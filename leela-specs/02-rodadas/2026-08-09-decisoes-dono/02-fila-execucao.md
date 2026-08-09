@@ -16,22 +16,27 @@ fonte: 01-decisoes-dono
 > mora o critério contra o qual cada card é medido.
 >
 > **A marca ⚔ é review antagonista obrigatória.** Ela cai em tudo que toca dinheiro cobrado ou
-> estoque de vaga: ESTOURO-RESERVA, SERV-2-PISO, JUROS-ALINHAMENTO e SEMKIT-REPARO.
+> estoque de vaga: ESTOURO-RESERVA, SERV-2-PISO, JUROS-ALINHAMENTO e SEMKIT-REPARO. A ⚔⚔ da
+> PURGA-DADOS-TESTE é a régua do expurgo de 06/08: inventário congelado, review fria sobre o plano
+> congelado, e só então o apply.
+>
+> **Atualizado pelo lote 2 de 09/08.** Três mudanças: o **JUROS-ALINHAMENTO saiu de retido** e virou
+> executável, porque o dono entregou o custo do gateway; a **PURGA-DADOS-TESTE** nasceu e absorveu a
+> CONTAS-DEMO, o VITRINE-2 e o COMPROMETIDO-1; e o **SEMKIT-2** deixou de ser só regra e virou build.
 
 ## O placar
 
 | | Frentes |
 |---|---|
-| Parte A · build direto | 4 |
+| Parte A · build direto | 6 |
 | Parte B · spec antes de build | 3 |
 | Parte C · pesquisa | 1 |
-| Parte D · execução administrativa | 1 |
-| Parte E · só regra, sem código | 1 |
+| Parte D · operação sobre produção | 1 |
 | Fecharam sem gerar trabalho | 5 linhas do painel |
 
-**Três frentes estão retidas esperando o dono**, e as três são de dinheiro. Estão reunidas no fim,
-na seção "O que volta ao dono antes de qualquer build". Nenhuma delas é adiamento de esteira: são
-perguntas que a frase dele abriu e que só ele fecha.
+**Duas perguntas continuam retidas esperando o dono**, e as duas são de dinheiro. Estão no fim, na
+seção "O que volta ao dono antes de qualquer build". A terceira, que era o parcelamento acima de 3x,
+**foi respondida pelo lote 2**.
 
 ---
 
@@ -58,8 +63,23 @@ preço** e não como "falha ao salvar"; `precoKitValido` continua aceitando nega
 porque é ele que `computeSaleState` chama e apertá-lo quebraria a exibição dos documentos legados; a
 travessia da RN-200 é escrita como exceção declarada, com a medição de zero compradores ao lado.
 
-**Ordem.** A 2b atravessa a RN-200 sobre dado de produção com 462 e 40 inscritos. Rota opus, review
-antagonista dupla, como a fila de 05/08 já marcava. Nada nesta cadeia pega carona em deploy pronto.
+**⛔ Gate de medição antes da 2b, aberto pelo lote 2.** Os dois eventos que carregam os kits,
+`meia-floripa-2026` e `sao-silvestre-floripa-2025`, **foram apagados pelo expurgo de 06/08** — o
+relatório daquela corrida nomeia o primeiro entre os apagados e lista os dois únicos sobreviventes do
+tenant, `teste-taxa-repassada` e `corrida-inverno-floripa-2026`
+(`.nirvana/handoffs/leela-apply-limpeza-20260806.md:223` e `:230`). A `S318-T6` **provavelmente não
+tem objeto**, e ela é justamente a tarefa cara: escrita em campo de preço de produção sob exceção à
+RN-200. **Medir antes de despachar**, e fechar como "sem objeto" se confirmar. A autorização do dono
+fica registrada e válida caso a medição contrarie a inferência.
+
+Isso **não** alivia a 2a. Ao contrário: com os documentos já apagados, a fonte passa a ser o único
+lugar onde o defeito ainda vive, e o runner de produção já rodou duas vezes. Enquanto o seed carregar
+`preco: -15` e `preco: -10`, uma terceira execução ressuscita os dois kits em eventos novos. **A 2a é a
+tarefa que importa agora.**
+
+**Ordem.** A 1a e a 2a sobem normalmente. A 2b só depois da medição. Rota opus e review antagonista
+dupla continuam valendo para ela, se ela sobreviver ao gate. Nada nesta cadeia pega carona em deploy
+pronto.
 
 ### CLUBES-CTA · a aba deixa de só informar que está vazia
 
@@ -94,7 +114,7 @@ técnico, campo de documento ou nome de variável muda junto, pela mesma discipl
 
 **Ordem.** Sai da retenção com esta rodada. Sonnet.
 
-### JUROS-ALINHAMENTO · o checkout para de cobrar juros em 2x e 3x ⚔ · **RETIDO**
+### JUROS-ALINHAMENTO · o checkout para de cobrar juros, e o teto cai para 3x ⚔ · **DESTRAVADO**
 
 **Território.** `packages/core/src/platform/commercialTerms.ts` (a estrutura e o default),
 `packages/core/src/finance/calc.ts` (`buildInstallmentOptions`), e o documento
@@ -106,22 +126,98 @@ R$ 317,49 no total, R$ 17,49 a mais que à vista. Sob a decisão do dono, ela de
 R$ 300,00. A parcela mínima de R$ 10,00 que ele pediu **já está em vigor** (`parcelaMinima: 10`,
 aplicada em `calc.ts:154`) e não gera tarefa.
 
-**Por que está retido.** `InstallmentRules` tem uma taxa única para todas as parcelas. Não existe
-"as três primeiras sem juros, o resto com". Só duas configurações são escrevíveis hoje, e nenhuma é
-obviamente o que ele quis: `maxParcelas: 3` com `jurosAoMes: 0`, que zera o juro e tira do ar o
-parcelamento de 4x a 12x; ou `jurosAoMes: 0` com `maxParcelas: 12`, que dá doze vezes sem juros à
-custa da plataforma. A terceira saída, um campo novo `parcelasSemJuros`, atende a leitura mais
-natural e custa migração no termo. **A pergunta está na seção final.**
+**O que destravou.** O lote 2 trouxe o custo do gateway (1,89% a.m., por parcela) e com ele a conta
+que escolhe a configuração. `InstallmentRules` tem taxa única, então "3x sem juros e 4x-12x com
+juros" não é escrevível sem campo novo. A saída adotada é `maxParcelas: 3` com `jurosAoMes: 0`, e ela
+deixou de ser arbitrária: **a plataforma passa a perder dinheiro a partir de 7x** quando absorve o
+custo e não cobra do comprador (ponto de virada em `N = 6,95`, independente do tamanho da venda).
+Manter 4x-12x sem juros custaria R$ 14,82 numa venda de R$ 300,00 em 12x. O "não trabalharemos com
+isso agora" e a aritmética apontam para o mesmo lugar.
 
-**Aceite, quando destravar.** Dentro da faixa sem juros, o total parcelado é **exatamente** igual ao
-à vista, provado por teste sobre os valores da RN-436; nenhum centavo de juro chega ao comprador
-nessa faixa; o custo absorvido pela plataforma aparece no lugar onde a RN-458 o declarar, e **não**
-desce ao líquido do produtor, que continua sendo `face − taxa(meio)` pela RN-182 intocada; o
-documento `commercialTerms/current` do tenant é atualizado pelo caminho canônico do painel, e não por
-escrita direta, para o histórico de versões ficar fiel.
+**O conserto.** Três coisas, na mesma lane. O juro vai a zero de 1x a 3x, e o total parcelado passa a
+ser exatamente o à vista. O teto cai de 12x para 3x. E `platform/config.custoGateway` nasce com a
+tabela de 1,89% a.m. calculada, para a coluna Margem do admin deixar de ficar vazia.
+
+**A quem o custo é debitado, e isto não pode sair errado.** O custo sai do **Serviço que a plataforma
+retém**, pelo verbatim do dono (*"abate do que iria para nós"*). Ele **não** desce ao líquido do
+produtor, que continua sendo `face − taxa(meio)` pela RN-182 intocada. Debitar do repasse do
+organizador é exatamente a alternativa que o JUROS-3 recusou.
+
+**Aceite.** Dentro da faixa, o total parcelado é **exatamente** igual ao à vista, provado por teste
+sobre os valores da RN-436, e nenhum centavo de juro chega ao comprador; nenhuma opção acima de 3x é
+ofertada em tela nenhuma; `commercialTerms/current` do tenant é atualizado pelo **caminho canônico do
+painel**, não por escrita direta, para o histórico de versões ficar fiel; a RN-182 é conferida
+intocada por teste, provando que o líquido do produtor não se moveu; a tabela de custo 1x-12x é
+entregue ao dono junto com as duas ressalvas do bloco 18 (a espera da primeira parcela e simples
+contra composto).
+
+**A consequência visível, que o dono veta se quiser.** O checkout hoje oferece até 12x. Depois desta
+lane oferece até 3x. É redução de oferta para o comprador, com efeito possível em conversão, e está
+escrita aqui para não ser descoberta na tela.
 
 **Ordem.** Dinheiro cobrado de gente real que já compra hoje. Rota opus, review antagonista, lane
-própria, sem carona em deploy.
+própria, sem carona em deploy. **O JUROS-1 vem depois desta lane**, nunca antes: salvar os termos
+agora selaria a v2 com 2,89% em toda parcela, que é o número que esta lane derruba.
+
+### SEMKIT-2-TOGGLE · o organizador liga e desliga a inscrição sem kit
+
+**Território.** RN-508 em [[LEELA-E03-operacao-evento]]; reconciliação com RN-503 e RN-504 em
+[[LEELA-E04-config-vendas]]; `S317-T1` e `S317-T2` de
+`02-rodadas/2026-08-05-modalidade-e-kit/04-fila-codigo.md`. **No ar hoje:** nem um interruptor nem o
+outro; hoje a saída sem kit se constrói criando um kit de R$ 0,00.
+
+**O conserto.** O organizador ganha um interruptor explícito, com aviso, em vez de descobrir sozinho
+que a saída se faz com um kit de preço zero.
+
+**A reconciliação obrigatória, antes da primeira linha.** Já existe um interruptor especificado, e
+ele tem polaridade oposta. O da **RN-503** (`incluiKitDaModalidade`, no lote) desliga o kit inteiro
+naquele lote: ninguém leva kit. O que o dono pediu mantém os kits existindo e deixa a **pessoa**
+escolher não levar nenhum. Dois interruptores vizinhos, na mesma tela, com significados opostos, é a
+receita de um defeito invisível em review. A primeira meia hora do card responde uma pergunta: é o da
+RN-503, que ele pode ter visto, ou é um segundo campo por modalidade do tipo "permitir inscrição sem
+kit"? O contexto do SEMKIT-2 e a "letra A" apontam para o segundo.
+
+**Aceite.** Existe **um** conceito de interruptor de kit no produto, com nome que o distingue do
+outro sem ambiguidade, ou existem dois com a diferença escrita na RN; o aviso do dono não é
+confundido com o aviso da RN-504, que serve outro caso (tirar um kit de desconto do cardápio) e
+continua valendo para quem criar um kit de desconto no futuro; nenhum organizador precisa criar kit
+de R$ 0,00 como gambiarra para abrir a saída; a `S317-T1` e a `S317-T2` são lidas antes do card
+nascer, e o card diz explicitamente se as substitui ou convive com elas.
+
+**Ordem.** Build pequeno, gate de reconciliação na frente. Sonnet, com a reconciliação em opus se a
+resposta for "dois campos".
+
+### PATROCINADOR-TOGGLE · apagar marca vira desativar marca
+
+**Território.** `apps/painel/src/routes/marcas/MarcasPage.tsx` (botão Excluir em `:188-189`, chamada
+em `:133`) e `MarcaFormModal.tsx`; `packages/api-client` no lugar de `excluirMarcaDoProfissional`;
+RN-171 em [[LEELA-E10-marcas]]. **No ar hoje:** sim, a tela de marcas funciona e o botão Excluir
+destrói o registro.
+
+**Metade já existe.** `StatusMarca = 'ativa' | 'inativa'` está no modelo
+(`packages/core/src/brands/marca.ts:31`), validado no core (`:143`, `:165`) e aceito pela Rule, que já
+exige "status no enum" (`firestore.rules:2980`). O que falta é superfície: o `MarcaFormModal` não
+expõe `status` em campo nenhum.
+
+**O conserto.** O botão destrutivo dá lugar ao interruptor que o dado já sabe representar. Marca
+inativa some do autocomplete de patrocínios futuros e continua no registro.
+
+**Aceite.** Não existe mais caminho de tela que apague uma marca; marca inativa não aparece no
+autocomplete de patrocínios novos e continua listada, com o estado visível, para poder voltar; o
+aviso ao desligar sai na tela e diz o que muda; nenhuma cópia de patrocínio já cadastrada em evento
+ou clube é tocada, o que já é verdade hoje e passa a ser provado por teste; a RN-171 ganha o
+enunciado de que marca não se apaga.
+
+**O que não muda.** O contador de ativações continua não existindo e o **E10-S812 segue no gelo**. A
+spec decide se o "avisando" é frase genérica, que custa nada, ou o número de patrocínios afetados,
+que exige o leitor barato que nunca houve. Proposta: frase genérica agora, número quando o S812 sair.
+
+**Honestidade sobre o tamanho.** O cabeçalho da própria página (`MarcasPage.tsx:11-13`) já diz que
+excluir só tira a marca do autocomplete **futuro**, e que patrocínios já cadastrados são cópias
+independentes que permanecem intactas. Apagar "Café Rota" hoje não quebra o desafio dela. Isto é
+ganho de reversibilidade, não resgate de integridade.
+
+**Ordem.** Build pequeno sobre tela servida. Sonnet.
 
 ---
 
@@ -238,79 +334,99 @@ visual do dono.
 
 ---
 
-## Parte D · execução administrativa
+## Parte D · operação sobre produção
 
-### CONTAS-DEMO · matar `marina@` e `felipe@`
+### PURGA-DADOS-TESTE · o banco fica só com dado real ⚔⚔
 
-**Território.** Firebase Auth do projeto `leela-hub`; `functions/src/seed/platformAdmin.seed.ts:65`;
-task A6 de `02-rodadas/2026-08-02-retomada/11-fila-contas-e-area-cliente.md`.
+**Território.** Dado de produção em `leela-hub`; os três documentos de `repasses` com status vetado;
+`functions/src/limpeza/planoLimpeza.ts` como plano; Firebase Auth para as duas contas demo;
+`functions/src/seed/platformAdmin.seed.ts:65`. **No ar hoje:** tudo, e é esse o ponto.
 
-**O estado real, conferido nesta lane.** O expurgo de 06/08 **não tocou em conta de Auth nenhuma** —
-está escrito com essas palavras em `.nirvana/handoffs/leela-apply-limpeza-20260806.md` §"O que NÃO
-foi feito, de propósito". As 2.873 operações foram todas em Firestore. Logo:
+**O que ela absorve.** Três linhas do painel que pareciam tarefas separadas e são a mesma operação:
+**VITRINE-2** (os dois eventos sem preço), **COMPROMETIDO-1** (os três repasses vetados que seguram
+R$ 167,00) e a metade que sobrava do **ADMINSEP-3** (as contas demo). A antiga CONTAS-DEMO desta fila
+deixa de existir sozinha.
 
-`marina@demo-leela.dev` e `felipe@demo-leela.dev` **seguem vivas em produção**, com senha válida, e a
-senha usada no preview está em texto claro no repositório (`preview-autologin.ts:35`).
+**O escopo.** Todo dado de teste restante: os três repasses vetados, os eventos de teste, as
+inscrições de teste e as contas `marina@demo-leela.dev` e `felipe@demo-leela.dev`.
 
-`admin@demo-leela.dev` **não existe mais como endereço**. Ela foi renomeada, não apagada: o uid
-`FTqslV98itZUNGwL5ss6201d23Z2` é hoje `inguzbuilders@gmail.com`, com a claim `platform_admin` e senha
-provada. **Tentar apagar `admin@demo-leela.dev` seria apagar o super-admin do dono.**
+**O que não pode ser tocado, e cada linha é um jeito de destruir algo que não volta.**
 
-**O que fazer.** Revogar as duas contas de demonstração, com `revokeRefreshTokens` antes da remoção.
-Antes disso, varrer o Firestore por referências aos uids delas: a REV3 registrou que `ownerUid` já
-apontou para `uid-marina-castelo`, então a conferência não é formalidade.
+A **compra real do dono**, `PED-8CDHM`, com o ingresso `T93N7F`, e o evento a que ela pertence. É o
+único pagamento real que a plataforma já processou e a prova do fluxo ponta a ponta.
 
-**Aceite.** As duas contas não autenticam mais; nenhuma referência viva no Firestore aponta para os
-uids removidos, provado por varredura antes e depois; o seed para de semear administrador contra o
-projeto real; a conta `inguzbuilders@gmail.com` é conferida intacta ao fim, com login provado; a
-credencial de preview em texto claro no repositório deixa de valer para qualquer conta de produção.
+A conta **`inguzbuilders@gmail.com`**, uid `FTqslV98itZUNGwL5ss6201d23Z2`. Ela **é** a antiga
+`admin@demo-leela.dev`, renomeada e não recriada, e carrega a claim `platform_admin`. Qualquer
+varredura que selecione contas pelo padrão de demonstração vai encontrá-la pelo histórico. Apagá-la
+tira o dono da própria plataforma.
 
-**Ordem.** Ato administrativo, com backup de Auth já existente
-(`C:\dev\leela-backups\leela-limpeza-prod-20260806\auth-users-20260806.json`). Não é lane de código.
+**⛔ A armadilha de nome.** O evento da compra real do dono chama-se **`teste-taxa-repassada`**. A
+palavra "teste" está no identificador. Uma varredura que selecione dado de teste por padrão de nome
+apagaria exatamente o que esta operação existe para preservar, junto com o único pagamento real que a
+plataforma já processou. **A seleção é por lista explícita conferida contra o inventário congelado,
+nunca por padrão de nome, de slug ou de e-mail.** Vale igual para a conta do dono, pelo histórico que
+ela carrega.
 
----
+**Quanto sobrou de verdade.** O expurgo de 06/08 já levou a maior parte: restam **dois** eventos vivos
+no tenant `castelo-producoes`, `teste-taxa-repassada` e `corrida-inverno-floripa-2026`, e os dois são
+os que sustentam o `vendidoBruto` de hoje. O primeiro é o da compra real e **não sai**. Então a purga é
+menor do que o pedido sugere, e o inventário congelado é o que vai dizer o tamanho exato antes de
+qualquer escrita.
 
-## Parte E · só regra, sem código
+**A forma, que não é burocracia.** O expurgo de 06/08 mediu que cada delete de inscrito dispara
+`agregarFinanceiro`, `agregarEstoque` e `agregarDemografia`, e que os três só desistem se o documento
+do evento não existir. Como o evento morre depois dos inscritos, os agregados renascem **órfãos sob um
+pai inexistente**, invisíveis no console e para qualquer inventário futuro, porque `documents.list`
+não devolve pai que não existe. A ordem do plano é o que impede isso, e ela já está codificada. A
+amplificação medida foi de cerca de 7.800 escritas e 1 milhão de leituras para 710 inscritos.
 
-### SEMKIT-2-REGRA · a saída sem kit é escolha do organizador
+Então: **inventário congelado antes de apagar**, review fria sobre o plano congelado, e só então o
+apply, reusando o runner de `C:\dev\leela-apply-20260806\`. Backup de Firestore e de Auth feitos
+**juntos** — restaurar um sem o outro devolve `ownerUid` para `uid-marina-castelo` com a claim do dono
+no lugar, que é o incidente da manhã de 06/08 outra vez.
 
-**Território.** RN-508 em [[LEELA-E03-operacao-evento]].
+**Aceite.** O inventário é congelado e conferido **antes** de qualquer escrita, com o sha do plano
+registrado; a compra `PED-8CDHM` e o evento dela sobrevivem, provado por leitura depois do apply; a
+conta `inguzbuilders@gmail.com` autentica ao fim, com login provado, e mantém a claim; as duas contas
+demo não autenticam mais, com `revokeRefreshTokens` antes da remoção e varredura por referências aos
+uids delas antes e depois; nenhum agregado órfão sobra, conferido por inventário pós-apply; o
+`comprometido` do caixa volta a bater com o dinheiro que existe; os dois eventos sem preço somem da
+vitrine; o seed para de semear administrador contra o projeto real.
 
-**O que muda.** A RN-508 passa de **default proposto** a **regra**. A plataforma não garante ao
-participante uma forma de se inscrever sem kit; quem quiser abrir a saída cria um kit de R$ 0,00, e
-quem quiser que todo participante leve o brinde do patrocinador simplesmente não cria. Evento sem kit
-nenhum continua válido.
+**O que a purga não resolve.** A lacuna estrutural que a REV3 registrou, recomputo de saldo sem
+caminho de operador, **continua aberta**. Apagar o comprometido de teste não cria o botão que faltava.
 
-**Aceite.** A RN carrega a frase do dono como fonte; nenhuma tarefa nasce na frente 1 de
-`02-rodadas/2026-08-05-sem-kit/04-fila-codigo.md`, porque as opções que geravam tarefa foram
-recusadas; o rótulo do kit de preço zero continua saindo do conteúdo e não do sinal, pela `S318-T3`,
-que já estava na fila e não muda.
+**Ordem.** A operação mais perigosa desta rodada. Rota opus, review fria obrigatória sobre o plano
+congelado antes do apply, e report com contagem antes e depois. **Nada de código de aplicação nesta
+lane.**
 
 ---
 
 ## O que volta ao dono antes de qualquer build
 
-Três perguntas nasceram das respostas dele, e as três são de dinheiro. Nenhuma é do tipo que a
-esteira resolve com default.
+Duas perguntas continuam de pé, e as duas são de dinheiro. A terceira foi respondida.
 
-**1 · Parcelamento acima de 3x.** "Até 3x sem juros" está decidido. De 4x a 12x, três leituras cabem
-na frase e a estrutura de dados não representa a mais natural sem um campo novo. A oferta acima de 3x
-sai do ar até o esquema maior existir, continua a 2,89% a.m. como está no ar hoje, ou o termo ganha
-`parcelasSemJuros` e as duas coisas convivem. Enquanto isso não voltar, o checkout continua cobrando
-R$ 17,49 a mais numa compra de R$ 300,00 em 3x, contra a decisão de hoje.
-
-**2 · O piso de R$ 10,00 vale sobre o total ou sobre o unitário.** Com o piso no total do pedido, um
+**1 · O piso de R$ 10,00 vale sobre o total ou sobre o unitário.** Com o piso no total do pedido, um
 lote de R$ 6,00 continua existindo e passa a só poder ser comprado aos pares. Com o piso no unitário,
 o lote de R$ 6,00 não pode ser criado. As duas são defensáveis, custam telas diferentes, e a leitura
 literal da frase é o pedido.
 
-**3 · O gatilho do modal de liberação.** Qualquer gesto, que é o que a RN-510 já faz, ou só uma ação
+**2 · O gatilho do modal de liberação.** Qualquer gesto, que é o que a RN-510 já faz, ou só uma ação
 bloqueada, que muda a regra e derruba parte do que a review de 08/08 mediu. Vai junto com o
 mecanismo da liberação direta, que a RN-510 não prevê.
 
-O **JUROS-1** entra nesta lista por tabela: ele pede um save que selaria a v2 dos termos comerciais
-com 2,89% em toda parcela. Enquanto a pergunta 1 não voltar respondida, executá-lo carimba o rastro
-errado no histórico que ele existe para consertar.
+**Respondida pelo lote 2 · parcelamento acima de 3x.** A leitura adotada é o teto em 3x, com 4x-12x
+saindo do ar até o esquema maior existir. Ela deixou de ser escolha de gosto quando o custo do
+gateway chegou: **a plataforma perde dinheiro a partir de 7x** absorvendo o custo, e 12x sem juros
+custaria R$ 14,82 numa venda de R$ 300,00. A leitura é do maestro e o dono veta se quiser; o que muda
+é que agora há número atrás dela.
+
+**Dois avisos que acompanham o destravamento.** O teto de 3x **reduz a oferta visível**: o checkout
+hoje mostra até 12x. E o custo absorvido sai do **Serviço da plataforma**, nunca do líquido do
+produtor — a instrução que chegou a esta lane dizia "abate do repasse", que pode ser lida ao
+contrário do que o dono decidiu no JUROS-3.
+
+O **JUROS-1** sai desta lista e vira ordem de execução: alinhamento primeiro, save depois.
 
 ## O que não gerou trabalho
 

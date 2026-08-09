@@ -5,12 +5,13 @@ lote: DEC-0809-REGISTRO
 data: 2026-08-09
 ---
 
-# 01-decisões do dono · a leva de 09/08
+# 01-decisões do dono · as duas levas de 09/08
 
-> **O que esta página é.** O dono respondeu quinze frentes do painel numa mensagem só, em 09/08,
-> pelo chat. Aqui está cada uma registrada: o trecho verbatim que a decide, a leitura que o maestro
-> faz dela, o que ela fecha, o que ela abre e onde aterrissa. O trabalho que sai daqui está em
-> [[02-fila-execucao]].
+> **O que esta página é.** O dono respondeu o painel em **duas mensagens** no mesmo dia, 09/08, pelo
+> chat, mais dois esclarecimentos por pergunta direta. Aqui está cada frente registrada: o trecho
+> verbatim que a decide, a leitura que o maestro faz dela, o que ela fecha, o que ela abre e onde
+> aterrissa. O **lote 1** são os blocos 1 a 15; o **lote 2** são os blocos 16 a 21, e ele corrige
+> duas coisas escritas no primeiro. O trabalho que sai daqui está em [[02-fila-execucao]].
 >
 > **O que esta página não é.** Não é o painel. O [[DECISOES-ABERTAS]] continua sendo o único lugar
 > onde as pendências vivem, e a passada que retira de lá os itens fechados aqui é outra lane, depois
@@ -43,13 +44,18 @@ Preservado inteiro, com os erros de digitação, porque é o registro e não a t
 
 ## O placar
 
-Quinze blocos, cobrindo **vinte** linhas do painel. Quinze fecham, cinco continuam dele.
+Vinte e um blocos nas duas levas, cobrindo **vinte e quatro** linhas do painel. Dezenove fecham,
+cinco continuam dele.
 
 | | Linhas do painel |
 |---|---|
-| Fecham nesta leva | 15 · SERV-1, SERV-2, SERV-3, JUROS-3, JUROS-4, ESTOURO-1, SEMKIT-1, SEMKIT-2, PB-11, ARENA-1, ARENA-2, CLUBES-1, ADMIN-USUARIOS-1, ADMINSEP-3, 69 |
+| Fecham no lote 1 | 15 · SERV-1, SERV-2, SERV-3, JUROS-3, JUROS-4, ESTOURO-1, SEMKIT-1, SEMKIT-2, PB-11, ARENA-1, ARENA-2, CLUBES-1, ADMIN-USUARIOS-1, ADMINSEP-3, 69 |
+| Fecham no lote 2 | 4 · VITRINE-2, JUROS-1, JUROS-5, COMPROMETIDO-1 |
 | Seguem com o dono | 5 · item 12, CRM-1, CRM-2, CRM-3, CRM-4 |
-| Conferidas de passagem, sem decisão nova | 2 · JUROS-1 e JUROS-5, nas Ações |
+| Decisão nova, fora do painel | 1 · PATROCINADOR-TOGGLE (bloco 20) |
+
+O lote 2 **corrige** dois blocos do lote 1: o SEMKIT-2 ganha mecanismo (bloco 19 emenda o bloco 6) e
+o JUROS-5 destrava o parcelamento que o bloco 4 tinha deixado retido.
 
 O **SEMKIT-2** entra na conta sem ter sido chamado pelo nome. A frase do dono sobre kit responde a
 pergunta dele por inteiro, e deixá-lo aberto seria manter no painel um item já respondido. Está
@@ -270,6 +276,31 @@ positivo, nunca negativo.
 **O que abre.** O reparo, com uma ordem que não pode ser invertida: **a fonte antes do banco**. O
 seed de produção já rodou duas vezes, e corrigir só o banco deixa uma terceira execução ressuscitar
 os dois kits. A tarefa da fonte subia de qualquer forma; agora as duas andam juntas.
+
+### ⛔ Correção de 09/08, lote 2 · o reparo em produção pode não ter mais objeto
+
+Apurado ao escrever a purga do bloco 21, e ele muda a parte cara deste item.
+
+Os dois kits negativos vivem em `meia-floripa-2026` e em `sao-silvestre-floripa-2025`, os dois do
+tenant `castelo-producoes` (`preview-seed-extra.ts:101` e `:191`). **O expurgo de 06/08 apagou os
+dois eventos.** O registro daquela corrida diz, com todas as letras, que `meia-floripa-2026` é um dos
+"dois eventos que esta corrida apagou", e a conferência aritmética do saldo nomeia os **dois únicos
+sobreviventes** do tenant: `teste-taxa-repassada` e `corrida-inverno-floripa-2026`
+(`.nirvana/handoffs/leela-apply-limpeza-20260806.md:223` e `:230`).
+
+Ou seja: o texto do painel, que fala de 462 e 40 inscritos e de preço congelado pela RN-200, descreve
+um estado que deixou de existir três dias antes de o dono autorizar o reparo.
+
+**O que isso muda.** A tarefa mais perigosa da cadeia, a `S318-T6`, que escreveria em campo de preço
+de produção como exceção declarada à RN-200 e por isso pedia rota opus e review dupla, **provavelmente
+não tem objeto**. E a tarefa que parecia acessória vira a única que importa: o seed continua com
+`preco: -15` e `preco: -10` no código, e o runner de produção já rodou duas vezes. Enquanto a fonte não
+for corrigida, qualquer nova execução **ressuscita os dois kits** em eventos novos.
+
+**O que não faço aqui.** Não declaro o item morto. Esta é inferência a partir do relatório de 06/08 e
+não leitura direta da produção, e leitura de produção não é território desta lane. A conclusão vira
+gate na fila: **medir antes de despachar a 2b**, e fechá-la como "sem objeto" se a medição confirmar.
+A autorização do dono continua registrada e válida para o caso de a medição contrariar a inferência.
 
 **Onde aterrissa.** RN-509 em [[LEELA-E03-operacao-evento]] para o reparo; RN-508 no mesmo épico para
 a escolha do organizador, que passa de default proposto a regra. Tarefas 2a e 2b de
@@ -581,19 +612,350 @@ passam a depender desta pesquisa. O restante do item 69 continua no painel, espe
 
 ---
 
+---
+
+# Lote 2 · a segunda leva do mesmo dia
+
+> O dono respondeu uma segunda mensagem em 09/08, e o maestro esclareceu duas ambiguidades por
+> pergunta direta. Mesmo padrão dos quinze blocos acima. Duas coisas mudam o que ficou escrito no
+> lote 1, e as duas estão marcadas: o **JUROS-5** entregou o número que destrava o JUROS-ALINHAMENTO,
+> e o **SEMKIT-2** ganha mecanismo onde antes tinha só direção.
+
+## O verbatim do lote 2, sem retoque
+
+> "vitrine  - eventos sem preço, pode apagar os dois. juros 1 - ok. Juros 5- o custo do parcelamento
+> do asaas é de 1,89% a.m. voce pode calcular isso para mim, para termos a tabela. UM ponto
+> importante, esses juros afetam o preço cheio. se eu mandar 300 reais parcelado em 6x, os juros vao
+> incidir porparcela, com calculo de custo para cada uma, entao a parcela de 6x tem um custo 2x é
+> outro, entendeu? Posição 1 - ok. Podemos deixar botao de liga e desliga,avisando. O comprometido
+> pode sair fora, já uq é apenas um teste. cancela e apaga tudo, pois quero trabalhar com dados
+> reais."
+
+## Os dois esclarecimentos, também verbatim
+
+Perguntados diretamente pelo maestro, porque duas referências eram ambíguas:
+
+> **Sobre "Posição 1":** "letra A, que voce me sugeriu e também para excluir algum patrocinador, que
+> na verdade será liga e desliga"
+
+> **Sobre o alcance de "cancela e apaga tudo":** "Todo dado de teste restante"
+
+---
+
+## 16 · VITRINE-2 · os dois eventos sem preço são apagados
+
+> "vitrine  - eventos sem preço, pode apagar os dois."
+
+**Leitura do maestro.** A segunda das três opções, e a mais radical delas: não é despublicar até ter
+preço, é apagar. Faz sentido junto da última frase da mensagem, e as duas são a mesma decisão vista
+de dois ângulos: ele quer o banco limpo para trabalhar com dado real.
+
+**O que fecha.** `noturna-beira-mar-2026` e `retiro-bem-estar-rio-vermelho-2026` saem. As opções de
+cadastrar preço e de deixar como está caem.
+
+**O que abre.** Nada por si. O VITRINE-2 deixa de ser tarefa própria e vira **subconjunto da
+PURGA-DADOS-TESTE** do bloco 21, porque apagar evento não é deletar um documento: os dois têm 60 e 28
+inscritos contabilizados, e o expurgo de 06/08 provou que cada delete de inscrito dispara três
+agregadores que reescrevem documentos que morrem depois, deixando órfãos invisíveis. Fazer isso à mão
+é o incidente daquela manhã de novo.
+
+**Onde aterrissa.** Dado de produção, dentro do plano da purga.
+
+---
+
+## 17 · JUROS-1 · ratificado, com uma ordem obrigatória
+
+> "juros 1 - ok."
+
+**Leitura do maestro.** Ele ratifica a ação: abrir os termos comerciais do Castelo no painel e salvar,
+para o histórico voltar a bater.
+
+**O que fecha.** A ação está autorizada.
+
+**O que abre, e é a ordem que precisa ficar escrita.** O alerta que abri no bloco 4 continua de pé, e
+o "ok" não o dissolve. Salvar **hoje** sela uma v2 dizendo 2,89% a.m. em toda parcela, que é
+exatamente o que a decisão de parcelamento derruba de 1x a 3x. O histórico ficaria fiel a um número
+que deixou de valer no mesmo dia em que foi carimbado.
+
+**A ordem: o alinhamento do código primeiro, o save depois.** Quando o `commercialTerms/current`
+refletir o modelo decidido, o save pelo painel sela a v2 certa e o rastro volta a ser fiel de
+verdade. Invertido, ele conserta o histórico com o número errado, que é pior do que o estado de hoje,
+porque o de hoje pelo menos é visivelmente incompleto.
+
+**Onde aterrissa.** `/plataforma` → Termos do tenant Castelo Produções, **depois** de JUROS-ALINHAMENTO.
+
+---
+
+## 18 · JUROS-5 · o dono entregou o número, e o item vira cálculo
+
+> "Juros 5- o custo do parcelamento do asaas é de 1,89% a.m. voce pode calcular isso para mim, para
+> termos a tabela. UM ponto importante, esses juros afetam o preço cheio. se eu mandar 300 reais
+> parcelado em 6x, os juros vao incidir porparcela, com calculo de custo para cada uma, entao a
+> parcela de 6x tem um custo 2x é outro, entendeu?"
+
+**Leitura do maestro.** O item mudou de natureza. Ele pedia que o dono **buscasse** a tabela de
+tarifas no Asaas, e era a única coisa que a construção não conseguia produzir sozinha. Ele trouxe o
+insumo: **1,89% a.m.** sobre o parcelamento. O que resta é aritmética, e aritmética é da esteira.
+
+A segunda metade da frase é o modelo, e ele é preciso. O custo não é uma taxa achatada sobre a venda:
+**incide por parcela, e cresce com a espera de cada uma**. A parcela que chega no sexto mês custa
+seis vezes o que custa a que chega no primeiro. E "afetam o preço cheio" fixa a base: o percentual
+corre sobre o valor inteiro que está sendo financiado, não sobre uma fatia de juro.
+
+Isso dá a fórmula: com a venda `V` em `N` parcelas iguais, o custo da parcela `k` é
+`(V/N) × 1,89% × k`, e o custo total é `V × 1,89% × (N+1)/2`.
+
+**O que fecha.** O número e o modelo. O item deixa de ser ação dele e vira entregável da esteira.
+
+**A tabela, calculada.** Venda de R$ 300,00, juros zero ao comprador, custo da operação com a
+plataforma. A receita é o Serviço a 10,5%; o custo do cartão à vista segue o benchmark de julho
+(2,99% + R$ 0,49), que **continua sendo benchmark e não contrato**, e é a única linha desta tabela que
+ainda não veio dele.
+
+| Parcelas | Parcela | Custo do parcelamento | % da face | Receita (Serviço) | Custo do cartão | **Margem** |
+|---|---|---|---|---|---|---|
+| 1x | R$ 300,00 | R$ 5,67 | 1,890% | R$ 31,50 | R$ 9,46 | **R$ 16,37** |
+| 2x | R$ 150,00 | R$ 8,50 | 2,835% | R$ 31,50 | R$ 9,46 | **R$ 13,54** |
+| 3x | R$ 100,00 | R$ 11,34 | 3,780% | R$ 31,50 | R$ 9,46 | **R$ 10,70** |
+| 4x | R$ 75,00 | R$ 14,17 | 4,725% | R$ 31,50 | R$ 9,46 | R$ 7,87 |
+| 5x | R$ 60,00 | R$ 17,01 | 5,670% | R$ 31,50 | R$ 9,46 | R$ 5,03 |
+| 6x | R$ 50,00 | R$ 19,84 | 6,615% | R$ 31,50 | R$ 9,46 | R$ 2,20 |
+| 7x | R$ 42,86 | R$ 22,68 | 7,560% | R$ 31,50 | R$ 9,46 | **−R$ 0,64** |
+| 8x | R$ 37,50 | R$ 25,52 | 8,505% | R$ 31,50 | R$ 9,46 | −R$ 3,48 |
+| 9x | R$ 33,33 | R$ 28,35 | 9,450% | R$ 31,50 | R$ 9,46 | −R$ 6,31 |
+| 10x | R$ 30,00 | R$ 31,19 | 10,395% | R$ 31,50 | R$ 9,46 | −R$ 9,15 |
+| 11x | R$ 27,27 | R$ 34,02 | 11,340% | R$ 31,50 | R$ 9,46 | −R$ 11,98 |
+| 12x | R$ 25,00 | R$ 36,86 | 12,285% | R$ 31,50 | R$ 9,46 | −R$ 14,82 |
+
+**O número que decide, e ele apareceu sozinho.** Absorvendo o custo e não cobrando do comprador, **a
+plataforma passa a perder dinheiro a partir de 7x**. O ponto de virada é `N = 6,95`, e ele não depende
+do tamanho da venda: sai de `10,5% − 2,99% ≥ 1,89% × (N+1)/2`, então vale para uma inscrição de
+R$ 30,00 tanto quanto para uma de R$ 3.000,00. Em 12x sem juros, uma venda de R$ 300,00 **custa
+R$ 14,82 à plataforma** em vez de render.
+
+Isso valida o corte em 3x por conta própria, e é a razão de eu tratar o "até 3x" como teto e não como
+exemplo. Em 3x sobram R$ 10,70, que é 3,6% da face: apertado, mas positivo, e o dobro da folga que 6x
+deixaria.
+
+**Duas ressalvas que a tabela carrega, e que a proposta ao dono declara em vez de esconder.**
+
+A **espera da primeira parcela**. A tabela supõe que a parcela `k` chega no mês `k`, que é a liberação
+padrão do cartão. Se o Asaas liberar a primeira sem espera, todo custo desce um degrau: 3x cai de
+R$ 11,34 para R$ 5,67, e o ponto de virada sobe de 7x para 8x. É a única variável que muda a
+conclusão, e ela se confirma numa linha do extrato dele.
+
+**Simples contra composto.** A tabela usa juro simples sobre a espera, que é a leitura direta de
+"incide por parcela". Pelo desconto composto a 1,89% a.m. os números ficam ligeiramente menores
+(3x custa R$ 10,99 em vez de R$ 11,34; 12x custa R$ 33,82 em vez de R$ 36,86) e o ponto de virada não
+se move. A diferença é de centavos por venda e não muda decisão nenhuma.
+
+**Onde aterrissa.** `platform/config.custoGateway`, que passa a nascer com valor em vez de declarar
+ausência; RN-455 em [[LEELA-E16-plataforma-superadmin]]; lacunas L1 e L2 da spec da rodada de juros. A
+coluna Margem da tabela do admin deixa de ficar vazia. A tarefa T5 da S1610, que registraria o custo
+real de cada venda a partir do que o gateway devolve, continua valendo e passa a ter contra o que
+comparar.
+
+**Uma correção que devo ao registro.** A instrução que chegou a esta lane dizia que o custo é
+"absorvido pela plataforma (abate do repasse)". A frase pode ser lida como abater do **repasse do
+organizador**, e isso contradiria a decisão do próprio dono. O verbatim dele é *"abate do que iria
+para nós"*, e "nós" é a plataforma. O custo sai do Serviço que a plataforma retém. **O líquido do
+produtor continua sendo `face − taxa(meio)` pela RN-182, intocado.** Registro a distinção porque é a
+diferença entre a decisão que ele tomou e uma que ele recusou explicitamente no JUROS-3.
+
+---
+
+## 19 · SEMKIT-2 · a letra A ganha mecanismo, e ele é um interruptor
+
+> "Posição 1 - ok. Podemos deixar botao de liga e desliga,avisando."
+>
+> Esclarecido: "letra A, que voce me sugeriu e também para excluir algum patrocinador, que na verdade
+> será liga e desliga"
+
+**Leitura do maestro.** A "letra A" é a primeira opção do SEMKIT-2, *"é escolha do organizador"*, que
+era o default proposto e que o lote 1 já havia registrado como fechada. O que o lote 2 acrescenta é o
+**mecanismo**, e ele corrige o que escrevi no bloco 6.
+
+**Correção ao bloco 6.** Ali eu escrevi que quem quiser abrir a saída sem kit *"cria um kit de
+R$ 0,00"*. Isso continua sendo o que o produto faz hoje, e deixa de ser o que ele vai fazer: o dono
+quer um **interruptor explícito, com aviso**, em vez de o organizador descobrir sozinho que a saída se
+constrói criando um kit de preço zero. A direção do bloco 6 está certa; o meio estava desatualizado
+por uma frase.
+
+**O que fecha.** A escolha é do organizador, e ela é exercida por um interruptor com aviso, não por
+um kit de R$ 0,00 usado como gambiarra.
+
+**O que abre, e aqui há uma colisão que precisa ser resolvida antes da primeira linha de código.**
+
+**Já existe um interruptor especificado, e ele não é este.** A RN-503, escrita em 05/08, dá ao **lote**
+o campo `incluiKitDaModalidade?: boolean`, com ausente equivalendo a ligado, e a RN-504 já exige que
+desligá-lo avise o organizador **no gesto, com o número**, quando isso tira um kit de desconto do
+cardápio. As tarefas `S317-T1` e `S317-T2` estão na fila desde então.
+
+Os dois interruptores têm nomes parecidos e significados opostos:
+
+O da **RN-503** desliga o kit inteiro naquele lote. Ninguém leva kit, e o comprador lê "Esta inscrição
+não inclui kit." Serve o organizador que fez um lote sem brinde.
+
+O que o **SEMKIT-2** pede mantém os kits existindo e deixa a **pessoa** escolher não levar nenhum.
+Serve a Ana, que quer correr os 5k sem a camiseta.
+
+Dois interruptores vizinhos, na mesma tela, com polaridade oposta, é a receita de um defeito que
+ninguém enxerga em review. **A tarefa começa por reconciliar os dois**, e a spec do card responde uma
+pergunta só: o interruptor do dono é o da RN-503, que já está na fila e ele pode ter visto, ou é um
+segundo campo por modalidade, do tipo "permitir inscrição sem kit"? O contexto do SEMKIT-2 e a letra
+A apontam para o segundo. Não decido isso dentro da tarefa de build.
+
+O "avisando" tem endereço certo de qualquer forma: a RN-504 já escreveu que o aviso aparece no gesto e
+com o número. Com os dois kits negativos zerados pelo SEMKIT-REPARO, o caso que aquele aviso protegia
+deixa de existir em produção, mas a regra continua valendo para quem criar um kit de desconto no
+futuro. Não é o mesmo aviso que o dono pediu agora, e a spec não deve confundir os dois.
+
+**Onde aterrissa.** RN-508 em [[LEELA-E03-operacao-evento]], que ganha o mecanismo; reconciliação com
+RN-503 e RN-504 em [[LEELA-E04-config-vendas]]; `S317-T1` e `S317-T2` de
+`02-rodadas/2026-08-05-modalidade-e-kit/04-fila-codigo.md`, que passam a ser leitura obrigatória antes
+do card nascer.
+
+---
+
+## 20 · PATROCINADOR-TOGGLE · apagar marca vira desativar marca
+
+> "Posição 1 - ok. Podemos deixar botao de liga e desliga,avisando."
+>
+> Esclarecido: "[…] e também para excluir algum patrocinador, que na verdade será liga e desliga"
+
+**Leitura do maestro.** Decisão nova, que não estava em item nenhum do painel, e ela responde a
+**Posição 1 da fila de construção** com precisão que vale registrar: aquele item é o E10, consolidação
+das ativações de marcas, e o caso de uso escrito nele é literalmente *"A Marina apaga 'Café Rota' sem
+saber que era o patrocinador de um desafio"*. O item existia porque a tela omite de propósito em
+quantos patrocínios cada marca é usada, e o motivo da omissão é que não há leitor barato para essa
+contagem.
+
+O dono resolve por outro caminho. Em vez de construir o contador para poder avisar antes de destruir,
+**tira a destruição da mesa**: patrocinador não se apaga, desativa-se, com aviso.
+
+**O que fecha.** A exclusão de marca é substituída por liga e desliga, com aviso.
+
+**O que abre, e é menor do que parece, porque metade já existe.** A medição feita nesta lane:
+
+O **campo já existe no modelo**. `StatusMarca = 'ativa' | 'inativa'`
+(`packages/core/src/brands/marca.ts:31`), validado no core (`:143`, `:165`) e aceito pela Rule, que
+exige "status no enum" no `shapeMarcaValida` de `firestore.rules:2980`.
+
+O que falta é a **superfície**. O `MarcaFormModal.tsx` não expõe `status` em campo nenhum, e a
+`MarcasPage.tsx` tem um botão **Excluir** destrutivo (`:188-189`) chamando
+`excluirMarcaDoProfissional` (`:133`), com o `ConfirmModal` que hoje é a única proteção.
+
+Então o build é: trocar o botão destrutivo pelo interruptor que o dado já sabe representar, esconder
+a marca inativa do autocomplete de patrocínios futuros sem removê-la do registro, e escrever o aviso.
+
+**Uma honestidade sobre o tamanho do risco que isto remove.** O cabeçalho da própria página
+(`MarcasPage.tsx:11-13`) diz que excluir tira a marca do autocomplete de patrocínios **futuros**, e
+que os patrocínios já cadastrados em eventos e clubes são **cópias independentes e permanecem
+intactos**. Apagar "Café Rota" hoje não quebra o desafio dela. O que se perde é o registro
+reutilizável, e a perda é irreversível. O interruptor é ganho de reversibilidade e de conforto, não
+resgate de integridade, e vender isso como conserto de defeito seria exagero.
+
+**O que a decisão faz com o E10-S812.** O contador de ativações continua não existindo, e o item
+continua no gelo. A pergunta que a spec responde: o "avisando" é uma frase genérica, que custa nada, ou
+é o número de patrocínios afetados, que exige o leitor barato que o S812 nunca teve? A esteira propõe a
+frase genérica agora e o número quando o S812 sair do gelo.
+
+**Onde aterrissa.** `apps/painel/src/routes/marcas/MarcasPage.tsx` e `MarcaFormModal.tsx`;
+`packages/api-client` no lugar de `excluirMarcaDoProfissional`; RN-171 em [[LEELA-E10-marcas]], que
+ganha o enunciado de que marca não se apaga.
+
+---
+
+## 21 · COMPROMETIDO-1 e a purga · o banco fica só com dado real
+
+> "O comprometido pode sair fora, já uq é apenas um teste. cancela e apaga tudo, pois quero trabalhar
+> com dados reais."
+>
+> Esclarecido, sobre o alcance: "Todo dado de teste restante"
+
+**Leitura do maestro.** Duas frases e dois tamanhos.
+
+A primeira fecha o **COMPROMETIDO-1**: os três repasses vetados que seguram R$ 167,00 são teste, e vão
+embora. É a primeira das três opções, cancelar os três de vez, e não a intermediária de poupar o que
+aponta para evento vivo. O "disponível para repasse" volta a corresponder ao dinheiro que existe.
+
+A segunda é muito maior que o item, e o esclarecimento confirma o alcance: **todo dado de teste
+restante**. Não é uma limpeza de resíduo, é a decisão de zerar o banco para o beta começar sobre dado
+real.
+
+**O que fecha.** COMPROMETIDO-1 e VITRINE-2, os dois por purga. E a purga em si, como ato autorizado.
+
+**O que abre, e é a operação mais perigosa desta rodada.** O escopo, como o maestro delimitou: os três
+repasses vetados, os eventos de teste, as inscrições de teste e as contas demo `marina@` e `felipe@`.
+
+**O que não pode ser tocado, e cada linha aqui é um jeito de destruir algo que não volta:**
+
+A **compra real do dono**, `PED-8CDHM`, com o ingresso `T93N7F`, e o evento a que ela pertence. É o
+único pagamento real que a plataforma já processou, é a prova do fluxo ponta a ponta, e apagá-lo
+apagaria o diagnóstico de 04/08 junto.
+
+A conta **`inguzbuilders@gmail.com`**, uid `FTqslV98itZUNGwL5ss6201d23Z2`. Ela **é** a antiga
+`admin@demo-leela.dev`, renomeada e não recriada, e carrega a claim `platform_admin`. Qualquer
+varredura que selecione contas pelo padrão de demonstração vai encontrá-la pelo histórico. Apagá-la
+tira o dono da própria plataforma.
+
+**A forma é a do expurgo de 06/08, e ela não é burocracia.** Aquele run mediu que cada delete de
+inscrito dispara `agregarFinanceiro`, `agregarEstoque` e `agregarDemografia`, e que os três só
+desistem se o documento do evento não existir. Como o evento morre depois dos inscritos, os agregados
+renascem e ficam **órfãos sob um pai inexistente**, invisíveis no console e para qualquer inventário
+futuro, porque `documents.list` não devolve pai que não existe. A ordem do plano é o que impede isso, e
+ela já está codificada em `planoLimpeza.ts`. Junto: a amplificação medida foi de cerca de 7.800
+escritas e 1 milhão de leituras para 710 inscritos, porque quatro gatilhos reescaneiam a coleção
+inteira a cada delete.
+
+Então a purga roda com **inventário congelado antes de apagar**, review fria sobre o plano congelado, e
+só depois o apply, reusando o runner de `C:\dev\leela-apply-20260806\`. O backup de Firestore e o de
+Auth têm de ser feitos **juntos**: restaurar um sem o outro devolve `ownerUid` para
+`uid-marina-castelo` com a claim do dono no lugar, que é o incidente da manhã de 06/08 outra vez.
+
+**Onde aterrissa.** Dado de produção em `leela-hub`; os três documentos de `repasses` com status
+vetado; `functions/src/limpeza/planoLimpeza.ts` como plano; Firebase Auth para as duas contas demo. A
+lacuna estrutural que a REV3 registrou, recomputo de saldo sem caminho de operador, **continua aberta**
+depois da purga: apagar o comprometido de teste não cria o botão que faltava.
+
+### ⛔ A armadilha de nome, e ela mataria a coisa mais importante do banco
+
+O evento da compra real do dono chama-se **`teste-taxa-repassada`**. A palavra "teste" está no próprio
+identificador. Qualquer varredura que selecione dado de teste por padrão de nome apagaria exatamente o
+que esta purga existe para preservar, e apagaria junto o único pagamento real que a plataforma já
+processou.
+
+A seleção tem de ser por **lista explícita conferida contra o inventário congelado**, nunca por padrão
+de nome, de slug ou de e-mail. A mesma regra vale para a conta `inguzbuilders@gmail.com`, que carrega o
+histórico de `admin@demo-leela.dev`, e que uma varredura por padrão de demonstração encontraria.
+
+Duas armadilhas de nome, dois jeitos de destruir o irrecuperável, e as duas se resolvem com a mesma
+disciplina: **a lista antes do apply, e nada fora dela**.
+
+---
+
 ## O que esta rodada deixa para a próxima lane do painel
 
-A retirada dos quinze itens de [[DECISOES-ABERTAS]] **não** foi feita aqui, por coordenação de
+A retirada dos dezenove itens de [[DECISOES-ABERTAS]] **não** foi feita aqui, por coordenação de
 árvore: a lane REV-CORTE estava viva no mesmo arquivo. A passada de painel entra depois dela e tem
 esta página como fonte.
 
-Três coisas precisam sobreviver à retirada, e é por isso que ficam escritas aqui:
+Cinco coisas precisam sobreviver à retirada, e é por isso que ficam escritas aqui:
 
 O **item 12** e os **quatro CRM** continuam no painel, e nenhum deles ganhou default por adiamento.
 
 O **LGPD-1** ganha a terceira frente, vinda do ARENA-1, ao lado da que o radar de WhatsApp criou hoje
 cedo. As duas são a mesma família: dado pessoal de participante deixando de ser privado por desenho.
 
-O **JUROS-1** deixou de ser executável como está escrito. Ele pede um save que selaria a v2 com
-2,89% em toda parcela, e a decisão de hoje derruba isso para 1x a 3x. Enquanto a pergunta do bloco 4
-não voltar respondida, executá-lo carimba o rastro errado.
+O **JUROS-1** fecha, mas com ordem: o alinhamento do parcelamento no código vem antes do save. Salvar
+primeiro sela uma v2 dizendo 2,89% em toda parcela, que é o número que a decisão do mesmo dia derruba
+de 1x a 3x. Consertar o histórico com o número errado é pior que o estado de hoje.
+
+Três linhas saem do painel **por purga** e não por construção: **VITRINE-2**, **COMPROMETIDO-1** e as
+contas demo do **ADMINSEP-3**. Nenhuma delas está resolvida até a PURGA-DADOS-TESTE rodar, então
+retirá-las do painel antes do apply trocaria pendência visível por pendência esquecida. Retirar junto
+com o report da purga, não antes.
+
+O **PATROCINADOR-TOGGLE** é decisão nova e não tem linha no painel para remover. Ele entra no board e
+no [[LEELA-E10-marcas]], e responde a **Posição 1** da fila de construção, que passa a ter resposta
+diferente da que o item propunha.
