@@ -1,4 +1,8 @@
 {
+  "color": {
+    "$description": "Polaridade do tema, em uma palavra: 'dark' ou 'light'. É o unico token que também vira DECLARAÇÃO CSS (`color-scheme`) no bloco do tema, e não só custom property — ver generateCSS em src/theme/generate.ts. Ele manda o navegador pintar o cromo que NÃO é nosso (barra de rolagem nativa, controles de formulário, caret, autofill) no esquema do tema. Sem ele o cromo nasce claro sobre tema escuro: foi a observação do dono em 04/08 sobre a barra de rolagem. Tema novo declara o seu; nunca é constante, porque brasa é escuro e wine é claro.",
+    "scheme": "dark"
+  },
   "surface": {
     "base": "{neutral.950}",
     "raised": "{neutral.900}",

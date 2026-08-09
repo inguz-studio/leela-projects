@@ -1,5 +1,6 @@
 :root:not([data-theme]),
 [data-theme="brasa"] {
+  color-scheme: dark;
   --primary-50: #FFE9DC;
   --primary-100: #FFC9A8;
   --primary-200: #FFA575;
@@ -135,6 +136,7 @@
   --icon-stroke: 1.75;
   --brand-wordmark: #C8E84A;
   --brand-wordmark-box: #2A1018;
+  --color-scheme: dark;
   --surface-base: var(--neutral-950);
   --surface-raised: var(--neutral-900);
   --surface-overlay: var(--neutral-850);

@@ -138,6 +138,7 @@ export interface GenerateCSSOptions {
  * Output shape:
  * ```css
  * [data-theme="brasa"] {
+ *   color-scheme: dark;
  *   --primary-500: #FF450C;
  *   --surface-base: var(--neutral-950);
  *   ...
@@ -164,8 +165,27 @@ export function generateCSS(
     ? `:root:not([data-theme]),\n[data-theme="${theme}"] {`
     : `[data-theme="${theme}"] {`;
 
+  // `color-scheme` é o ÚNICO token que também sai como DECLARAÇÃO, não só como
+  // custom property. Uma var sozinha não pinta nada: quem lê `--color-scheme`
+  // é o nosso CSS, e o cromo que precisa obedecer ao tema não é nosso — barra
+  // de rolagem nativa, controles de formulário, caret e autofill são desenhados
+  // pelo navegador, e ele só olha para a propriedade `color-scheme`. Sem essa
+  // linha o navegador assume o esquema claro e pinta uma barra cinza-clara
+  // sobre a interface escura (observação do dono, 04/08).
+  //
+  // O valor vem do token do tema (`tokens/semantic*.json` → `color.scheme`),
+  // nunca de um literal aqui: brasa é escuro e wine é claro, e um tema futuro
+  // declara o seu sem tocar no gerador. Token ausente ⇒ nenhuma declaração
+  // (o navegador volta ao `normal`), em vez de carimbar um esquema errado.
+  //
+  // Vai ANTES das vars, e a var `--color-scheme` continua emitida junto com as
+  // outras: é dela que uma barra estilizada por token se serviria, se o dono
+  // pedir (proposta SCROLLBAR-1 em leela-specs/01-produto/DECISOES-ABERTAS.md).
+  const colorScheme = allVars.find(([name]) => name === 'color-scheme')?.[1];
+
   const lines = [
     selector,
+    ...(colorScheme === undefined ? [] : [`  color-scheme: ${colorScheme};`]),
     ...allVars.map(([name, value]) => `  --${name}: ${value};`),
     '}',
   ];

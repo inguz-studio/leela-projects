@@ -61,6 +61,16 @@
  * vindo de fora apagava a trava em silêncio e o teste continuava verde, porque
  * renderiza sem `className` — foi o achado da REV-LOTES (c2b19244). Todo
  * componente que aceita `className` no elemento que rola tem teste de override.
+ *
+ * ## A COR da barra não se decide aqui
+ *
+ * Este arquivo manda em quando a barra EXISTE. Em que cor ela nasce é assunto do
+ * tema: `color-scheme` no bloco de cada tema, vindo do token `color.scheme`
+ * (`tokens/semantic*.json` → `src/theme/generate.ts`), com contrato em
+ * `src/theme/__tests__/color-scheme.test.ts`. O dono reportou a barra clara sobre
+ * o tema escuro em 04/08 e a causa era essa declaração faltando — não estas
+ * constantes. Quem for mexer na aparência da barra mexe no tema; quem for mexer
+ * na existência dela mexe aqui.
  */
 
 /**

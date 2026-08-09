@@ -1,4 +1,8 @@
 {
+  "color": {
+    "$description": "wine inverte os papéis dos neutros: surface.base é {neutral.50} (#FDFAF7) e o texto é escuro. Tema CLARO — o cromo nativo tem de nascer claro aqui, ou a barra de rolagem escura do brasa vazaria para uma interface branca. Este override é a prova de que a polaridade acompanha o tema em vez de ser constante.",
+    "scheme": "light"
+  },
   "surface": {
     "base":    "{neutral.50}",
     "raised":  "{neutral.0}",
