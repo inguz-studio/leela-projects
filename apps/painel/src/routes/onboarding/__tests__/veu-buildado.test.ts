@@ -27,6 +27,18 @@
 // grava em `dist/assets/*.css` para essas utilidades — sem pagar um bundle
 // inteiro a cada `vitest run`.
 //
+// ONDE O VÉU MORA AGORA (VITRINE-VEU-1 · corte de 09/08). O aviso deixou de
+// desenhar o próprio `role="dialog"` e passou a usar o `Modal` do design
+// system, que 26 telas do painel já usavam. O véu é o `data-testid="modal-
+// overlay"` do `Modal`, e é de lá que a classe é lida — o gate segue a peça em
+// vez de medir um véu que o aviso não usa mais. A medição não afrouxou: são as
+// mesmas cinco perguntas, sobre a classe que está de fato na tela.
+//
+// E porque a fonte da classe mudou de arquivo, o gate ganhou o elo que faltava:
+// um caso que exige que o aviso USE o `Modal`. Sem ele, alguém reescreveria o
+// véu à mão de novo e este arquivo seguiria verde medindo o `Modal` de outra
+// pessoa.
+//
 // E A PROVA DE QUE A MEDIÇÃO MORDE: o último caso compila a classe do DEF-C,
 // exatamente como ela era, e exige ZERO declaração de fundo. Um gate que não
 // falha no defeito que veio prevenir é decoração; este falha.
@@ -46,6 +58,7 @@ import type { Config } from 'tailwindcss';
 
 const RAIZ_DS = resolve(__dirname, '../../../../../../packages/design-system');
 const FONTE_OVERLAY = resolve(__dirname, '../OverlayConvite.tsx');
+const FONTE_MODAL = resolve(RAIZ_DS, 'src/components/Modal/Modal.tsx');
 
 /**
  * Compila `classes` com o Tailwind e o preset REAIS do painel e devolve o CSS.
@@ -65,18 +78,27 @@ async function compilar(classes: string): Promise<string> {
 }
 
 /**
- * A classe do VÉU, lida da fonte — o elemento que carrega `role="dialog"`, que
- * é o mesmo que pinta o fundo e cobre a tela inteira.
+ * A classe do VÉU, lida da fonte do `Modal` do DS — o elemento
+ * `data-testid="modal-overlay"`, que é o que pinta o fundo e cobre a tela.
+ *
+ * O `Modal` monta a classe com `cn(...)`, então o que se lê são os literais de
+ * string do elemento, juntos, na ordem em que estão. Comentários saem antes
+ * para que um apóstrofo dentro de um deles não vire classe.
  * @pure
  */
 function classeDoVeu(): string {
-  const fonte = readFileSync(FONTE_OVERLAY, 'utf8');
-  const inicio = fonte.indexOf('role="dialog"');
-  expect(inicio, 'o elemento do véu (role="dialog") sumiu da fonte').toBeGreaterThan(-1);
-  const abertura = fonte.slice(inicio);
-  const classe = /className="([^"]+)"/.exec(abertura)?.[1];
-  expect(classe, 'o véu ficou sem className na fonte').toBeTruthy();
-  return classe ?? '';
+  const fonte = readFileSync(FONTE_MODAL, 'utf8');
+  const inicio = fonte.indexOf('data-testid="modal-overlay"');
+  expect(inicio, 'o véu do Modal (data-testid="modal-overlay") sumiu da fonte').toBeGreaterThan(-1);
+  const semComentario = fonte.slice(inicio).replace(/\/\/[^\n]*/g, '');
+  const fim = semComentario.indexOf('/>');
+  expect(fim, 'o elemento do véu não fecha na fonte do Modal').toBeGreaterThan(-1);
+  const classe = [...semComentario.slice(0, fim).matchAll(/'([^']*)'/g)]
+    .map((m) => m[1] ?? '')
+    .join(' ')
+    .trim();
+  expect(classe, 'o véu ficou sem classe na fonte do Modal').toBeTruthy();
+  return classe;
 }
 
 /** Todas as declarações `background-color` do CSS compilado. @pure */
@@ -85,6 +107,39 @@ function fundosDeclarados(css: string): string[] {
     .map((m) => m[1]?.trim())
     .filter((valor): valor is string => valor !== undefined);
 }
+
+describe('véu do overlay · é o véu DO AVISO que está sendo medido', () => {
+  // O elo que amarra os dois arquivos. Sem ele o gate mede o véu do `Modal` e
+  // passa verde mesmo que o aviso tenha voltado a desenhar um dialog à mão —
+  // que é exatamente o defeito (DEF-R1) que o VITRINE-VEU-1 veio desfazer.
+  const fonteDoAviso = (): string => readFileSync(FONTE_OVERLAY, 'utf8');
+
+  /**
+   * O CÓDIGO do aviso, sem comentário. O cabeçalho do arquivo explica o DEF-R1
+   * citando `role="dialog"` e `aria-modal` — apagar essa explicação para o teste
+   * passar seria a troca errada. Mede-se o que roda.
+   * @pure
+   */
+  const codigoDoAviso = (): string =>
+    fonteDoAviso()
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '');
+
+  it('o aviso usa o `Modal` do design system', () => {
+    const codigo = codigoDoAviso();
+    expect(codigo).toMatch(/import\s*{[^}]*\bModal\b[^}]*}\s*from\s*'@leela\/design-system'/);
+    expect(codigo).toMatch(/<Modal\b/);
+  });
+
+  it('o aviso não desenha diálogo à mão (DEF-R1 não volta por descuido)', () => {
+    // `role="dialog"` + `aria-modal` escritos aqui foram o defeito medido: véu
+    // que para o ponteiro e mais nada, sem portal, sem trava de rolagem, com
+    // oito controles do fundo alcançáveis por trás dele.
+    const codigo = codigoDoAviso();
+    expect(codigo).not.toMatch(/role="dialog"/);
+    expect(codigo).not.toMatch(/aria-modal/);
+  });
+});
 
 describe('véu do overlay · o que o BUILD produz (DEF-C)', () => {
   it('a classe que está na fonte compila em cor de fundo de verdade', async () => {

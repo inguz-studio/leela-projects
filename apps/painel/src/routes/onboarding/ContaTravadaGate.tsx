@@ -54,12 +54,13 @@
 // relida — o painel destrava na hora, sem novo login.
 // =============================================================================
 
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { logout } from '@leela/api-client';
 import { Skeleton } from '@leela/design-system';
 import { OverlayConvite } from './OverlayConvite';
 import { VitrinePainel } from './VitrinePainel';
+import { useFundoInerte } from './_lib/fundoInerte';
 import { useAvisoNaPrimeiraInteracao } from './_lib/primeiraInteracao';
 import {
   contaTravada,
@@ -98,6 +99,15 @@ export function ContaTravadaGate({ children }: ContaTravadaGateProps): JSX.Eleme
   // painel não paga nada por esta tela.
   const aviso = useAvisoNaPrimeiraInteracao(emVitrine);
 
+  // VITRINE-VEU-1 · com o aviso na frente, o painel inteiro sai do alcance —
+  // inclusive da tecnologia assistiva, que é o que o `aria-modal` sozinho não
+  // entrega (DEF-R1). A âncora é a raiz da vitrine; quem acha o contêiner do
+  // app a partir dela, e por que ela precisa estar ABAIXO da sidebar no DOM,
+  // está em `_lib/fundoInerte.ts`. O aviso é portalizado pelo `Modal` do DS
+  // para o `body`, então fica irmão do contêiner e de fora do `inert`.
+  const vitrineRef = useRef<HTMLDivElement>(null);
+  useFundoInerte(aviso.aberto, vitrineRef);
+
   if (lendoCracha) {
     return (
       <div role="status" aria-label="Carregando o painel" className="p-[var(--spacing-6)]">
@@ -117,7 +127,7 @@ export function ContaTravadaGate({ children }: ContaTravadaGateProps): JSX.Eleme
 
   return (
     <>
-      <VitrinePainel onPedirCodigo={aviso.abrir} />
+      <VitrinePainel ref={vitrineRef} onPedirCodigo={aviso.abrir} />
       {aviso.aberto ? (
         <OverlayConvite
           contato={contato}

@@ -23,6 +23,7 @@
 // coisa. `areaDaVitrine` é pura e resolve isso sem uma linha de dado.
 // =============================================================================
 
+import { forwardRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Button, EmptyState, PageHeader } from '@leela/design-system';
 import { KeyRound } from 'lucide-react';
@@ -33,30 +34,39 @@ export interface VitrinePainelProps {
   onPedirCodigo: () => void;
 }
 
-export function VitrinePainel({ onPedirCodigo }: VitrinePainelProps): JSX.Element {
-  const location = useLocation();
-  const area = areaDaVitrine(location.pathname);
+/**
+ * A raiz é encaminhada por `ref` (VITRINE-VEU-1) e não é enfeite: o gate precisa
+ * de um ponto de partida DENTRO da árvore do app para achar o contêiner que vai
+ * ficar inerte enquanto o aviso está na frente — e a sidebar, que carrega seis
+ * dos oito controles do defeito, é desenhada acima deste gate. Encaminhar o
+ * `ref` custa zero nó novo no DOM. Ver `_lib/fundoInerte.ts`.
+ */
+export const VitrinePainel = forwardRef<HTMLDivElement, VitrinePainelProps>(
+  function VitrinePainel({ onPedirCodigo }, ref): JSX.Element {
+    const location = useLocation();
+    const area = areaDaVitrine(location.pathname);
 
-  return (
-    <div className="flex flex-col gap-[var(--spacing-6)]">
-      <PageHeader title={area.titulo} subtitle={area.descricao} />
+    return (
+      <div ref={ref} className="flex flex-col gap-[var(--spacing-6)]">
+        <PageHeader title={area.titulo} subtitle={area.descricao} />
 
-      <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">
-        <div className="rounded-[var(--card-radius)] border border-[var(--border-subtle)] bg-[var(--surface-raised)]">
-          <EmptyState
-            icon={<KeyRound size={32} aria-hidden />}
-            title="Esta área abre com o código Leela"
-            description="Você já está dentro e pode circular à vontade. Para trabalhar com seus dados aqui, fale com o nosso time e receba o código Leela."
-            action={
-              <Button variant="primary" onClick={onPedirCodigo}>
-                Como receber o código Leela
-              </Button>
-            }
-          />
+        <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">
+          <div className="rounded-[var(--card-radius)] border border-[var(--border-subtle)] bg-[var(--surface-raised)]">
+            <EmptyState
+              icon={<KeyRound size={32} aria-hidden />}
+              title="Esta área abre com o código Leela"
+              description="Você já está dentro e pode circular à vontade. Para trabalhar com seus dados aqui, fale com o nosso time e receba o código Leela."
+              action={
+                <Button variant="primary" onClick={onPedirCodigo}>
+                  Como receber o código Leela
+                </Button>
+              }
+            />
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
 
 VitrinePainel.displayName = 'VitrinePainel';

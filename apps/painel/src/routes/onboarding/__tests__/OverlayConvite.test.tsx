@@ -99,13 +99,68 @@ describe('OverlayConvite — bloqueia, mas sai (RN-510)', () => {
   // nenhuma: modificador de opacidade sobre valor arbitrário `var()` é
   // descartado no build. Aqui se mede a CLASSE; quem mede o CSS BUILDADO é
   // `veu-buildado.test.ts`, que é a prova que faltava em 2026-08-03.
+  //
+  // Desde o VITRINE-VEU-1 o véu é o do `Modal` do DS (`modal-overlay`), e não
+  // mais um irmão do painel desenhado aqui. O token medido é o MESMO — era dele
+  // que o conserto do DEF-C tinha ido buscar a cor.
   it('DEF-C: o véu usa o token de overlay do DS, não uma classe que não compila', () => {
     montar();
-    const dialogo = screen.getByRole('dialog');
-    expect(dialogo.className).toContain('bg-[var(--modal-overlay-bg)]');
-    expect(dialogo.className).toContain('backdrop-blur-[var(--modal-overlay-blur)]');
+    const veu = screen.getByTestId('modal-overlay');
+    expect(veu.className).toContain('bg-[var(--modal-overlay-bg)]');
+    expect(veu.className).toContain('backdrop-blur-[var(--modal-overlay-blur)]');
     // Modificador de opacidade sobre `var()` some no build — em nenhuma classe.
-    expect(dialogo.className).not.toMatch(/var\(--[a-z-]+\)\]\/\d/);
+    expect(veu.className).not.toMatch(/var\(--[a-z-]+\)\]\/\d/);
+  });
+
+  // ── VITRINE-CONTRASTE-1 (corte de 09/08) ─────────────────────────────
+  it('o cartão tem limite visível: a borda é `--border-strong`', () => {
+    // 1,13:1 do cartão contra o próprio véu no tema brasa, e 1,31:1 da borda
+    // `--border-subtle`, num piso de 3:1 (WCAG 1.4.11). O `Modal` do DS não
+    // desenha borda — ele se separa do fundo por sombra, que não é limite
+    // medível. Os números do token resolvido estão em `contraste-aviso.test.ts`.
+    montar();
+    const painel = screen.getByRole('dialog');
+    expect(painel.className).toContain('border-[var(--border-strong)]');
+    expect(painel.className).not.toContain('border-[var(--border-subtle)]');
+  });
+});
+
+describe('OverlayConvite — o que o `Modal` do DS trouxe (VITRINE-VEU-1)', () => {
+  it('o aviso é portalizado para o `body`, fora do `<main>` do painel', () => {
+    // Era este o coração do DEF-R1: o dialog morava dentro do
+    // `<main class="overflow-hidden">`, e portanto dentro da mesma subárvore
+    // que ele dizia estar tornando inerte.
+    const { container } = montar();
+    const dialogo = screen.getByRole('dialog');
+    expect(container.contains(dialogo)).toBe(false);
+    expect(dialogo.parentElement).toBe(document.body);
+  });
+
+  it('a rolagem do documento trava enquanto o aviso está na tela', () => {
+    expect(document.body.style.overflow).toBe('');
+    const { unmount } = montar();
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('o X do cabeçalho fecha, como as outras saídas', async () => {
+    const onFechar = vi.fn();
+    montar({ onFechar });
+    await usuario().click(screen.getByRole('button', { name: /Fechar/i }));
+    expect(onFechar).toHaveBeenCalledTimes(1);
+  });
+
+  it('digitar o código não arranca o foco do campo', async () => {
+    // ⛔ Regressão que o `Modal` cria se `onOpenChange` nascer inline: o
+    // `useDialogBehavior` tem `onClose` nas dependências do efeito, e a cada
+    // tecla o efeito remontaria — devolvendo o foco ao abridor (no FUNDO) e
+    // depois jogando-o no X. Um caractere por vez, e nunca dois.
+    montar();
+    const campo = screen.getByLabelText(/código Leela/i);
+    await usuario().type(campo, 'AB23CD45');
+    expect(campo).toHaveValue('AB23CD45');
+    expect(document.activeElement).toBe(campo);
   });
 });
 
