@@ -137,6 +137,32 @@ describe('véu do overlay · o que o BUILD produz (DEF-C)', () => {
 describe('véu do overlay · o token é opaco o bastante para ser véu', () => {
   const TEMAS = ['themes/index.css', 'themes/brasa.css', 'themes/wine.css'] as const;
 
+  it.each(TEMAS)('%s define --modal-overlay-blur (o elo que faltava medir)', (arquivo) => {
+    // Acrescentado pela review antagonista (REV-VITRINE · DEF-R5). O bloco
+    // acima prova que a classe compila a CORRENTE do desfoque
+    // (`--tw-backdrop-blur: blur(var(--modal-overlay-blur))` e o
+    // `backdrop-filter` que a consome) — mas nunca perguntou se a ponta da
+    // corrente EXISTE. `blur(var(--indefinido))` não é um valor válido, e um
+    // valor inválido dentro de `backdrop-filter` invalida a declaração INTEIRA:
+    // o desfoque some sem que classe nenhuma mude. É o DEF-C um degrau adiante
+    // — a regra certa apontando para um token que não está lá.
+    //
+    // Medido no bundle desta review: `--modal-overlay-blur: 4px` nos dois
+    // blocos de tema do `dist`. Aqui trava-se a fonte, tema a tema.
+    const css = readFileSync(resolve(RAIZ_DS, arquivo), 'utf8');
+    const declaracoes = [...css.matchAll(/--modal-overlay-blur:\s*([^;]+);/g)]
+      .map((m) => m[1]?.trim())
+      .filter((valor): valor is string => valor !== undefined);
+    expect(declaracoes.length, `--modal-overlay-blur não existe em ${arquivo}`).toBeGreaterThan(0);
+    for (const valor of declaracoes) {
+      // Comprimento com unidade e maior que zero. `0px` compila, resolve e não
+      // desfoca nada — a mesma classe de defeito do `transparent`.
+      const px = /^([\d.]+)(px|rem|em)$/.exec(valor);
+      expect(px, `--modal-overlay-blur sem comprimento legível em ${arquivo}: ${valor}`).not.toBeNull();
+      expect(Number(px?.[1])).toBeGreaterThan(0);
+    }
+  });
+
   it.each(TEMAS)('%s define --modal-overlay-bg com opacidade real', (arquivo) => {
     // Uma regra que resolve para `transparent` é o mesmo defeito com outra
     // roupa: o véu existe no CSS e não cobre nada. 0,5 é o piso do que ainda
