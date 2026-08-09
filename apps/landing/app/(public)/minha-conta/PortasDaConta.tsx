@@ -42,6 +42,32 @@
 // "Profissional", nunca "organizador", no rótulo do painel. E a copy não
 // promete mais que a conta "nasce separada": pela RN-450, organizador e
 // cliente cabem na MESMA conta — o que nasce separado é o documento de perfil.
+//
+// -----------------------------------------------------------------------------
+// O RÓTULO É VARIANTE, E A VARIANTE TEM FILA (PONTE-RET-D1 · direção do dono 07/08)
+// -----------------------------------------------------------------------------
+// O dono pediu, verbatim: *"a primeira é 'Painel Profissional' ao invés de virar
+// profissional. Podemos ter CTA's diferentes, que é 'Criar Club' e 'Organizar
+// eventos'"*. São três rótulos e uma ordem: o primeiro nomeia o LUGAR, os outros
+// dois nomeiam o TRABALHO, e a frase que os une é "devemos testar coisas
+// diferentes".
+//
+// O que esta tela entrega é a variante 1 — `ROTULO_DA_TRAVESSIA`. As outras duas
+// ficam escritas ao lado dela, e a razão de não subirem juntas não é escopo, é
+// MEDIÇÃO: a landing não tem uma linha de telemetria (`grep` por
+// gtag/plausible/posthog/analytics/logEvent devolve zero fora de node_modules).
+// Dois botões que disparam a MESMA promoção, sem medir qual foi clicado, não
+// testam nada — só cobram da pessoa uma decisão a mais num cartão cuja função é
+// desbloquear um caminho que hoje é beco.
+//
+// O que NÃO é razão para a fila, e vale registrar porque o oposto já foi suposto:
+// a criação de clube EXISTE (`/clubes/novo`, `NovoClubePage`, com CTA no
+// `HubClubes`). Ela está atrás do tenant, exatamente como a criação de evento, e
+// o `ContaTravadaGate` do painel troca as duas pela vitrine enquanto a conta não
+// resgatou o código. As duas intenções são SIMÉTRICAS — a vitrine já nomeia
+// "Eventos" e "Clubs" com o mesmo peso (`areasDaVitrine.ts`) — e o resgate do
+// código provisiona o tenant que abre as duas. Por isso o cartão pode NOMEAR os
+// dois trabalhos sem mentir, mesmo entregando uma porta só.
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -66,6 +92,24 @@ const ERRO =
 
 /** A frase do segundo login. Uma só, para os dois cartões (PCLIENTE-3). */
 const AVISO_SEGUNDO_LOGIN = 'O painel vai pedir sua senha de novo — é a mesma conta e o mesmo e-mail.';
+
+/**
+ * O rótulo da travessia, variante 1 (PONTE-RET-D1). Texto exato do dono.
+ *
+ * A fila de variantes, para quem for rodar o teste — trocar aqui, e em nenhum
+ * outro lugar, é o que muda o rótulo:
+ *
+ *   v1 (esta)  'Painel Profissional'  — nomeia o lugar.
+ *   v2         'Organizar eventos'    — nomeia o trabalho; a área existe e a
+ *                                       vitrine já a nomeia.
+ *   v3         'Criar Club'           — nomeia o outro trabalho; `/clubes/novo`
+ *                                       existe e abre com o mesmo código.
+ *
+ * ⛔ Nenhuma das três pode subir junto com outra enquanto não houver medição na
+ * landing: sem saber qual foi clicado, o teste não tem leitura. É variante
+ * alternada, não botão duplo.
+ */
+const ROTULO_DA_TRAVESSIA = 'Painel Profissional';
 
 /**
  * A copy de cada recusa. Fica AQUI, e não no api-client, porque é voz do
@@ -157,10 +201,15 @@ function PortaDeQuemAindaNaoE(): React.JSX.Element {
         <h2 className={TITULO}>Pronto. O painel profissional já é seu</h2>
         {/* A confirmação é curta e a travessia vem junto: a pessoa acabou de
             pedir para conhecer, e mandá-la procurar o caminho seria devolver
-            a ela o trabalho que este cartão existe para tirar. */}
+            a ela o trabalho que este cartão existe para tirar.
+
+            As duas áreas são NOMEADAS aqui de propósito. A pessoa vai cair na
+            vitrine, e a vitrine acompanha o menu: dizer "Eventos e Clubs" é
+            dizer onde ela vai encontrar o que veio buscar, e no mesmo fôlego
+            dizer que o código é o que abre as duas. */}
         <p className={APOIO} role="status">
-          Entre com esta mesma conta para conhecer as áreas por dentro. Para começar a vender,
-          o time Leela libera seu código. {AVISO_SEGUNDO_LOGIN}
+          Entre com esta mesma conta para conhecer as áreas por dentro — Eventos e Clubs estão lá.
+          Para trabalhar com os seus dados, o time Leela libera seu código. {AVISO_SEGUNDO_LOGIN}
         </p>
         <a className={LINK} href={painelUrl('/entrar')} data-slot="ir-para-painel-vitrine">
           Ir para o painel profissional
@@ -171,11 +220,14 @@ function PortaDeQuemAindaNaoE(): React.JSX.Element {
 
   return (
     <section className={CARTAO} data-slot="porta-conhecer-painel">
-      <h2 className={TITULO}>Quer organizar uma experiência?</h2>
+      {/* O título nomeia os dois TRABALHOS que o dono pediu como intenção, e o
+          botão nomeia o LUGAR. Não são dois botões: ver a nota do
+          `ROTULO_DA_TRAVESSIA`. */}
+      <h2 className={TITULO}>Quer organizar eventos ou criar um club?</h2>
       <p className={APOIO}>
-        O painel profissional é onde você publica experiências, vende inscrições e acompanha
-        repasses. Você pode entrar e conhecer agora, com esta mesma conta. Para começar a vender,
-        o time Leela libera seu código.
+        O painel profissional é onde você publica experiências, vende inscrições, acompanha
+        repasses e toca os seus clubs. Você pode entrar e circular agora, com esta mesma conta.
+        Para trabalhar com os seus dados, o time Leela libera seu código.
       </p>
       <p className={APOIO}>{AVISO_SEGUNDO_LOGIN}</p>
 
@@ -213,9 +265,9 @@ function PortaDeQuemAindaNaoE(): React.JSX.Element {
           type="button"
           onClick={() => void conhecer()}
           disabled={!aceito || fase === 'promovendo'}
-          data-slot="conhecer-painel-profissional"
+          data-slot="ponte-cta-painel-profissional"
         >
-          {fase === 'promovendo' ? 'Abrindo…' : 'Conhecer o painel profissional'}
+          {fase === 'promovendo' ? 'Abrindo…' : ROTULO_DA_TRAVESSIA}
         </Button>
       </div>
     </section>

@@ -15,6 +15,12 @@
  *   - cada recusa vira frase própria, e nenhuma chega como erro cru;
  *   - a máscara anti-enumeração continua INTACTA: a área não exercita mais o
  *     `/cadastrar` do painel, e sessão anônima não alcança este cartão.
+ *
+ * PONTE-RET-D1 (direção do dono de 07/08) acrescenta o que o rótulo passou a
+ * dever: o botão diz "Painel Profissional" — o lugar, com o texto exato do dono
+ * —, o cartão NOMEIA as duas intenções que ele pediu, e a porta continua UMA só
+ * enquanto a landing não tiver medição. Um segundo botão disparando a mesma
+ * promoção é um teste que não mede nada, e este arquivo falha se ele aparecer.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'fs';
@@ -43,8 +49,10 @@ async function montar(claims: Record<string, unknown>): Promise<void> {
   await waitFor(() => expect(getClaims).toHaveBeenCalled());
 }
 
-const botaoConhecer = (): HTMLElement =>
-  screen.getByRole('button', { name: /conhecer o painel profissional/i });
+/** O rótulo da variante 1, verbatim do dono. Ver `ROTULO_DA_TRAVESSIA`. */
+const ROTULO_CTA = /^painel profissional$/i;
+
+const botaoConhecer = (): HTMLElement => screen.getByRole('button', { name: ROTULO_CTA });
 
 const marcarTermo = (): void => {
   fireEvent.click(screen.getByLabelText(/li e aceito o termo do profissional/i));
@@ -83,8 +91,51 @@ describe('S1234-T2 · quem JÁ é profissional', () => {
 
   it('não propõe promoção nenhuma a quem já atravessou', async () => {
     await montar({ role: 'tenant_owner', tenantId: 'castelo' });
-    expect(screen.queryByRole('button', { name: /conhecer o painel profissional/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: ROTULO_CTA })).toBeNull();
     expect(promoverParaProfissional).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PONTE-RET-D1 · o rótulo do dono, e a porta única que ele não vira
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-RET-D1 · o rótulo nomeia o lugar, o cartão nomeia os trabalhos', () => {
+  it('o CTA é exatamente "Painel Profissional" — texto do dono, sem paráfrase', async () => {
+    await montar({ role: 'athlete' });
+    const botao = document.querySelector('[data-slot="ponte-cta-painel-profissional"]');
+    expect(botao).not.toBeNull();
+    expect((botao?.textContent ?? '').trim()).toBe('Painel Profissional');
+    // ⛔ O rótulo velho prometia a visita, não o lugar. Não volta.
+    expect((botao?.textContent ?? '').toLowerCase()).not.toContain('conhecer');
+    // ⛔ E não pode virar promessa de transformação da pessoa (RN-468).
+    expect((botao?.textContent ?? '').toLowerCase()).not.toContain('virar');
+  });
+
+  it('o cartão nomeia as DUAS intenções que o dono pediu', async () => {
+    await montar({ role: 'athlete' });
+    const texto = document.querySelector('[data-slot="porta-conhecer-painel"]')?.textContent ?? '';
+    expect(texto).toMatch(/eventos/i);
+    expect(texto).toMatch(/clubs?/i);
+  });
+
+  it('⚔ a porta é UMA — dois botões sem medição seriam um teste que não mede', async () => {
+    // A landing não tem uma linha de telemetria. Um segundo CTA disparando a
+    // mesma promoção não diria qual intenção converteu, e cobraria da pessoa
+    // uma decisão a mais no cartão que existe para desbloquear um beco.
+    await montar({ role: 'athlete' });
+    const cartao = document.querySelector('[data-slot="porta-conhecer-painel"]');
+    const botoes = Array.from(cartao?.querySelectorAll('button') ?? []);
+    expect(botoes).toHaveLength(1);
+  });
+
+  it('⚔ o cartão NÃO promete criação de clube na landing', async () => {
+    // A tela de criação existe, mas mora no painel (`/clubes/novo`) e atrás do
+    // tenant. Nada aqui pode sugerir que ela abre deste lado.
+    await montar({ role: 'athlete' });
+    for (const a of Array.from(document.querySelectorAll('a[href]'))) {
+      expect(a.getAttribute('href') ?? '').not.toContain('/clubes');
+    }
   });
 });
 

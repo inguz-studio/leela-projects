@@ -94,7 +94,7 @@ describe('S1222-T5 · as portas na tela', () => {
     getClaims.mockResolvedValue({ role: 'athlete' });
     await montar();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /conhecer o painel profissional/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /^painel profissional$/i })).toBeTruthy()
     );
     expect(screen.queryByRole('link', { name: /ir para o painel profissional/i })).toBeNull();
   });
@@ -107,7 +107,7 @@ describe('S1222-T5 · as portas na tela', () => {
     );
     const link = screen.getByRole('link', { name: /ir para o painel profissional/i });
     expect(link.getAttribute('href')).toMatch(/\/entrar$/);
-    expect(screen.queryByRole('button', { name: /conhecer o painel profissional/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^painel profissional$/i })).toBeNull();
   });
 
   it('⚔ conta de administração não vê porta alguma', async () => {

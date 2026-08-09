@@ -10,15 +10,6 @@ tags:
 
 ## 📋 Backlog
 
-- [ ] **[E12] A porta do painel do cliente para o painel profissional está quebrada** — o cartão "criar conta de organizador" manda quem está logada para o formulário de cadastro do painel, e como a conta dela já existe o sistema devolve a negativa genérica anti-enumeração. Passa a ser promoção da conta que já existe, com o destino sendo a vitrine da RN-510 e o código Leela à mão 📋 especificado em 06/08 · lane SPEC-PAINEL-CLIENTE · **pode sair a qualquer momento, não depende de decisão** [[LEELA-E12-landing]]
-    - [ ] **S1234 · A ponte para o painel profissional**
-        - [ ] S1234-T1 a promoção no servidor: `profissionais/{uid}` em `aguardando_convite` com o carimbo do termo, idempotente, com as cinco recusas nomeadas ⚔
-        - [ ] S1234-T3 a prova de fronteira: a ponte não concede tenant, não concede `platform_admin` e não altera papel ⚔ — **antes da tela**
-        - [ ] S1234-T2 o cartão da ponte nos dois estados, com o aceite do termo e o aviso do segundo login — ⚠️ `portaOrganizador.ts:52-68` tem comentário pinado que não pode ser "consertado"
-        - [ ] S1234-T4 a demonstração ponta a ponta: cliente atravessa, aterrissa em vitrine, o aviso sobe e o código resgata
-    - [ ] **S1235 · A travessia declarada nos dois sentidos**
-        - [ ] S1235-T1 o par do alternador no lado do cliente, com o vocabulário do `AlternadorDePainel`
-        - [ ] S1235-T2 a copy da travessia e o rebatismo da RN-468 nos rótulos (profissional, não organizador)
 - [ ] **[E12] O painel do cliente ganha casca, navegação e estados** — a área do cliente está no ar com as quatro abas e vira painel: cabeçalho de conta, navegação persistente e os estados de sistema com nome próprio, em vez de improviso por painel 📋 especificado em 06/08 · lane SPEC-PAINEL-CLIENTE · **retido: fica com você o PCLIENTE-1** (a forma, antes de você simular as telas) [[LEELA-E12-landing]]
     - [ ] **S1233 · O painel do cliente ganha casca, navegação e estados**
         - [ ] S1233-T1 a casca: cabeçalho de conta, navegação persistente e o comportamento em 320 pixels — precisa de `AppShell`, `PageHeader` e `Skeleton` atravessando o boundary de cliente da landing (três nomes no `export`)
@@ -207,6 +198,19 @@ tags:
 
 
 ## 🔄 Em execução
+
+- [ ] **[E12] A porta do painel do cliente para o painel profissional está quebrada** — o cartão "criar conta de organizador" manda quem está logada para o formulário de cadastro do painel, e como a conta dela já existe o sistema devolve a negativa genérica anti-enumeração. Passa a ser promoção da conta que já existe, com o destino sendo a vitrine da RN-510 e o código Leela à mão 🔄 **construído em 06/08 (`35a85f04`) e NÃO está no ar** — o commit declara no próprio trailer que a callable nunca foi exercitada · **os gates foram re-provados do zero em 08/08** pela lane PONTE-RET, porque verde de antes de um travamento não vale · **falta a review antagonista (PONTE-REV) e o deploy (DEPLOY-PONTE)** · o rótulo virou o que você pediu em 07/08 · **fica com você:** **PONTE-CTA-1** (três rótulos para a mesma porta, e a landing não tem medição) [[LEELA-E12-landing]]
+    - [ ] **S1234 · A ponte para o painel profissional**
+        - [x] S1234-T1 a promoção no servidor: `profissionais/{uid}` em `aguardando_convite` com o carimbo do termo, idempotente, com as cinco recusas nomeadas ⚔ — `35a85f04` · **construído, não no ar**
+        - [x] S1234-T3 a prova de fronteira: a ponte não concede tenant, não concede `platform_admin` e não altera papel ⚔ — `35a85f04` · **re-provada em 08/08 e falsificada de propósito**: injetando um `setCustomUserClaims` real no módulo, 6 dos 19 casos caem. A guarda é executável, não é comentário prometendo gate
+        - [x] S1234-T2 o cartão da ponte nos dois estados, com o aceite do termo e o aviso do segundo login — `35a85f04` + o rótulo de 08/08 · ⚠️ `portaOrganizador.ts:52-68` **não foi tocado**, o comentário pinado segue intacto
+        - [x] S1234-T2-ROTULO o rótulo passa a ser "Painel Profissional", com as duas intenções nomeadas no título — 08/08 · lane PONTE-RET · a decisão de desenho e o que ficou de fora estão em `02-rodadas/2026-08-06-painel-cliente/06-desenho-do-cartao.md`. **Achado que corrige uma premissa:** a criação de clube **existe** (`/clubes/novo`), atrás do mesmo tenant que segura a criação de evento — o que impede os dois CTAs simultâneos não é superfície faltando, é a landing não ter uma linha de medição
+        - [ ] S1234-T4 a demonstração ponta a ponta: cliente atravessa, aterrissa em vitrine, o aviso sobe e o código resgata — **em curso na PONTE-RET**, contra emulator, com a máquina em 0,5 GB livres
+        - [ ] S1234-REV review antagonista em contexto frio (lane PONTE-REV) — **antes** do deploy, e essa inversão de ordem é consciente
+        - [ ] S1234-DEPLOY a callable `promoverParaProfissional` + o bundle da landing (lane DEPLOY-PONTE) — sem a callable, o botão vira 404
+    - [ ] **S1235 · A travessia declarada nos dois sentidos**
+        - [ ] S1235-T1 o par do alternador no lado do cliente, com o vocabulário do `AlternadorDePainel`
+        - [ ] S1235-T2 a copy da travessia e o rebatismo da RN-468 nos rótulos (profissional, não organizador)
 
 - [ ] **[E16/E00] Quem se cadastra entra e conhece a Leela antes de precisar do código** — hoje a conta nova bate numa parede: um campo de código e mais nada, que foi onde duas pessoas reais pararam em 06/08. Passa a entrar no painel e circular por ele, e no primeiro clique — em botão, aba de menu ou pelo teclado — sobe um aviso de boas-vindas que orienta a falar com o nosso time para receber o código Leela. O código continua sendo coisa de quem vai ser profissional, e quem só participa de experiências é apontado para a área do cliente 🔄 construído em 06/08 · **falta a review antagonista e o deploy do dia** · sua ordem de 06/08 virou a **D-ONB-6** e a **RN-510**, que sucede a RN-416 [[LEELA-E16-plataforma-superadmin]]
     - [ ] **S1609 · Resgate do código + a aterrissagem de quem ainda não tem** — a história é a mesma de 28/07; o que mudou foi a aterrissagem

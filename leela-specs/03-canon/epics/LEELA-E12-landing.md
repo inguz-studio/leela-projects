@@ -3743,6 +3743,31 @@ Ali o papel literal está certo, porque a pergunta é *"esta conta é SÓ da pla
 `isPlatformAdmin` tira do dono — `tenant_owner` **com** a capacidade — a porta de organizador na
 própria área de cliente.
 
+#### RN-515 (nova, dona · 08/08) · o rótulo da porta é variante, e sobe uma por vez
+
+Direção do dono de 07/08: o rótulo do cartão passa a nomear o **lugar** — "Painel Profissional" —,
+e ele quer testar dois rótulos de **trabalho** no mesmo botão, "Criar Club" e "Organizar eventos".
+A regra que a construção fixou, e que existe para não transformar um teste em ruído:
+
+**Sobe um rótulo por vez.** Os três vivem numa constante única
+(`ROTULO_DA_TRAVESSIA`, em `PortasDaConta.tsx`), e trocar de variante é uma linha. Dois CTAs
+simultâneos disparando a **mesma** promoção ficam **proibidos enquanto a landing não tiver
+medição** — hoje não há nenhuma: um teste sem leitura não é teste, e o segundo botão só cobraria
+de quem lê uma decisão a mais no cartão que existe para desbloquear um beco.
+
+O que o cartão pode prometer, e por quê: as **duas intenções são simétricas**. A criação de clube
+existe (`/clubes/novo`, `NovoClubePage`, com CTA no `HubClubes`) e está atrás do **tenant**,
+exatamente como a criação de evento; o `ContaTravadaGate` troca as duas pela vitrine até o resgate
+do código, e a vitrine já nomeia "Eventos" e "Clubs" com o mesmo peso (RN-510). Por isso o título
+do cartão **nomeia os dois trabalhos** sem mentir, enquanto o botão entrega **um** destino.
+
+⚠️ Vocabulário: "Eventos" e "Clubs" entram como nomes de **área do painel**, não como categoria do
+produto — o guarda-chuva da D-0802-1 continua "experiência" e "participante". Se um rótulo de
+trabalho vencer o teste e virar porta permanente, a conversa de vocabulário reabre.
+
+Decisão do dono em aberto: **PONTE-CTA-1** no painel canônico. Desenho completo e o que ficou de
+fora em `02-rodadas/2026-08-06-painel-cliente/06-desenho-do-cartao.md`.
+
 ### LEELA-S1235 · A travessia declarada nos dois sentidos · (de-para novo · SPEC-PAINEL-CLIENTE)
 
 **Tasks:** `S1235-T1` (o par do alternador no lado do cliente), `S1235-T2` (a copy da travessia e
