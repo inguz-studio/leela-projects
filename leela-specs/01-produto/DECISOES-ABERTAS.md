@@ -166,8 +166,10 @@ Você fixou o piso do Serviço em R$ 3,00 e disse "a priori". A conta foi feita,
 
 ### SERV-2 · numa venda de R$ 2,00 o piso é maior que a venda inteira
 
-Sua frase tratou de taxa pequena, não de venda pequena. Numa venda abaixo de R$ 3,00 com a taxa incorporada, o organizador receberia **valor negativo** — o líquido dele é a face menos o Serviço. Nada no produto sabe representar isso: o clamp em zero existe só uma camada acima, no agregado, e ele esconde a divergência em vez de resolvê-la, fazendo o repasse deixar de bater com a soma das vendas. Hoje nada impede uma venda de R$ 2,00: o único mínimo que existe recusa preço zero. *O Castelo publica um ingresso simbólico de R$ 2,00 para um mutirão, vende trinta, e a plataforma calcula que ele deve R$ 30,00.*
+Sua frase tratou de taxa pequena, não de venda pequena. Numa venda abaixo de R$ 3,00 com a taxa incorporada, o organizador receberia **valor negativo** — o líquido dele é a face menos o Serviço. Nada no produto sabe representar isso: o clamp em zero existe só uma camada acima, no agregado, e ele esconde a divergência em vez de resolvê-la, fazendo o repasse deixar de bater com a soma das vendas. Hoje nada impede uma venda de R$ 2,00: o único mínimo que existe recusa preço zero.
 
+- **Caso de uso:** o Castelo publica um ingresso simbólico de R$ 2,00 para um mutirão, vende trinta, e a plataforma calcula que ele deve R$ 30,00.
+- **Job story:** quando eu abro uma inscrição simbólica de dois reais, eu quero que a conta feche em zero e nunca contra mim, para que cobrar pouco não vire dívida com a plataforma.
 - **O que fica com você:** escolher entre limitar o Serviço ou limitar o preço.
 - **Por que agora:** é uma linha de código na aritmética se decidida antes, e uma migração de dado financeiro se decidida depois.
 - **Opções:** **o Serviço nunca ultrapassa a face** (**default proposto** e já em vigor na spec) — numa venda de R$ 2,00 o organizador recebe R$ 0,00 e a plataforma fica com os R$ 2,00; nada quebra, mas a venda vira trabalho de graça para ele · **preço mínimo de venda** acima do piso, que resolve na origem e cria uma regra a explicar para quem quiser vender barato · deixar negativo e mostrar como dívida, que eu **recomendo recusar**, porque nenhuma tela do produto sabe desenhar saldo devedor de organizador.
@@ -175,8 +177,10 @@ Sua frase tratou de taxa pequena, não de venda pequena. Numa venda abaixo de R$
 
 ### SERV-3 · até onde vai a palavra "Serviço"
 
-Você escreveu a palavra entre aspas, e a leitura literal tira duas palavras do rótulo, não uma. Isso muda o tamanho do trabalho, porque **o comprador já lê "Taxa de serviço" no checkout** — se o alvo fosse só apagar a marca, o checkout não teria tarefa nenhuma. E há uma segunda pergunta embutida: o painel que **você** opera chama a mesma coisa de "Taxa da plataforma", e ali quem lê precisa distinguir esta cobrança das outras. *A Ana vê "Serviço (PIX) · R$ 3,00" no resumo da compra; você abre `/plataforma/taxa` e vê "Serviço da plataforma" ou "Taxa da plataforma", dependendo da sua resposta.*
+Você escreveu a palavra entre aspas, e a leitura literal tira duas palavras do rótulo, não uma. Isso muda o tamanho do trabalho, porque **o comprador já lê "Taxa de serviço" no checkout** — se o alvo fosse só apagar a marca, o checkout não teria tarefa nenhuma. E há uma segunda pergunta embutida: o painel que **você** opera chama a mesma coisa de "Taxa da plataforma", e ali quem lê precisa distinguir esta cobrança das outras.
 
+- **Caso de uso:** a Ana vê "Serviço (PIX) · R$ 3,00" no resumo da compra; você abre `/plataforma/taxa` e vê "Serviço da plataforma" ou "Taxa da plataforma", dependendo da sua resposta.
+- **Job story:** quando eu leio o resumo antes de pagar, eu quero entender o que é cada linha cobrada, para não achar que estão me empurrando uma taxa escondida. No super-admin quem lê é você, e ali a palavra tem outro trabalho: separar esta cobrança das outras que a mesma tela mostra.
 - **O que fica com você:** confirmar a leitura literal, e dizer se o super-admin acompanha.
 - **Por que agora:** são 34 strings em três aplicações, e trocá-las duas vezes é o desperdício que a pergunta evita. A fila do renome está retida esperando esta resposta.
 - **Opções:** **"Serviço" para comprador e organizador, "Serviço da plataforma" no super-admin** (**default proposto**, porque segue a sua letra onde o público é externo e mantém a desambiguação onde o público é você) · "Serviço" em tudo, inclusive no super-admin · manter "Taxa de serviço" para o comprador e trocar só onde diz "Leela", que é a leitura mínima da sua frase.
@@ -184,8 +188,10 @@ Você escreveu a palavra entre aspas, e a leitura literal tira duas palavras do 
 
 ### INSCR-1 · o "N inscritos" da página pública acompanha o painel, ou fica como está
 
-Você falou do painel profissional. O mesmo número alimenta a página pública do evento, e lá ele já está lido mas com a exibição suprimida — a prova social ficou desligada numa rodada anterior. Se ela voltar um dia, a pergunta de qual verdade ela conta já está respondida ou ainda não, dependendo de você. *A página do evento diz "já somos 40" contando doze pessoas que geraram PIX e nunca pagaram.*
+Você falou do painel profissional. O mesmo número alimenta a página pública do evento, e lá ele já está lido mas com a exibição suprimida — a prova social ficou desligada numa rodada anterior. Se ela voltar um dia, a pergunta de qual verdade ela conta já está respondida ou ainda não, dependendo de você.
 
+- **Caso de uso:** a página do evento diz "já somos 40" contando doze pessoas que geraram PIX e nunca pagaram. O Castelo olha o painel e lê 28, e as duas telas discordam sobre o mesmo evento.
+- **Job story:** quando eu vejo quantas pessoas já entraram antes de decidir me inscrever, eu quero um número de gente que de fato pagou, para não tomar a minha decisão apoiada numa multidão que não existe.
 - **O que fica com você:** dizer se as duas telas contam a mesma coisa.
 - **Por que agora:** custa uma linha enquanto a fila da métrica está aberta, e custa uma investigação depois que a prova social voltar.
 - **Opções:** **a mesma verdade nas duas telas** (**default proposto** — o número que você acabou de corrigir é o número, e ter duas definições de "inscrito" é como este item nasceu) · a página pública conta todo mundo, porque prova social se beneficia do número maior, o que eu **recomendo recusar** por ser exatamente a distorção que você mandou consertar.
@@ -193,8 +199,10 @@ Você falou do painel profissional. O mesmo número alimenta a página pública 
 
 ### CONV-1 · o card de conversão fica em branco ou some
 
-Você estava certo nas duas pontas: o denominador certo é visitantes sobre pagantes, e não contabilizamos visitantes. Fui conferir o quanto: **não existe contagem de visitas em lugar nenhum** — nenhum SDK de analytics instalado, nenhum contador no banco, nada fora dele. O card existe e sempre mostrou um traço. O que ele não deveria estar fazendo é manter o rótulo "visitantes → inscritos" na tela, porque ele promete uma medição que não acontece. *A Marina lê "visitantes → inscritos: —" e conclui que a plataforma mede o tráfego dela e ainda não juntou dados suficientes.*
+Você estava certo nas duas pontas: o denominador certo é visitantes sobre pagantes, e não contabilizamos visitantes. Fui conferir o quanto: **não existe contagem de visitas em lugar nenhum** — nenhum SDK de analytics instalado, nenhum contador no banco, nada fora dele. O card existe e sempre mostrou um traço. O que ele não deveria estar fazendo é manter o rótulo "visitantes → inscritos" na tela, porque ele promete uma medição que não acontece.
 
+- **Caso de uso:** a Marina lê "visitantes → inscritos: —" e conclui que a plataforma mede o tráfego dela e ainda não juntou dados suficientes. Ela vai continuar esperando, porque a contagem não existe em lugar nenhum.
+- **Job story:** quando eu abro o painel para entender como o meu evento está indo, eu quero que todo indicador na tela seja um que a plataforma realmente mede, para não organizar a minha semana em torno de um número que nunca vem.
 - **O que fica com você:** escolher o que ocupa aquele quarto da faixa de KPIs até existir denominador.
 - **Por que agora:** enquanto o rótulo estiver lá, cada organizador novo aprende a esperar um número que não vem.
 - **Opções:** **esconder o card** até haver contagem de visitas (**default proposto**, porque card vazio ensina expectativa errada) · manter o traço com uma frase curta dizendo que ainda não medimos visitas — mais honesto e mais ruidoso · construir a contagem de visitas agora, que é frente própria e não estava no seu pedido; o contrato dela já está escrito para o dia em que você pedir.
@@ -202,10 +210,12 @@ Você estava certo nas duas pontas: o denominador certo é visitantes sobre paga
 
 ### ESTOURO-1 · duas pessoas podem comprar a mesma última vaga, e o painel não avisa
 
-A vaga do lote só é contada quando o pagamento **confirma**. Enquanto duas cobranças PIX estão em voo pela mesma última vaga, as duas passam pela cotação, as duas viram pedido e as duas confirmam: o `webhookPagamento` vira o inscrito sem revalidar lote nem capacidade, e o `virarLote` recomputa `vendidos` sem teto. O contador passa do configurado e a tela esconde, porque o disponível é cortado em zero uma camada antes de chegar aos olhos de quem opera. *A Ana e mais uma pessoa geram PIX para a última vaga do lote promocional do Castelo, as duas pagam, e a Marina abre o painel e lê "20 vendidos · 0 disponíveis · 19 no total", sem nenhuma linha dizendo que alguém entrou a mais.*
+A vaga do lote só é contada quando o pagamento **confirma**. Enquanto duas cobranças PIX estão em voo pela mesma última vaga, as duas passam pela cotação, as duas viram pedido e as duas confirmam: o `webhookPagamento` vira o inscrito sem revalidar lote nem capacidade, e o `virarLote` recomputa `vendidos` sem teto. O contador passa do configurado e a tela esconde, porque o disponível é cortado em zero uma camada antes de chegar aos olhos de quem opera.
 
 Isso **não depende** da ação de desativar lote, que foi por onde o achado apareceu. Basta duas pessoas com PIX pendente para a última vaga. E não é hipótese de código: é o efeito direto da RN-158, que declara que carrinho aberto não segura estoque, encontrando um contador que nunca teve teto.
 
+- **Caso de uso:** a Ana e mais uma pessoa geram PIX para a última vaga do lote promocional do Castelo, as duas pagam, e a Marina abre o painel e lê "20 vendidos · 0 disponíveis · 19 no total", sem nenhuma linha dizendo que alguém entrou a mais.
+- **Job story:** quando eu pago pela última vaga, eu quero sair com a certeza de que ela é minha, para não descobrir na véspera que outra pessoa pagou pelo mesmo lugar. A operadora é servida pela outra ponta: com o estouro apenas avisado, a Marina enxerga o excedente e decide o que fazer, coisa que hoje ela não consegue nem ver.
 - **O que fica com você:** dizer se a vaga passa a ser **reservada**, ou se o produto aceita o estouro e apenas o mostra.
 - **Por que agora:** o beta começa com eventos pequenos, e é em lote pequeno que a última vaga é disputada. Decidir depois de acontecer significa decidir com uma pessoa já paga e sem lugar na frente de você.
 - **A correção mínima entra de qualquer forma, e não é o que você decide.** Hoje o estouro é silencioso nos dois lados: nenhum log, nenhum aviso na tela. Isso vira tarefa na fila independente da sua resposta (RN-498). O que a sua resposta muda é se, **além** de avisar, a vaga passa a ser segurada.
@@ -214,8 +224,10 @@ Isso **não depende** da ação de desativar lote, que foi por onde o achado apa
 
 ### PARSE-1 · o campo de dinheiro não diz como o sistema lê o ponto, e treze das dezoito mensagens não têm como aparecer
 
-Você decidiu em 05/08 que `1.234` num campo de preço é mil duzentos e trinta e quatro. A decisão está aplicada e no ar, e o custo dela está declarado: quem usa teclado numérico e escreve três casas decimais grava mil vezes mais. O problema é que essa regra hoje mora **só no cabeçalho de um arquivo de código**, e nenhuma tela conta isso a ninguém. A revisão do parser devolveu cinco lugares onde falta texto, e o principal é esse. *O Castelo digita `1.005` querendo um real e meio de kit, o sistema grava mil e cinco reais, e nada na tela dá a ele a chance de perceber.*
+Você decidiu em 05/08 que `1.234` num campo de preço é mil duzentos e trinta e quatro. A decisão está aplicada e no ar, e o custo dela está declarado: quem usa teclado numérico e escreve três casas decimais grava mil vezes mais. O problema é que essa regra hoje mora **só no cabeçalho de um arquivo de código**, e nenhuma tela conta isso a ninguém. A revisão do parser devolveu cinco lugares onde falta texto, e o principal é esse.
 
+- **Caso de uso:** o Castelo digita `1.005` querendo um real e meio de kit, o sistema grava mil e cinco reais, e nada na tela dá a ele a chance de perceber. A única defesa que ele tem hoje é reabrir o campo e conferir o que ficou gravado.
+- **Job story:** quando eu digito um preço, eu quero que a tela me diga como ela vai ler o ponto e a vírgula, para eu não gravar mil vezes o valor que eu queria cobrar.
 - **O que fica com você:** aprovar as cinco frases, ou reescrevê-las. São textos de tela, então é a sua palavra que vale, não a minha.
 - **Por que agora:** a regra já está valendo em produção. Cada dia sem a frase é um dia em que a única defesa contra o erro é o organizador conferir o valor gravado por conta própria.
 - **As cinco, em ordem de peso:**
@@ -228,8 +240,10 @@ Você decidiu em 05/08 que `1.234` num campo de preço é mil duzentos e trinta 
 
 ### RESPIRO-1 · os vinte pixels de respiro do topo são calibragem, e o olho é seu
 
-Quando a barra superior saiu, sumiram oitenta e nove pixels do alto de toda tela autenticada. As telas que abrem com cabeçalho de página não sentiram, porque o próprio cabeçalho segura o espaço. Sete rotas de produtor abrem com o menu secundário, que não tem folga vertical nenhuma, e passaram a nascer com o texto colado no alto. A review pôs vinte pixels ali, escolhidos por alinhar o texto da aba com o texto do título das telas que têm cabeçalho. *Você abre Eventos ao lado da tela inicial e uma das duas parece torta, sem que nenhum número esteja errado.*
+Quando a barra superior saiu, sumiram oitenta e nove pixels do alto de toda tela autenticada. As telas que abrem com cabeçalho de página não sentiram, porque o próprio cabeçalho segura o espaço. Sete rotas de produtor abrem com o menu secundário, que não tem folga vertical nenhuma, e passaram a nascer com o texto colado no alto. A review pôs vinte pixels ali, escolhidos por alinhar o texto da aba com o texto do título das telas que têm cabeçalho.
 
+- **Caso de uso:** você abre Eventos ao lado da tela inicial e uma das duas parece torta, sem que nenhum número esteja errado.
+- **Job story:** quando eu troco de tela do painel dezenas de vezes por dia, eu quero que o conteúdo comece sempre na mesma altura, para a interface não parecer desalinhada sem que eu saiba dizer por quê.
 - **O que fica com você:** olhar as duas ao lado e dizer se ficou alto demais, baixo demais ou certo.
 - **Por que agora:** é uma linha em duas molduras enquanto for calibragem. Depois que outras telas nascerem em cima desse ritmo, mexer vira varredura.
 - **Onde olhar:** `/eventos`, `/eventos/repasses` e as cinco telas de `/crm`, comparadas com `/` e com `/clubes`. As três que mudaram de verdade são as duas primeiras e o CRM; todo o resto da lista está no relatório. Entra no mesmo passeio do item 69.
@@ -237,8 +251,10 @@ Quando a barra superior saiu, sumiram oitenta e nove pixels do alto de toda tela
 
 ### MODAL-1 · editar a modalidade para quando o evento vende, ou já quando ele é publicado
 
-Você pediu para editar as modalidades, e hoje não existe caminho nenhum: a lista nasce na criação do evento e morre lá. O que a sua frase não decide é até quando a edição continua valendo. As Rules já autorizam enquanto o evento não vendeu, e a spec adotou essa fronteira. A alternativa é parar antes, no momento em que o evento é publicado. *O Castelo publica a corrida com "21k" escrito errado, ninguém comprou ainda, e ele quer arrumar sem tirar a página do ar.*
+Você pediu para editar as modalidades, e hoje não existe caminho nenhum: a lista nasce na criação do evento e morre lá. O que a sua frase não decide é até quando a edição continua valendo. As Rules já autorizam enquanto o evento não vendeu, e a spec adotou essa fronteira. A alternativa é parar antes, no momento em que o evento é publicado.
 
+- **Caso de uso:** o Castelo publica a corrida com "21k" escrito errado, ninguém comprou ainda, e ele quer arrumar sem tirar a página do ar — que já está circulando no Instagram.
+- **Job story:** quando eu descubro um erro de digitação na modalidade depois de publicar, eu quero corrigir com a página no ar, para não perder as visitas que o link já está trazendo.
 - **O que fica com você:** ratificar a fronteira, ou apertá-la.
 - **Por que agora:** é uma condição na Function e uma frase na tela agora; depois de construída, apertar a fronteira invalida telas que já ensinaram o organizador a editar.
 - **Opções:** **sem venda**, que é o que a Rule já aplica (**default proposto**, e ele se sustenta em três medições) — `qtdInscritos` conta qualquer status, então uma cobrança PIX viva já fecha a lista antes de qualquer pagamento; quem estiver com o checkout aberto sob o nome antigo tem a compra **recusada**, nunca cobrada errado; e exigir rascunho pioraria exatamente o seu caso, porque você descobre o erro olhando a página pública e despublicar é ação de Function que o organizador pode nem ter · **sem venda e ainda em rascunho**, mais rígido, e que obriga a tirar a página do ar para corrigir um nome.
@@ -246,8 +262,10 @@ Você pediu para editar as modalidades, e hoje não existe caminho nenhum: a lis
 
 ### MODAL-2 · remover uma modalidade que tem lote pode arrastar o lote junto
 
-Remover uma modalidade que ainda tem lote apontando para ela não deixa o lote órfão: deixa o documento **inutilizado**, porque a regra do servidor exige que a modalidade do lote conste da lista do evento, e ela é checada também na escrita que consertaria o problema. A spec por isso recusa a remoção enquanto houver quem aponte, e nomeia cada lote e cada kit que impedem. A alternativa é o botão fazer tudo de uma vez. *A Marina remove "Kids 1k" para limpar a página e leva junto os dois lotes que alguém configurou com preço e data.*
+Remover uma modalidade que ainda tem lote apontando para ela não deixa o lote órfão: deixa o documento **inutilizado**, porque a regra do servidor exige que a modalidade do lote conste da lista do evento, e ela é checada também na escrita que consertaria o problema. A spec por isso recusa a remoção enquanto houver quem aponte, e nomeia cada lote e cada kit que impedem. A alternativa é o botão fazer tudo de uma vez.
 
+- **Caso de uso:** a Marina remove "Kids 1k" para limpar a página e leva junto os dois lotes que alguém configurou com preço e data. Ela não tinha como saber que os lotes estavam pendurados naquela modalidade.
+- **Job story:** quando eu removo uma modalidade para arrumar a página, eu quero saber antes o que vai junto, para não apagar preço e janela de venda que outra pessoa da equipe configurou.
 - **O que fica com você:** escolher entre a recusa que explica e a remoção em cascata.
 - **Por que agora:** é a diferença entre uma mensagem e um botão destrutivo, e os dois custam o mesmo enquanto nada foi construído.
 - **Opções:** **recusar e nomear quem impede** (**default proposto**) — a tela lista os lotes e kits que apontam, o organizador apaga o que quiser apagar, e aí remove; nada some sem alguém decidir por ele · **remover em cascata**, mais confortável e mais destrutivo, porque apagar um lote é apagar preço e janela que alguém configurou, e o botão que faz isso a reboque de outra ação não deixa a pessoa medir o que perdeu · **proibir remover**, que eu recomendo recusar: obrigaria a refazer o evento por causa de uma modalidade digitada errada, que é exatamente a queixa que abriu esta rodada.
@@ -257,6 +275,8 @@ Remover uma modalidade que ainda tem lote apontando para ela não deixa o lote �
 
 Você acabou de dizer que a plataforma não vende desconto por dispensar o kit. Existem dois documentos em produção que fazem exatamente isso: um "Sem kit" de **−R$ 15,00** na Meia Floripa 2026 e um de **−R$ 10,00** na São Silvestre 2025. Os dois vieram do seed, não de organizador, e a apuração conferiu o que importa antes de propor qualquer coisa: **ninguém comprou nenhum dos dois**. Zero inscritos apontam para eles, zero pedidos, zero pagamentos — e o modelo de pedido nem tem campo de kit, então não existe caminho para um pedido referenciar um. *Mexer neles não mexe em dinheiro que já entrou.*
 
+- **Caso de uso:** você abre a Meia Floripa 2026 para mostrar o produto a alguém e a lista de kits traz um "Sem kit" de −R$ 15,00 — exatamente o desconto por dispensar o kit que você acabou de proibir. Pelo painel você não consegue arrumar: o campo está bloqueado porque o evento já vendeu.
+- **Job story:** quando eu mostro a plataforma a um organizador novo, eu quero que os dados que ele vê digam a mesma coisa que as regras dizem, para o produto não ensinar o contrário do que eu decidi.
 - **O que fica com você:** qual dos três reparos, e a autorização para executá-lo em produção.
 - **Por que agora:** enquanto os dois documentos existem, a demonstração do produto ensina o contrário do que você decidiu. E há um detalhe de ordem que não pode ser esquecido: o seed de produção já rodou duas vezes, então **a fonte tem de ser corrigida antes do banco**, senão uma terceira execução ressuscita os dois.
 - **Um fato que muda a natureza da tarefa:** os dois eventos têm inscritos (462 e 40), e a plataforma congela o preço de kit depois da primeira venda (RN-200). **Você não consegue arrumar isso pela tela do painel** — o campo aparece bloqueado e apagar o kit é negado. O reparo é operação de plataforma, feita como **exceção declarada** à RN-200, e ela só se sustenta porque a medição acima prova que não há comprador para proteger.
@@ -265,8 +285,10 @@ Você acabou de dizer que a plataforma não vende desconto por dispensar o kit. 
 
 ### SEMKIT-2 · a plataforma garante ao participante uma forma de se inscrever sem kit, ou isso é escolha do organizador
 
-Sua decisão tem uma consequência que prefiro escrever do que deixar você descobrir na tela. Onde a modalidade oferece kits, **escolher um sempre foi obrigatório** — isso já é o código, não muda nada agora. O que fazia a etapa parecer suave é que o "Sem kit" estava dentro da lista, e escolhê-lo satisfazia a exigência. Sem ele, uma modalidade que só tem kits pagos passa a obrigar a compra de um kit para se inscrever. *A Ana quer correr os 5k e não quer a camiseta; se o Castelo não criar um kit de R$ 0,00, ela paga a camiseta ou não corre.*
+Sua decisão tem uma consequência que prefiro escrever do que deixar você descobrir na tela. Onde a modalidade oferece kits, **escolher um sempre foi obrigatório** — isso já é o código, não muda nada agora. O que fazia a etapa parecer suave é que o "Sem kit" estava dentro da lista, e escolhê-lo satisfazia a exigência. Sem ele, uma modalidade que só tem kits pagos passa a obrigar a compra de um kit para se inscrever.
 
+- **Caso de uso:** a Ana quer correr os 5k e não quer a camiseta. Se o Castelo não criar um kit de R$ 0,00, ela paga a camiseta ou não corre.
+- **Job story:** quando eu me inscrevo só para participar, eu quero uma opção sem kit, para não pagar por uma camiseta que eu não vou usar. O organizador é servido pelo lado oposto: quem quer que todo participante leve o brinde do patrocinador precisa poder não abrir essa saída.
 - **O que fica com você:** se a plataforma **garante** essa saída, ou se ela é escolha de cada organizador.
 - **Por que agora:** é uma regra na criação do evento enquanto nada existe. Depois, é migrar evento configurado.
 - **Opções:** **é escolha do organizador** (**default proposto**, e ele vem da sua própria frase) — quem quiser abrir a saída cria um kit de R$ 0,00, e quem quiser que todo participante leve o brinde do patrocinador simplesmente não cria; forçar a saída em toda modalidade trabalharia contra a razão que você deu · **a plataforma garante**, exigindo que toda modalidade com kits tenha pelo menos um de preço zero — mais protetor para quem compra, e tira do organizador uma decisão comercial que é dele · **a plataforma sugere**, criando o kit de R$ 0,00 por padrão e deixando apagar, que é o meio-termo e o único que muda o comportamento de eventos futuros sem impedir nada.
@@ -274,10 +296,12 @@ Sua decisão tem uma consequência que prefiro escrever do que deixar você desc
 
 ### SENHA-1 · o e-mail de "esqueci minha senha" já veio para a Brevo — falta você ratificar
 
-⚠️ **Este item mudou de natureza em 04/08 e não é mais escolha entre dois futuros.** Quando ele foi escrito, a opção "trazer para a Brevo" custava um template novo e um caminho de envio próprio. As duas coisas foram construídas na madrugada (lane IDENTIDADE-EMAIL) e **entraram em produção na lane DEPLOY-EMAIL**, junto com a moldura da marca nos oito e-mails: a function `solicitarRedefinicaoSenha` está no ar com a chave da Brevo amarrada, e o painel já a chama. *A organizadora que esquecer a senha hoje recebe o e-mail da Leela, não mais o do Firebase.*
+⚠️ **Este item mudou de natureza em 04/08 e não é mais escolha entre dois futuros.** Quando ele foi escrito, a opção "trazer para a Brevo" custava um template novo e um caminho de envio próprio. As duas coisas foram construídas na madrugada (lane IDENTIDADE-EMAIL) e **entraram em produção na lane DEPLOY-EMAIL**, junto com a moldura da marca nos oito e-mails: a function `solicitarRedefinicaoSenha` está no ar com a chave da Brevo amarrada, e o painel já a chama.
 
 Vale manter registrada a distinção que o item desfez: o e-mail de **primeiro acesso**, o que a pessoa recebe depois da primeira compra, **já era nosso** desde antes. O que saía com template genérico e remetente `noreply@leela-hub.firebaseapp.com` era só o "esqueci minha senha" do painel.
 
+- **Caso de uso:** a organizadora que esquecer a senha hoje recebe o e-mail da Leela, com a moldura da marca, e não mais o e-mail genérico do Firebase saindo de um endereço que ela não reconhece.
+- **Job story:** quando eu esqueço a senha e peço para redefinir, eu quero receber um e-mail que pareça vir da Leela, para clicar no link em vez de tratá-lo como golpe.
 - **O que fica com você:** ratificar — ou mandar voltar atrás. Nada aqui foi decidido no seu lugar; o que aconteceu é que a construção da outra frente atropelou o custo que sustentava o default.
 - **Por que agora:** o caminho antigo continua vivo como rede de proteção. Se a callable ficar indisponível, o `enviarResetSenha` cai no envio do Firebase com `actionCodeSettings` — feio é melhor que ninguém conseguir recuperar a conta. Voltar atrás é um deploy, não um resgate.
 - **Onde aterrissa:** `functions/src/auth/solicitarRedefinicaoSenha.ts` e `packages/api-client/src/auth.ts`; RN-453 em [[LEELA-E12-landing]].
