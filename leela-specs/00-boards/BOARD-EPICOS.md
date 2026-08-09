@@ -80,6 +80,12 @@ Antecipada por decisão de 2026-07-18: fecha o produto web antes do app. **Item 
 | [[LEELA-E14-integracoes-treino]] | Importar treino e corrida do Strava e afins | 🧊 Onda 6 — esqueleto escrito; com PWA a camada do aparelho (Health) some e o Strava vira a primeira camada viável |
 | [[LEELA-E06-marketing]] · avançado | Segmentação além do evento e novos gatilhos | 🧊 Onda 6 — sem lacuna de V1; a primeira parcela do avançado chega pelo E19 |
 
+## Radar da comunidade (WhatsApp) — 📋 spec pronta, fora de onda
+
+| Épico | O que entrega | Estado |
+|---|---|---|
+| [[LEELA-E20-radar-comunidade]] | Retrato da comunidade WhatsApp do organizador dentro do Painel: volume, horários, palavras mais faladas, entradas e saídas, pirâmide de engajamento com nome real | 📋 spec escrita 09/08 (RN-520 a RN-529 + `04-engenharia/ponte-radar-whatsapp.md`, do estudo trace `c5a4a8bd`); **F0.a despachável** (número dedicado sobrevive 14 dias observando 1 comunidade real, sem nuvem) → F0.b ponte no emulador → **F1 🚫 bloqueada pela quarta frente do LGPD-1** (base legal + termo, advogado) → F2 multi-locação. Radar mudo por RN-520; rollout só convidados; review antagonista da spec DEVIDA antes de código |
+
 ## Onda 7 · Creator Studio — 🧊
 
 | Épico | O que entrega | Estado |
