@@ -99,7 +99,22 @@ const PORTAS_PERMITIDAS: ReadonlySet<string> = new Set([
   'getContatoOnboarding',
 ]);
 
-/** As rotas que a pessoa alcança pelo menu, mais o desconhecido. */
+/**
+ * As rotas que a pessoa alcança pelo menu, mais o desconhecido, mais `/conta`.
+ *
+ * `/conta` entrou na review antagonista (REV-VITRINE · DEF-R4) e é a mais
+ * importante da lista, não a última: ela é a ÚNICA rota liberada
+ * (`ROTAS_LIBERADAS` do gate), e portanto o único endereço onde a conta em
+ * vitrine monta uma tela REAL, com hooks de dados de verdade, em vez da
+ * `VitrinePainel`. Faltar aqui era o inverso exato do que a lista deveria
+ * cobrir: mediam-se seis rotas onde nenhuma tela monta e deixava-se de fora a
+ * única onde alguma monta.
+ *
+ * Dentro de `/conta` vivem a `RecebimentoSection` (RN-366) e o editor de perfil
+ * público — duas telas que uma lane futura pode ligar a dado de tenant sem que
+ * nada reclame. Hoje as duas estão limpas, e é isso que estes dois casos
+ * congelam.
+ */
 const ROTAS_DA_VITRINE: readonly string[] = [
   '/',
   '/eventos',
@@ -107,6 +122,8 @@ const ROTAS_DA_VITRINE: readonly string[] = [
   '/crm',
   '/marcas',
   '/plataforma',
+  '/conta',
+  '/conta/perfil-publico',
   '/rota-que-ninguem-criou-ainda',
 ];
 
@@ -158,6 +175,66 @@ describe('vitrine · nenhuma query tenant-scoped sai do painel (RN-510)', () => 
     // O conteúdo acompanha o endereço (o menu continua navegando), e o que
     // aparece é a vitrine, não a página de eventos.
     expect(screen.getByText(/Esta área abre com o código Leela/i)).toBeInTheDocument();
+  });
+
+  it('a espera do crachá TEM prazo: leitura pendurada acaba em vitrine, não em skeleton eterno', async () => {
+    // REV-VITRINE · DEF-R3. `getClaims` que nunca assenta (a aba que o celular
+    // suspendeu no meio do refresh do token) deixava a pessoa num retângulo
+    // cinza para sempre: promessa pendurada não rejeita, então o `catch` que
+    // trata a leitura com ERRO nunca rodava. Medido antes do conserto: cinco
+    // minutos de relógio simulado, skeleton ainda na tela, vitrine nunca.
+    //
+    // Depois do prazo o estado é o MESMO em que a leitura com erro já
+    // aterrissava — autenticada sem papel, que é vitrine. Fail-closed: nada se
+    // abre por decurso de prazo.
+    vi.resetModules();
+    vi.doMock('@leela/api-client', async (importOriginal) => {
+      const original = await importOriginal<Record<string, unknown>>();
+      const espelho: Record<string, unknown> = {};
+      for (const [nome, valor] of Object.entries(original)) {
+        espelho[nome] =
+          typeof valor === 'function'
+            ? (..._args: unknown[]) => {
+                registro.nomes.add(nome);
+                return undefined;
+              }
+            : valor;
+      }
+      return {
+        ...espelho,
+        onSessionChange: (cb: (u: { uid: string } | null) => void) => {
+          cb({ uid: 'u-pendurada' });
+          return () => {};
+        },
+        getClaims: () => new Promise(() => {}),
+        getLeelaDb: () => ({}),
+        getLeelaFunctions: () => ({}),
+        getContatoOnboarding: async () => CONTATO_ONBOARDING_PADRAO,
+      };
+    });
+    const { App: AppPendurado } = await import('../../../App');
+    vi.useFakeTimers();
+    try {
+      window.history.pushState({}, '', '/crm');
+      render(<AppPendurado />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.getByRole('status', { name: 'Carregando o painel' })).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(13_000);
+      });
+      expect(screen.queryByRole('status', { name: 'Carregando o painel' })).toBeNull();
+      expect(screen.getByText(/Esta área abre com o código Leela/i)).toBeInTheDocument();
+      // E o prazo não abriu porta nenhuma: a rota real de /crm continua sem
+      // montar, e nenhuma query tenant-scoped saiu.
+      expect(forasteiras()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+      vi.doUnmock('@leela/api-client');
+      vi.resetModules();
+    }
   });
 
   it('o aviso sobe no CLIQUE e a vitrine segue sem consultar nada', async () => {

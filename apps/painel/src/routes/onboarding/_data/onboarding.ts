@@ -103,6 +103,35 @@ async function resolverSessao(uid: string): Promise<ContaOnboardingSession> {
   }
 }
 
+/**
+ * Prazo da leitura do crachá (REV-VITRINE · DEF-R3).
+ *
+ * `resolverSessao` já trata a leitura que FALHA: o `catch` cai no estado
+ * terminal (autenticada sem papel), que aterrissa em vitrine — fail-closed, e
+ * correto. O que não tinha tratamento era a leitura que **nunca assenta**:
+ * promessa pendurada não rejeita, então o `catch` não roda, o estado fica em
+ * 'loading' e o `ContaTravadaGate` desenha skeleton para sempre. Medido pela
+ * review: `getClaims` devolvendo `new Promise(() => {})`, cinco minutos de
+ * relógio simulado, o retângulo cinza ainda na tela e nenhum erro no console.
+ * É o que acontece com a aba que o celular suspendeu no meio do refresh do
+ * token, e o estado de espera nasceu nesta rodada — a vitrine o criou e não
+ * criou a saída.
+ *
+ * O prazo NÃO inventa política nova: ele faz o caso pendurado terminar no MESMO
+ * estado em que o caso com erro já termina hoje. Do lado de quem usa, rede que
+ * engoliu a resposta e rede que devolveu erro são a mesma coisa.
+ *
+ * 12s é folga deliberada. `getClaims(false)` lê o token em memória e volta em
+ * microssegundos; só o refresh forçado sai do dispositivo, e ele é o caminho de
+ * quem tem crachá vazio — justamente quem termina em vitrine de qualquer jeito.
+ *
+ * E o prazo não fecha a porta: quando a leitura real assenta DEPOIS do prazo, o
+ * `.then` abaixo continua vivo e sobrescreve a sessão com o crachá verdadeiro.
+ * Quem tem tenant e passou do prazo vê a vitrine por um instante e o painel
+ * volta sozinho, sem recarregar a página.
+ */
+const PRAZO_DO_CRACHA_MS = 12_000;
+
 /** Sessão da conta (papel + tenant) com recarga sob demanda pós-resgate. */
 export function useContaOnboardingSession(): ContaOnboardingSession & {
   recarregar: () => void;
@@ -117,17 +146,32 @@ export function useContaOnboardingSession(): ContaOnboardingSession & {
 
   useEffect(() => {
     let ativo = true;
+    let prazo: ReturnType<typeof setTimeout> | undefined;
     const unsub = onSessionChange((user) => {
+      if (prazo !== undefined) clearTimeout(prazo);
       if (!user) {
         if (ativo) setSession({ status: 'anonymous', uid: null, role: null, tenantId: null });
         return;
       }
-      void resolverSessao(user.uid).then((next) => {
+      const uid = user.uid;
+      prazo = setTimeout(() => {
+        if (!ativo) return;
+        // Só desempata quem ainda está esperando: se o crachá já chegou, o
+        // estado terminal dele manda, e o prazo não tem nada a dizer.
+        setSession((atual) =>
+          atual.status === 'loading'
+            ? { status: 'authenticated', uid, role: null, tenantId: null }
+            : atual,
+        );
+      }, PRAZO_DO_CRACHA_MS);
+      void resolverSessao(uid).then((next) => {
+        if (prazo !== undefined) clearTimeout(prazo);
         if (ativo) setSession(next);
       });
     });
     return () => {
       ativo = false;
+      if (prazo !== undefined) clearTimeout(prazo);
       unsub();
     };
   }, [recarga]);
