@@ -4,7 +4,7 @@ atualizado: 2026-08-06
 fonte: DECISOES-ABERTAS
 ---
 
-# Triagem do painel — 60 itens para uma sentada
+# Triagem do painel — 56 itens para uma sentada
 
 > **Esta página não é um painel.** O painel é um só e continua sendo o [[DECISOES-ABERTAS]]. Aqui não existe item novo, decisão nova nem versão diferente de nada. É uma vista de leitura sobre ele, feita para você varrer de uma vez e responder em bloco. Cada linha aponta para o texto completo, que continua morando lá. Se esta página divergir do painel, o painel manda, e a divergência é defeito meu.
 >
@@ -12,13 +12,17 @@ fonte: DECISOES-ABERTAS
 >
 > **A ordem dentro de cada bloco é por custo de errar, não por data.** A data aparece só onde ela conta alguma coisa: há quanto tempo aquilo está parado.
 
-**Onde estão os 60:** 16 travam trabalho · 25 mexem em dinheiro ou em risco · 18 são preferência · 1 não é seu e está no fim.
+**Onde estão os 56:** 14 travam trabalho · 24 mexem em dinheiro ou em risco · 17 são preferência · 1 não é seu e está no fim.
+
+> **Quatro linhas saíram em 06/08, e você as tirou.** Foram o 12b, o QUALIF-6, o 11 e o HIP-R9-01 — as três propostas do último bloco desta página, que você aprovou de uma vez. Elas não foram respondidas: deixaram de ser suas. O registro de cada uma, com o texto que estava no painel, o default que passou a valer e a condição que a traz de volta, está em `02-rodadas/2026-08-06-triagem-painel/01-decisoes-dono.md`.
+>
+> **E quatro linhas entraram depois que esta vista foi desenhada, então ela está atrasada e o painel está em 60.** Esta página é a leva de 06/08 e não foi redesenhada desde então. Faltam nela o **PCLIENTE-1** (a forma do painel do cliente, que precede a sua própria simulação), o **PERFIL-1** e o **ACEITE-1** (os dois que a limpeza do banco devolveu) e o **COMPROMETIDO-1** (os R$ 167,00 presos em três repasses vetados contra eventos apagados). Os quatro estão no painel com texto completo, e nenhum deles está escondido — só não está aqui. Vale a regra do topo desta página: **o painel manda, e a divergência é defeito meu.** A próxima leva redesenha esta vista inteira; até lá, os 56 abaixo são os 56 daquele dia, não o painel de hoje.
 
 ---
 
 ## Bloco 1 · Trava trabalho
 
-Dezesseis itens. Aqui está tudo que hoje impede código de ser escrito ou de subir. Se você só tiver fôlego para um bloco, é este.
+Catorze itens. Aqui está tudo que hoje impede código de ser escrito ou de subir. Se você só tiver fôlego para um bloco, é este.
 
 #### LGPD-1 · organizador ativo sem prova de que aceitou o termo
 **Hoje:** ninguém entra por convite. Não há default proposto, e isso é de propósito: inventar o carimbo de consentimento fabricaria a prova que a regra recusa.
@@ -104,25 +108,13 @@ Dezesseis itens. Aqui está tudo que hoje impede código de ser escrito ou de su
 **Parado há 1 dia:** a tarefa 4d, na mesma fila do rebatismo.
 → [[DECISOES-ABERTAS#CONV-1 · o card de conversão fica em branco ou some|item completo]]
 
-#### 12b · liberação da conta Asaas para pagador estrangeiro
-**Hoje:** o paliativo funciona e custa zero. O comprador brasileiro paga pelo estrangeiro.
-**Se você pedir a liberação:** cerca de seis dias úteis, e mesmo assim só cartão internacional à vista.
-**Parado há 18 dias:** o lote ESTRANGEIRO-CHECKOUT, que nem contato com o gerente de contas teve. Ninguém cobrou nesse tempo. Veja o último bloco desta página.
-→ [[DECISOES-ABERTAS#12b · liberação da conta Asaas para pagador estrangeiro|item completo]]
-
-#### QUALIF-6 · o passaporte entra como regra e a jornada trava no pagamento
-**Hoje:** a identidade por passaporte está especificada e o pagamento não anda, porque o gateway exige CPF ou CNPJ.
-**Se você mudar:** é o mesmo gesto do 12b, e os dois fecham juntos.
-**Parado há 2 dias como item, 18 como assunto:** a tela do estrangeiro, no mesmo lote gated.
-→ [[DECISOES-ABERTAS#QUALIF-6 · o passaporte entra como regra, mas a jornada do estrangeiro trava no pagamento|item completo]]
-
 **Uma coisa mais está parada por você e não é decisão:** o **ADMINSEP-3**, no último bloco desta página.
 
 ---
 
 ## Bloco 2 · Mexe em dinheiro ou em risco
 
-Vinte e cinco itens. Nenhum trava fila. Todos mudam valor cobrado ou repassado, exposição de dado, ou obrigação legal. São baratos de responder e caros de errar.
+Vinte e quatro itens. Nenhum trava fila. Todos mudam valor cobrado ou repassado, exposição de dado, ou obrigação legal. São baratos de responder e caros de errar.
 
 #### PARSE-1 · o campo de dinheiro não diz como o sistema lê o ponto
 **Hoje:** a regra que você decidiu está valendo em produção e mora só no cabeçalho de um arquivo de código. Quem escreve `1.005` querendo um e meio grava mil e cinco reais.
@@ -165,12 +157,6 @@ Vinte e cinco itens. Nenhum trava fila. Todos mudam valor cobrado ou repassado, 
 **Se você trouxer os números:** a tabela vira margem de verdade, e a decisão de preço para de ser tomada no escuro.
 **Não está parado:** é o único insumo que a construção não produz sozinha. Enquanto isso, o custo real de cada venda passa a ser registrado a partir do que o gateway devolve.
 → [[DECISOES-ABERTAS#JUROS-5 · a tabela de tarifas do Asaas, que só você consegue buscar|item completo]]
-
-#### 11 · os três segredos do primeiro deploy
-**Hoje:** três dos segredos estão provados presentes em produção. A chave que cifra os dados bancários e o endereço do monitoramento não foram conferidos.
-**Se faltar a chave bancária:** o cadastro bancário falha fechado e não abre.
-**Não está parado, e não é ação sua:** o próprio item diz que a execução é da esteira. Veja o último bloco desta página.
-→ [[DECISOES-ABERTAS#11 · os três segredos do primeiro deploy — status a confirmar|item completo]]
 
 #### PB-11 · no retry, a prova de aceite carimba a versão que a pessoa não leu
 **Hoje:** o retry carimba a versão vigente e a compra segue viva.
@@ -278,7 +264,7 @@ Vinte e cinco itens. Nenhum trava fila. Todos mudam valor cobrado ou repassado, 
 
 ## Bloco 3 · Preferência
 
-Dezoito itens. Todos andam sozinhos com o default em vigor. Responder melhora, e não responder não quebra nada. Se o dia acabar antes daqui, acabou bem.
+Dezessete itens. Todos andam sozinhos com o default em vigor. Responder melhora, e não responder não quebra nada. Se o dia acabar antes daqui, acabou bem.
 
 #### ADMINSEP-2 · o botão da área do cliente leva a qual painel
 **Hoje:** o default o lê como o painel do organizador, e o botão só aparece para quem também é organizador.
@@ -365,11 +351,6 @@ Dezoito itens. Todos andam sozinhos com o default em vigor. Responder melhora, e
 **Se for indicação:** nasce épico novo e entra na fila.
 → [[DECISOES-ABERTAS#QUALIF-4 · "fluxo de referência" era exemplo a copiar, ou programa de indicação|item completo]]
 
-#### HIP-R9-01 · pré-compra do clube-influenciador
-**Hoje:** o default conservador está em vigor. O link do clube só ativa o desconto ao cruzar o mínimo, sem cobrança em lote.
-**Se você validar em campo:** uma conversa com um organizador real responde as quatro questões de dinheiro, e só então nasce regra.
-→ [[DECISOES-ABERTAS#HIP-R9-01 · pré-compra do clube-influenciador|item completo]]
-
 ---
 
 ## O que não é seu
@@ -390,21 +371,25 @@ Esta seção existe para você não achar que tudo é seu. Duas coisas foram rot
 
 ## Leitura honesta do acúmulo
 
-Sessenta itens não é ritmo de decisão, é acúmulo. Parte dele é meu: cada review antagonista desta rodada devolveu de dois a cinco itens de juízo seu, e eu empilhei todos no mesmo lugar com o mesmo peso. Isto aqui é a parte que dá para devolver.
+Sessenta itens não é ritmo de decisão, é acúmulo. Parte dele é meu: cada review antagonista desta rodada devolveu de dois a cinco itens de juízo seu, e eu empilhei todos no mesmo lugar com o mesmo peso. Isto aqui é a parte que deu para devolver.
 
-**O critério.** Um item vira decisão minha com default permanente quando as três coisas valem ao mesmo tempo: está aberto há oito dias ou mais; nada quebrou nem foi cobrado nesse tempo; e a resposta não muda valor cobrado nem toca dado pessoal. Se as três valerem, o default deixa de ser proposta e vira regra, o item sai do painel e vira card de backlog. Você continua podendo reabrir a qualquer momento, e reabrir é uma frase.
+**O critério, que agora é regra e não proposta.** Um item vira decisão minha com default permanente quando as três coisas valem ao mesmo tempo: está aberto há oito dias ou mais; nada quebrou nem foi cobrado nesse tempo; e a resposta não muda valor cobrado nem toca dado pessoal. Se as três valerem, o default deixa de ser proposta e vira regra, o item sai do painel e vira card de backlog **com a condição que o traz de volta escrita ao lado**. Você continua podendo reabrir a qualquer momento, e reabrir é uma frase.
 
-**Os três que passam no critério hoje.**
+**Duas precisões que a conferência de 08/08 obrigou a escrever, e nenhuma delas muda o que você aprovou.** A primeira: a terceira condição fala da **resposta**, não do assunto — é o que deixa passar um item como o HIP-R9-01, cujo assunto é dinheiro do começo ao fim, mas cuja resposta é a regra que já está rodando. Para isso não virar porta dos fundos, vem com trava: item de dinheiro ou de dado pessoal só converte quando a resposta é o que já está em vigor **e** o portão de dinheiro sobrevive na condição de reabertura. A segunda: **condição de volta que ninguém consegue observar não é condição** — e uma das três do pagador estrangeiro está nessa situação hoje, o que está dito por inteiro no item logo abaixo.
 
-- **12b e QUALIF-6 · o pagador estrangeiro.** Dezoito dias, adiado por você em 26/07, e o lote nem contato com o gerente de contas teve. O paliativo funciona e custa zero. Proposta: o paliativo vira o comportamento permanente, os dois itens saem do painel juntos, e a liberação volta à mesa no dia em que existir um estrangeiro real querendo pagar. Isso tira dois de sessenta.
-- **11 · os três segredos do primeiro deploy.** Dezenove dias, e o próprio item já diz que não fica nada com você: a execução é da esteira. Ele está listado como ação sua por herança de uma moldura que envelheceu, a de "antes do primeiro deploy", e o primeiro deploy já aconteceu. Proposta: vira tarefa minha, conferir a chave bancária e o endereço do monitoramento em produção, e sai do painel. Isso tira um.
-- **HIP-R9-01 · pré-compra do clube-influenciador.** Dezenove dias, com default conservador em vigor e nada bloqueado. Proposta: o default vira permanente e a hipótese sai do painel para o backlog, marcada para voltar quando houver um organizador real na mesa. Isso tira um.
+**Os três passaram, e você aprovou em 06/08.** Verbatim: *"aprovado, pode virar default permanente esses três, e corrija"*.
 
-Se você aprovar os três, o painel cai de 60 para 56 e para de te cobrar por coisa que não está cobrando ninguém.
+- **12b e QUALIF-6 · o pagador estrangeiro.** Dezoito dias, adiado por você em 26/07, e o lote nem contato com o gerente de contas teve. ✅ **Convertidos.** O paliativo — comprador brasileiro paga pelo estrangeiro inscrito com passaporte — é o comportamento permanente, e o lote `ESTRANGEIRO-CHECKOUT` passou de gated por espera a fechado por decisão. **Volta quando existir um estrangeiro real querendo pagar sozinho**, em qualquer uma de três formas: um organizador pede o botão "aceitar estrangeiros", alguém tenta pagar com cartão emitido no exterior e é recusado no gateway, ou você decide vender para fora do Brasil. **Duas dessas três eu vejo; a do meio, não** — ela pressupõe alguém enxergando a recusa, e o projeto hoje tem zero política de alerta, zero métrica de log e zero canal de notificação, com o Sentry em produção como no-op sem endereço. Enquanto a observabilidade estiver com o CTO humano, esse gatilho depende dela. As outras duas chegam por contato humano e seguram a condição de pé sozinhas.
+- **11 · os três segredos do primeiro deploy.** Dezenove dias, e o próprio item já dizia que não ficava nada com você. ✅ **Convertido, e a tarefa já foi paga no mesmo dia.** A chave que cifra os dados bancários existe no Secret Manager com versão ativa, medido contra o projeto real, então o cadastro bancário não falha fechado. O endereço do monitoramento **não existe** — não há DSN em ambiente nenhum e nem nos dois bundles servidos, e o Sentry está em produção como no-op silencioso. Isso não é ponta solta deste item: é a mesma falta de observabilidade que já está com o CTO humano, e as duas metades passam a viver num lugar só.
+- **HIP-R9-01 · pré-compra do clube-influenciador.** Dezenove dias, com default conservador em vigor e nada bloqueado. ✅ **Convertida.** A RN-315 é a regra, sem prazo de validade: o link do clube só ativa o desconto ao cruzar o mínimo, sem cobrança em lote. **Volta quando houver um organizador real na mesa** que responda as quatro perguntas de dinheiro, e a conversa não precisa ser sua.
+
+O painel caiu de 60 para **56**. O registro completo dos três, com o texto que estava no painel e as condições de reabertura, está em `02-rodadas/2026-08-06-triagem-painel/01-decisoes-dono.md`.
 
 **Dois que são velhos e não passam no critério, e é honesto dizer por quê.**
 
 - **Item 12 · o domínio público**, dez dias. Falha na terceira condição. Enquanto o marcador não vira endereço, o e-mail transacional sai por um endereço do Gmail e tende a cair em spam, e a porta do organizador carrega um CTA com endereço que não existe. Isso é reputação de remetente, não preferência.
 - **Item 34 · a compra real**, oito dias. Falha na segunda condição. Nada quebrou porque nada foi provado: a função de cobrança segue com zero sucesso na história, e não existe substituto para você comprar.
 
-**Dois jovens demais para o critério e fortes no mérito.** O **CODPED-PODA-1** e o **PDF-SPINNER-1** são exatamente o tipo de item que vira default permanente: os dois já dizem no próprio texto que nada empurra. Eles nasceram ontem, então não têm tempo de estrada para provar. Reavalio os dois pelo mesmo critério na semana que vem, sem te perguntar de novo.
+**Dois jovens demais para o critério e fortes no mérito.** O **CODPED-PODA-1** e o **PDF-SPINNER-1** são exatamente o tipo de item que vira default permanente: os dois já dizem no próprio texto que nada empurra. Eles nasceram ontem, então não têm tempo de estrada para provar. Reavalio os dois pelo mesmo critério na semana de 10/08, sem te perguntar de novo.
+
+**Uma ação sua que nunca esteve nesta página, e agora está fechada.** Rodar o retroativo do código da compra contra produção era ato seu e vivia em três lugares — o card da S1228, o registro da rodada e o critério de pronto da fila —, **em painel nenhum**. Foi por isso que ele não entrou na conta dos sessenta. Ele rodou em 05/08, com a sua autorização: dezessete compras carimbadas, dezessete reservas, vinte e dois espelhos, e a conferência posterior fechando em zero sem código. **A sua compra ficou `PED-8CDHM`.** A lição fica escrita para não repetir: ação sua que nasce fora do painel não é cobrável nem visível, e a próxima entra no painel no mesmo gesto em que entra no card.
