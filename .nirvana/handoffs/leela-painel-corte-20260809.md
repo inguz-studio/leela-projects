@@ -99,4 +99,52 @@ sobrevive com uma pergunta só, no lugar de três.
 
 ## Blocos
 
-(preenchido a cada aterrissagem)
+### 1 · resgate da lane morta · `d82209bb`
+
+A rodada e este handoff entraram no repositório como estavam, depois da conferência descrita acima
+e das cinco seções recolocadas. Zero trabalho refeito: o registro dos 39 é o da lane anterior.
+
+### 2 · o painel reescrito no lugar · `eba43277`
+
+`leela-specs/01-produto/DECISOES-ABERTAS.md` passou de 905 para 447 linhas e de 66 para **28 itens
+contados à mão**, 23 decisões e 5 ações. O formato ficou: caso de uso e job story continuam em cada
+item, e nenhum dos que ficam foi reescrito, salvo os dois que a rodada mandou reformar.
+
+**O PONTE-CTA-1 enxuto, e o que exatamente encolheu.** A lane anterior registrou "enxugar ·
+executado" sem dizer o que era, e o painel nunca foi tocado, então o critério é meu e fica escrito
+aqui. Saíram os dois parágrafos de "primeiro fato" e "segundo fato", que viraram um; a quarta opção
+(medir pelo servidor por um campo na chamada) estava num bullet **abaixo** da linha de opções e
+subiu para dentro dela, que é onde uma opção mora; a razão de calendário pela qual a lane recusou
+aquele campo desceu para o "onde aterrissa". A pergunta, os quatro caminhos e a ponta de vocabulário
+continuam inteiros. Saiu também o ponteiro para o QUALIF-3, que deixou o painel.
+
+**O SEMKIT-1 encolhido.** O título passou a nomear o que sobrou: a autorização. "Qual dos três
+reparos" saiu com o default `zerar o preço dos dois` registrado na rodada, e o item agora tem uma
+pergunta só, com o motivo de ela continuar sendo dele em bullet próprio — o reparo é escrito em
+campo de preço de produção, como exceção declarada à RN-200.
+
+**Dois buracos fechados no caminho, e o primeiro é grave.** O **ACEITE-1** estava sendo dado como
+"absorvido pelo LGPD-1", e o LGPD-1 do painel só carregava **duas** frentes: a absorção existia no
+registro e desaparecia na prática, o que apagaria uma pergunta de prova de consentimento. O LGPD-1
+ganhou a terceira frente por escrito, com os três caminhos, a assimetria do `materialHash` e a
+medição dos três aceites de teste. E o **item 69** ainda dizia que as telas da porta do organizador
+"só sobem quando você responder o DEPLOY-1", que foi decidido nesta rodada; a frase passou a
+apontar o deploy. Um terceiro ponteiro, na fila do CTO, também dizia "entra na conta do DEPLOY-1" e
+foi ajustado.
+
+**Uma armadilha técnica que vale ficar registrada.** O script que fez a cirurgia duplicou o
+cabeçalho da "Fila de construção", porque a função que separa blocos por `###` devolve o texto de
+abertura como bloco e ele foi concatenado duas vezes. Achado na conferência de headings, antes do
+commit. Cirurgia por script em documento longo pede conferência de duplicata, não só de contagem.
+
+### 3 · a fila de execução · `02-fila-execucao.md`
+
+Os 27 itens que geram trabalho, com território e critério de aceite por item, divididos em
+**17 que mudam código** e **10 que mudam só spec, regra ou board**. Cada entrada da Parte A declara
+se o alvo está no ar hoje, porque é isso que separa ajuste barato de deploy com gente em cima.
+
+Quatro pedem lane própria: **PONTE-ELEGIVEL-1** (muda contrato de chamada e a review pediu review),
+**PARSE-1** (dezoito campos em duas aplicações), **DEPLOY-1** (escreve duas functions que nunca
+existiram) e **ACUMULO-ESTOQUE-1** (roda contra dado de produção, só leitura). Dois pares dividem
+arquivo e têm de andar juntos: **VITRINE-VEU-1** com **VITRINE-CONTRASTE-1**, e **AREA-MUDA-1** com
+**TROCA-EMAIL-1** — lane vizinha em arquivo compartilhado é como trabalho verde some.
