@@ -281,4 +281,50 @@ describe('A4 · a travessia da ponte, contra o emulator', () => {
 
     expect((await db.collection('profissionais').doc(ana.uid).get()).exists).toBe(false);
   });
+
+  it('⚔ PONTE-ELEGIVEL-1 · o divulgador para na porta, e o banco real fica intacto', async () => {
+    // Contra banco de mentira já estava provado. O que só um banco real prova
+    // é que a recusa acontece ANTES de qualquer escrita — nenhuma transação
+    // aberta, nenhum documento meio-criado.
+    const divulgador = await participanteLogada('t8');
+    const erro = await promoverParaProfissionalCore(
+      db,
+      { ...divulgador, role: 'promoter' },
+      { aceiteTermo: true }
+    ).catch((e: { details?: { motivo?: string } }) => e);
+
+    expect((erro as { details?: { motivo?: string } }).details?.motivo).toBe('conta_inelegivel');
+    expect((await db.collection('profissionais').doc(divulgador.uid).get()).exists).toBe(false);
+  });
+
+  it('⚔ PONTE-ELEGIVEL-1 · a rebaixada com doc ANTIGO é recusada, e o doc dela não é tocado', async () => {
+    // O caso que a ordem das guardas decide. Ela organizava, foi rebaixada de
+    // propósito (o marcador fica, o tenantId some) e reaparece como
+    // participante — com `profissionais/{uid}` de antes. Se a inelegibilidade
+    // fosse decidida depois da transação, ela receberia `jaExistia: true`,
+    // atravessaria e voltaria ao mesmo beco, agora em silêncio.
+    const rebaixada = await participanteLogada('t9');
+    await db.collection('profissionais').doc(rebaixada.uid).set({
+      id: rebaixada.uid,
+      nome: 'Ana Paula',
+      email: rebaixada.email,
+      telefone: '',
+      organizacao: 'Castelo',
+      statusOnboarding: 'ativo',
+      criadoEm: FieldValue.serverTimestamp(),
+    });
+
+    const erro = await promoverParaProfissionalCore(
+      db,
+      { ...rebaixada, demotedFromRole: 'tenant_owner' },
+      { aceiteTermo: true }
+    ).catch((e: { details?: { motivo?: string } }) => e);
+
+    expect((erro as { details?: { motivo?: string } }).details?.motivo).toBe('conta_inelegivel');
+    // O doc antigo continua como estava: a recusa não rebaixa `ativo` para
+    // `aguardando_convite` nem recarimba consentimento (RN-467).
+    const doc = await db.collection('profissionais').doc(rebaixada.uid).get();
+    expect(doc.get('statusOnboarding')).toBe('ativo');
+    expect(doc.get('organizacao')).toBe('Castelo');
+  });
 });
