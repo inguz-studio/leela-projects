@@ -163,10 +163,8 @@ export function SolicitarRepasseModal({
 
         <Input
           id="repasse-valor"
-          type="number"
+          type="text"
           inputMode="decimal"
-          step="0.01"
-          min="0"
           label="Valor do repasse (R$)"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}

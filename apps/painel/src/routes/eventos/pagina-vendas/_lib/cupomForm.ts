@@ -23,6 +23,8 @@ import {
   dataHoraLocalParaDate,
   isCodigoCupomValido,
   isDataHoraLocalISO,
+  mensagemContagemInvalida,
+  mensagemValorInvalido,
   normalizarCodigoCupom,
   parseContagemPtBr,
   parseValorPtBr,
@@ -150,6 +152,16 @@ export function validarFormCupom(params: ValidarFormCupomParams): ResultadoValid
 
   // 3. Valor — coerência tipo↔valor pelo core. Percentual fora de 0–100 é
   // bloqueado com mensagem própria (aceite S300-T5); fixo exige R$ > 0.
+  //
+  // PARSE-1: texto ILEGÍVEL passa a usar a frase do parser, que ensina a
+  // pontuação. "Informe um percentual maior que zero" respondia igual para
+  // "1,234.56" e para campo em branco — e o desconto é dinheiro.
+  // O `vazio` fica com a frase daqui, que diz de qual campo se trata (mesma
+  // exceção do lote e do `CapacidadeModal`).
+  const lidoValor = parseValorPtBr(values.valor);
+  if (!lidoValor.ok && lidoValor.motivo !== 'vazio') {
+    return { ok: false, campo: 'valor', erro: mensagemValorInvalido(lidoValor.motivo) };
+  }
   const valor = parseValorCupom(values.tipo, values.valor);
   if (valor === null || valor <= 0) {
     return {
@@ -180,8 +192,13 @@ export function validarFormCupom(params: ValidarFormCupomParams): ResultadoValid
     // round-trip `String(n) !== tetoBruto`, que era a defesa certa contra o
     // truncamento do `parseInt` mas recusava junto o milhar legítimo: "1.000"
     // caía como texto sujo em vez de virar mil usos.
+    // PARSE-1: o motivo da recusa deixa de ser descartado; a faixa (≥ 1) fica
+    // com a frase de sempre.
     const lido = parseContagemPtBr(tetoBruto);
-    const n = lido.ok ? lido.valor : Number.NaN;
+    if (!lido.ok) {
+      return { ok: false, campo: 'tetoUso', erro: mensagemContagemInvalida(lido.motivo) };
+    }
+    const n = lido.valor;
     if (!Number.isInteger(n) || n < 1) {
       return {
         ok: false,

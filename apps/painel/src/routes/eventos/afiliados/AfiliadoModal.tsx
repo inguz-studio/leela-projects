@@ -20,6 +20,7 @@ import type {
 } from '@leela/api-client';
 import type { AfiliadoDoTenant } from '@leela/api-client';
 import { isComissaoAfiliadoValida, parseContagemPtBr, parseValorPtBr } from '@leela/core';
+import { mensagemDeContagem, mensagemDeValor } from '../../../lib/mensagemDoParser';
 
 type TipoComissao = 'nenhuma' | 'percentual' | 'valor_fixo';
 
@@ -32,9 +33,10 @@ type TipoComissao = 'nenhuma' | 'percentual' | 'valor_fixo';
  * é o que `isComissaoAfiliadoValida` já reprovava antes, então o botão continua
  * desabilitado pelo mesmo caminho.
  *
- * Exportada para teste de mesa: o campo é `type="number"`, e o jsdom (como o
- * browser) higieniza para "" tudo que não seja número de ponto flutuante, então
- * pelo teclado o teste não alcança o parse. A tabela de casos entra direto.
+ * Exportada para teste de mesa desde a lane do parser, quando o campo ainda era
+ * `type="number"` e nem o jsdom nem o browser deixavam o texto chegar ao parse.
+ * Com o campo de texto (PARSE-1) o teclado alcança, e a tabela de casos fica
+ * como está: ela cobre o parse sem montar o modal inteiro.
  */
 export function montarComissao(
   tipo: TipoComissao,
@@ -117,6 +119,15 @@ export function AfiliadoModal({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [tokenGerado, setTokenGerado] = useState<string | null>(null);
+
+  // PARSE-1: os três campos numéricos deste modal liam pelos parsers do core e
+  // não mostravam NADA — texto ilegível virava `NaN`, o `valido` fechava o
+  // botão e a pessoa não tinha como saber qual dos campos a estava travando.
+  // Cada um passa a dizer a recusa do parser; a faixa (1..90, ≥ 1, comissão)
+  // continua sendo do `valido`, como sempre foi.
+  const erroJanela = mensagemDeContagem(janela);
+  const erroMinimo = mensagemDeContagem(minimo);
+  const erroComissao = comTipo === 'nenhuma' ? null : mensagemDeValor(comValor);
 
   const valido = useMemo(() => {
     if (nome.trim().length === 0) return false;
@@ -290,19 +301,21 @@ export function AfiliadoModal({
           <div className="grid grid-cols-2 gap-[var(--spacing-4)]">
             <Input
               id="afiliado-janela"
-              type="number"
+              type="text"
               inputMode="numeric"
               label="Janela de atribuição (dias)"
               value={janela}
               onChange={(e) => setJanela(e.target.value)}
+              {...(erroJanela !== null ? { errorMessage: erroJanela } : {})}
             />
             <Input
               id="afiliado-minimo"
-              type="number"
+              type="text"
               inputMode="numeric"
               label="Mínimo p/ desconto (opcional)"
               value={minimo}
               onChange={(e) => setMinimo(e.target.value)}
+              {...(erroMinimo !== null ? { errorMessage: erroMinimo } : {})}
             />
           </div>
 
@@ -333,14 +346,13 @@ export function AfiliadoModal({
               <>
                 <Input
                   id="afiliado-comissao-valor"
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  step="0.01"
-                  min="0.01"
                   label={comTipo === 'percentual' ? 'Percentual (%) — 0,01 a 100' : 'Valor por inscrição (R$)'}
                   value={comValor}
                   onChange={(e) => setComValor(e.target.value)}
                   placeholder={comTipo === 'percentual' ? '10' : '5,00'}
+                  {...(erroComissao !== null ? { errorMessage: erroComissao } : {})}
                 />
                 <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
                   Mudanças na comissão valem só para conversões futuras — a config

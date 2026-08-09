@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
 import type { Cupom, Timestamp } from '@leela/core';
@@ -165,5 +165,64 @@ describe('CupomModal (S300-T5)', () => {
     const { onOpenChange } = setup();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+// =============================================================================
+// PARSE-1 · dois dos dezoito campos (desconto e limite de usos do cupom).
+//
+// O desconto é dinheiro e já era campo de texto, mas respondia "Informe um
+// percentual maior que zero" para qualquer texto que não entendeu. O limite de
+// usos era `type="number"`.
+// =============================================================================
+
+describe('PARSE-1 · a recusa do parser tem onde aparecer no cupom', () => {
+  it('desconto e limite de usos são campo de TEXTO com teclado numérico', () => {
+    setup();
+    const valor = screen.getByLabelText('Desconto (%)');
+    const teto = screen.getByLabelText('Limite de usos (opcional)');
+    expect(valor).toHaveAttribute('type', 'text');
+    expect(valor).toHaveAttribute('inputmode', 'decimal');
+    expect(teto).toHaveAttribute('type', 'text');
+    expect(teto).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('desconto no estilo en-US ensina a pontuação, em vez de "maior que zero"', async () => {
+    const { onSalvar } = setup();
+    await userEvent.type(screen.getByLabelText('Código'), 'PROMO10');
+    await userEvent.type(screen.getByLabelText('Desconto (%)'), '1,234.56');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar cupom' }));
+    expect(
+      await screen.findByText(
+        'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).',
+      ),
+    ).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('limite de usos com casa decimal acusa a casa decimal', async () => {
+    const { onSalvar } = setup();
+    await userEvent.type(screen.getByLabelText('Código'), 'PROMO10');
+    await userEvent.type(screen.getByLabelText('Desconto (%)'), '10');
+    await userEvent.type(screen.getByLabelText('Limite de usos (opcional)'), '2,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar cupom' }));
+    expect(
+      await screen.findByText(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      ),
+    ).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('BASELINE colar de planilha: "1.000" no limite de usos vale mil resgates', async () => {
+    const { onSalvar } = setup();
+    await userEvent.type(screen.getByLabelText('Código'), 'PROMO10');
+    await userEvent.type(screen.getByLabelText('Desconto (%)'), '10');
+    fireEvent.change(screen.getByLabelText('Limite de usos (opcional)'), {
+      target: { value: '1.000' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar cupom' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar.mock.calls[0]?.[1]).toMatchObject({ tetoUso: 1000 });
   });
 });

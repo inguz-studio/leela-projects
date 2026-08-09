@@ -40,6 +40,7 @@ import {
   type CanalCampanha,
 } from '@leela/core';
 import type { EventoOutletContext } from '../evento/EventoLayout';
+import { mensagemDeContagem } from '../../../lib/mensagemDoParser';
 import { canalCampanhaLabel } from '../_lib/campanhas';
 import {
   AUTOMACAO_VALORES_INICIAIS,
@@ -135,6 +136,15 @@ export function AutomacoesPage(): JSX.Element {
 
   const erros = useMemo(() => validarAutomacaoForm(values), [values]);
   const podeSalvar = erros.length === 0 && !salvando && campanhas.length > 0;
+
+  // PARSE-1: o intervalo é campo de contagem e não tinha mensagem nenhuma.
+  // Texto ilegível some do payload (`paraAutomacaoInput` só copia o que leu) e
+  // a automação salva com as vinte e quatro horas padrão, calada — RS1-22. A
+  // frase do parser passa a aparecer; o campo em branco fala pela dica, que diz
+  // o que acontece, porque a decisão foi AVISAR e não recusar.
+  const erroOffset = gatilhoUsaOffset(values.gatilho)
+    ? mensagemDeContagem(values.offsetHoras)
+    : null;
 
   function set<K extends keyof AutomacaoFormValues>(campo: K, valor: AutomacaoFormValues[K]): void {
     setValues((v) => ({ ...v, [campo]: valor }));
@@ -329,14 +339,12 @@ export function AutomacoesPage(): JSX.Element {
               {gatilhoUsaOffset(values.gatilho) ? (
                 <Input
                   id="auto-offset"
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  min="1"
-                  max="720"
-                  step="1"
                   label="Horas de offset (1–720)"
                   value={values.offsetHoras}
                   onChange={(e) => set('offsetHoras', e.target.value)}
+                  {...(erroOffset !== null ? { errorMessage: erroOffset } : {})}
                 />
               ) : null}
 

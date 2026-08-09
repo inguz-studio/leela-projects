@@ -41,6 +41,7 @@ import {
   LIMIAR_BAIXA_SKU_DEFAULT,
   TRANSICOES_APROVISIONAMENTO,
   gradeEfetivaDoItem,
+  mensagemContagemInvalida,
   parseContagemPtBr,
   tamanhosDoCorte,
   type Aprovisionamento,
@@ -643,8 +644,15 @@ function TransicaoSkuModal({
   async function confirmar(): Promise<void> {
     // Estoque pelo parser único de contagem (FIX-PARSE-MILHAR): encomendar
     // "1.000" camisetas registrava UMA, e 1 passava na guarda de inteiro.
+    // PARSE-1: texto ilegível passa a dizer POR QUE é ilegível — a frase única
+    // respondia "informe um inteiro" tanto para "2,5" quanto para "abc" quanto
+    // para campo em branco. A guarda de faixa (≥ 0) fica com a frase antiga.
     const lido = parseContagemPtBr(qtd);
-    if (!lido.ok || lido.valor < 0) {
+    if (!lido.ok) {
+      setErro(mensagemContagemInvalida(lido.motivo));
+      return;
+    }
+    if (lido.valor < 0) {
       setErro('Informe um número inteiro maior ou igual a zero.');
       return;
     }
@@ -687,9 +695,8 @@ function TransicaoSkuModal({
         <Input
           id="transicao-sku-qtd"
           label={receber ? 'Quantidade recebida' : 'Quantidade a encomendar'}
-          type="number"
-          min={0}
-          step={1}
+          type="text"
+          inputMode="numeric"
           value={qtd}
           onChange={(e) => setQtd(e.target.value)}
           {...(erro ? { errorMessage: erro } : {})}

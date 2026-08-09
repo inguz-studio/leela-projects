@@ -139,17 +139,21 @@ export function CapacidadeModal({
           </p>
         )}
 
+        {/* PARSE-1: campo de TEXTO com teclado numérico. Como `type="number"` o
+            navegador higienizava "1.234,56" para vazio antes de o código ver o
+            texto, e a recusa montada logo acima não tinha o que explicar. E o
+            guard `capacidadeParseavel &&` que morava aqui apagava a mensagem
+            exatamente no caso em que ela existe: a frase do parser só nasce
+            quando o parse FALHA. */}
         <Input
           id="capacidade-nova"
-          type="number"
+          type="text"
           inputMode="numeric"
-          min={lote.vendidos}
-          step="1"
           label="Nova capacidade (vagas configuradas)"
           value={capacidade}
           onChange={(e) => setCapacidade(e.target.value)}
           aria-describedby="capacidade-hint"
-          {...(capacidadeParseavel && erroCapacidade ? { errorMessage: erroCapacidade } : {})}
+          {...(erroCapacidade ? { errorMessage: erroCapacidade } : {})}
         />
         <span id="capacidade-hint" className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
           {`Não pode ficar abaixo de ${formatInt(lote.vendidos)} (já vendidos). Aumente para reabrir vagas.`}

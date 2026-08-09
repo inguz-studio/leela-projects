@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
 import type { Lote } from '@leela/core';
@@ -154,5 +154,54 @@ describe('CapacidadeModal · aritmética e recusa (frente D)', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar capacidade' }));
     expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 19, 'Encerrando a venda deste lote.');
+  });
+});
+
+// =============================================================================
+// PARSE-1 · o campo da capacidade (um dos dezoito).
+//
+// Aqui havia DOIS motivos para a mensagem não aparecer, e o `type="number"` era
+// só o primeiro. O segundo morava na própria tela: o `errorMessage` só era
+// passado quando `capacidadeParseavel` era verdadeiro — isto é, exatamente
+// quando a frase do parser NÃO existe. A recusa era montada e jogada fora.
+// =============================================================================
+
+describe('PARSE-1 · a recusa do parser tem onde aparecer na capacidade', () => {
+  it('é campo de TEXTO com teclado numérico', () => {
+    renderModal();
+    const campo = screen.getByLabelText(/Nova capacidade/i);
+    expect(campo).toHaveAttribute('type', 'text');
+    expect(campo).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('casa decimal na capacidade diz o que fazer, e o botão fecha', async () => {
+    const onAjustar = renderModal();
+    const usuario = userEvent.setup({ delay: null });
+    const campo = screen.getByLabelText(/Nova capacidade/i);
+    await usuario.clear(campo);
+    await usuario.type(campo, '2,5');
+    await usuario.type(screen.getByLabelText(/Motivo do ajuste/i), 'Ajuste com texto torto.');
+
+    expect(
+      screen.getByText(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      ),
+    ).toBeInTheDocument();
+    expect(campo).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: 'Salvar capacidade' })).toBeDisabled();
+    expect(onAjustar).not.toHaveBeenCalled();
+  });
+
+  it('BASELINE colar de planilha: "1.000" atravessa o campo e vale mil', async () => {
+    const onAjustar = renderModal();
+    const usuario = userEvent.setup({ delay: null });
+    const campo = screen.getByLabelText(/Nova capacidade/i);
+    fireEvent.change(campo, { target: { value: '1.000' } });
+    expect(campo).toHaveValue('1.000');
+    expect(screen.getByText('Configurado').nextSibling).toHaveTextContent('1.000');
+
+    await usuario.type(screen.getByLabelText(/Motivo do ajuste/i), 'Reabrindo mil vagas.');
+    await usuario.click(screen.getByRole('button', { name: 'Salvar capacidade' }));
+    expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 1000, 'Reabrindo mil vagas.');
   });
 });

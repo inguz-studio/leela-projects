@@ -7,7 +7,12 @@
 // criação/lotes) — exibidos read-only na tela.
 // =============================================================================
 
-import { modoTaxaDoEvento, parseContagemPtBr, type ModoTaxa } from '@leela/core';
+import {
+  mensagemContagemInvalida,
+  modoTaxaDoEvento,
+  parseContagemPtBr,
+  type ModoTaxa,
+} from '@leela/core';
 import { DOMINIO_LEELA } from '../../pagina-vendas/_lib/paginaVendasView';
 
 /** Estado controlado do form (capacidade como string do input; converte no submit). */
@@ -126,8 +131,16 @@ export function validaConfigGerais(v: ConfigGeraisValues): {
   }
   // A capacidade passa pela MESMA função que monta o payload — validar por um
   // caminho e gravar por outro é como o defeito de milhar sobrevivia calado.
-  if (v.capacidade.trim().length > 0 && capacidadeParaNumero(v.capacidade) === null) {
-    erros.capacidade = 'Capacidade deve ser um número inteiro maior que zero.';
+  //
+  // PARSE-1: texto ilegível usa a frase do parser (que ensina a pontuação) e a
+  // faixa (> 0) fica com a frase de domínio. Antes as duas eram a mesma.
+  if (v.capacidade.trim().length > 0) {
+    const lida = parseContagemPtBr(v.capacidade);
+    if (!lida.ok) {
+      erros.capacidade = mensagemContagemInvalida(lida.motivo);
+    } else if (capacidadeParaNumero(v.capacidade) === null) {
+      erros.capacidade = 'Capacidade deve ser um número inteiro maior que zero.';
+    }
   }
   return { valido: Object.keys(erros).length === 0, erros };
 }

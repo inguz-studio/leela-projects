@@ -27,6 +27,8 @@ import {
   loteEncerrado,
   loteEsgotado,
   loteShapeValido,
+  mensagemContagemInvalida,
+  mensagemValorInvalido,
   parseContagemPtBr,
   parseValorPtBr,
   validarLotesModalidade,
@@ -442,18 +444,33 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
   // corrigir um, salvar, e descobrir o próximo (frente A).
   // Ordem e vaga pelo parser único de contagem (FIX-PARSE-MILHAR): com
   // `parseInt` o separador de milhar não sobrevivia — "1.000" virava 1, um
-  // inteiro que a guarda abaixo aprovava, e o lote nascia com UMA vaga. Texto
-  // ilegível vira NaN de propósito: a régua de faixa segue sendo esta guarda,
-  // que não afrouxou em nada.
+  // inteiro que a guarda abaixo aprovava, e o lote nascia com UMA vaga.
+  //
+  // PARSE-1: o motivo da recusa deixa de ser descartado. Texto ILEGÍVEL usa a
+  // frase do parser, que diz o que fazer; a guarda de faixa continua inteira e
+  // fala quando há número para julgar. As duas nunca competem — texto que o
+  // parser recusou não chega a ter valor.
+  //
+  // O motivo `vazio` é a exceção, e é a mesma exceção do `CapacidadeModal`: a
+  // frase do parser ("Informe uma quantidade.") não diz DE QUAL campo se trata,
+  // e o conserto da frente A foi exatamente pôr o nome do campo no aviso. Campo
+  // em branco continua com a frase daqui.
   const ordemLida = parseContagemPtBr(values.ordem);
   const ordem = ordemLida.ok ? ordemLida.valor : Number.NaN;
-  if (!Number.isInteger(ordem) || ordem < 1) {
+  if (!ordemLida.ok && ordemLida.motivo !== 'vazio') {
+    erros.push({ campo: 'ordem', mensagem: mensagemContagemInvalida(ordemLida.motivo) });
+  } else if (!Number.isInteger(ordem) || ordem < 1) {
     erros.push({ campo: 'ordem', mensagem: 'A ordem deve ser um inteiro ≥ 1.' });
   }
 
   const vagaLida = parseContagemPtBr(values.quantidadeLimite);
   const quantidadeLimite = vagaLida.ok ? vagaLida.valor : Number.NaN;
-  if (!Number.isInteger(quantidadeLimite) || quantidadeLimite < 1) {
+  if (!vagaLida.ok && vagaLida.motivo !== 'vazio') {
+    erros.push({
+      campo: 'quantidadeLimite',
+      mensagem: mensagemContagemInvalida(vagaLida.motivo),
+    });
+  } else if (!Number.isInteger(quantidadeLimite) || quantidadeLimite < 1) {
     erros.push({
       campo: 'quantidadeLimite',
       mensagem: 'A vaga (quantidade limite) deve ser um inteiro ≥ 1.',
@@ -472,8 +489,14 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
     erros.push({ campo: 'fimEm', mensagem: 'O fim da janela deve ser depois do início.' });
   }
 
+  // PARSE-1: idem no preço. "Preço inválido (use R$ ≥ 0)" era a resposta para
+  // pontuação torta, para letra e para campo em branco — três problemas
+  // diferentes com a mesma frase. Agora a frase de faixa fica só com o negativo.
+  const precoLido = parseValorPtBr(values.preco);
   const preco = parsePrecoReais(values.preco);
-  if (preco === null) {
+  if (!precoLido.ok && precoLido.motivo !== 'vazio') {
+    erros.push({ campo: 'preco', mensagem: mensagemValorInvalido(precoLido.motivo) });
+  } else if (preco === null) {
     erros.push({ campo: 'preco', mensagem: 'Preço inválido (use R$ ≥ 0).' });
   }
 

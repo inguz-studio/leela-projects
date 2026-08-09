@@ -23,6 +23,7 @@ import {
 import { DateTimeField } from '@/components/fields/DateTimeField';
 import { definirCondicaoDesconto } from '@leela/api-client';
 import { AuthAlert } from '../../conta/auth/AuthAlert';
+import { mensagemDeContagem, mensagemDeValor } from '../../../lib/mensagemDoParser';
 import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useEventosDoOrganizador, useParceriasAssessoria } from './_data/assessorias';
 import {
@@ -85,6 +86,13 @@ export function ParceriaDetailPage(): JSX.Element {
 
   const erros = useMemo(() => validarCondicaoDesconto(values), [values]);
   const podeSalvar = erros.length === 0 && !enviando && parceria?.status === 'ativa';
+
+  // PARSE-1: os dois campos numéricos desta tela liam pelos parsers do core e
+  // não tinham NENHUMA mensagem — `erros` só desabilitava o botão, e quem
+  // digitasse "1,234.56" ficava olhando um botão morto sem uma palavra. O
+  // branco não acusa: os dois são preenchidos aos poucos e o teto é opcional.
+  const erroValor = mensagemDeValor(values.valor);
+  const erroTeto = mensagemDeContagem(values.tetoUso);
 
   const eventoOpcoes: SelectOption[] = useMemo(
     () => [
@@ -233,22 +241,23 @@ export function ParceriaDetailPage(): JSX.Element {
             <Input
               id="condicao-valor"
               label={values.tipo === 'percentual' ? 'Percentual (0–100)' : 'Valor em R$'}
+              type="text"
               inputMode="decimal"
               value={values.valor}
               onChange={(e) => set('valor', e.target.value)}
               placeholder={values.tipo === 'percentual' ? '10' : '25,00'}
+              {...(erroValor !== null ? { errorMessage: erroValor } : {})}
             />
           </div>
           <Input
             id="condicao-teto"
             label="Teto de usos (vazio = ilimitado)"
-            type="number"
+            type="text"
             inputMode="numeric"
-            min="1"
-            step="1"
             value={values.tetoUso}
             onChange={(e) => set('tetoUso', e.target.value)}
             placeholder="Deixe vazio para ilimitado"
+            {...(erroTeto !== null ? { errorMessage: erroTeto } : {})}
           />
           <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
             <DateTimeField

@@ -4,7 +4,7 @@
 // (sem EmailProvider o organizador recebe o link de aceite).
 // =============================================================================
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AfiliadoModal, montarComissao } from '../AfiliadoModal';
 
@@ -155,5 +155,80 @@ describe('AfiliadoModal (RN-317)', () => {
     await userEvent.type(screen.getByLabelText('E-mail do convite'), 'd@e.com');
     await userEvent.click(screen.getByRole('button', { name: 'Criar afiliado' }));
     expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ comissao: null }));
+  });
+});
+
+// =============================================================================
+// PARSE-1 · três dos dezoito campos (janela, mínimo e valor da comissão).
+//
+// Os três eram `type="number"` e NENHUM tinha mensagem: texto ilegível virava
+// `NaN`, o botão fechava e a pessoa não tinha como saber qual campo a travava.
+// =============================================================================
+
+describe('PARSE-1 · a recusa do parser tem onde aparecer no afiliado', () => {
+  it('os três são campo de TEXTO com teclado numérico', async () => {
+    renderModal();
+    await userEvent.click(screen.getByRole('button', { name: 'Percentual sobre a face' }));
+    const esperado = [
+      ['Janela de atribuição (dias)', 'numeric'],
+      ['Mínimo p/ desconto (opcional)', 'numeric'],
+      ['Percentual (%) — 0,01 a 100', 'decimal'],
+    ] as const;
+    for (const [rotulo, modo] of esperado) {
+      const campo = screen.getByLabelText(rotulo);
+      expect(campo).toHaveAttribute('type', 'text');
+      expect(campo).toHaveAttribute('inputmode', modo);
+    }
+  });
+
+  it('janela ilegível deixa de ser botão morto: o campo diz o que fazer', async () => {
+    renderModal();
+    const campo = screen.getByLabelText('Janela de atribuição (dias)');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '2,5');
+    expect(
+      screen.getByText(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      ),
+    ).toBeInTheDocument();
+    expect(campo).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('mínimo ilegível acusa no MÍNIMO, e o campo vazio segue quieto (é opcional)', async () => {
+    renderModal();
+    const minimo = screen.getByLabelText('Mínimo p/ desconto (opcional)');
+    expect(minimo).not.toHaveAttribute('aria-invalid');
+    await userEvent.type(minimo, '1,23,4');
+    expect(minimo).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('comissão em R$ no estilo en-US ensina a pontuação do dinheiro', async () => {
+    renderModal();
+    await userEvent.click(screen.getByRole('button', { name: 'Valor fixo por inscrição' }));
+    const campo = screen.getByLabelText('Valor por inscrição (R$)');
+    await userEvent.type(campo, '1,234.56');
+    expect(
+      screen.getByText(
+        'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('BASELINE colar de planilha: "1.000" no mínimo continua sendo mil inscrições', async () => {
+    const onSalvar = vi.fn().mockResolvedValue({
+      afiliadoId: 'DIONEY10',
+      refCodigo: 'DIONEY10',
+      status: 'ativo',
+      jaExistia: false,
+    });
+    renderModal({ onSalvar });
+    await userEvent.type(screen.getByLabelText(/Nome/), 'Dioney');
+    await userEvent.type(screen.getByLabelText(/E-mail/), 'dioney@exemplo.com');
+    fireEvent.change(screen.getByLabelText('Mínimo p/ desconto (opcional)'), {
+      target: { value: '1.000' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Criar afiliado' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar.mock.calls[0]?.[0]).toMatchObject({ minimoInscricoes: 1000 });
   });
 });

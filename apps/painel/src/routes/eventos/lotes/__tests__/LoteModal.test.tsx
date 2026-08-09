@@ -10,7 +10,7 @@
 // =============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
 import type { Lote } from '@leela/core';
@@ -256,5 +256,107 @@ describe('LoteModal · frente D — os lotes existentes ficam à vista enquanto 
   it('modalidade ainda sem lote não mostra painel vazio', () => {
     renderModal({ modalidade: '21k', lotesDoEvento: [] });
     expect(screen.queryByRole('region', { name: /Lotes já configurados/i })).not.toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// PARSE-1 · três dos dezoito campos (ordem, vaga e preço do lote).
+//
+// Ordem e vaga eram `type="number"`: o navegador higienizava o texto antes de
+// o código ver, então a recusa do parser não tinha onde aparecer. E as três
+// recusas eram frases de FAIXA — "inteiro ≥ 1", "use R$ ≥ 0" —, respondidas
+// igual para pontuação torta, para letra e para campo em branco.
+// =============================================================================
+
+describe('PARSE-1 · a recusa do parser tem onde aparecer nos campos do lote', () => {
+  it('ordem, vaga e preço são campo de TEXTO com teclado numérico', () => {
+    renderModal();
+    const esperado = [
+      ['Ordem na modalidade', 'numeric'],
+      ['Vaga (quantidade limite)', 'numeric'],
+      ['Preço da inscrição em 5k (R$)', 'decimal'],
+    ] as const;
+    for (const [rotulo, modo] of esperado) {
+      const campo = screen.getByLabelText(rotulo);
+      expect(campo).toHaveAttribute('type', 'text');
+      expect(campo).toHaveAttribute('inputmode', modo);
+    }
+  });
+
+  it('vaga com pontuação torta ensina a régua do milhar, em vez de repetir "inteiro ≥ 1"', async () => {
+    const onSalvar = vi.fn();
+    renderModal({ onSalvar });
+    await userEvent.type(screen.getByLabelText('Nome do lote'), 'Lote 3');
+    await userEvent.type(screen.getByLabelText('Vaga (quantidade limite)'), '1.23,45');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+
+    expect(
+      await screen.findByText(
+        'Pontuação fora do padrão. O ponto separa o milhar, de três em três (ex.: 1.000).',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Vaga (quantidade limite)')).toHaveAttribute('aria-invalid', 'true');
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('vaga com casa decimal diz que vaga não tem casa decimal', async () => {
+    renderModal();
+    await userEvent.type(screen.getByLabelText('Nome do lote'), 'Lote 3');
+    await userEvent.type(screen.getByLabelText('Vaga (quantidade limite)'), '2,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+    expect(
+      await screen.findByText(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('ordem ilegível acusa na ORDEM, e a vaga em branco continua com a frase que a nomeia', async () => {
+    renderModal();
+    await userEvent.type(screen.getByLabelText('Nome do lote'), 'Lote 3');
+    await userEvent.clear(screen.getByLabelText('Ordem na modalidade'));
+    await userEvent.type(screen.getByLabelText('Ordem na modalidade'), 'abc');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+
+    expect(
+      await screen.findByText('Quantidade inválida. Use apenas números inteiros (ex.: 1.000).'),
+    ).toBeInTheDocument();
+    // O `vazio` continua sendo da tela: "Informe uma quantidade." não diz de
+    // qual campo se trata, e nomear o campo foi o conserto da frente A.
+    expect(screen.getByText(/A vaga \(quantidade limite\)/)).toBeInTheDocument();
+  });
+
+  it('preço no estilo en-US ensina a pontuação, em vez de "Preço inválido"', async () => {
+    renderModal();
+    await userEvent.type(screen.getByLabelText('Nome do lote'), 'Lote 3');
+    await userEvent.type(screen.getByLabelText('Preço da inscrição em 5k (R$)'), '1,234.56');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+    expect(
+      await screen.findByText(
+        'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('BASELINE colar de planilha: "1.000" na vaga e "1.234,56" no preço atravessam o campo intactos', async () => {
+    renderModal();
+    // `fireEvent.change` com o texto inteiro é o que a COLAGEM faz: uma
+    // inserção só, e não tecla a tecla. Era aqui que o `type="number"`
+    // apagava — medido: "1.234,56" colado num campo numérico vira "".
+    const vaga = screen.getByLabelText('Vaga (quantidade limite)');
+    const preco = screen.getByLabelText('Preço da inscrição em 5k (R$)');
+    fireEvent.change(vaga, { target: { value: '1.000' } });
+    fireEvent.change(preco, { target: { value: '1.234,56' } });
+    expect(vaga).toHaveValue('1.000');
+    expect(preco).toHaveValue('1.234,56');
+
+    // E nenhum dos dois é acusado no submit: o valor colado é legível.
+    // (O payload que sai daí — mil vagas, R$ 1.234,56 — é provado no unitário
+    // do `loteForm`, que roda o validador sem montar a tela.)
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+    expect(screen.getByLabelText('Vaga (quantidade limite)')).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByLabelText('Preço da inscrição em 5k (R$)')).not.toHaveAttribute(
+      'aria-invalid',
+    );
   });
 });

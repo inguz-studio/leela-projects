@@ -5,7 +5,7 @@
 // de repasse manual de comissão (FASE 2 · idempotência amigável).
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
@@ -333,5 +333,27 @@ describe('InfluenciadoresPage', () => {
     expect(screen.getByText('1 repasse · R$ 500,00')).toBeInTheDocument();
     // O campo continua propondo o SALDO (700), não o total acumulado.
     expect(campoValor()).toHaveValue('700,00');
+  });
+
+  // ---------------------------------------------------------------------------
+  // PARSE-1 · o valor do repasse do influenciador é um dos cinco campos de
+  // dinheiro alcançáveis. Ele já era campo de texto e já mostrava a frase do
+  // parser (os testes acima provam o milhar e a recusa); o que faltava era a
+  // régua do ponto e da vírgula em tela, que entra na metade da calibragem.
+  // ---------------------------------------------------------------------------
+  it('PARSE-1 · é campo de TEXTO com teclado decimal, e a recusa do parser aparece', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(5000)] });
+    renderPage();
+    await abrirModal();
+    expect(campoValor()).toHaveAttribute('type', 'text');
+    expect(campoValor()).toHaveAttribute('inputmode', 'decimal');
+
+    await userEvent.clear(campoValor());
+    fireEvent.change(campoValor(), { target: { value: '1,234.56' } });
+    expect(
+      screen.getByText(
+        'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).',
+      ),
+    ).toBeInTheDocument();
   });
 });

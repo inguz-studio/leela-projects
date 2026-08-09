@@ -161,10 +161,8 @@ export function ConfigGeraisForm({
         />
         <Input
           id="config-capacidade"
-          type="number"
+          type="text"
           inputMode="numeric"
-          min="1"
-          step="1"
           label="Capacidade (vagas)"
           value={values.capacidade}
           onChange={(e) => set('capacidade', e.target.value)}

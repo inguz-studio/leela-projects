@@ -205,7 +205,9 @@ describe('validarFormLote (shape do core + invariante cross-lote)', () => {
     const values = { ...base, preco: 'abc' };
     const r = validarFormLote({ values, modalidade: '5k', loteId: null, lotesDoEvento: [l1] });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.erro).toMatch(/pre.o inv/i);
+    // PARSE-1: texto ilegível responde com a frase do parser, que ensina a
+    // pontuação. "Preço inválido (use R$ ≥ 0)" ficou só com o negativo.
+    if (!r.ok) expect(r.erro).toMatch(/Valor inválido/i);
   });
 
   it('ao editar, exclui o próprio lote dos irmãos (não colide consigo)', () => {
@@ -254,7 +256,7 @@ describe('erro POR CAMPO (frente A — o defeito que acusava "preço" pela vaga 
     if (r.ok) return;
     expect(r.erros).toHaveLength(2);
     expect(erroDoCampo(r, 'quantidadeLimite')).toMatch(/vaga/i);
-    expect(erroDoCampo(r, 'preco')).toMatch(/pre.o inv/i);
+    expect(erroDoCampo(r, 'preco')).toMatch(/Valor inválido/i);
     // Ordem VISUAL do formulário: a vaga vem antes do preço, então é ela que
     // recebe o foco.
     expect(r.erros[0]?.campo).toBe('quantidadeLimite');
@@ -550,7 +552,12 @@ describe('vaga e ordem com separador de milhar (FIX-PARSE-MILHAR)', () => {
         lotesDoEvento: [],
       });
       expect(r.ok).toBe(false);
-      expect(erroDoCampo(r, 'quantidadeLimite')).toMatch(/vaga/i);
+      // PARSE-1: a recusa passou a ser a do PARSER, que diz o que fazer, no
+      // lugar do "A vaga deve ser um inteiro ≥ 1" que respondia igual para
+      // casa decimal, para letra e para pontuação torta.
+      expect(erroDoCampo(r, 'quantidadeLimite')).toBe(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      );
     }
   });
 
@@ -570,7 +577,10 @@ describe('vaga e ordem com separador de milhar (FIX-PARSE-MILHAR)', () => {
   });
 
   it('a guarda de faixa continua de pé (vaga ≥ 1)', () => {
-    for (const q of ['0', '-5', '', 'abc']) {
+    // Número legível fora da faixa, e campo em branco: os dois seguem com a
+    // frase que NOMEIA o campo, que é o conserto da frente A (PARSE-1 não a
+    // toca — "Informe uma quantidade." não diria de qual campo se trata).
+    for (const q of ['0', '-5', '']) {
       const r = validarFormLote({
         values: { ...base, quantidadeLimite: q },
         modalidade: '5k',
@@ -580,6 +590,19 @@ describe('vaga e ordem com separador de milhar (FIX-PARSE-MILHAR)', () => {
       expect(r.ok).toBe(false);
       expect(erroDoCampo(r, 'quantidadeLimite')).toMatch(/vaga/i);
     }
+  });
+
+  it('texto ILEGÍVEL passa a dizer o que fazer, em vez de repetir a faixa', () => {
+    const r = validarFormLote({
+      values: { ...base, quantidadeLimite: 'abc' },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [],
+    });
+    expect(r.ok).toBe(false);
+    expect(erroDoCampo(r, 'quantidadeLimite')).toBe(
+      'Quantidade inválida. Use apenas números inteiros (ex.: 1.000).',
+    );
   });
 });
 

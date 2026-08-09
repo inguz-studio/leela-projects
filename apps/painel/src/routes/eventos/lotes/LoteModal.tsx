@@ -224,8 +224,8 @@ export function LoteModal({
           <Input
             id={ID_DO_CAMPO.ordem}
             label="Ordem na modalidade"
-            type="number"
-            min={1}
+            type="text"
+            inputMode="numeric"
             value={values.ordem}
             onChange={(e) => set('ordem', e.target.value)}
             disabled={congelado}
@@ -235,8 +235,8 @@ export function LoteModal({
             <Input
               id={ID_DO_CAMPO.quantidadeLimite}
               label="Vaga (quantidade limite)"
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
               value={values.quantidadeLimite}
               onChange={(e) => set('quantidadeLimite', e.target.value)}
               disabled={congelado}

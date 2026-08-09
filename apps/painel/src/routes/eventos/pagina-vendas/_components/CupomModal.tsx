@@ -193,8 +193,8 @@ export function CupomModal({
           <Input
             id="cupom-teto-uso"
             label="Limite de usos (opcional)"
-            type="number"
-            min={1}
+            type="text"
+            inputMode="numeric"
             placeholder="Vazio = ilimitado"
             value={values.tetoUso}
             onChange={(e) => set('tetoUso', e.target.value)}

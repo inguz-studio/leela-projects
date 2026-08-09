@@ -134,7 +134,13 @@ describe('ConfigGeraisForm (S304-T2)', () => {
   it('capa: NÃO há input de URL; upload → onUploadCapa → Salvar persiste a downloadURL', async () => {
     const { onSalvar, onUploadCapa } = setup();
     // Upload-only (RN-168): nenhum textbox de URL de imagem na tela de capa.
-    expect(screen.queryByRole('textbox', { name: /capa|imagem/i })).not.toBeInTheDocument();
+    // O nome é casado por palavra inteira desde o PARSE-1: "Capacidade (vagas)"
+    // virou `type="text"` e passou a ser um textbox, e o `/capa/i` solto casava
+    // com o começo da palavra — o teste acusaria a capacidade como se fosse um
+    // campo de URL de capa.
+    expect(
+      screen.queryByRole('textbox', { name: /\b(capa|imagem)\b/i }),
+    ).not.toBeInTheDocument();
     const arquivo = new File(['x'], 'capa.png', { type: 'image/png' });
     await userEvent.upload(screen.getByLabelText('Imagem de capa'), arquivo);
     await waitFor(() => expect(onUploadCapa).toHaveBeenCalledTimes(1));
@@ -258,5 +264,40 @@ describe('ConfigGeraisForm (S304-T2)', () => {
         expect(caixa.querySelector('svg')).not.toBeNull();
       },
     );
+  });
+});
+
+// =============================================================================
+// PARSE-1 · o campo de capacidade do evento (um dos dezoito).
+// =============================================================================
+
+describe('PARSE-1 · a recusa do parser tem onde aparecer na capacidade do evento', () => {
+  it('é campo de TEXTO com teclado numérico', () => {
+    setup();
+    const campo = screen.getByLabelText('Capacidade (vagas)');
+    expect(campo).toHaveAttribute('type', 'text');
+    expect(campo).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('capacidade com casa decimal diz o que fazer, e nada é salvo', async () => {
+    const { onSalvar } = setup();
+    const campo = screen.getByLabelText('Capacidade (vagas)');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '2,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    expect(
+      await screen.findByText(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      ),
+    ).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('BASELINE colar de planilha: "1.000" vagas continuam sendo mil', async () => {
+    const { onSalvar } = setup();
+    fireEvent.change(screen.getByLabelText('Capacidade (vagas)'), { target: { value: '1.000' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar.mock.calls[0]?.[0]).toMatchObject({ capacidade: 1000 });
   });
 });

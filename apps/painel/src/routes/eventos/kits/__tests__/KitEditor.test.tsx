@@ -236,3 +236,66 @@ describe('KitEditor (RN-200/211/216/217)', () => {
     expect(onSalvarKit).not.toHaveBeenCalled();
   });
 });
+
+// =============================================================================
+// PARSE-1 · dois dos dezoito campos (preço e capacidade do kit).
+//
+// O preço já era campo de texto e já mostrava a frase do parser; a capacidade
+// montava a frase e nunca a mostrava, porque era `type="number"` e o navegador
+// higienizava o texto antes de o código ver.
+// =============================================================================
+
+describe('PARSE-1 · a recusa do parser tem onde aparecer no kit', () => {
+  it('preço e capacidade são campo de TEXTO com teclado numérico', () => {
+    setup();
+    const preco = screen.getByLabelText(/Preço \(delta/i);
+    const capacidade = screen.getByLabelText('Capacidade');
+    expect(preco).toHaveAttribute('type', 'text');
+    expect(preco).toHaveAttribute('inputmode', 'decimal');
+    expect(capacidade).toHaveAttribute('type', 'text');
+    expect(capacidade).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('capacidade com casa decimal acusa, em vez de o campo se apagar sozinho', async () => {
+    const { onSalvarKit } = setup();
+    await userEvent.type(screen.getByLabelText('Nome do kit'), 'Kit Prata');
+    await userEvent.clear(screen.getByLabelText('Capacidade'));
+    await userEvent.type(screen.getByLabelText('Capacidade'), '2,5');
+    await userEvent.click(screen.getByRole('button', { name: /Salvar kit/i }));
+
+    expect(
+      await screen.findByText(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      ),
+    ).toBeInTheDocument();
+    expect(onSalvarKit).not.toHaveBeenCalled();
+  });
+
+  it('preço no estilo en-US ensina a pontuação', async () => {
+    // Evento SEM venda: com venda o preço nasce `disabled` pela RN-200 e a
+    // conversa é outra (a frase do bloqueio, que já tem teste próprio).
+    const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 } });
+    await userEvent.type(screen.getByLabelText('Nome do kit'), 'Kit Prata');
+    await userEvent.clear(screen.getByLabelText(/Preço \(delta/i));
+    await userEvent.type(screen.getByLabelText(/Preço \(delta/i), '1,234.56');
+    await userEvent.click(screen.getByRole('button', { name: /Salvar kit/i }));
+
+    expect(
+      await screen.findByText(
+        'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).',
+      ),
+    ).toBeInTheDocument();
+    expect(onSalvarKit).not.toHaveBeenCalled();
+  });
+
+  it('BASELINE colar de planilha: "1.000" na capacidade e "1.234,56" no preço viram mil e mil duzentos', async () => {
+    const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 } });
+    await userEvent.type(screen.getByLabelText('Nome do kit'), 'Kit Prata');
+    fireEvent.change(screen.getByLabelText('Capacidade'), { target: { value: '1.000' } });
+    fireEvent.change(screen.getByLabelText(/Preço \(delta/i), { target: { value: '1.234,56' } });
+    await userEvent.click(screen.getByRole('button', { name: /Salvar kit/i }));
+
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalledTimes(1));
+    expect(onSalvarKit.mock.calls[0]?.[1]).toMatchObject({ capacidade: 1000, preco: 1234.56 });
+  });
+});

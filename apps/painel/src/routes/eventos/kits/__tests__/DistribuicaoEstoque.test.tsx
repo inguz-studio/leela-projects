@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
 import { DistribuicaoView } from '../DistribuicaoView';
@@ -225,7 +225,9 @@ describe('EstoqueView', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
     const input = screen.getByLabelText('Quantidade a encomendar');
-    expect(input).toHaveValue(7); // sugestão lida do doc, não recalculada
+    // String, e não número: o campo é de TEXTO com teclado numérico desde o
+    // PARSE-1 — como `type="number"` a recusa do parser não tinha onde aparecer.
+    expect(input).toHaveValue('7'); // sugestão lida do doc, não recalculada
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() =>
@@ -248,7 +250,7 @@ describe('EstoqueView', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Receber' }));
     const input = screen.getByLabelText('Quantidade recebida');
-    expect(input).toHaveValue(10); // última encomenda do historico (RN-226)
+    expect(input).toHaveValue('10'); // última encomenda do historico (RN-226)
     await userEvent.clear(input);
     await userEvent.type(input, '9');
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
@@ -362,6 +364,62 @@ describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () =>
     await userEvent.click(screen.getByRole('button', { name: 'Encerrar encomendas' }));
     await waitFor(() =>
       expect(screen.getByText('Falha ao encerrar encomendas')).toBeInTheDocument(),
+    );
+  });
+});
+
+// =============================================================================
+// PARSE-1 · o campo de quantidade do estoque (um dos dezoito).
+//
+// Era `type="number"`, e a recusa era uma frase só ("Informe um número inteiro
+// maior ou igual a zero") para casa decimal, para letra e para campo em branco.
+// =============================================================================
+
+describe('PARSE-1 · a recusa do parser tem onde aparecer no estoque', () => {
+  it('é campo de TEXTO com teclado numérico', async () => {
+    renderEstoque({ aprovisionamento: [mkAprov({ aEncomendar: 7 })], itens: [mkItem({})] });
+    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    const campo = screen.getByLabelText('Quantidade a encomendar');
+    expect(campo).toHaveAttribute('type', 'text');
+    expect(campo).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('casa decimal na quantidade diz o que fazer, e nada é chamado', async () => {
+    const onTransicao = vi.fn().mockResolvedValue(undefined);
+    renderEstoque({
+      aprovisionamento: [mkAprov({ aEncomendar: 7 })],
+      itens: [mkItem({})],
+      onTransicao,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    const campo = screen.getByLabelText('Quantidade a encomendar');
+    fireEvent.change(campo, { target: { value: '2,5' } });
+    expect(campo).toHaveValue('2,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(
+      await screen.findByText(
+        'A quantidade é um número inteiro, sem casas decimais. Para mil, escreva 1.000 ou 1000.',
+      ),
+    ).toBeInTheDocument();
+    expect(onTransicao).not.toHaveBeenCalled();
+  });
+
+  it('BASELINE colar de planilha: "1.000" camisetas continuam sendo mil', async () => {
+    const onTransicao = vi.fn().mockResolvedValue(undefined);
+    renderEstoque({
+      aprovisionamento: [mkAprov({ aEncomendar: 7 })],
+      itens: [mkItem({})],
+      onTransicao,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    fireEvent.change(screen.getByLabelText('Quantidade a encomendar'), {
+      target: { value: '1.000' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() =>
+      expect(onTransicao).toHaveBeenCalledWith('camiseta__M', 'encomendado', 1000),
     );
   });
 });

@@ -427,7 +427,8 @@ export function KitEditor({
         <Input
           id="kit-capacidade"
           label="Capacidade"
-          type="number"
+          type="text"
+          inputMode="numeric"
           value={capacidadeStr}
           onChange={(e) => {
             setCapacidadeStr(e.target.value);
