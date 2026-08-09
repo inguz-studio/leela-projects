@@ -255,6 +255,10 @@ describe('S1234-T2 · as recusas viram frase, nunca erro cru', () => {
     { motivo: 'sem_sessao', trecho: /sess[ãa]o expirou/i },
     { motivo: 'sessao_anonima', trecho: /e-mail da sua conta/i },
     { motivo: 'conta_de_plataforma', trecho: /administra a plataforma/i },
+    // PONTE-ELEGIVEL-1 · a sexta recusa. Antes desta lane, o divulgador e a
+    // ex-organizadora rebaixada atravessavam a porta e só ouviam "código
+    // inválido" no resgate, dias depois.
+    { motivo: 'conta_inelegivel', trecho: /fale com o time leela/i },
     { motivo: 'aceite_ausente', trecho: /aceite o termo/i },
     { motivo: 'aceite_datado_pelo_cliente', trecho: /recarregue a p[áa]gina/i },
     { motivo: 'indisponivel', trecho: /tente de novo/i },

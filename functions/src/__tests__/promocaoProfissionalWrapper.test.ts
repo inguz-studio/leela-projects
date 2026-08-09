@@ -11,6 +11,13 @@
  *   1. a recusa `sem_sessao` — ela é lançada NO WRAPPER (`!context.auth`) e não
  *      existe no core. Das cinco recusas nomeadas, era a ÚNICA sem um caso de
  *      teste em lugar nenhum do repositório;
+ *
+ *      (PONTE-ELEGIVEL-1 · 09/08) as cinco viraram SEIS: `conta_inelegivel`
+ *      entrou pela mesma porta e é exercitada aqui pelo transporte, junto das
+ *      outras. A recusa nova depende de uma claim que a tradução do token
+ *      passou a ler — `demotedFromRole` —, e o transporte é o único lugar onde
+ *      essa leitura é provada de ponta a ponta a partir de um JWT de verdade.
+ *
  *   2. o `details.motivo` sobreviver à serialização. Se a `HttpsError` que o
  *      módulo lança não for a MESMA classe que o runtime carrega — e num
  *      monorepo pnpm com duas cópias de `firebase-functions` isso é possível —,
@@ -198,7 +205,7 @@ describe('⚔ vetor 12 · o wrapper https.onCall, pela primeira vez', () => {
     expect(estado.escritas).toHaveLength(0);
   });
 
-  it('⚔ o `details.motivo` sobrevive à serialização nas CINCO recusas', async () => {
+  it('⚔ o `details.motivo` sobrevive à serialização nas SEIS recusas', async () => {
     // Se a HttpsError do módulo não fosse a mesma classe do runtime, todas
     // estas viriam com status INTERNAL e sem `details` — o DEF-B de novo.
     const casos: {
@@ -227,6 +234,27 @@ describe('⚔ vetor 12 · o wrapper https.onCall, pela primeira vez', () => {
         token: { ...TOKEN_PARTICIPANTE, role: 'platform_admin' },
         motivo: 'conta_de_plataforma',
         status: 'PERMISSION_DENIED',
+      },
+      {
+        // PONTE-ELEGIVEL-1 · a sexta. O divulgador tem papel na Leela e o
+        // portão do código o recusa; a porta passou a recusá-lo aqui, com nome,
+        // em vez de deixá-lo esperar um convite que nunca seria aceito.
+        nome: 'divulgador',
+        corpo: { data: { aceiteTermo: true } },
+        token: { ...TOKEN_PARTICIPANTE, role: 'promoter' },
+        motivo: 'conta_inelegivel',
+        status: 'FAILED_PRECONDITION',
+      },
+      {
+        // A mesma recusa pelo OUTRO caminho: rebaixar apaga o `tenantId` e
+        // deixa o marcador, então o crachá dela é `athlete` — o papel mais
+        // comum do produto. É o marcador, e só ele, que a separa da
+        // participante que atravessa no caso feliz acima.
+        nome: 'ex-organizadora rebaixada de propósito',
+        corpo: { data: { aceiteTermo: true } },
+        token: { ...TOKEN_PARTICIPANTE, demotedFromRole: 'tenant_owner' },
+        motivo: 'conta_inelegivel',
+        status: 'FAILED_PRECONDITION',
       },
       {
         nome: 'aceite ausente',

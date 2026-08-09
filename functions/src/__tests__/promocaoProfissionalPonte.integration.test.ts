@@ -101,6 +101,9 @@ async function participanteLogada(sufixo: string): Promise<CallerPromocao & { em
     email,
     nome: 'Ana Paula',
     role: 'athlete',
+    // `athlete` LIMPO — sem marcador de demoção, ela é elegível pela mesma
+    // régua do resgate do código (PONTE-ELEGIVEL-1).
+    demotedFromRole: undefined,
     tenantId: null,
   };
 }

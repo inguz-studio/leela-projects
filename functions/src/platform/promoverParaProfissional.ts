@@ -67,6 +67,24 @@
 // `isPlatformAdmin` ele seria recusado aqui, e a ponte perderia exatamente a
 // conta mais legítima do sistema.
 //
+// -----------------------------------------------------------------------------
+// A PORTA RECUSA O QUE O PORTÃO RECUSA (PONTE-ELEGIVEL-1)
+// -----------------------------------------------------------------------------
+// A porta recusava só a conta de plataforma; o portão do código
+// (`resgatarConviteOrganizador`) recusa cinco estados. O divulgador
+// (`promoter`) e a ex-organizadora rebaixada de propósito (`athlete` com
+// `demotedFromRole` — rebaixar APAGA o `tenantId`, então ela reaparece como
+// participante) atravessavam esta porta, esperavam o convite e recebiam a
+// recusa genérica da RN-414 lá adiante, indistinguível de "código inválido".
+//
+// Não era escolha de produto: era inconsistência de contrato entre duas
+// guardas do mesmo caminho. A régua passou a morar em
+// `elegibilidadeOrganizador.ts` e as duas a leem — aqui pelo TOKEN, lá pelo
+// Auth Admin. Nenhuma cópia de lista de papéis nasce neste arquivo.
+//
+// O anti-enumeração não sofre: a recusa fala da conta que JÁ está logada, e
+// não do estado de conta de terceiro. Não há endereço de e-mail de entrada.
+//
 // Zero PII em log: uid e flags.
 // =============================================================================
 
@@ -75,6 +93,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { TERMO_LGPD_FINALIDADE, TERMO_LGPD_VERSAO } from '@leela/core';
+import { contaElegivelParaPapelDeOrganizador } from './elegibilidadeOrganizador';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -101,6 +120,7 @@ export type MotivoRecusaPromocao =
   | 'sem_sessao'
   | 'sessao_anonima'
   | 'conta_de_plataforma'
+  | 'conta_inelegivel'
   | 'aceite_ausente'
   | 'aceite_datado_pelo_cliente';
 
@@ -114,6 +134,17 @@ export interface CallerPromocao {
   nome: string | null;
   /** Papel LITERAL da claim. Ver a nota da RN-449 no topo. */
   role: string | null;
+  /**
+   * Marcador de demoção deliberada (`mergeTenantClaims`), como veio do TOKEN —
+   * não do Auth Admin, que não entra neste módulo e cuja ausência aqui é
+   * metade da prova de que a ponte não concede nada.
+   *
+   * `unknown` de propósito: só a PRESENÇA decide, e é exatamente assim que o
+   * portão do código o lê. Estreitar para `string` aqui faria um marcador
+   * malformado desaparecer no caminho — fail-open num campo que existe para
+   * dizer "não".
+   */
+  demotedFromRole: unknown;
   /** Tenant carimbado na claim, quando existe. */
   tenantId: string | null;
 }
@@ -149,6 +180,7 @@ export function callerDaPromocao(auth: {
     email?: string;
     name?: string;
     role?: unknown;
+    demotedFromRole?: unknown;
     tenantId?: unknown;
     firebase?: { sign_in_provider?: string };
   };
@@ -162,6 +194,9 @@ export function callerDaPromocao(auth: {
     email: typeof auth.token.email === 'string' ? auth.token.email : null,
     nome: typeof auth.token.name === 'string' ? auth.token.name : null,
     role: typeof auth.token.role === 'string' ? auth.token.role : null,
+    // Sem estreitamento: o marcador atravessa cru, porque quem decide é a
+    // presença dele e não o formato (ver `CallerPromocao.demotedFromRole`).
+    demotedFromRole: auth.token.demotedFromRole,
     tenantId: typeof auth.token.tenantId === 'string' ? auth.token.tenantId : null,
   };
 }
@@ -226,7 +261,27 @@ export async function promoverParaProfissionalCore(
     return { statusOnboarding: 'aguardando_convite', jaExistia: true };
   }
 
-  // ── 5. A criação, dentro da transação que decide o duplo clique ────────
+  // ── 5. PONTE-ELEGIVEL-1 — a porta recusa o que o portão recusaria ──────
+  // A régua é a MESMA do resgate do código, importada e não recopiada. Cai
+  // aqui o divulgador (`promoter`) e a ex-organizadora rebaixada de propósito
+  // (`athlete` + `demotedFromRole`), que antes atravessavam para ouvir a
+  // recusa genérica dias depois, no resgate.
+  //
+  // A ORDEM É PARTE DA REGRA, nos dois lados:
+  //   - depois do passo 4, para que quem já tem tenant continue recebendo
+  //     `jaExistia: true` em vez de uma recusa nova (ela JÁ atravessou);
+  //   - antes da transação, porque a rebaixada pode ter `profissionais/{uid}`
+  //     de quando organizava — deixá-la chegar ao doc devolveria sucesso e a
+  //     mandaria de volta para o mesmo beco, agora em silêncio.
+  if (!contaElegivelParaPapelDeOrganizador(caller)) {
+    throw recusa(
+      'failed-precondition',
+      'conta_inelegivel',
+      'Esta conta não pode virar conta de profissional. Fale com o time Leela para liberar o seu acesso.'
+    );
+  }
+
+  // ── 6. A criação, dentro da transação que decide o duplo clique ────────
   const ref = db.collection(COLECAO_PROFISSIONAIS).doc(caller.uid);
   const jaExistia = await db.runTransaction<boolean>(async (tx) => {
     const snap = await tx.get(ref);

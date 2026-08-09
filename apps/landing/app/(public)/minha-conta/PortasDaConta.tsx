@@ -120,6 +120,14 @@ const FRASE_DA_RECUSA: Record<MotivoRecusaPromocao, string> = {
   sem_sessao: 'Sua sessão expirou. Entre de novo e tente outra vez.',
   sessao_anonima: 'Entre com o e-mail da sua conta para conhecer o painel profissional.',
   conta_de_plataforma: 'Esta conta administra a plataforma e não vira conta de profissional.',
+  // PONTE-ELEGIVEL-1 · a sexta. Quem cai aqui é o divulgador e a
+  // ex-organizadora rebaixada de propósito: o resgate do código recusaria as
+  // duas, e a porta passou a recusá-las na entrada. A frase diz o que fazer
+  // porque o caminho de saída existe e é humano — o time Leela destrava a
+  // conta. Deixá-la atravessar era pior: ela esperava dias por um código que
+  // ia ser negado como se estivesse inválido.
+  conta_inelegivel:
+    'Esta conta não pode virar conta de profissional. Fale com o time Leela para liberar o seu acesso.',
   aceite_ausente: 'Aceite o termo do profissional para continuar.',
   aceite_datado_pelo_cliente: 'Recarregue a página e tente de novo.',
   indisponivel: 'Não conseguimos abrir o painel profissional agora. Tente de novo em instantes.',

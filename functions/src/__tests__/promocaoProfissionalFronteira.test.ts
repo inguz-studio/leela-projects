@@ -68,6 +68,10 @@ const CLIENTE: CallerPromocao = {
   email: 'ana@exemplo.dev',
   nome: 'Ana',
   role: 'athlete',
+  // A participante comum: `athlete` LIMPO, que é o papel que o `onCreateUser`
+  // dá a toda conta nova. O marcador de demoção é o que separa ela da
+  // ex-organizadora rebaixada (PONTE-ELEGIVEL-1).
+  demotedFromRole: undefined,
   tenantId: null,
 };
 
@@ -171,6 +175,24 @@ describe('S1234-T1 · a promoção repetida não duplica nada (RN-512, fluxo C)'
     expect(escritas).toHaveLength(0);
   });
 
+  it('⚔ PONTE-ELEGIVEL-1 · a rebaixada COM doc antigo é recusada, não recebe `jaExistia`', async () => {
+    // A ordem das guardas é a regra: a inelegibilidade é decidida ANTES da
+    // transação. Se ela fosse decidida depois, a ex-organizadora — que tem
+    // `profissionais/{uid}` de quando organizava — receberia sucesso, cairia
+    // na vitrine e voltaria ao mesmo beco, agora sem nem uma frase.
+    const { db, escritas } = dbFake(true);
+    const erro = await promoverParaProfissionalCore(
+      db,
+      { ...CLIENTE, demotedFromRole: 'tenant_owner' },
+      ACEITE
+    ).then(
+      () => null,
+      (e: unknown) => e as { details?: { motivo?: string } }
+    );
+    expect(erro?.details?.motivo).toBe('conta_inelegivel');
+    expect(escritas).toHaveLength(0);
+  });
+
   it('a decisão "existe ou não" acontece DENTRO da transação', async () => {
     // Se a leitura saísse da transação, duas chamadas simultâneas leriam
     // "não existe" e as duas escreveriam. O duplo clique da área do cliente é
@@ -215,6 +237,20 @@ describe('S1234-T1 · as recusas têm nome e nenhuma é `internal`', () => {
       caller: { ...CLIENTE, role: 'platform_admin' },
       input: ACEITE,
       motivo: 'conta_de_plataforma',
+    },
+    {
+      nome: 'divulgador (PONTE-ELEGIVEL-1)',
+      caller: { ...CLIENTE, role: 'promoter' },
+      input: ACEITE,
+      motivo: 'conta_inelegivel',
+    },
+    {
+      nome: 'ex-organizadora rebaixada de propósito (PONTE-ELEGIVEL-1)',
+      // Rebaixar APAGA o `tenantId` e grava o marcador (`mergeTenantClaims`):
+      // ela reaparece como participante e o `portaDaConta` lhe mostra a ponte.
+      caller: { ...CLIENTE, role: 'athlete', demotedFromRole: 'tenant_owner' },
+      input: ACEITE,
+      motivo: 'conta_inelegivel',
     },
     {
       nome: 'aceite ausente',
@@ -276,6 +312,21 @@ describe('S1234-T1 · o token lido sem inferência', () => {
       callerDaPromocao({ uid: 'u', token: { firebase: { sign_in_provider: 'password' } } })
         .ehAnonimo
     ).toBe(false);
+  });
+
+  it('o marcador de demoção atravessa cru — só a PRESENÇA dele decide', () => {
+    // Estreitar para `string` faria um marcador malformado sumir no caminho, e
+    // sumir num campo que existe para dizer "não" é fail-open.
+    expect(
+      callerDaPromocao({
+        uid: 'u',
+        token: { demotedFromRole: 'tenant_owner', firebase: { sign_in_provider: 'password' } },
+      }).demotedFromRole
+    ).toBe('tenant_owner');
+    expect(
+      callerDaPromocao({ uid: 'u', token: { firebase: { sign_in_provider: 'password' } } })
+        .demotedFromRole
+    ).toBeUndefined();
   });
 
   it('papel e tenant não-string não viram papel nem tenant por acidente', () => {

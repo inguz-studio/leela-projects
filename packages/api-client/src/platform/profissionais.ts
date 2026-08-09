@@ -132,19 +132,36 @@ export async function criarPerfilOrganizador(
 // ---------------------------------------------------------------------------
 
 /**
+ * Os motivos que o SERVIDOR nomeia, em `details.motivo`.
+ *
+ * Esta lista é a fonte: a união abaixo é derivada dela, e não escrita ao lado.
+ * Antes eram duas listas — a união e o array de validação — e uma recusa nova
+ * que entrasse só na união passaria a compilar e a cair em `indisponivel` em
+ * produção: a pessoa leria "tente de novo em instantes" para uma recusa que o
+ * servidor tinha acabado de nomear.
+ */
+const MOTIVOS_NOMEADOS = [
+  'sem_sessao',
+  'sessao_anonima',
+  'conta_de_plataforma',
+  /**
+   * PONTE-ELEGIVEL-1: a conta que o resgate do código recusaria (divulgador,
+   * ex-organizadora rebaixada de propósito) para na PORTA, com frase própria,
+   * em vez de atravessar e ouvir "código inválido" dias depois.
+   */
+  'conta_inelegivel',
+  'aceite_ausente',
+  'aceite_datado_pelo_cliente',
+] as const;
+
+/**
  * As recusas nomeadas da promoção. Vêm em `details.motivo` do callable; a
  * TELA escolhe a frase, porque copy é voz do produto e não contrato de API.
  * `indisponivel` é o balde do que não é recusa de regra (rede, deploy ainda
  * não propagado) — e existe para que nenhuma dessas chegue à pessoa como
  * "erro interno".
  */
-export type MotivoRecusaPromocao =
-  | 'sem_sessao'
-  | 'sessao_anonima'
-  | 'conta_de_plataforma'
-  | 'aceite_ausente'
-  | 'aceite_datado_pelo_cliente'
-  | 'indisponivel';
+export type MotivoRecusaPromocao = (typeof MOTIVOS_NOMEADOS)[number] | 'indisponivel';
 
 export interface PromocaoProfissionalResult {
   statusOnboarding: 'aguardando_convite';
@@ -173,15 +190,6 @@ export async function promoverParaProfissional(): Promise<PromocaoProfissionalRe
   return data;
 }
 
-/** Motivos que o servidor nomeia — o resto cai em `indisponivel`. */
-const MOTIVOS_NOMEADOS: readonly string[] = [
-  'sem_sessao',
-  'sessao_anonima',
-  'conta_de_plataforma',
-  'aceite_ausente',
-  'aceite_datado_pelo_cliente',
-];
-
 /**
  * Traduz a falha da promoção no motivo que a tela sabe dizer.
  *
@@ -192,7 +200,10 @@ const MOTIVOS_NOMEADOS: readonly string[] = [
  */
 export function motivoDaRecusaDaPromocao(erro: unknown): MotivoRecusaPromocao {
   const detalhe = (erro as { details?: { motivo?: unknown } } | null)?.details?.motivo;
-  if (typeof detalhe === 'string' && MOTIVOS_NOMEADOS.includes(detalhe)) {
+  if (
+    typeof detalhe === 'string' &&
+    (MOTIVOS_NOMEADOS as readonly string[]).includes(detalhe)
+  ) {
     return detalhe as MotivoRecusaPromocao;
   }
   // Fallback estreito e só para o caso que o transporte resolve sozinho: sem
