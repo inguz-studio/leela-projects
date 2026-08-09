@@ -7,7 +7,11 @@ repo: C:\dev\LEELA
 branch: main
 base: 1e5ee639
 inicio: 2026-08-08 20:57 (-03)
-estado: EM CURSO
+fim: 2026-08-08 21:36 (-03) · 39 minutos
+estado: CONCLUÍDA — construída e provada, NÃO revisada, NÃO no ar
+commits: ca72625c (T1+T2) · 0641e7f6 (T3) · ambos com push
+sumario: .nirvana/outputs/leela-retomada-20260808/lanes/PONTE-RET/outputs/_SUMMARY.md
+sobra: nenhuma — o `firestore-debug.log` gerado pelo emulator foi apagado no fim
 ---
 
 # Handoff vivo — PONTE-RET
