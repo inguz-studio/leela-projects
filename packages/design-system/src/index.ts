@@ -75,8 +75,8 @@ export { Toolbar, type ToolbarProps } from './components/Toolbar';
 export { SearchInput, type SearchInputProps } from './components/SearchInput';
 
 // ── Shell (S001-3-T1) ───────────────────────────────────────────────────────
-export { Sidebar, DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon, SidebarBrand, SidebarFooter } from './components/Sidebar';
-export type { SidebarProps, SidebarSection, SidebarItem, SidebarBadgeVariant, SidebarBrandProps, SidebarFooterProps } from './components/Sidebar';
+export { Sidebar, DEFAULT_SIDEBAR_SECTIONS, DEFAULT_SIDEBAR_NAV_ICONS, sidebarNavIcon, SidebarBrand, SidebarFooter } from './components/Sidebar';
+export type { SidebarProps, SidebarSection, SidebarItem, SidebarBadgeVariant, SidebarNavIconEntry, SidebarBrandProps, SidebarFooterProps } from './components/Sidebar';
 export { Breadcrumb } from './components/Breadcrumb';
 export type { BreadcrumbProps, BreadcrumbItem } from './components/Breadcrumb';
 export { PageHeader } from './components/PageHeader';
