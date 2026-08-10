@@ -161,6 +161,7 @@
   --surface-high: var(--neutral-200);
   --surface-sunken: var(--neutral-100);
   --surface-raised-opaque: var(--neutral-0);
+  --surface-overlay-opaque: var(--neutral-100);
   --text-primary: var(--neutral-900);
   --text-secondary: var(--neutral-700);
   --text-tertiary: var(--neutral-600);
@@ -533,7 +534,7 @@
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
   --card-foreground: var(--text-primary);
-  --popover: var(--surface-overlay);
+  --popover: var(--surface-overlay-opaque);
   --popover-foreground: var(--text-primary);
   --primary: var(--action-primary);
   --primary-foreground: var(--action-primary-fg);

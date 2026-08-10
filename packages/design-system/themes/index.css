@@ -151,6 +151,7 @@
   --surface-high: var(--neutral-750);
   --surface-sunken: var(--neutral-975);
   --surface-raised-opaque: var(--neutral-900);
+  --surface-overlay-opaque: var(--neutral-850);
   --text-primary: var(--neutral-50);
   --text-secondary: var(--neutral-300);
   --text-tertiary: var(--neutral-400);
@@ -523,7 +524,7 @@
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
   --card-foreground: var(--text-primary);
-  --popover: var(--surface-overlay);
+  --popover: var(--surface-overlay-opaque);
   --popover-foreground: var(--text-primary);
   --primary: var(--action-primary);
   --primary-foreground: var(--action-primary-fg);
@@ -721,6 +722,7 @@
   --surface-high: var(--neutral-200);
   --surface-sunken: var(--neutral-100);
   --surface-raised-opaque: var(--neutral-0);
+  --surface-overlay-opaque: var(--neutral-100);
   --text-primary: var(--neutral-900);
   --text-secondary: var(--neutral-700);
   --text-tertiary: var(--neutral-600);
@@ -1093,7 +1095,7 @@
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
   --card-foreground: var(--text-primary);
-  --popover: var(--surface-overlay);
+  --popover: var(--surface-overlay-opaque);
   --popover-foreground: var(--text-primary);
   --primary: var(--action-primary);
   --primary-foreground: var(--action-primary-fg);
@@ -1259,6 +1261,7 @@
   --surface-high: rgba(255, 255, 255, 0.055);
   --surface-sunken: var(--neutral-975);
   --surface-raised-opaque: var(--neutral-900);
+  --surface-overlay-opaque: var(--neutral-850);
   --text-primary: var(--neutral-50);
   --text-secondary: var(--neutral-200);
   --text-tertiary: var(--neutral-400);
@@ -1631,7 +1634,7 @@
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
   --card-foreground: var(--text-primary);
-  --popover: var(--surface-overlay);
+  --popover: var(--surface-overlay-opaque);
   --popover-foreground: var(--text-primary);
   --primary: var(--action-primary);
   --primary-foreground: var(--action-primary-fg);

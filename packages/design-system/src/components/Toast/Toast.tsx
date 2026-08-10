@@ -4,7 +4,8 @@
  * PROVENIÊNCIA (Lote A restante, decisão bd31974): VISUAL shadcn `toast`,
  * COMPORTAMENTO nosso. O frame adota a receita stock (rounded-md + border +
  * shadow + animate-in) via classes de ALIAS shadcn→brasa (border-border,
- * bg-popover = surface-overlay — mesma cor resolvida de antes) e motion
+ * bg-popover = surface-overlay-opaque desde a DELTA-UX/D-1008-R4 — painel
+ * flutuante nunca pinta o filme translúcido do vidro) e motion
  * tokenizado (A2: animate-in roda em var(--motion-duration-fast)). A fila do
  * `useToast` (ToastProvider) fica INTACTA — nada de Radix Toast primitives.
  *

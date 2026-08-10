@@ -109,8 +109,16 @@ const TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['text-brand',     'surface-raised'],
   ['text-danger',    'surface-base'],
   ['text-danger',    'surface-raised'],
-  ['text-danger',    'surface-overlay'], // DropdownMenu (A5): item destrutivo em repouso sobre bg-popover
   ['text-danger',    'feedback-danger-surface'], // DropdownMenu item destrutivo em hover/focus
+  // DELTA-UX (D-1008-R4): bg-popover passou de surface-overlay para
+  // surface-overlay-opaque — sob o vidro o overlay é filme translúcido de
+  // elemento em fluxo, e painel flutuante em portal o pintava como PRETO.
+  // Os pares dos consumidores de bg-popover (DropdownMenu/Popover/Command/
+  // Tooltip/Toast) medem a superfície que eles REALMENTE pintam:
+  ['text-primary',   'surface-overlay-opaque'], // item de menu / conteúdo de popover
+  ['text-secondary', 'surface-overlay-opaque'], // linhas secundárias em popover/toast
+  ['text-tertiary',  'surface-overlay-opaque'], // count do DropdownMenu / muted em popover
+  ['text-danger',    'surface-overlay-opaque'], // DropdownMenu (A5): item destrutivo em repouso sobre bg-popover
   ['text-success',   'surface-base'],
   ['text-success',   'surface-raised'],
   // Botões (Button/Chip ativo/Badge brand) — todos os estados
@@ -153,12 +161,13 @@ const NON_TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-heroico', 'surface-raised'],
   ['feedback-info',    'surface-base'],
   ['feedback-info',    'surface-raised'],
-  // Toast: borda esquerda semântica sobre o bg do toast (surface-overlay)
-  ['feedback-success', 'surface-overlay'],
-  ['feedback-danger',  'surface-overlay'],
-  ['feedback-warning', 'surface-overlay'],
-  ['feedback-heroico', 'surface-overlay'],
-  ['feedback-info',    'surface-overlay'],
+  // Toast: borda esquerda semântica sobre o bg do toast (bg-popover, que na
+  // DELTA-UX passou a resolver surface-overlay-opaque — ver TEXT_PAIRS acima)
+  ['feedback-success', 'surface-overlay-opaque'],
+  ['feedback-danger',  'surface-overlay-opaque'],
+  ['feedback-warning', 'surface-overlay-opaque'],
+  ['feedback-heroico', 'surface-overlay-opaque'],
+  ['feedback-info',    'surface-overlay-opaque'],
   // S-R9-04 (L-006) · pares NÃO-TEXTO de COMPONENTE que o gate original não
   // cobriu — o contraste passado só media pares de texto. Em T1 estes pares
   // eram os surrogate surface-raised×sunken (1.09:1) e sunken×base (1.01:1),
@@ -206,7 +215,12 @@ describe('Higiene da matriz', () => {
     // campo flat × página) — pares de COMPONENTE que faltavam na matriz.
     // GATE-DS-W1 (2026-07-18): -1 não-texto — o par input-border-flat×base saiu
     // (flat sem borda ratificado pelo Vitor; exceção documentada na matriz).
-    expect(TEXT_PAIRS.length).toBe(35);
+    // DELTA-UX (D-1008-R4): +3 texto líquido — bg-popover mudou para
+    // surface-overlay-opaque: +4 pares dos consumidores de popover (primary/
+    // secondary/tertiary/danger sobre overlay-opaque), -1 par movido
+    // (text-danger×surface-overlay). Os 5 não-texto do Toast MOVERAM de
+    // surface-overlay para surface-overlay-opaque (contagem inalterada).
+    expect(TEXT_PAIRS.length).toBe(38);
     expect(NON_TEXT_PAIRS.length).toBe(21);
   });
 });

@@ -61,11 +61,12 @@
  * transparente que ainda engole clique é pior que um menu que some seco.
  *
  * AA (matriz de contraste): item default = popover-foreground sobre popover
- * (text-primary/surface-overlay ✓); hover/focus = accent-foreground sobre
- * accent (action-ghost-fg/action-ghost-hover ✓); item destrutivo =
- * text-danger sobre surface-overlay (PAR NOVO do lote, provado 6.75/6.68 na
- * matriz) e sobre feedback-danger-surface em hover (✓). border-border é
- * decorativa (frame shadcn), fora do gate 1.4.11.
+ * (text-primary/surface-overlay-opaque ✓ — DELTA-UX/D-1008-R4: o painel
+ * flutuante nunca pinta o filme translúcido do vidro; a prova do portal está
+ * em __tests__/superficie-portal.test.tsx); hover/focus = accent-foreground
+ * sobre accent (action-ghost-fg/action-ghost-hover ✓); item destrutivo =
+ * text-danger sobre surface-overlay-opaque e sobre feedback-danger-surface em
+ * hover (✓). border-border é decorativa (frame shadcn), fora do gate 1.4.11.
  */
 
 import * as React from 'react';
