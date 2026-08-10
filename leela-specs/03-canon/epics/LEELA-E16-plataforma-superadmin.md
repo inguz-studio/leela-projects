@@ -1943,3 +1943,92 @@ nenhuma — mas encosta em todas, e vira card próprio.
 exatamente por elas: nenhum caso exercita `platform_admin` contra `crmClientes` (a negação mais
 consequente do arquivo não tem canário); nenhum caso de `collectionGroup` com crachá de
 administrador; e `pessoas` (`:2688`) não tem caso nomeado com administrador.
+
+## Delta o fluxo de aprovação de contas (SPEC-ADMIN-USUARIOS · 2026-08-10)
+
+Decisão ADMIN-USUARIOS-1 do dono em 09/08 — *"esse cadastro deve aparecer no painel master.
+que lá eu aprovarei, passando um código. Ou liberando diretamente o acesso. O modal de liberar
+acesso deve aparecer depois que a pessoa já entra no sistema e tenta fazer alguma ação."* —
+formalizada contra o código real em `02-rodadas/2026-08-10-admin-usuarios/` (decisão,
+inventário linha a linha, spec e fila). A tela continua sendo a **S1615** (uma rota, dois
+modos); este delta dá a ela o contrato que faltava.
+
+### O que a medição cravou, e a spec consome
+
+**Aprovação não é campo — é a posse da claim `tenantId`.** Não existe `aprovado`, `pendente`
+nem callable de aprovação em lugar nenhum (greps exaustivos no inventário). O estado inteiro
+cabe em duas peças: `profissionais/{uid}.statusOnboarding: 'aguardando_convite' | 'ativo'`
+(preso pela Rule no create, promovido só por `provisionTenant.ts:407`/`:425`) e as claims
+(`role` + `tenantId`). O painel master **não lê** esse estado hoje (grep `aguardando_convite`
+em `routes/plataforma`: zero), e nenhum reader lista `profissionais` — a Rule já permitiria ao
+admin (`firestore.rules:2920-2922`); falta só a S1615-T1.
+
+**A vitrine não descobre a liberação.** `onSnapshot`/`onIdTokenChanged`: zero no fluxo;
+`sessao.recarregar()` só roda após resgate na própria tela (`ContaTravadaGate.tsx:141-144`).
+Liberada server-side, a conta fica em vitrine até o F5 — é o buraco que o ADMINVISAO-5 (b)
+pergunta e a RN-550 propõe fechar.
+
+### Regras de negócio novas (faixa RN-547 a RN-552)
+
+- **RN-547 · Quem espera aparece.** Toda conta em `aguardando_convite` aparece na fila do
+  painel master (modo Fila da S1615) desde o instante do cadastro, pelas duas origens
+  (`/cadastrar` — RN-411; ponte — RN-512), com os campos mínimos da RN-540. Nenhum estado novo:
+  sair da fila é consequência do `statusOnboarding` virar `'ativo'`, nunca gesto separado. A
+  fila declara a borda da conta órfã (write best-effort que falhou — frente LGPD-1).
+- **RN-548 · Aprovar tem duas portas e um destino só.** Código (RN-414, intocada) e liberação
+  direta terminam no **mesmo** estado terminal, produzido pelo mesmo núcleo
+  (`provisionTenantCore`): tenant `ativo` + doc `'ativo'`/`tenantId`/`papeis` + claims
+  `tenant_owner`+`tenantId` com refresh revogado. Mesma régua de elegibilidade
+  (`contaElegivelParaPapelDeOrganizador`); a porta administrativa nomeia o motivo da recusa (o
+  operador não é atacante). Prova por teste que compara os dois desfechos campo a campo.
+- **RN-549 · A régua do "AÇÃO" — condicionada ao ADMINVISAO-5 (a).** No default proposto
+  (ratificar), nada muda no ar: a regra escreve a régua da RN-510 como texto canônico —
+  dispara clique/`Enter`/espaço sobre acionável (o `SELETOR_INTERATIVO` real, aba de menu
+  incluída pelo verbatim de 06/08), não dispara texto/moldura/foco puro/tecla de widget/aviso
+  isento/`/conta`, rearma ao fechar. Na leitura restritiva, muda P11/P14 e
+  `primeiraInteracao.ts`, com o custo declarado no vetável.
+- **RN-550 · A liberação chega sem F5 — condicionada ao ADMINVISAO-5 (b).** Default proposto:
+  a vitrine assina o **doc próprio** (`request.auth.uid == profId` já passa na Rule — zero
+  Rule nova), relê o crachá quando `statusOnboarding` vira `'ativo'` e cai pela mesma saída
+  por sessão do resgate, com todas as travas devolvidas (lição REV-CORTE). A allowlist da
+  RN-510 cresce **em um nome, declarado**. O aviso ganha a linha da segunda espera; o campo de
+  resgate fica (RN-414).
+- **RN-551 · Todo ato de aprovação deixa rastro.** Quem, quando, sobre quem, por qual porta —
+  nas duas portas, com **negativa registrada**, no livro `auditoriaAcessos` que a Onda 1 já
+  abriu. Sem export (RN-540 vale para o rastro). O convite queimado (RN-447) continua sendo o
+  rastro do código; o registro canônico do ato passa a ser o resgate/liberação, num lugar só.
+- **RN-552 · Recusar e revogar — condicionada ao ADMIN-USUARIOS-2.** Nasce na forma da
+  resposta (número consumido de qualquer jeito, como a RN-546). Já cravado: se existirem, são
+  atos com o rastro da RN-551, e revogação nunca apaga dado — no máximo suspende
+  (`transitionTenant`).
+
+### História nova
+
+| História | O que entrega | Espera |
+|---|---|---|
+| **LEELA-S1616** · A aprovação converge, e a vitrine descobre | contrato de convergência da liberação direta (T1) + rastro das duas portas + saída da vitrine sem F5 (T2) + copy das duas esperas (T3) + régua do gatilho (T4) + recusa/revogação (T5, condicionada) | ADMINVISAO-5 (a) e (b) · ADMIN-USUARIOS-2 (só T5) |
+
+A S1616 dá o **contrato** da `S1615-T3` (liberação direta) e da `S1615-T4` (delta da RN-510);
+a tela continua na onda 5 da ADMIN-VISAO. Fila com territórios e gates em
+`02-rodadas/2026-08-10-admin-usuarios/04-fila-codigo.md` — incluindo o **gate de produção**
+herdado do corte de 09/08 (o registro diz que `resgatarConviteOrganizador` responde 404 em
+produção; conferir o deploy antes de qualquer build que dependa da porta do código viva).
+
+### A RN-510 continua inalterada no enunciado
+
+O gatilho só muda se o dono escolher a leitura restritiva no ADMINVISAO-5 (a) — e aí a mudança
+é a `S1616-T4`, declarada, nunca efeito colateral. A allowlist ganha um nome **somente** se o
+default do (b) for ratificado, e ganha nomeado. As pontas que a medição achou sem carona em
+decisão: a sidebar troca para a nav de plataforma por pathname sem olhar claim
+(`shell/sidebar.ts:148-157` — moldura mente o papel para conta em vitrine que digita
+`/plataforma`; dado nenhum vaza) e os puros da régua não têm teste unitário dedicado — as duas
+na fila da rodada como consertos P1/P2.
+
+### O que saiu e o que entrou no painel de decisões
+
+**ADMIN-USUARIOS-1 saiu** — decidido em 09/08, formalizado nesta rodada; o alcance do
+diretório, que era a metade ainda aberta, foi respondido pela própria ordem da visão master
+("todos os usuários") com o desenho de dois modos da S1615. **ADMIN-USUARIOS-2 entrou** no
+lugar (recusa/revogação — a pergunta que a frase não alcança). **ADMINVISAO-5 foi atualizado
+no lugar**: as duas letras ganharam default proposto com custo medido; a decisão continua do
+dono.
