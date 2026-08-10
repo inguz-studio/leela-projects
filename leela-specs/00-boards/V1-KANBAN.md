@@ -126,7 +126,7 @@ tags:
         - [ ] S1610-T6 custo, markup e margem viram funções do core, com margem negativa à mostra ⚔
         - [ ] S1610-T7 a economia do parcelamento aparece na tela de termos, linha a linha
         - [ ] S1610-T8 a grade de taxa por parcela dos planos avisa que não move preço nenhum
-- [ ] **[E16] O painel master passa a mostrar cada produtora por dentro, e o sistema inteiro por cima** — você abre uma produtora e vê os eventos, os clubs, os clientes, as vendas, o que ela gerou, o que ela tem a receber, em que plano está e quem responde por ela; e passa a ter as listas de todos os eventos e de todos os clubs do sistema 📋 especificado em 09/08 · a conferência achou que o administrador **já** cruza a fronteira em 9 dos 11 itens, então quase nada é permissão e quase tudo é tela · **fica com você:** **V-1** (o que "faturamento" nomeia), **V-2** (clientes: comportamento ou contato), **V-3** (responsável é o dono da conta?), **V-4** (CPF no diretório) e **V-5** (o gatilho do aviso) [[LEELA-E16-plataforma-superadmin]]
+- [ ] **[E16] O painel master passa a mostrar cada produtora por dentro, e o sistema inteiro por cima** — você abre uma produtora e vê os eventos, os clubs, os clientes, as vendas, o que ela gerou, o que ela tem a receber, em que plano está e quem responde por ela; e passa a ter as listas de todos os eventos e de todos os clubs do sistema 📋 especificado em 09/08 · a conferência achou que o administrador **já** cruza a fronteira em 9 dos 11 itens, então quase nada é permissão e quase tudo é tela · **fica com você:** **V-1** (o que "faturamento" nomeia), **V-2** (clientes: comportamento ou contato), **V-3** (responsável é o dono da conta?), **V-4** (CPF no diretório) e **V-5** (o gatilho do aviso — atualizado em 10/08 com defaults propostos nos dois lados) · a decisão ADMIN-USUARIOS-1 de 09/08 foi formalizada em 10/08 (RN-547 a RN-552) e deixou no painel só o **ADMIN-USUARIOS-2** (recusar/revogar) [[LEELA-E16-plataforma-superadmin]]
     - [ ] **S1612 · A ficha do tenant: o que ele produz e para quem** — uma rota com abas, não sete endereços
         - [ ] S1612-T1 a SubNav da ficha nasce sem reescrever o resumo que já está no ar
         - [x] S1612-T2 leitura por tenant de eventos e clubs, paginada · `354116a9`
@@ -153,6 +153,12 @@ tags:
         - [ ] S1615-T3 liberar acesso direto passa por servidor e deixa rastro
         - [ ] S1615-T4 o aviso de boas-vindas se ajusta à sua resposta sobre o gatilho
         - [ ] S1615-T5 o CPF de todo mundo continua fora do alcance do painel
+    - [ ] **S1616 · A aprovação converge, e a vitrine descobre** — as duas portas terminam no mesmo lugar, com rastro de quem abriu · especificada em 10/08 · [[LEELA-E16-plataforma-superadmin]]
+        - [ ] S1616-T1 a liberação direta termina exatamente onde o resgate termina, provado por comparação ⚔
+        - [ ] S1616-T2 a vitrine descobre a liberação sem F5, pela mesma saída por sessão do resgate ⚔ · aguarda ADMINVISAO-5 (b)
+        - [ ] S1616-T3 o aviso passa a cobrir as duas esperas, numa linha · aguarda ADMINVISAO-5 (b)
+        - [ ] S1616-T4 a régua do gatilho vira texto canônico, ou muda para ação bloqueada · aguarda ADMINVISAO-5 (a)
+        - [ ] S1616-T5 recusar e revogar · só nasce com o ADMIN-USUARIOS-2 respondido
     - [ ] **Dívida · o crachá de administrador tem duas leituras que não conversam** — quem tem a capacidade nova e não o papel antigo lê tudo e é barrado em quase toda ação; telas carregam e botões falham sem explicar
 - [ ] **[E00] A limpeza das imagens de build entra no fechamento de sprint** — cada deploy de function guarda uma imagem no Artifact Registry e a fatura cresce sem nada avisando; a janela de 7 dias está decidida por default e a execução entra na esteira, sem voltar a você. Regra permanente da mesma leva: limpeza não interrompe o dono 📋 higiene · item 58 [[LEELA-E00-fundacao-tecnica]]
     - [ ] **S031 · Retenção das imagens de build**
