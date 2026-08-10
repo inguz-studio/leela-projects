@@ -10,7 +10,7 @@
 
 ## Objetivo
 
-O organizador mantém a comunidade dos participantes no WhatsApp e não tem retrato nenhum dela dentro da Leela. Este épico entrega esse retrato no Painel Profissional: volume de conversa por dia, mapa de horários, palavras mais faladas, entradas e saídas de membro, e a pirâmide de engajamento com o nome de quem fala. O dado nasce fora, num número dedicado que observa os grupos daquele organizador, e chega ao painel já agregado.
+O organizador mantém a comunidade dos participantes no WhatsApp e não tem retrato nenhum dela dentro da Leela. Este épico entrega esse retrato no Painel Profissional: volume de conversa por dia, mapa de horários, palavras mais faladas, entradas e saídas de membro, comparação entre as comunidades do mesmo organizador e a lista de quem mais falou, pelo nome, com os dias ativos ao lado da contagem (RN-535). O dado nasce fora, num número dedicado que observa os grupos daquele organizador, e chega ao painel já agregado.
 
 O radar não envia nada. Nunca. Nenhuma mensagem, nenhuma resposta, nenhum aviso automático em grupo, e nenhuma ponte entre o ranking e a tela de comunicação. Mensagem bruta, telefone e identificador de WhatsApp também não sobem: eles morrem na máquina que roda o motor, que é a máquina do organizador (RN-530). O que atravessa a fronteira são números e o nome que o WhatsApp entrega — o `notify_name` que o próprio participante mostra na comunidade, até ele virar cliente e o cadastro passar a mandar (RN-532).
 
@@ -35,7 +35,7 @@ Antes desta rodada, quatro dessas cinco linhas não tinham história nenhuma, e 
 ## Critérios de sucesso do épico
 
 - O organizador abre `/clubes/:slug/radar` e reconhece a própria comunidade nos números, com os oito estados de tela cobertos (sem instância, sem pareamento, sem grupo, sem dado no período, sincronismo atrasado, dia parcial, cobertura desconhecida, radar pausado).
-- A tela entrega os quatro blocos de conteúdo, e não só o ranking: volume por dia, mapa de horários, palavras e saldo de entradas e saídas. Uma tela que renderize apenas a pirâmide não fecha este épico.
+- A tela entrega os quatro blocos de conteúdo, e não só o ranking: volume por dia, mapa de horários, palavras e saldo de entradas e saídas. Uma tela que renderize apenas o ranking e os oito estados passaria em todos os critérios da versão anterior desta spec e não entregaria três dos quatro jobs.
 - Nenhuma superfície do produto oferece envio a partir do radar; a varredura de código não acha caminho do ranking para qualquer canal de saída, e a prova é comportamental: zero job de envio na instância ao fim da medição.
 - Um tenant nunca lê o ramo do outro, provado por teste dirigido de rules e pela recusa de ingestão com tenant divergente.
 - Republicar o mesmo lote não muda `atualizadoEm`: a idempotência é observável, não presumida.
@@ -46,13 +46,13 @@ Antes desta rodada, quatro dessas cinco linhas não tinham história nenhuma, e 
 
 Li os dois antes de decidir. O E11 é analytics do próprio negócio da Leela: ele agrega o que a plataforma já registrou (inscrições, receita, membros, conversão) num rollup mantido por Function, e a tela dele mora hoje em CRM › Visão geral. Tudo o que ele toca é dado de dentro.
 
-O radar tem outra natureza em quatro eixos, e cada um deles sozinho já pediria arquivo próprio. A **fonte é externa e não oficial**, com risco permanente de o número ser banido, o que nenhuma métrica do E11 carrega. O **ciclo de vida é por fase com portão de sobrevivência**: F0.a decide se o produto continua existindo antes de qualquer linha de código na Leela. A **frente jurídica é dele**, entrou como quarta frente do LGPD-1 em 09/08 e trava o F1 inteiro. E a **superfície é a rota do clube**, não a área de CRM.
+O radar tem outra natureza em quatro eixos, e cada um deles sozinho já pediria arquivo próprio. A **fonte é externa e não oficial**, com risco permanente de o número ser banido, o que nenhuma métrica do E11 carrega. O **ciclo de vida é por fase com portão de sobrevivência**: F0.a decide se o produto continua existindo antes de qualquer linha de código na Leela. A **categoria de dado é dele** — agregado nominal de não-cliente, que não existia no produto e tem frente jurídica própria correndo com o advogado (RN-531). E a **superfície é a rota do clube**, não a área de CRM.
 
 Pendurar isso no E11 misturaria um épico gelado de rollup interno com um produto que tem motor de terceiro, chip, banimento e advogado no caminho. O E11 continua sendo dependência conceitual, porque o radar copia a disciplina dele (agregado mantido por Function, nunca cálculo no cliente, nunca dado individual sem regra explícita), e nada mais.
 
 ## Regras de negócio aplicáveis
 
-Definidas aqui: RN-520 a RN-529 e RN-530 a RN-536 (seção "Regras de negócio novas" adiante). Herdadas:
+Definidas aqui: RN-520 a RN-536, nas duas seções "Regras de negócio novas" adiante. Herdadas:
 
 - **Governança de agregados (E11)** — número que a tela mostra vem de documento mantido por Function; o cliente nunca calcula ranking.
 - **Mecanismo de expurgo da RN-147** — o radar reusa o **mecanismo** de expurgo criado para o dado de saúde, **sem herdar a base legal nem o prazo dela**. A RN-147 trata de dado sensível de saúde (LGPD Art. 11): ela exige consentimento específico e destacado e amarra a retenção ao ciclo do evento. O radar não tem esse consentimento, não pode obtê-lo e guarda 400 dias (RN-524). Herdar o enunciado inteiro importaria uma base legal e um prazo que contradizem este épico.
@@ -92,7 +92,7 @@ Nada mora sob `clubes/`: o catch-all de subcoleção de clube está fechado por 
 
 **Como** dono do produto, **quero** provar que um chip dedicado consegue ficar mudo dentro de uma comunidade real por duas semanas, **para** não construir uma feature em cima de um número que vai ser banido.
 
-- **MoSCoW:** Must · **Estimativa:** S · **Superfície:** nenhuma (operação fora da Leela) · **RNs:** RN-520, RN-525, RN-526, RN-529
+- **MoSCoW:** Must · **Estimativa:** S · **Superfície:** nenhuma (operação fora da Leela) · **RNs:** RN-520, RN-525, RN-526, RN-529, RN-530
 
 **Critérios de aceite (Given/When/Then):**
 - **Dado** um chip dedicado pareado como instância do motor, **quando** ele entra na comunidade de teste, **então** nenhuma mensagem é publicada no grupo e o perfil do contato aparece como "Radar · [nome da experiência]" com a descrição de que ele só conta e nunca envia.
@@ -163,7 +163,7 @@ Medir a sobrevivência do número e a utilidade do dado antes de autorizar const
 
 **Como** engenheiro da Leela, **quero** a função de ingestão, as coleções e as rules provadas no emulador de preview, **para** que o primeiro dado real chegue por um contrato fechado e idempotente.
 
-- **MoSCoW:** Must · **Estimativa:** L · **Superfície:** Painel (tela mínima só para provar a leitura) · **RNs:** RN-521, RN-522, RN-523, RN-527, RN-528
+- **MoSCoW:** Must · **Estimativa:** L · **Superfície:** Painel (tela mínima só para provar a leitura) · **RNs:** RN-521, RN-522, RN-523, RN-527, RN-528, RN-532
 - **Depende de:** S2001 aprovada; conta de serviço criada; termo do organizador em rascunho.
 
 **Critérios de aceite (Given/When/Then):**
@@ -174,7 +174,7 @@ Medir a sobrevivência do número e a utilidade do dado antes de autorizar const
 - **Dado** um cliente autenticado como `platform_admin`, **quando** ele tenta escrever em `dias` ou `janelas`, **então** a rule nega.
 - **Dado** o organizador A logado, **quando** ele tenta ler o ramo do tenant B, **então** a rule nega.
 
-**Tasks:** LEELA-S2002-T1 a LEELA-S2002-T7. A T3 foi quebrada em duas nesta rodada: métricas por dia no motor (T3) e publicador (T7). A estimativa anterior estava ancorada numa lacuna declarada — "o campo `remetentes` não existe hoje, é trabalho novo, pequeno" — e a lista real do que falta no motor tem sete itens.
+**Tasks:** LEELA-S2002-T1 a LEELA-S2002-T7. A T3 foi quebrada em duas nesta rodada: métricas por dia no motor (T3) e publicador (T7). A estimativa anterior estava ancorada numa lacuna declarada — "o campo `remetentes` não existe hoje, é trabalho novo, pequeno" — e a lista real do que falta no motor tem sete itens. A T7 é lida logo depois da T3 neste arquivo, e não no fim, porque as duas são a mesma frente e a T7 depende da T3.
 
 #### LEELA-S2002-T1 · Núcleo puro de validação e projeção do payload
 - **Tipo:** data-model · **Depende de:** S2001-T2 · **Bloqueia:** T2, T3 · **Estimativa:** M
@@ -188,7 +188,7 @@ Escrever em `packages/core/src/radar/` o schema fechado, os invariantes de borda
 
 **Arquivos (criar/editar)**
 - `packages/core/src/radar/contrato.ts` — tipos e schema fechado da versão 1.
-- `packages/core/src/radar/invariantes.ts` — as oito checagens de borda com o código de recusa de cada uma.
+- `packages/core/src/radar/invariantes.ts` — as checagens de borda da tabela do contrato, com o código de recusa de cada uma.
 - `packages/core/src/radar/projecao.ts` — payload para documentos.
 
 **Regras de negócio a respeitar**
@@ -331,7 +331,7 @@ Renderizar sem capricho visual os números de um organizador, lendo direto do Fi
 - **Dado** um participante sem nome, **quando** a linha renderiza, **então** ela aparece com rótulo próprio e a ação de nomear ao lado, em vez de linha em branco.
 - **Dado** um documento de dia com mais de 400 dias, **quando** o expurgo roda de madrugada, **então** ele é apagado e o grupo recebe carimbo de expurgo.
 
-**Tasks:** LEELA-S2003-T1 a LEELA-S2003-T4.
+**Tasks:** LEELA-S2003-T1 a LEELA-S2003-T5.
 
 #### LEELA-S2003-T1 · Termo do organizador como pré-condição de ligar o radar
 - **Tipo:** api/function · **Depende de:** S2002-T2 · **Estimativa:** S
@@ -387,8 +387,6 @@ Apagar dia vencido às 03h25 no fuso de São Paulo, com núcleo puro de relógio
 
 **Critérios de aceite (testáveis)**
 - **Dado** um dia cujo agregado ainda não subiu, **quando** a poda roda, **então** o texto daquele dia permanece.
-
----
 
 #### LEELA-S2003-T5 · Função de exclusão de participante pelo lado da nuvem
 - **Tipo:** api/function · **Depende de:** S2002-T2 · **Estimativa:** S
@@ -548,13 +546,13 @@ Vazamento entre locatários é a pior falha possível neste produto. Um número 
 
 ### RN-523 · só agregado atravessa a fronteira, e o schema fechado é quem garante (nova · 2026-08-09)
 
-Sobem números e nomes de exibição. Nunca sobem: texto de mensagem, telefone, identificador de WhatsApp, mídia e transcrição. Eles são descartados na origem, no publicador, e não filtrados no servidor — filtrar depois pressupõe que já viajaram.
+Sobem números e o nome do participante, na forma que a RN-532 fixa. Nunca sobem: texto de mensagem, telefone, identificador de WhatsApp, mídia e transcrição. Eles são descartados na origem, no publicador, e não filtrados no servidor — filtrar depois pressupõe que já viajaram.
 
 A trava é o schema fechado da ingestão: campo desconhecido no payload é recusa com 400, não campo ignorado. Sem isso, um dia alguém acrescenta um campo de telefone no publicador e a nuvem aceita calada.
 
 ### RN-524 · retenção de 400 dias na nuvem, 90 dias de texto no local, com poda (nova · 2026-08-09)
 
-Documento diário vive 400 dias corridos, o que permite comparar o mesmo mês do ano anterior e não guarda dado pessoal. Documento de janela é sempre substituído por inteiro e não acumula histórico. O texto das mensagens no espelho local vive 90 dias e é apagado depois que os agregados daqueles dias subiram e foram confirmados; o agregado fica.
+Documento diário vive 400 dias corridos, o que permite comparar o mesmo mês do ano anterior e não guarda dado pessoal. Documento de janela é sempre substituído por inteiro e não acumula histórico — e, desde a RN-536, janela que parou de ser republicada há mais de 120 dias é apagada, para nome de participante não ficar congelado num documento que ninguém substitui. O texto das mensagens no espelho local vive 90 dias e é apagado depois que os agregados daqueles dias subiram e foram confirmados; o agregado fica.
 
 O expurgo é cron auditável com carimbo por grupo, não política silenciosa de banco. A escolha é deliberada: exclusão por esforço, sem hora garantida e sem trilha, é exatamente o que o runbook de LGPD da casa não aceita como prova de cumprimento. Esta regra reabre com o parecer jurídico, que pode apontar prazo diferente.
 
@@ -666,4 +664,4 @@ Pela mesma razão, **documento de janela ou de frota sem republicação há mais
 
 ## Vizinhos
 
-[[ponte-radar-whatsapp]] para o contrato normativo da ponte. [[LEELA-E05-clubs]] para a comunidade dentro da Leela. [[LEELA-E11-analytics]] para a disciplina de agregado mantido por Function. [[runbook-expurgo-lgpd]] para o mecanismo de expurgo que este épico reusa.
+[[ponte-radar-whatsapp]] para o contrato normativo da ponte. [[LEELA-E05-clubs]] para a comunidade dentro da Leela e para a rota do clube. [[LEELA-E11-analytics]] para a disciplina de agregado mantido por Function e para a fronteira do agregado sem identidade. [[LEELA-E19-crm]] para a identidade transacional e o gate de PII que a RN-531 estende. [[LEELA-E17-perfil-social]] para a RN-167, que é o precedente contrário do qual este épico abre exceção declarada. [[runbook-expurgo-lgpd]] para o mecanismo de expurgo que este épico reusa.
