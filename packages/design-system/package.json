@@ -33,6 +33,7 @@
     },
     "./themes/brasa.css": "./themes/brasa.css",
     "./themes/wine.css": "./themes/wine.css",
+    "./themes/dark-wine.css": "./themes/dark-wine.css",
     "./themes/index.css": "./themes/index.css"
   },
   "sideEffects": [

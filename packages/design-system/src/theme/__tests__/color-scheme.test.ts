@@ -28,8 +28,10 @@ import { fileURLToPath } from 'node:url';
 
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
 import primitivesWine from '../../../tokens/primitives.wine.json';
+import primitivesDarkWine from '../../../tokens/primitives.dark-wine.json';
 import semanticBase from '../../../tokens/semantic.json';
 import semanticWineOverrides from '../../../tokens/semantic.wine.json';
+import semanticDarkWineOverrides from '../../../tokens/semantic.dark-wine.json';
 import component from '../../../tokens/component.json';
 import {
   generateCSS,
@@ -42,21 +44,25 @@ const RAIZ_DS = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..
 
 const brasa = primitivesBrasa as TokenRecord;
 const wine = primitivesWine as TokenRecord;
+const darkWine = primitivesDarkWine as TokenRecord;
 const sem = semanticBase as TokenRecord;
 const semWine = mergeTokens(sem, semanticWineOverrides as TokenRecord);
+const semDarkWine = mergeTokens(sem, semanticDarkWineOverrides as TokenRecord);
 const comp = component as TokenRecord;
 
 /** Os temas do produto hoje, com a polaridade que cada um DECLARA. */
 const TEMAS = [
   { nome: 'brasa', prims: brasa, semantic: sem, esperado: 'dark' },
   { nome: 'wine', prims: wine, semantic: semWine, esperado: 'light' },
+  { nome: 'dark-wine', prims: darkWine, semantic: semDarkWine, esperado: 'dark' },
 ] as const;
 
 /** Arquivos de tema que o pacote publica (`package.json` → exports/files). */
 const ARQUIVOS = [
   { arquivo: 'themes/brasa.css', temas: ['brasa'] },
   { arquivo: 'themes/wine.css', temas: ['wine'] },
-  { arquivo: 'themes/index.css', temas: ['brasa', 'wine'] },
+  { arquivo: 'themes/dark-wine.css', temas: ['dark-wine'] },
+  { arquivo: 'themes/index.css', temas: ['brasa', 'wine', 'dark-wine'] },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -200,7 +206,7 @@ describe('os arquivos de tema publicados carregam a declaração', () => {
     for (const { seletor, corpo } of blocos(css)) {
       if (colorSchemeDe(corpo) === undefined) continue;
       expect(seletor, `color-scheme fora de um seletor de tema: ${seletor}`).toMatch(
-        /:root:not\(\[data-theme\]\)|\[data-theme="[a-z]+"\]/,
+        /:root:not\(\[data-theme\]\)|\[data-theme="[a-z-]+"\]/,
       );
     }
   });
