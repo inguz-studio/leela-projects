@@ -4,9 +4,9 @@
 - **Horizonte:** H2 (piloto convidado)
 - **MoSCoW:** Should
 - **Estimativa:** L
-- **Status:** 📋 spec escrita 09/08, reparada no mesmo dia depois da review antagonista (trace `3ed45e7f`); F0.a despachável; **F1 destravado** pela decisão 12 do dono, que assumiu o risco jurídico
+- **Status:** 📋 spec escrita 09/08, reparada no mesmo dia depois da review antagonista (trace `3ed45e7f`), com os gaps da verificação fechados em 10/08 (trace `a164f4c3`): as quatro histórias JTBD ganharam tarefa, a lista de radares do tenant virou a **S2009** e as cinco bordas do gate de PII estão enumeradas na RN-531. Nenhuma regra nova nasceu no fechamento. F0.a despachável; **F1 destravado** pela decisão 12 do dono, que assumiu o risco jurídico
 - **Depende de:** LEELA-E05 (clubs — a comunidade é o clube), LEELA-E11 (convenção de agregado mantido por Function). O LGPD-1 **deixou de ser dependência bloqueante** em 09/08 (decisão 12): a quarta frente dele segue correndo com o advogado, em paralelo, sem gate sobre este épico
-- **De-para:** novo (sem BH- direto). Fonte técnica: estudo `arquitetura-radar-leela.md`, trace `c5a4a8bd-e9e4-4759-869c-a70f874c9c52`; decisões do dono em `02-rodadas/2026-08-09-radar-whatsapp/01-decisoes-dono.md`; review antagonista da spec, trace `3ed45e7f-73ee-460e-9f93-270f06b6c09c` (25 achados)
+- **De-para:** novo (sem BH- direto). Fonte técnica: estudo `arquitetura-radar-leela.md`, trace `c5a4a8bd-e9e4-4759-869c-a70f874c9c52`; decisões do dono em `02-rodadas/2026-08-09-radar-whatsapp/01-decisoes-dono.md`; review antagonista da spec, trace `3ed45e7f-73ee-460e-9f93-270f06b6c09c` (25 achados); verificação antagonista do reparo, trace `662b9248-be60-4aae-bf5e-3a40c19bd987` (11 achados); fechamento dos gaps, trace `a164f4c3-319b-47b6-ad7f-ca32879bfa30`
 
 ## Objetivo
 
