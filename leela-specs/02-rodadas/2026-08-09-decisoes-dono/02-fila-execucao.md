@@ -16,13 +16,18 @@ fonte: 01-decisoes-dono
 > mora o critério contra o qual cada card é medido.
 >
 > **A marca ⚔ é review antagonista obrigatória.** Ela cai em tudo que toca dinheiro cobrado ou
-> estoque de vaga: ESTOURO-RESERVA, SERV-2-PISO, JUROS-ALINHAMENTO e SEMKIT-REPARO. A ⚔⚔ da
+> estoque de vaga: ESTOURO-RESERVA, SERV-2-PISO e SEMKIT-REPARO. A ⚔⚔ da
 > PURGA-DADOS-TESTE é a régua do expurgo de 06/08: inventário congelado, review fria sobre o plano
 > congelado, e só então o apply.
 >
 > **Atualizado pelo lote 2 de 09/08.** Três mudanças: o **JUROS-ALINHAMENTO saiu de retido** e virou
 > executável, porque o dono entregou o custo do gateway; a **PURGA-DADOS-TESTE** nasceu e absorveu a
 > CONTAS-DEMO, o VITRINE-2 e o COMPROMETIDO-1; e o **SEMKIT-2** deixou de ser só regra e virou build.
+>
+> **⛔ Corrigido pelo dono após a pausa de 09/08.** O **JUROS-ALINHAMENTO está CANCELADO**: o "até 3x
+> sem juros" era exemplo, não decisão — juros é operação manual do dono pelo painel admin. A seção
+> dele abaixo fica como registro histórico da leitura que caiu, e o placar da Parte A perde uma
+> frente. Verbatim e consequências: `01-decisoes-dono.md`, correção no bloco 4.
 
 ## O placar
 
@@ -114,7 +119,14 @@ técnico, campo de documento ou nome de variável muda junto, pela mesma discipl
 
 **Ordem.** Sai da retenção com esta rodada. Sonnet.
 
-### JUROS-ALINHAMENTO · o checkout para de cobrar juros, e o teto cai para 3x ⚔ · **DESTRAVADO**
+### JUROS-ALINHAMENTO · **CANCELADO pela correção do dono de 09/08** — era exemplo, não decisão
+
+> ⛔ Verbatim do dono, após a pausa: *"voce decidiu errado sobre os juros, apenas dei um exemplo sobre
+> as vezes sem juros, pode desconsiderar. Eu que decido como cobrarei juros pelo painel admin,
+> manualmente."* Nada desta frente executa. O checkout permanece como configurado até ele mexer pelo
+> painel; o JUROS-1 destrava (save livre — o que ele salvar é a decisão vigente); a tabela do custo do
+> gateway (1,89% a.m., virada em N = 6,95) segue válida como **insumo da escolha manual dele**. O
+> texto abaixo fica como registro da leitura que caiu.
 
 **Território.** `packages/core/src/platform/commercialTerms.ts` (a estrutura e o default),
 `packages/core/src/finance/calc.ts` (`buildInstallmentOptions`), e o documento
@@ -415,18 +427,16 @@ literal da frase é o pedido.
 bloqueada, que muda a regra e derruba parte do que a review de 08/08 mediu. Vai junto com o
 mecanismo da liberação direta, que a RN-510 não prevê.
 
-**Respondida pelo lote 2 · parcelamento acima de 3x.** A leitura adotada é o teto em 3x, com 4x-12x
-saindo do ar até o esquema maior existir. Ela deixou de ser escolha de gosto quando o custo do
-gateway chegou: **a plataforma perde dinheiro a partir de 7x** absorvendo o custo, e 12x sem juros
-custaria R$ 14,82 numa venda de R$ 300,00. A leitura é do maestro e o dono veta se quiser; o que muda
-é que agora há número atrás dela.
+**Respondida pelo lote 2 · parcelamento acima de 3x — e a resposta caiu com a correção do dono.** A
+leitura adotada era o teto em 3x, com 4x-12x saindo do ar. O dono vetou depois da pausa: o "até 3x
+sem juros" era **exemplo**, e juros é operação manual dele pelo painel admin — teto e taxa não mudam
+por código. O número que a leitura tinha atrás (**a plataforma perde dinheiro a partir de 7x**
+absorvendo o custo; 12x sem juros custaria R$ 14,82 numa venda de R$ 300,00) continua válido como
+informação para a escolha manual dele. A fronteira que fica de pé é a RN-182: custo de juros nunca
+desce ao líquido do produtor, até ordem dele em contrário.
 
-**Dois avisos que acompanham o destravamento.** O teto de 3x **reduz a oferta visível**: o checkout
-hoje mostra até 12x. E o custo absorvido sai do **Serviço da plataforma**, nunca do líquido do
-produtor — a instrução que chegou a esta lane dizia "abate do repasse", que pode ser lida ao
-contrário do que o dono decidiu no JUROS-3.
-
-O **JUROS-1** sai desta lista e vira ordem de execução: alinhamento primeiro, save depois.
+O **JUROS-1** sai desta lista livre de ordem — o save é dele, quando quiser, e o que ele salvar é a
+decisão vigente.
 
 ## O que não gerou trabalho
 

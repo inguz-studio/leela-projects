@@ -3,6 +3,17 @@
 > **Retomada lê este arquivo primeiro.** Ele aponta os handoffs vivos e a fila; o detalhe mora
 > em cada handoff de lane e nas rodadas.
 
+> **⛔ Adendo de ~14h30, escrito pela sessão Orkestra (o terminal desta pausa travou):**
+> 1. A **DEPLOY-CORTE não deixou handoff** — o arquivo `leela-painel-corte-20260809-DEPLOY-CORTE.md`
+>    não existe no disco. Vale o plano B já escrito abaixo: medir produção contra o baseline.
+> 2. O dono **corrigiu a decisão de juros**: "até 3x sem juros" era exemplo, não decisão — juros é
+>    operação manual dele pelo painel admin. **JUROS-ALINHAMENTO CANCELADO, JUROS-1 livre.** Registro
+>    em `leela-specs/02-rodadas/2026-08-09-decisoes-dono/01-decisoes-dono.md`, correção no bloco 4.
+> 3. Entrou o **REDESIGN-DS** (decisão do dono a executar): handoff de design em
+>    `leela-specs/02-rodadas/2026-08-09-redesign-ds/` (copiado de Downloads, que é volátil).
+>    Painel do organizador em **brasa com glass ligado**; painel admin com **glass desligado, fundo
+>    preto**, para diferenciar. Detalhe em `00-decisao.md` da rodada.
+
 ## Estado no fechamento
 
 - **Branch `main`**, HEAD ~`be15f18f` no momento da pausa. Push em dia até aqui.
@@ -38,9 +49,9 @@
 ## Decisões do dono de hoje (resumo operacional; verbatim na rodada)
 
 SERV-1 (piso R$3 ok) · SERV-2 (pedido mínimo R$10 e parcela mínima R$10; parcela mínima JÁ roda
-no código) · SERV-3 (Serviço = taxa da plataforma; destrava 34 strings do renome) · **JUROS: até
-3x sem juros, custo da plataforma abatido do que iria para NÓS (nunca do repasse do organizador
-— RN-182 intacta), 4x-12x adiado** · ESTOURO-1 (pendente segura vaga; volta ao expirar) ·
+no código) · SERV-3 (Serviço = taxa da plataforma; destrava 34 strings do renome) · **JUROS: CORRIGIDO após a pausa
+— "até 3x sem juros" era exemplo, não decisão; juros é operação manual do dono pelo painel admin
+(RN-182 segue intacta)** · ESTOURO-1 (pendente segura vaga; volta ao expirar) ·
 SEMKIT-1 (reparo autorizado, dados de teste; sem desconto sem kit, ponto final) · SEMKIT-2
 (interruptor liga/desliga com aviso) · **PATROCINADOR-TOGGLE (decisão nova: patrocinador não se
 apaga, desativa-se — metade já existe no modelo `StatusMarca`)** · PB-11 (sem arquivar) ·
@@ -53,14 +64,14 @@ item 12 (domínio) e CRM-1..4 SEGUEM com o dono.
 
 ## ⛔ Avisos que não podem se perder
 
-- **JUROS-1 (salvar termos no painel) NÃO PODE rodar antes do JUROS-ALINHAMENTO** — o save de
-  hoje selaria v2 com 2,89% em toda parcela, contra a decisão. Ordem: alinhar código → dono salva.
-- **O checkout COBRA JUROS em 2x/3x HOJE** (R$300 em 3x = R$317,49) — contra a decisão do dono.
-  JUROS-ALINHAMENTO é a frente nº 1 da fila de código.
-- **"Até 3x sem juros" não é representável** no `InstallmentRules` atual (taxa única) — caminho:
-  `maxParcelas:3 + juros:0`. Teto de 3x reduz oferta visível (hoje mostra 12x) — avisado ao dono.
+- **⛔ JUROS — os três avisos que estavam aqui CAÍRAM com a correção do dono** (*"apenas dei um
+  exemplo sobre as vezes sem juros, pode desconsiderar. Eu que decido como cobrarei juros pelo
+  painel admin, manualmente."*). JUROS-ALINHAMENTO cancelado; o checkout a 2,89% de 2x em diante é
+  o estado vigente sob controle manual dele, não divergência; JUROS-1 livre (o que ele salvar no
+  painel é a decisão). Registro: rodada `2026-08-09-decisoes-dono`, bloco 4.
 - **Tabela Asaas 1,89% a.m. CALCULADA** (na rodada): custo por parcela k = (V/N)×1,89%×k;
-  **margem negativa a partir de 7x** (virada N=6,95). Alimenta `platform/config.custoGateway`.
+  **margem negativa a partir de 7x** (virada N=6,95). Alimenta `platform/config.custoGateway` e
+  serve de insumo à escolha manual do dono no painel.
 - **PURGA: seleção por LISTA EXPLÍCITA contra inventário congelado, nunca por padrão de nome** —
   o evento da compra real do dono chama-se `teste-taxa-repassada`, e `inguzbuilders@gmail.com`
   carrega o uid do antigo `admin@demo-leela.dev`. Preservar: PED-8CDHM, T93N7F, o evento, o uid.
@@ -74,9 +85,14 @@ item 12 (domínio) e CRM-1..4 SEGUEM com o dono.
 
 ## Fila da retomada, na ordem
 
-1. **Conferir DEPLOY-CORTE** (handoff dela; completar o que faltou — provavelmente a landing).
-2. **JUROS-ALINHAMENTO ⚔** (dinheiro; checkout 3x sem juros; core `commercialTerms`/`calc` +
-   checkout landing + seed; review antagonista; depois liberar o dono para o JUROS-1).
+1. **Conferir DEPLOY-CORTE** (o handoff dela **não existe** — a lane morreu sem registrar; medir
+   produção contra o baseline `leela-retomada-20260808-DEPLOY-FINAL.md`, deploys de 23:27/23:37).
+2. **REDESIGN-DS** (entrou no lugar do JUROS-ALINHAMENTO cancelado): aplicar o handoff de design de
+   `leela-specs/02-rodadas/2026-08-09-redesign-ds/handoff/` — tema `dark-wine` + camada glass +
+   tipografia do brasa (Exo 2 + Rubik) + telas Visão Geral v3/Engajamento. Painel do organizador em
+   **brasa, glass ligado**; painel admin **glass desligado, fundo preto** (diferenciação; "se
+   possível" — impedimento volta ao dono). Ordem do README §9, em duas conversas: tokens → tela.
+   Gate: `pnpm generate-tokens` limpo, contraste passando, brasa/wine intocados além do pedido (L-011).
 3. **PURGA-DADOS-TESTE ⚔⚔** (inventário congelado → review fria → apply; lista explícita).
 4. **Builds**: SEMKIT-2-TOGGLE (após reconciliar RN-503) · PATROCINADOR-TOGGLE · CLUBES-CTA ·
    SERV-3-RENOME (34 strings) · SEMKIT-REPARO (após medição).

@@ -6,9 +6,11 @@
 >
 > **Disciplina de limpeza.** Item resolvido sai deste painel na mesma aterrissagem. O registro completo, com o seu verbatim, passa a viver no arquivo da rodada em `02-rodadas/`. Este painel só carrega o que ainda é seu, e o histórico do que já fechou mora lá, não aqui.
 >
+> **Limpeza de 09/08 (pós-pausa).** JUROS-3 e JUROS-4 saíram — fechados pelo lote 1 e pela sua correção (*"eu que decido como cobrarei juros pelo painel admin, manualmente"*; o "até 3x sem juros" era exemplo, e o JUROS-ALINHAMENTO que nasceu dele foi cancelado). JUROS-5 saiu porque você entregou o número (1,89% a.m.) e a tabela foi calculada na rodada. Registro: `02-rodadas/2026-08-09-decisoes-dono/`.
+>
 > **Personagens dos exemplos.** Ana compra, Castelo organiza eventos, Marina opera o painel, Téo é influenciador afiliado. São ilustrativos, não pessoas do banco.
 >
-> **A conta de hoje: 28 itens abertos.** São **23** em "Decisões que dependem de você" e **5** em "Ações que só você pode executar" — contados à mão, um a um, contra as duas seções abaixo. A "Fila de construção" no fim não é decisão e não entra na conta, agora sem exceção nenhuma: o **ADMIN-USUARIOS-1**, que morava lá dentro e pedia resposta sua, subiu para o bloco das decisões, que é onde uma decisão sua tem de estar.
+> **A conta de hoje: 25 itens abertos.** São **21** em "Decisões que dependem de você" e **4** em "Ações que só você pode executar" — contados à mão, um a um, contra as duas seções abaixo. A "Fila de construção" no fim não é decisão e não entra na conta, agora sem exceção nenhuma: o **ADMIN-USUARIOS-1**, que morava lá dentro e pedia resposta sua, subiu para o bloco das decisões, que é onde uma decisão sua tem de estar.
 
 ## Decisões que dependem de você
 
@@ -98,28 +100,6 @@ Você escreveu a palavra entre aspas, e a leitura literal tira duas palavras do 
 - **Por que agora:** são 34 strings em três aplicações, e trocá-las duas vezes é o desperdício que a pergunta evita. A fila do renome está retida esperando esta resposta.
 - **Opções:** **"Serviço" para comprador e organizador, "Serviço da plataforma" no super-admin** (**default proposto**, porque segue a sua letra onde o público é externo e mantém a desambiguação onde o público é você) · "Serviço" em tudo, inclusive no super-admin · manter "Taxa de serviço" para o comprador e trocar só onde diz "Leela", que é a leitura mínima da sua frase.
 - **Onde aterrissa:** RN-495 em [[LEELA-E12-landing]]; tarefas 4a, 4b e 4c de `02-rodadas/2026-08-05-metricas-e-servico/04-fila-codigo.md`.
-
-### JUROS-3 · quem paga o custo quando o juro é zero
-
-Você determinou que "sem juros" será ferramenta do admin, liberada por tenant, nunca escolha do produtor. O contrato está especificado e nada será construído agora. Falta a única parte que é dinheiro: quando a plataforma zera o juro de um tenant, o custo de financiar aquela venda sai de quem.
-
-- **Caso de uso:** você libera 6x sem juros para o Castelo, a compradora paga o mesmo preço do à vista, e alguém absorve o que o gateway cobra por parcelar.
-- **Job story:** quando a plataforma anuncia "sem juros" no meu evento, eu quero saber se esse desconto sai do meu líquido, para não descobrir a conta só quando o extrato chegar.
-- **O que fica com você:** dizer se a plataforma absorve ou se o custo desce para o líquido do produtor.
-- **Por que agora:** é uma linha na spec agora e um campo novo no pagamento mais uma linha no extrato depois. Decidir junto do contrato custa nada; decidir depois de construído é retrabalho de dinheiro.
-- **Opções:** a **plataforma absorve** (**default proposto**) — a RN-437 já diz que o juro do parcelamento não é receita do organizador, e a simetria manda que o custo também não seja despesa dele; cobrar do produtor contradiria a RN-182, que hoje define o líquido como `face − taxa(meio)` e mais nada · **descontar do líquido do produtor**, que é o caminho mais caro: pede campo novo no pagamento, linha nova no extrato e revisão da RN-182.
-- **Onde aterrissa:** RN-458 em [[LEELA-E16-plataforma-superadmin]]; `02-rodadas/2026-08-04-juros-margem/01-spec-economia-parcelamento.md` §5.3.
-
-### JUROS-4 · dois markups estão no registro e não são o mesmo modelo
-
-Você declarou duas coisas diferentes em duas semanas, e as duas viraram registro. Em 27/07, verbatim: *"já as parcelas, pode ir adicionando 2.5% a cada parcela, e depois eu edito"* — está no backlog como card. Em 03/08 você mandou preencher a tabela com 2,89% a.m., chamando o número de estimativa.
-
-- **Caso de uso:** numa venda de R$ 300,00 em 12x, um modelo cobra R$ 359,28 da compradora e o outro cobra R$ 390,00. Trinta reais e setenta e dois centavos de diferença na mesma venda, e a tabela do admin vai exibir um dos dois.
-- **Job story:** quando eu parcelo uma compra em doze vezes, eu quero saber quanto o parcelamento me custa a mais, para escolher entre parcelar e pagar à vista sabendo o preço da conveniência. Os dois modelos servem jobs diferentes do outro lado do balcão: o Price acerta a conta do dinheiro no tempo, e o acréscimo linear é o que um produtor consegue explicar sem calculadora.
-- **O que fica com você:** dizer qual vale. Nenhum é obviamente o vencedor, e por isso não há default proposto.
-- **Por que agora:** a tabela de margem vai exibir o markup, e exibir o número errado corrompe a decisão de preço que você vai tomar olhando para ela. É troca barata enquanto nada foi construído.
-- **Opções:** **Price a 2,89% a.m.** (19,8% sobre o principal em 12x) — está no ar hoje, é o que o teste de 03/08 exercitou e é o que a S314 construiu · **acréscimo linear de 2,5% por parcela** (30% em 12x na leitura direta, ou 27,5% se a contagem começar em 2x) — é a sua decisão mais recente e a mais simples de explicar a um produtor, e a própria frase admite as duas leituras, então escolhê-la pede dizer qual.
-- **Onde aterrissa:** `commercialTerms/current.installmentRules`; RN-436 em [[LEELA-E04-config-vendas]]; lacuna L4 da spec da rodada. O card "Preço do SaaS e acréscimo por parcela" do backlog fecha junto.
 
 ### ESTOURO-1 · duas pessoas podem comprar a mesma última vaga, e o painel não avisa
 
@@ -325,16 +305,6 @@ A escrita de 03/08 foi minimalista por ordem explícita, então o documento vige
 - **O que fica com você:** abrir os termos e salvar sem mudar nada.
 - **Por que agora:** o próximo save pelo painel grava a v2 já com 2,89% e sela o rastro pelo caminho canônico, que é o único jeito de o histórico voltar a bater.
 - **Onde aterrissa:** `/plataforma` → Termos do tenant Castelo Produções.
-
-### JUROS-5 · a tabela de tarifas do Asaas, que só você consegue buscar
-
-A coluna de custo é o que transforma a tabela do admin em margem de verdade, e o número que a preenche não existe em lugar nenhum do sistema. O que existe é benchmark de julho, com cartão à vista a 2,99% mais R$ 0,49 e a coluna de **parcelado vazia** para o Asaas, coletado sob a ressalva de não fechar taxa sem cotação por volume.
-
-- **Caso de uso:** você abre a tabela nova, lê "custo não configurado" em todas as linhas, e a coluna Margem fica vazia até alguém trazer o número do contrato.
-- **Job story:** quando eu defino quanto cobrar pelo parcelamento, eu quero ver a margem ao lado de cada linha, para decidir preço com número em vez de com estimativa.
-- **O que fica com você:** buscar no painel do Asaas, ou com o gerente de contas, a tabela de tarifas vigente, incluindo o acréscimo por parcela.
-- **Por que agora:** é o único insumo que a construção não consegue produzir sozinha. A tela nasce funcionando sem ele, declarando a ausência em vez de estimar, porque você vai usar esses números para decidir preço e um número inventado aqui vira decisão errada.
-- **Onde aterrissa:** `platform/config.custoGateway`; RN-455 em [[LEELA-E16-plataforma-superadmin]]; lacunas L1 e L2 da spec da rodada. Enquanto isso, a tarefa T5 da S1610 passa a registrar o custo real de cada venda a partir do que o gateway devolve, o que fecha a lacuna pelo lado da medição em vez do lado do contrato.
 
 ## Fila de construção
 

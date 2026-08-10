@@ -203,6 +203,22 @@ não menos: se a plataforma absorve o custo de parcelar, ela precisa saber quant
 acréscimo por parcela" do backlog fecha pela metade: o markup linear de 2,5% por parcela está
 descartado para 1x a 3x, e continua sem resposta acima disso.
 
+### ⛔ Correção do dono, 09/08 (após a pausa) — a leitura acima caiu
+
+Verbatim: *"voce decidiu errado sobre os juros, apenas dei um exemplo sobre as vezes sem juros, pode
+desconsiderar. Eu que decido como cobrarei juros pelo painel admin, manualmente."*
+
+O "até 3x sem juros" era **exemplo**, não decisão. A camada que este bloco leu como "decide sem
+parecer" não existe: nenhum modelo comercial entra no código. **Juros é operação manual do dono, pelo
+painel admin**, e a configuração que ele salvar lá é a decisão vigente, seja ela qual for.
+
+O que muda em consequência: o **JUROS-ALINHAMENTO está cancelado** — o checkout permanece como
+configurado (2,89% a.m. de 2x em diante) até ele mexer pelo painel, e isso deixou de ser divergência:
+é o estado vigente sob controle dele. O **JUROS-1 destrava** — a ordem "alinhamento primeiro, save
+depois" caiu junto com a leitura, e ele salva quando quiser. A **tabela do JUROS-5 continua valendo**
+como insumo da escolha manual: o ponto de virada em N = 6,95 informa, não decide. A RN-182 segue
+intocada — o líquido do produtor é `face − taxa(meio)` — até ordem dele em contrário.
+
 ---
 
 ## 5 · ESTOURO-1 · pagamento pendente segura a vaga
@@ -682,7 +698,11 @@ refletir o modelo decidido, o save pelo painel sela a v2 certa e o rastro volta 
 verdade. Invertido, ele conserta o histórico com o número errado, que é pior do que o estado de hoje,
 porque o de hoje pelo menos é visivelmente incompleto.
 
-**Onde aterrissa.** `/plataforma` → Termos do tenant Castelo Produções, **depois** de JUROS-ALINHAMENTO.
+**Correção do dono, 09/08: a ordem caiu.** O JUROS-ALINHAMENTO foi cancelado pela correção registrada
+no bloco 4 — o "até 3x sem juros" era exemplo, e juros é operação manual dele pelo painel. O save é
+livre: o que ele salvar é a decisão vigente, e a v2 que nascer dele é fiel por construção.
+
+**Onde aterrissa.** `/plataforma` → Termos do tenant Castelo Produções, quando ele quiser.
 
 ---
 
@@ -947,9 +967,9 @@ O **item 12** e os **quatro CRM** continuam no painel, e nenhum deles ganhou def
 O **LGPD-1** ganha a terceira frente, vinda do ARENA-1, ao lado da que o radar de WhatsApp criou hoje
 cedo. As duas são a mesma família: dado pessoal de participante deixando de ser privado por desenho.
 
-O **JUROS-1** fecha, mas com ordem: o alinhamento do parcelamento no código vem antes do save. Salvar
-primeiro sela uma v2 dizendo 2,89% em toda parcela, que é o número que a decisão do mesmo dia derruba
-de 1x a 3x. Consertar o histórico com o número errado é pior que o estado de hoje.
+O **JUROS-1** fecha livre de ordem — a correção do dono de 09/08 (bloco 4) cancelou o
+JUROS-ALINHAMENTO: o "até 3x sem juros" era exemplo, juros é operação manual dele pelo painel admin,
+e o que ele salvar lá é a decisão vigente.
 
 Três linhas saem do painel **por purga** e não por construção: **VITRINE-2**, **COMPROMETIDO-1** e as
 contas demo do **ADMINSEP-3**. Nenhuma delas está resolvida até a PURGA-DADOS-TESTE rodar, então
