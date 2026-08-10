@@ -29,18 +29,23 @@
 // clique nem foco. Então não existe aqui um caso "o clique sintético não
 // navega": ele passaria pelo motivo errado hoje e pelo motivo certo amanhã, sem
 // distinguir os dois. O que se mede é a propriedade que o navegador consome —
-// os oito controles estão dentro de uma subárvore inerte —, e a falsificação
-// mora no primeiro caso: a mesma sonda, com o aviso FECHADO, acha os controles.
+// os controles do fundo estão dentro de uma subárvore inerte —, e a
+// falsificação mora no primeiro caso: a mesma sonda, com o aviso FECHADO,
+// acha os controles.
 //
-// O painel é montado INTEIRO (`App`) de propósito: seis dos oito controles são
-// da sidebar, que o `RootShell` desenha ACIMA do gate. Um teste que montasse só
-// o gate mediria dois controles e passaria verde com o menu de pé.
+// O painel é montado INTEIRO (`App`) de propósito: oito dos nove controles são
+// da moldura (toggle + seis destinos do rail + o hambúrguer do Drawer mobile —
+// HIFI-REC trocou a Sidebar clássica pelo SidebarRail ≥ lg), que o `RootShell`
+// desenha ACIMA do gate. Um teste que montasse só o gate mediria um controle e
+// passaria verde com o menu de pé. A lista da review original (oito, por
+// textContent) está preservada acima como registro histórico da sonda DEF-R1.
 // =============================================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, cleanup, within } from '@testing-library/react';
 import { CONTATO_ONBOARDING_PADRAO } from '@leela/core';
 import { usuario } from '@/test/usuario';
+import { nomeAcessivel } from '@/test/nomeAcessivel';
 import { ATRIBUTO_INERTE } from '../_lib/fundoInerte';
 
 vi.mock('../../../lib/firebase', async (importOriginal) => ({
@@ -120,31 +125,46 @@ function alcancaveisNoFundo(): HTMLElement[] {
   return foraDoAviso().filter((no) => no.closest(`[${ATRIBUTO_INERTE}]`) === null);
 }
 
-/** Nomes legíveis, para o erro dizer QUEM sobrou em vez de só um número. */
+/**
+ * Nomes legíveis, para o erro dizer QUEM sobrou em vez de só um número.
+ *
+ * Identidade por NOME ACESSÍVEL, não `textContent` (HIFI-REC-FIX): o item
+ * FECHADO do rail carrega o rótulo duas vezes no texto (sr-only + tooltip
+ * `aria-hidden` → 'ClubsClubs'), e o nome acessível é o que a AT anuncia —
+ * imune à duplicação. A sonda continua medindo exatamente a mesma coisa:
+ * quantos controles do fundo a tecnologia assistiva ainda alcança.
+ */
 function nomes(nos: readonly HTMLElement[]): string[] {
-  return nos.map((no) => `${no.tagName}:${(no.textContent ?? '').trim().slice(0, 28)}`);
+  return nos.map((no) => `${no.tagName}:${nomeAcessivel(no).slice(0, 28)}`);
 }
 
 /**
- * Os OITO da sonda, nominais e na ordem do documento.
+ * Os NOVE da sonda, nominais e na ordem do documento.
  *
- * A lista da review, medida no navegador, e a desta suíte, medida no jsdom,
- * batem elemento a elemento — inclusive o `BUTTON:` sem texto, que é o botão de
- * recolher a sidebar. Seis são da sidebar, que vive ACIMA deste gate; um é da
- * moldura; um é o CTA da própria vitrine.
+ * Re-inventariados para a moldura do SidebarRail (HIFI-REC-FIX), agora por
+ * NOME ACESSÍVEL: o toggle do rail ('Abrir menu') virou o PRIMEIRO tabbável
+ * do documento; os seis destinos seguem âncoras (o rótulo vem do span
+ * `sr-only`, presente também com o rail fechado); o hambúrguer do Drawer
+ * mobile ('Abrir menu de navegação') continua no DOM ≥ lg — o `lg:hidden` o
+ * esconde por CSS, e a sonda mede DOM, não pixel (era ele o antigo `BUTTON:`
+ * sem texto da lista da review); o CTA da vitrine fecha a lista. O rodapé de
+ * perfil do rail não aparece AQUI porque esta conta em vitrine não tem
+ * displayName — sem `footerName`, o rail não desenha rodapé. De 8 para 9:
+ * o rail TROUXE um controle novo de verdade (o toggle).
  *
  * A lista é nominal de propósito. Um número (`>= 6`) passaria verde no dia em
  * que a sidebar perdesse metade dos itens por outro motivo, e é justamente aí
  * que a medição precisa falar.
  */
-const OITO_CONTROLES_DO_FUNDO: readonly string[] = [
+const CONTROLES_DO_FUNDO: readonly string[] = [
+  'BUTTON:Abrir menu',
   'A:Visão Geral',
   'A:Eventos',
   'A:Clubs',
   'A:CRM',
   'A:Marcas',
   'A:Configurações',
-  'BUTTON:',
+  'BUTTON:Abrir menu de navegação',
   'BUTTON:Como receber o código Leela',
 ];
 
@@ -166,7 +186,7 @@ describe('vitrine · o fundo sai do alcance enquanto o aviso está na frente (DE
     // dos casos seguintes não significaria coisa nenhuma.
     await abrirVitrine();
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(nomes(alcancaveisNoFundo())).toEqual(OITO_CONTROLES_DO_FUNDO);
+    expect(nomes(alcancaveisNoFundo())).toEqual(CONTROLES_DO_FUNDO);
   });
 
   it('com o aviso aberto, nenhum controle do fundo continua alcançável', async () => {
@@ -182,7 +202,7 @@ describe('vitrine · o fundo sai do alcance enquanto o aviso está na frente (DE
     // visível por baixo do véu, que é o que o dono pediu em 06/08.
     await abrirVitrine();
     await subirOAviso();
-    expect(nomes(foraDoAviso())).toEqual(OITO_CONTROLES_DO_FUNDO);
+    expect(nomes(foraDoAviso())).toEqual(CONTROLES_DO_FUNDO);
   });
 
   it('o link que a AT clicou na review está dentro da subárvore inerte', async () => {
@@ -215,7 +235,7 @@ describe('vitrine · o fundo sai do alcance enquanto o aviso está na frente (DE
     await usuario().click(screen.getByRole('button', { name: /Continuar olhando/i }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.querySelector(`[${ATRIBUTO_INERTE}]`)).toBeNull();
-    expect(nomes(alcancaveisNoFundo())).toEqual(OITO_CONTROLES_DO_FUNDO);
+    expect(nomes(alcancaveisNoFundo())).toEqual(CONTROLES_DO_FUNDO);
   });
 });
 
@@ -264,8 +284,10 @@ describe('vitrine · o `inert` cai em TODA saída, não só no botão (REV-CORTE
       configurable: true,
       writable: true,
       value: function espiao(this: HTMLElement, ...args: unknown[]): void {
+        // Identidade por nome acessível (HIFI-REC-FIX): o textContent do item
+        // fechado do rail é 'ClubsClubs' (sr-only + tooltip aria-hidden).
         chamadas.push({
-          alvo: `${this.tagName}:${(this.textContent ?? '').trim().slice(0, 20)}`,
+          alvo: `${this.tagName}:${nomeAcessivel(this).slice(0, 20)}`,
           sobInerte: this.closest(`[${ATRIBUTO_INERTE}]`) !== null,
         });
         (focoOriginal as (...a: unknown[]) => void).apply(this, args);

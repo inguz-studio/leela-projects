@@ -36,6 +36,7 @@ import { RootShell } from '../../shell/RootShell';
 import { mkEvento } from '../eventos/_test/fixtures';
 import { mkClube } from '../clubes/_test/fixtures';
 import { clicarNoDom } from '../../test/clique';
+import { nomeAcessivel } from '../../test/nomeAcessivel';
 import type { EventoOutletContext } from '../eventos/evento/EventoLayout';
 
 // Sessão + claims sem Firebase (mesma dublagem de RootShell.test.tsx); o
@@ -118,11 +119,13 @@ interface SuperficieNav {
   atual: string;
   /**
    * `<button>` que a superfície pode conter por NÃO ser destino de navegação
-   * (LEELA-DEBT-T4). A lista é a exceção declarada, texto por texto: quem
-   * acrescentar um botão aqui está afirmando que ele abre um menu ou dispara
-   * uma ação, e não que leva a uma rota. Destino em `<button>` é o defeito que
-   * este arquivo existe para pegar — a pessoa não consegue abrir em nova aba
-   * nem copiar o endereço.
+   * (LEELA-DEBT-T4). A lista é a exceção declarada, NOME ACESSÍVEL por nome
+   * acessível (HIFI-REC-FIX — o rail duplica rótulo no textContent via
+   * sr-only+tooltip; o nome acessível é o que a AT anuncia e é imune a isso):
+   * quem acrescentar um botão aqui está afirmando que ele abre um menu ou
+   * dispara uma ação, e não que leva a uma rota. Destino em `<button>` é o
+   * defeito que este arquivo existe para pegar — a pessoa não consegue abrir
+   * em nova aba nem copiar o endereço.
    */
   botoesQueNaoSaoDestino?: string[];
   montar: () => void;
@@ -228,9 +231,16 @@ const SUPERFICIES: SuperficieNav[] = [
     landmark: 'Navegação principal',
     ancoras: 6,
     atual: 'Visão Geral',
-    // O rodapé da sidebar (B4) é o gatilho do menu do usuário: abre um menu,
-    // não leva a uma rota. Botão é o elemento certo para ele.
-    botoesQueNaoSaoDestino: ['MCMarina CasteloVer perfil'],
+    // A moldura ≥ lg é o SidebarRail (HIFI-REC), e ele traz DOIS botões que
+    // não são destino:
+    //   · 'Abrir menu' — o toggle que abre/recolhe o rail. Ação pura.
+    //   · '' — o rodapé de perfil, FECHADO: o único conteúdo é o avatar
+    //     `aria-hidden`, então o botão fica sem nome acessível. A entrada
+    //     vazia declara essa dívida de a11y de propósito, junto com a F5 da
+    //     REV: o rodapé NAVEGA para /conta por botão (mesma exceção do
+    //     SidebarFooter clássico) — a dívida de virar âncora + onClick SPA
+    //     está anexada na fila do handoff HIFI-REC-FIX.
+    botoesQueNaoSaoDestino: ['Abrir menu', ''],
     montar: () =>
       void render(
         <MemoryRouter initialEntries={['/']}>
@@ -419,7 +429,7 @@ describe('nenhuma superfície de navegação navega por botão', () => {
       montar();
       const nav = screen.getByRole('navigation', { name: landmark });
       expect(
-        within(nav).queryAllByRole('button').map((b) => b.textContent),
+        within(nav).queryAllByRole('button').map((b) => nomeAcessivel(b)),
         'destino de navegação em <button> não abre em nova aba nem copia endereço — ' +
           'se este botão realmente não é destino, declare-o em botoesQueNaoSaoDestino',
       ).toEqual(botoesQueNaoSaoDestino);
