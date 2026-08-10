@@ -37,6 +37,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { parseEvento, type Clube, type Evento, type StatusEvento } from '@leela/core';
+import { eventoDegradado } from '../eventos/queries';
 
 /** Página canônica das tabelas densas globais (§2.5). */
 export const LISTA_GLOBAL_PAGE_SIZE = 20;
@@ -98,7 +99,30 @@ export async function listarEventosGlobalPaginado(
   if (options.cursor) constraints.push(startAfter(options.cursor));
 
   const snap = await getDocs(query(collection(db, 'eventos'), ...constraints));
-  const itens = snap.docs.map((d) => parseEvento(d.id, d.data()));
+  // ONDA1-FIX · D-2 — doutrina F1 (eventos/queries.ts:117-133): um único
+  // evento com faixa/janela malformada em QUALQUER tenant não pode derrubar a
+  // lista global inteira do painel master (o caso real que originou F1).
+  // Diferença honesta para os readers por tenant: aqui NÃO há filtro de
+  // tenant, então o `tenantId` do placeholder é best-effort do próprio doc
+  // (identidade não garantida pela query) — vazio quando ilegível.
+  const itens = snap.docs.map((d) => {
+    try {
+      return parseEvento(d.id, d.data());
+    } catch (err) {
+      console.error(
+        `[listarEventosGlobalPaginado] evento "${d.id}" corrompido — placeholder degradado (F1)`,
+        err
+      );
+      const raw = d.data();
+      const tenantIdRaw = raw['tenantId'];
+      return eventoDegradado(
+        d.id,
+        raw,
+        typeof tenantIdRaw === 'string' ? tenantIdRaw : '',
+        ''
+      );
+    }
+  });
   const ultimo = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : undefined;
   return {
     itens,

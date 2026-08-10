@@ -161,8 +161,12 @@ function timestampSeguro(v: unknown): Timestamp {
  * best-effort: aproveita o primitivo quando o tipo confere, senão cai num default
  * neutro; cronograma/faixa (fontes mais prováveis do defeito) degradam para
  * vazio. NUNCA lança — é o caminho de resgate da listagem.
+ *
+ * Exportado (ONDA1-FIX · D-2) para os readers admin de `platform/`
+ * (tenantEventosClubs, listasGlobais) reaproveitarem o MESMO caminho de
+ * resgate — helper interno do pacote, fora do barrel público.
  */
-function eventoDegradado(
+export function eventoDegradado(
   id: string,
   raw: Record<string, unknown>,
   tenantId: string,

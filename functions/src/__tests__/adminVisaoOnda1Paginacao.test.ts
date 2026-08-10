@@ -297,6 +297,97 @@ describe('listarEventosGlobalPaginado — cross-tenant, contagem honesta (S1614-
   });
 });
 
+// ---------------------------------------------------------------------------
+// ONDA1-FIX · D-2 — isolamento por doc (doutrina F1, review r1) nos DOIS
+// readers de eventos desta onda. `parseEvento` é fail-fast (lança em
+// janela/faixa/campo malformado); antes do fix, `snap.docs.map(parseEvento)`
+// deixava UM doc envenenado derrubar a página inteira — contra o precedente
+// já pago em eventos/queries.ts:117-133 (placeholder degradado + telemetria).
+// Falsificação real: contra o código velho, `janelasEntrega: [{dia:'amanhã'}]`
+// faz o map LANÇAR e `expect(res.itens).toHaveLength(2)` nunca é alcançado —
+// o teste falha com o throw do parseEvento.
+// ---------------------------------------------------------------------------
+
+describe('isolamento por doc nos readers de eventos (ONDA1-FIX · D-2 · doutrina F1)', () => {
+  it('listarEventosDoTenantPaginado: um doc ENVENENADO não derruba a página — vira placeholder degradado + telemetria', async () => {
+    vi.mocked(getDocs).mockResolvedValue(
+      snapshotDe(['bom', 'ruim'], (id) =>
+        id === 'ruim'
+          ? { ...eventoDoc(id), janelasEntrega: [{ dia: 'amanhã' }] }
+          : eventoDoc(id)
+      )
+    );
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const res = await listarEventosDoTenantPaginado(db, 'castelo-producoes', {
+      pageSize: 2,
+    });
+
+    expect(res.itens).toHaveLength(2);
+    expect(res.itens[0]?.nome).toBe('Evento bom');
+    const degradado = res.itens[1];
+    expect(degradado?.id).toBe('ruim');
+    // Identidade do FILTRO da query (ADR-009), não do doc envenenado
+    expect(degradado?.tenantId).toBe('castelo-producoes');
+    expect(degradado?.nome).toBe('Evento ruim'); // best-effort preservado
+    expect(degradado?.janelasEntrega).toEqual([]); // fonte do defeito neutralizada
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining('ruim'),
+      expect.anything()
+    );
+    // Página cheia continua honesta mesmo com doc degradado no meio
+    expect(res.proxCursor).not.toBeNull();
+    errSpy.mockRestore();
+  });
+
+  it('listarEventosGlobalPaginado: doc envenenado de QUALQUER tenant não derruba a lista global do painel master', async () => {
+    vi.mocked(getDocs).mockResolvedValue({
+      docs: [
+        { id: 'e-bom', data: () => eventoDoc('e-bom', 'castelo-producoes') },
+        {
+          id: 'e-ruim',
+          data: () => ({
+            ...eventoDoc('e-ruim', 'passo-certo'),
+            janelasEntrega: [{ dia: 'amanhã' }],
+          }),
+        },
+      ],
+    } as unknown as Awaited<ReturnType<typeof getDocs>>);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const res = await listarEventosGlobalPaginado(db, { pageSize: 2 });
+
+    expect(res.itens).toHaveLength(2);
+    expect(res.itens[0]?.nome).toBe('Evento e-bom');
+    const degradado = res.itens[1];
+    expect(degradado?.id).toBe('e-ruim');
+    // Na lista global NÃO há filtro de tenant: tenantId do degradado é
+    // best-effort do próprio doc (identidade não garantida — documentado no reader)
+    expect(degradado?.tenantId).toBe('passo-certo');
+    expect(degradado?.janelasEntrega).toEqual([]);
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining('e-ruim'),
+      expect.anything()
+    );
+    errSpy.mockRestore();
+  });
+
+  it('lista toda VÁLIDA passa intacta, sem telemetria de erro (os dois readers)', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    vi.mocked(getDocs).mockResolvedValue(snapshotDe(['e1'], (id) => eventoDoc(id)));
+    const porTenant = await listarEventosDoTenantPaginado(db, 'castelo-producoes');
+    expect(porTenant.itens).toHaveLength(1);
+
+    vi.mocked(getDocs).mockResolvedValue(snapshotDe(['e2'], (id) => eventoDoc(id)));
+    const global = await listarEventosGlobalPaginado(db);
+    expect(global.itens).toHaveLength(1);
+
+    expect(errSpy).not.toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+});
+
 describe('listarClubesGlobalPaginado — cross-tenant, contagem honesta (S1614-T1)', () => {
   it('devolve clubs de tenants diferentes na mesma página', async () => {
     vi.mocked(getDocs).mockResolvedValue({

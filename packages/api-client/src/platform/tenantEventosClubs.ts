@@ -39,6 +39,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { parseEvento, type Clube, type Evento } from '@leela/core';
+import { eventoDegradado } from '../eventos/queries';
 
 /** Página canônica das tabelas densas da ficha do tenant (§2.5). */
 export const TENANT_DRILLDOWN_PAGE_SIZE = 20;
@@ -91,7 +92,21 @@ export async function listarEventosDoTenantPaginado(
   if (options.cursor) constraints.push(startAfter(options.cursor));
 
   const snap = await getDocs(query(collection(db, 'eventos'), ...constraints));
-  const itens = snap.docs.map((d) => parseEvento(d.id, d.data()));
+  // ONDA1-FIX · D-2 — doutrina F1 (eventos/queries.ts:117-133): UM doc
+  // envenenado NÃO derruba a página da aba Eventos da ficha. `parseEvento` é
+  // fail-fast; aqui cada doc é isolado — o que falha vira placeholder
+  // degradado + telemetria. Identidade do FILTRO da query (ADR-009).
+  const itens = snap.docs.map((d) => {
+    try {
+      return parseEvento(d.id, d.data());
+    } catch (err) {
+      console.error(
+        `[listarEventosDoTenantPaginado] evento "${d.id}" corrompido — placeholder degradado (F1)`,
+        err
+      );
+      return eventoDegradado(d.id, d.data(), tenantId, '');
+    }
+  });
   const ultimo = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : undefined;
   return {
     itens,
