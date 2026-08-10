@@ -124,6 +124,14 @@ describe('EngajamentoView · o que não tem fonte', () => {
     expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 
+  it('o Volume de Check-ins também se nomeia, e não vira série com o progresso do desafio', () => {
+    render(<EngajamentoView {...props()} />);
+    const secao = screen.getByRole('region', { name: 'Volume de Check-ins' });
+    expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+    expect(within(secao).getByText(/acumulado por participante/i)).toBeInTheDocument();
+    expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
+  });
+
   it('conversão da base explica as DUAS coisas que faltam, sem taxa nenhuma', () => {
     render(<EngajamentoView {...props()} />);
     const secao = screen.getByRole('region', { name: 'Conversão da base' });

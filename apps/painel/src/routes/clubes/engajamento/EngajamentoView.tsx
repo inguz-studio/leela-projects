@@ -455,6 +455,11 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 icon={<CalendarClock aria-hidden />}
                 causa="O club não registra presença: o único check-in que existe é o do QR na largada de um evento, e os registros de atividade do atleta não são legíveis pelo organizador. Sem essa fonte, não há hora nem dia para pintar."
               />
+              <CardEmBreve
+                titulo="Volume de Check-ins"
+                icon={<Activity aria-hidden />}
+                causa="Mesma origem do mapa. O progresso dos desafios existe, mas é um acumulado por participante: ele diz o quanto a comunidade andou, nunca em que faixa de hora ou em que semana ela apareceu."
+              />
             </div>
 
             {/* ── Seção 2 · a ponte ──────────────────────────────────────── */}
