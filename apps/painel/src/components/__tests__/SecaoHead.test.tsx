@@ -3,8 +3,9 @@
 //
 // O que se cobra aqui é a regra do REFACTOR item 8, que é estrutural e não
 // estética: a explicação do bloco abre em PORTAL, na raiz do documento. Um
-// ancestral com `transform` (o hover de card que sobe 2px, por exemplo) vira
-// bloco de contenção e faz qualquer camada posicionada se ancorar no card —
+// ancestral com `transform` (o hover de card que sobe um tiquinho, por
+// exemplo) vira bloco de contenção e faz qualquer camada posicionada se
+// ancorar no card —
 // a dica some atrás do vizinho. O teste afirma o que impede isso: o conteúdo
 // não é descendente do bloco que o disparou, e a família tipográfica é
 // declarada em vez de herdada, porque fora da árvore do painel não há de quem

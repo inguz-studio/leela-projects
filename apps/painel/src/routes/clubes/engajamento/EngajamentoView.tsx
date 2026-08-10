@@ -16,11 +16,17 @@
 // duas coisas que também não existem — contagem de visitantes (RN-489, medida e
 // confirmada ausente) e vínculo entre membro de club e comprador de evento.
 //
-// Em vez de seis caixas vazias (que é o que "um empty-state por gráfico"
-// produziria), cada seção sem base recebe UM estado vazio que NOMEIA a métrica
-// e a causa. É a diferença entre uma tela que parece quebrada e uma tela que
-// explica o que falta — e o que falta virou lista de vetáveis no handoff, não
-// número inventado.
+// Nenhuma dessas caixas fica vazia e muda: cada métrica sem base tem um card
+// COM NOME PRÓPRIO que diz a causa em uma frase e escreve "em breve" (REDESIGN-V2,
+// itens 7, 11 e 13). É a diferença entre uma tela que parece quebrada e uma tela
+// que explica o que falta — e o que falta virou lista de vetáveis no handoff, não
+// número inventado. A caixa genérica anterior escondia quantas análises estão
+// previstas e qual fonte destrava cada uma.
+//
+// Duas regras estruturais entraram junto (REDESIGN-V2): o recorte de um card
+// mora DENTRO dele (item 9) e a reanimação é por gráfico, nunca por tela
+// (item 10). As duas existem pelo mesmo motivo — um clique deve mexer no que
+// foi clicado, e em mais nada.
 // =============================================================================
 
 import { useState, type ReactNode } from 'react';

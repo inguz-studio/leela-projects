@@ -36,10 +36,10 @@ export interface SecaoHeadProps {
    * quem precisa e some da varredura de quem já sabe.
    *
    * O conteúdo abre em PORTAL, na raiz do documento (REFACTOR item 8). A causa
-   * é concreta: basta um ancestral com `transform` — um card com
-   * `translateY(-2px)` no hover, por exemplo — para virar bloco de contenção, e
-   * aí `position: fixed` passa a se ancorar no card, com a dica indo parar
-   * atrás do vizinho. Em portal, o problema não pode acontecer.
+   * é concreta: basta um ancestral com `transform` — um card que sobe um
+   * tiquinho no hover, por exemplo — para virar bloco de contenção, e aí
+   * `position: fixed` passa a se ancorar no card, com a dica indo parar atrás
+   * do vizinho. Em portal, o problema não pode acontecer.
    */
   ajuda?: string;
   /**
