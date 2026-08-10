@@ -394,6 +394,7 @@
     "tag-py":         "5px",
     "cta-h":          "48px",
     "cta-h-sm":       "44px",
-    "label-spacing":  "0.06em"
+    "label-spacing":  "0.06em",
+    "band-size":      "1.0625rem"
   }
 }

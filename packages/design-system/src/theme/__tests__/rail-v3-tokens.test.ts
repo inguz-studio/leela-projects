@@ -135,6 +135,7 @@ describe('grupo v3 — chrome das seções do protótipo', () => {
     '--v3-cta-h': '48px',
     '--v3-cta-h-sm': '44px',
     '--v3-label-spacing': '0.06em',
+    '--v3-band-size': '1.0625rem',
   };
 
   for (const [nome, valor] of Object.entries(esperado)) {

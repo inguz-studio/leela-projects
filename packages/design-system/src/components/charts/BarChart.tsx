@@ -78,6 +78,22 @@ function ChartTooltip({
   );
 }
 
+/** Limite de caracteres do tick do eixo Y (92px comportam ~13 em 13px). */
+export const TICK_MAX_CHARS = 13;
+
+/**
+ * Trunca o rótulo do EIXO com reticências — defesa contra a colisão de
+ * rótulos que o dono viu na primeira rodada (HIFI-REC · defeito nº 2): o
+ * eixo categórico tem 92px; um nome maior vazava por cima da barra vizinha.
+ * A identidade completa NUNCA se perde — segue no tooltip e na tabela
+ * equivalente (sr-only), que são as superfícies de leitura do nome.
+ * @pure
+ */
+export function truncarRotulo(rotulo: string, max: number = TICK_MAX_CHARS): string {
+  if (rotulo.length <= max) return rotulo;
+  return `${rotulo.slice(0, Math.max(1, max - 1)).trimEnd()}…`;
+}
+
 export function BarChart({
   data,
   'aria-label': ariaLabel,
@@ -111,6 +127,7 @@ export function BarChart({
               tickLine={false}
               axisLine={false}
               tick={{ fill: 'var(--text-secondary)', fontSize: 13 }}
+              tickFormatter={truncarRotulo}
             />
             <Tooltip
               cursor={{ fill: 'var(--chart-track)', opacity: 0.4 }}

@@ -516,7 +516,8 @@ export const brasaTheme: FlatTokens = {
   "v3-tag-py": "5px",
   "v3-cta-h": "48px",
   "v3-cta-h-sm": "44px",
-  "v3-label-spacing": "0.06em"
+  "v3-label-spacing": "0.06em",
+  "v3-band-size": "1.0625rem"
 };
 
 export const wineTheme: FlatTokens = {
@@ -1047,7 +1048,8 @@ export const wineTheme: FlatTokens = {
   "v3-tag-py": "5px",
   "v3-cta-h": "48px",
   "v3-cta-h-sm": "44px",
-  "v3-label-spacing": "0.06em"
+  "v3-label-spacing": "0.06em",
+  "v3-band-size": "1.0625rem"
 };
 
 export const darkWineTheme: FlatTokens = {
@@ -1546,5 +1548,6 @@ export const darkWineTheme: FlatTokens = {
   "v3-tag-py": "5px",
   "v3-cta-h": "48px",
   "v3-cta-h-sm": "44px",
-  "v3-label-spacing": "0.06em"
+  "v3-label-spacing": "0.06em",
+  "v3-band-size": "1.0625rem"
 };

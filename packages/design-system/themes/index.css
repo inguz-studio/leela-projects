@@ -518,6 +518,7 @@
   --v3-cta-h: 48px;
   --v3-cta-h-sm: 44px;
   --v3-label-spacing: 0.06em;
+  --v3-band-size: 1.0625rem;
   --background: var(--surface-base);
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
@@ -1087,6 +1088,7 @@
   --v3-cta-h: 48px;
   --v3-cta-h-sm: 44px;
   --v3-label-spacing: 0.06em;
+  --v3-band-size: 1.0625rem;
   --background: var(--surface-base);
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
@@ -1624,6 +1626,7 @@
   --v3-cta-h: 48px;
   --v3-cta-h-sm: 44px;
   --v3-label-spacing: 0.06em;
+  --v3-band-size: 1.0625rem;
   --background: var(--surface-base);
   --foreground: var(--text-primary);
   --card: var(--surface-raised);
