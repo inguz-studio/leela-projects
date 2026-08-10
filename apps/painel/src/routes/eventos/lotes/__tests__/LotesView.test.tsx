@@ -88,19 +88,32 @@ describe('LotesView', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Frente D — os três números da vaga, na tabela
+  // Frente D — os três números da vaga, na tabela. Leva 3 do dono
+  // (D-1008-R12): a coluna ÚNICA "Vagas (vendidas · disponíveis · total)"
+  // virou TRÊS colunas — Vendidos · Disponíveis · Total — por decisão do dono
+  // ("simplifique para vendidos, disponiveis e total"). O job continua o
+  // mesmo: os três números por lote, sem obrigar a subtração de cabeça.
   // -------------------------------------------------------------------------
-  it('mostra vendidas · disponíveis · total por lote (sem obrigar a subtração de cabeça)', () => {
+  it('mostra Vendidos · Disponíveis · Total em três colunas (D-1008-R12)', () => {
     renderView();
     const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
-    expect(
-      within(bloco).getByRole('columnheader', { name: /Vagas \(vendidas · disponíveis · total\)/i }),
-    ).toBeInTheDocument();
+    expect(within(bloco).getByRole('columnheader', { name: 'Vendidos' })).toBeInTheDocument();
+    expect(within(bloco).getByRole('columnheader', { name: 'Disponíveis' })).toBeInTheDocument();
+    expect(within(bloco).getByRole('columnheader', { name: 'Total' })).toBeInTheDocument();
+    // A coluna única amontoada não volta.
+    expect(within(bloco).queryByRole('columnheader', { name: /Vagas \(/ })).not.toBeInTheDocument();
     const linhas = within(bloco).getAllByRole('row');
-    // L1 esgotado: 150 vendidas, 0 disponíveis, 150 no total.
-    expect(linhas[1]).toHaveTextContent('150 · 0 · 150');
+    // L1 esgotado: 150 vendidas, 0 disponíveis, 150 no total — cada número na
+    // SUA célula (índices 3-5: depois de Ordem, Lote, Janela).
+    const celulasL1 = within(linhas[1] as HTMLElement).getAllByRole('cell');
+    expect(celulasL1[3]).toHaveTextContent('150');
+    expect(celulasL1[4]).toHaveTextContent('0');
+    expect(celulasL1[5]).toHaveTextContent('150');
     // L2 ativo: 120 de 300 → 180 disponíveis.
-    expect(linhas[2]).toHaveTextContent('120 · 180 · 300');
+    const celulasL2 = within(linhas[2] as HTMLElement).getAllByRole('cell');
+    expect(celulasL2[3]).toHaveTextContent('120');
+    expect(celulasL2[4]).toHaveTextContent('180');
+    expect(celulasL2[5]).toHaveTextContent('300');
   });
 
   // -------------------------------------------------------------------------

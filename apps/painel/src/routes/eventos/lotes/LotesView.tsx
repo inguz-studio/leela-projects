@@ -147,28 +147,42 @@ function ModalidadeBloco({
       header: 'Janela',
       render: (l) => `${formatDataHoraCurta(l.inicioEm)} → ${formatDataHoraCurta(l.fimEm)}`,
     },
+    // Os TRÊS números em TRÊS colunas (D-1008-R12: "simplifique para
+    // vendidos, disponiveis e total" — a coluna única "150 · 0 · 150" lia
+    // como amontoado). Segue sem obrigar subtração de cabeça: os três números
+    // continuam lado a lado, cada um com header próprio e alinhamento
+    // numérico do padrão da Table (align right + tabular-nums).
+    // `capacidadeDoLote` é a aritmética do kernel (disponível = configurado −
+    // vendido, nunca negativo).
     {
-      // Os TRÊS números pedidos pelo dono, sempre juntos: sozinho, o par
-      // "vendidos / total" obrigava a fazer a subtração de cabeça para saber
-      // quanto ainda está em pé. `capacidadeDoLote` é a aritmética do kernel
-      // (disponível = configurado − vendido, nunca negativo).
-      key: 'vaga',
-      header: 'Vagas (vendidas · disponíveis · total)',
+      key: 'vendidos',
+      header: 'Vendidos',
       align: 'right',
-      render: (l) => {
-        const c = capacidadeDoLote(l);
-        return (
-          <span className="[font-variant-numeric:tabular-nums]">
-            <span className="text-[var(--text-secondary)]">{formatInt(c.vendido)}</span>
-            {' · '}
-            <strong className="font-[var(--font-weight-semibold)] text-[var(--text-success)]">
-              {formatInt(c.disponivel)}
-            </strong>
-            {' · '}
-            <span className="text-[var(--text-secondary)]">{formatInt(c.configurado)}</span>
-          </span>
-        );
-      },
+      render: (l) => (
+        <span className="[font-variant-numeric:tabular-nums] text-[var(--text-secondary)]">
+          {formatInt(capacidadeDoLote(l).vendido)}
+        </span>
+      ),
+    },
+    {
+      key: 'disponiveis',
+      header: 'Disponíveis',
+      align: 'right',
+      render: (l) => (
+        <strong className="[font-variant-numeric:tabular-nums] font-[var(--font-weight-semibold)] text-[var(--text-success)]">
+          {formatInt(capacidadeDoLote(l).disponivel)}
+        </strong>
+      ),
+    },
+    {
+      key: 'total',
+      header: 'Total',
+      align: 'right',
+      render: (l) => (
+        <span className="[font-variant-numeric:tabular-nums] text-[var(--text-secondary)]">
+          {formatInt(capacidadeDoLote(l).configurado)}
+        </span>
+      ),
     },
     {
       key: 'preco',
