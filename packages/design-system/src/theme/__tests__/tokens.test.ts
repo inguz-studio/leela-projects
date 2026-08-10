@@ -219,6 +219,32 @@ describe('generateRNTheme', () => {
     expect(tokens['action-primary']).toBe('#D63500');
     expect(tokens['action-primary-fg']).toBe('#FFFFFF');
   });
+
+  it('REDESIGN-DS-0809 §3: brasa é pareado — display (Exo 2) ≠ ui (Rubik)', () => {
+    const tokens = generateRNTheme(brasa, sem, comp);
+    expect(tokens['font-family-display']).toBe('"Exo 2", sans-serif');
+    expect(tokens['font-family-ui']).toBe('"Rubik", sans-serif');
+    expect(tokens['font-family-display']).not.toBe(tokens['font-family-ui']);
+  });
+
+  it('REDESIGN-DS-0809 §3: os 4 papéis de peso do brasa existem e são numéricos', () => {
+    const tokens = generateRNTheme(brasa, sem, comp);
+    // Números derivados da regra do handoff aplicada aos cortes REALMENTE
+    // carregados (ver $description de tokens/primitives.brasa.json → peso):
+    // display pede 800 "ou o maior corte disponível" — Exo 2 só carrega até
+    // 700, então cai para 700; os demais já batem sem precisar cair.
+    expect(tokens['peso-display']).toBe('700');
+    expect(tokens['peso-forte']).toBe('700');
+    expect(tokens['peso-medio']).toBe('600');
+    expect(tokens['peso-suave']).toBe('500');
+  });
+
+  it('REDESIGN-DS-0809 §3: wine e dark-wine NÃO ganham --peso-* (só o brasa pediu pareamento)', () => {
+    const wineTokens = generateRNTheme(wine, semWine, comp);
+    const darkWineTokens = generateRNTheme(darkWine, semDarkWine, comp);
+    expect(wineTokens['peso-display']).toBeUndefined();
+    expect(darkWineTokens['peso-display']).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,15 @@
 /* Showroom — importa os temas do DS e as camadas do Tailwind (preset do DS). */
-/* Fontes de AMBOS os temas (o showroom alterna brasa↔wine): brasa=Exo 2,
-   wine=Syne (display)+Figtree (ui), mono comum=JetBrains Mono. O painel só
-   carrega Exo 2 porque roda só em brasa; aqui precisamos das quatro famílias. */
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;0,700;1,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
+/* Fontes dos temas que o showroom alterna (brasa/wine/dark-wine): brasa
+   pareado desde REDESIGN-DS-0809 = Exo 2 (display) + Rubik (ui, 400/500/
+   600/700 — os 4 cortes que os tokens --peso-* endereçam); wine = Syne
+   (display) + Figtree (ui); mono comum = JetBrains Mono. dark-wine usa Geist
+   (display+ui) — Geist NÃO está no Google Fonts (é fonte própria da
+   Vercel), então o dark-wine cai no fallback `sans-serif` do token aqui;
+   carregar Geist de verdade é fora do escopo desta lane (§3 do README só
+   pede a tipografia do BRASA) — registrado no handoff. O painel só carrega
+   Exo 2 porque roda só em brasa (mecanismo próprio, fora deste pacote);
+   aqui o showroom precisa das famílias dos temas que ele de fato alterna. */
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;0,700;1,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Rubik:wght@400;500;600;700&family=Syne:wght@400;600;700;800&display=swap');
 @import '../../themes/index.css';
 
 @tailwind base;

@@ -78,8 +78,9 @@
   },
   "font": {
     "family": {
+      "$description": "REDESIGN-DS-0809 §3: brasa passa a ser PAREADO — Exo 2 nos títulos (voz da marca), Rubik no texto corrido (altura-x maior, cinza óptico mais estável em corpo pequeno). Antes desta lane os dois eram Exo 2; wine e dark-wine já nascem pareados (Syne/Figtree, Geist/Geist) e não mudam aqui.",
       "display": "\"Exo 2\", sans-serif",
-      "ui":      "\"Exo 2\", sans-serif",
+      "ui":      "\"Rubik\", sans-serif",
       "mono":    "\"JetBrains Mono\", monospace"
     },
     "size": {
@@ -171,6 +172,13 @@
   "icon": {
     "size":   "24px",
     "stroke": "1.75"
+  },
+  "peso": {
+    "$description": "REDESIGN-DS-0809 §3: 4 papéis de peso tipográfico que se adaptam aos cortes que a família REALMENTE tem, evitando negrito sintético — regra do handoff, números derivados dela. Top-level (não sob font.*) porque o README nomeia a var --peso-*, não --font-peso-*. display pede '800 ou o maior corte disponível' — Exo 2 (display) carrega só até 700 (@import de painel/showcase: 400/600/700 + 700 itálico, sem 800), então o maior corte disponível é 700. forte=700 (Exo 2 tem). medio pede '600, cai para 500' — Rubik (ui) carrega 400/500/600/700 (carga nova desta lane), então 600 já existe, sem precisar cair. suave pede '500, cai para 400' — Rubik tem 500, idem. Regra de contraste tipográfico do handoff (se o título é 700+, o corpo é 400/500) fica satisfeita por construção: display/forte=700 (família display) nunca fica lado a lado com medio/suave=600/500 (família ui) no mesmo bloco.",
+    "display": "700",
+    "forte": "700",
+    "medio": "600",
+    "suave": "500"
   },
   "brand": {
     "wordmark":     "#C8E84A",
