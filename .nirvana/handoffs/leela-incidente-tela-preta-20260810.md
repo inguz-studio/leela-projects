@@ -244,3 +244,55 @@ usar:
 Scripts temporários (`_incident-boot-node.mjs`, `_incident-boot-jsdom.mjs`,
 `_incident-boot-jsdom-control.mjs`) e o worktree `C:/dev/leela-wt-rollback` removidos ao fim desta
 lane — nenhum deles fazia parte da árvore principal em nenhum momento.
+
+---
+
+## FASE 3 — Inspeção do maestro em navegador real + causa mecânica confirmada (10/08 ~14h)
+
+**Método:** PREP2 reserviu o build quebrado `021e3e4a` em `localhost:4599` (hashes idênticos ao
+que esteve no ar — handoff PREP2). O maestro abriu no Chrome/Windows real desta máquina.
+
+**Resultado:** `/entrar` do build quebrado **renderiza perfeitamente** — tema brasa, cartão de
+login, console zero erro. O build V2 (`localhost:4601`) idem. A hipótese "CSS global quebra tudo"
+está REFUTADA em navegador real (antes só em jsdom).
+
+**Causa mecânica confirmada por medição em produção (14h05):**
+
+1. `curl -sI https://leela-hub.web.app/` → **`Cache-Control: max-age=3600` no index.html** (nenhum
+   header customizado no `firebase.prod.json` — é o default do Firebase Hosting). O navegador pode
+   servir um index.html defasado por até 1 hora sem revalidar.
+2. Assets têm hash no nome (`index-_EVW2ljU.js`) e a release nova REMOVE os antigos do hosting —
+   404 imediato para qualquer HTML defasado que os referencie.
+3. O CSS do painel pinta `html{background-color:var(--surface-base, #0C0C0C)}` — sem JS, a
+   página é PRETA (não branca), o sintoma literal do dono.
+
+**Cadeia do incidente (melhor explicação disponível):** dono com o painel aberto/cacheado →
+deploy do REDESIGN-DS remove `index-_EVW2ljU.js` do ar → o navegador dele, com index.html (e CSS)
+cacheados, não encontra o JS → fundo preto, app nunca boota → "tela preta. nao abre". O rollback
+"consertou" porque devolveu ao ar EXATAMENTE os arquivos que o cache dele referenciava. Todas as
+evidências anteriores (bundle boota em jsdom, renderiza no Chrome, nenhum erro) são consistentes.
+
+**O que segue em aberto:** confirmação no navegador do dono (hipótese 4 do diagnóstico — basta
+ele dizer se recarregou/aba anônima resolvia) e a eliminação formal da hipótese "rota autenticada"
+via preview+autologin (lane futura, opcional dado o peso da evidência).
+
+**Conserto permanente (build card HOSTING-CACHE-1):** headers no `firebase.prod.json` (e config
+da landing): `/index.html` → `Cache-Control: no-cache` (ETag revalida barato) · `/assets/**` →
+`max-age=31536000, immutable`. Redeploy hosting-only com o MESMO bundle do rollback (prova por
+hash idêntico ao ar + headers novos medidos por curl). Sem isso, TODO deploy futuro repete a
+roleta de tela preta por até 1h.
+
+## FASE 4 — CONSERTO PERMANENTE NO AR (10/08 13:49:46) · incidente FECHADO no processo, confirmação do dono pendente
+
+HOSTING-CACHE deployado (handoff próprio `...-HOSTING-CACHE.md`, commit `b73eef6e`): index.html
+`no-cache` + `/assets/**` `immutable`, bundle INALTERADO (sha256 `a1dd6f53…` e ETags idênticos
+antes/depois, medidos do ar). Gate visual: pixel do MESMO bundle conferido pelo maestro em
+navegador real via `localhost:4599` (PREP2, hash idêntico); a conferência do ar ficou pendente
+só por permissão da extensão do Chrome (dono ausente) — nota honesta, risco ≈ zero por
+identidade de bytes.
+
+**Estado final do incidente:** mitigado (rollback 09:14) + causa mecânica provada (cache 1h ×
+assets removidos × CSS preta) + conserto permanente no ar (13:49). Resta do dono: confirmar o
+navegador dele (recarregar/aba anônima resolvia?) — fecha a hipótese em definitivo — e a
+conferência visual de 10s do ar. A eliminação formal da hipótese "rota autenticada" (preview +
+autologin) ficou OPCIONAL dado o peso da evidência; se o dono confirmar o cache, morre.
