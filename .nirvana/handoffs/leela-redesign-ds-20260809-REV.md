@@ -721,3 +721,8 @@ E a pendência de produto que nenhuma lane de painel resolve: **o escritor de
 `membro.ultimaAtividadeEm`**. Enquanto ele não existir, "Sem registro (30 dias+)"
 é o teto de honestidade da tela, e é isso que ela afirma agora.
 
+---
+
+**Adendo (2026-08-10, lane DEPLOY):** o pacote liberado acima subiu ao ar —
+prova em `.nirvana/handoffs/leela-redesign-ds-20260809-DEPLOY.md`.
+
