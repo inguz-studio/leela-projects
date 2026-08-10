@@ -54,6 +54,8 @@ describe('derivarCountdown (S602-T1)', () => {
     expect(view!.quando).toBe('27 Abr · Florianópolis/SC');
     expect(view!.qtdInscritos).toBe(453);
     expect(view!.vagasRestantes).toBe(47);
+    // Stat "ocupado" do protótipo v3: razão canônica do core, arredondada.
+    expect(view!.ocupacaoPct).toBe(91);
     expect(view!.checkinHref).toBe('/eventos/meia-floripa-2026/credenciamento');
     expect(view!.gerenciarHref).toBe('/eventos/meia-floripa-2026');
     expect(view!.inscritosHref).toBe('/eventos/meia-floripa-2026/inscritos');
@@ -78,6 +80,15 @@ describe('derivarCountdown (S602-T1)', () => {
       new Date('2026-04-19T00:00:00Z')
     );
     expect(view!.slug).toBe('proximo');
+  });
+
+  it('capacidade desconhecida → ocupacaoPct null (nunca 0 falso)', () => {
+    const view = derivarCountdown(
+      [mkEventoCountdown({ capacidade: null })],
+      new Date('2026-04-19T09:00:00Z')
+    );
+    expect(view!.ocupacaoPct).toBeNull();
+    expect(view!.vagasRestantes).toBeNull();
   });
 
   it('sem evento futuro → null', () => {

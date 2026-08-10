@@ -29,9 +29,9 @@ function montar(over: Partial<ComunidadeResumoProps> = {}) {
 describe('ComunidadeResumo · com comunidade', () => {
   it('mostra os dois agregados de comunidade que o resumo já trazia', () => {
     montar();
-    expect(screen.getByText('Membros ativos')).toBeInTheDocument();
+    expect(screen.getByText('membros ativos')).toBeInTheDocument();
     expect(screen.getByText('120')).toBeInTheDocument();
-    expect(screen.getByText('Desafios ativos')).toBeInTheDocument();
+    expect(screen.getByText('desafios ativos')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
   });
 
@@ -62,7 +62,7 @@ describe('ComunidadeResumo · estados', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Não foi possível carregar o resumo dos seus clubs.'
     );
-    expect(screen.queryByText('Membros ativos')).not.toBeInTheDocument();
+    expect(screen.queryByText('membros ativos')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(onRetry).toHaveBeenCalled();
   });

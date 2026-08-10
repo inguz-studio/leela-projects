@@ -70,4 +70,22 @@ describe('AlertsPanel (S602-T2)', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
   });
+
+  it('alerta com destino ganha "Ver agora →" que navega (protótipo v3)', async () => {
+    const onNavigate = vi.fn();
+    render(
+      <AlertsPanel
+        loading={false}
+        alerts={[mkAlert({ id: 'a', href: '/eventos/meia-floripa-2026/inscritos' })]}
+        onNavigate={onNavigate}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Ver agora/ }));
+    expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/inscritos');
+  });
+
+  it('alerta sem destino não desenha link morto', () => {
+    render(<AlertsPanel loading={false} alerts={[mkAlert({ id: 'a' })]} onNavigate={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Ver agora/ })).not.toBeInTheDocument();
+  });
 });

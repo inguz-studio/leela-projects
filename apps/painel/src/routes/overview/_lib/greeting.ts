@@ -26,3 +26,21 @@ export function saudacaoProfissional(nomeCompleto: string | null | undefined): s
   const abertura = primeiro ? `Olá, ${primeiro}` : 'Olá';
   return `${abertura} — aqui está o resumo das suas operações.`;
 }
+
+/** Frase fixa da saudação v3 (protótipo Visao Geral v3 — HIFI-REC). */
+export const PANORAMA_V3 = 'aqui está o panorama do seu ecossistema.';
+
+/**
+ * Partes da saudação do protótipo v3: "Olá, VITOR, aqui está o panorama do
+ * seu ecossistema." — o nome vem em MAIÚSCULAS e em destaque de marca (o
+ * `<strong>` é da view; aqui só as partes). Sem nome, a frase fecha sozinha:
+ * "Olá, aqui está o panorama do seu ecossistema." — nunca "undefined".
+ * @pure
+ */
+export function saudacaoPanorama(nomeCompleto: string | null | undefined): {
+  nome: string | null;
+  frase: string;
+} {
+  const primeiro = primeiroNome(nomeCompleto);
+  return { nome: primeiro ? primeiro.toUpperCase() : null, frase: PANORAMA_V3 };
+}
