@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar da comunidade — relatório de produto</title>
+<style>
+  :root {
+    --tinta: #1b1d21;
+    --tinta-suave: #4a4f57;
+    --tinta-fraca: #6c727c;
+    --papel: #f6f6f3;
+    --cartao: #ffffff;
+    --linha: #e2e2dc;
+    --linha-forte: #cfcfc6;
+    --acento: #2f6b52;
+    --acento-fraco: #eaf1ed;
+    --alerta: #8a5a17;
+    --alerta-fraco: #faf2e3;
+    --largura: 46rem;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.62;
+    overflow-wrap: break-word;
+  }
+
+  .envelope { max-width: var(--largura); margin: 0 auto; padding: 0 1.25rem 5rem; }
+
+  /* ---------- cabeçalho ---------- */
+
+  header.capa { padding: 3.5rem 0 2.25rem; border-bottom: 1px solid var(--linha-forte); }
+
+  header.capa h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.75rem;
+  }
+
+  .subtitulo { font-size: 1.08rem; color: var(--tinta-suave); margin: 0 0 1.5rem; max-width: 34rem; }
+
+  .ficha { display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem; font-size: 0.85rem; color: var(--tinta-fraca); margin: 0; padding: 0; list-style: none; }
+  .ficha li strong { color: var(--tinta-suave); font-weight: 600; }
+
+  /* ---------- estrutura ---------- */
+
+  section { padding-top: 2.75rem; }
+
+  h2 {
+    font-size: 1.28rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.35rem;
+  }
+
+  h2 + .abertura { color: var(--tinta-suave); margin-top: 0; }
+
+  h3 {
+    font-size: 1.02rem;
+    font-weight: 600;
+    margin: 2rem 0 0.25rem;
+  }
+
+  h3 .conta { color: var(--tinta-fraca); font-weight: 400; font-size: 0.85rem; margin-left: 0.4rem; }
+
+  p { margin: 0 0 1rem; }
+
+  a { color: var(--acento); }
+
+  /* ---------- job stories ---------- */
+
+  .grupo > .abertura { color: var(--tinta-suave); margin-bottom: 1.25rem; }
+
+  .story {
+    background: var(--cartao);
+    border: 1px solid var(--linha);
+    border-left: 3px solid var(--acento);
+    border-radius: 3px;
+    padding: 1.1rem 1.25rem 0.35rem;
+    margin: 0 0 0.85rem;
+  }
+
+  .story .frase {
+    font-size: 1.02rem;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 0.6rem;
+  }
+
+  .story .frase b { font-weight: 600; color: var(--acento); }
+
+  .story .desc { font-size: 0.94rem; color: var(--tinta-suave); }
+
+  /* ---------- callouts ---------- */
+
+  .limite, .nota {
+    border-radius: 3px;
+    padding: 0.9rem 1.1rem 0.1rem;
+    margin: 0.4rem 0 1rem;
+    font-size: 0.92rem;
+  }
+
+  .limite { background: var(--alerta-fraco); border: 1px solid #eddfc0; }
+  .nota { background: var(--acento-fraco); border: 1px solid #d3e3da; }
+
+  .rotulo {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  .limite .rotulo { color: var(--alerta); }
+  .nota .rotulo { color: var(--acento); }
+
+  .limite p, .nota p { margin-bottom: 0.8rem; }
+
+  /* ---------- listas ---------- */
+
+  ul.marcada { list-style: none; margin: 0 0 1rem; padding: 0; }
+
+  ul.marcada li {
+    position: relative;
+    padding: 0 0 0 1.15rem;
+    margin-bottom: 0.7rem;
+  }
+
+  ul.marcada li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--linha-forte);
+  }
+
+  ul.marcada li b { font-weight: 600; }
+
+  /* ---------- tabelas ---------- */
+
+  .rolagem { overflow-x: auto; margin: 0 0 1.25rem; -webkit-overflow-scrolling: touch; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 30rem;
+    font-size: 0.9rem;
+    background: var(--cartao);
+  }
+
+  caption { text-align: left; font-size: 0.85rem; color: var(--tinta-fraca); padding-bottom: 0.5rem; }
+
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--linha);
+  }
+
+  thead th {
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tinta-fraca);
+    border-bottom: 1px solid var(--linha-forte);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  td:first-child { font-weight: 500; }
+
+  /* ---------- fases ---------- */
+
+  .fase {
+    background: var(--cartao);
+    border: 1px solid var(--linha);
+    border-radius: 3px;
+    padding: 1.05rem 1.2rem 0.35rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .fase .topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .fase .nome { font-weight: 600; font-size: 1rem; }
+
+  .selo {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 2px;
+    background: var(--acento-fraco);
+    color: var(--acento);
+    white-space: nowrap;
+  }
+
+  .selo.espera { background: #eeeeea; color: var(--tinta-fraca); }
+  .selo.aberto { background: var(--alerta-fraco); color: var(--alerta); }
+
+  .fase p { font-size: 0.94rem; color: var(--tinta-suave); }
+
+  /* ---------- referências ---------- */
+
+  .tecnicas { margin-top: 3.5rem; padding-top: 1.75rem; border-top: 1px solid var(--linha-forte); font-size: 0.85rem; color: var(--tinta-fraca); }
+  .tecnicas h2 { font-size: 0.95rem; color: var(--tinta-suave); }
+  .tecnicas table { font-size: 0.82rem; background: transparent; }
+  .tecnicas td:first-child { font-weight: 500; color: var(--tinta-suave); }
+  .tecnicas p { margin-bottom: 0.8rem; }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .envelope { padding: 0 1rem 4rem; }
+    header.capa { padding-top: 2.5rem; }
+    header.capa h1 { font-size: 1.6rem; }
+    .story { padding: 1rem 1rem 0.3rem; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    .story, .fase, table { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="envelope">
+
+<header class="capa">
+  <h1>Radar da comunidade — relatório de produto</h1>
+  <p class="subtitulo">O retrato da comunidade de WhatsApp do organizador, dentro do painel da Leela. Este documento é para quem vai priorizar o produto e não leu a especificação.</p>
+  <ul class="ficha">
+    <li><strong>Superfície</strong> Painel Profissional</li>
+    <li><strong>Estágio</strong> piloto convidado</li>
+    <li><strong>Documento de</strong> 10 de agosto de 2026</li>
+  </ul>
+</header>
+
+<section>
+  <h2>O que é o radar</h2>
+  <p>O organizador toca a comunidade dele no WhatsApp e não tem nenhum retrato dela dentro da Leela. O radar entrega esse retrato no painel: quanto se conversa por dia, em que horários, quais assuntos aparecem, quem entra e quem sai, e a lista de quem mais falou, pelo nome. O dado nasce fora do painel, num número dedicado que só observa, e chega já em forma de número.</p>
+  <div class="nota">
+    <span class="rotulo">A regra que organiza tudo</span>
+    <p>O radar nunca fala no grupo. Nenhuma mensagem, nenhuma resposta, nenhum aviso automático. Ele conta e mostra, e isso é o produto inteiro.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Para quem</h2>
+  <p>A pessoa principal é a organizadora que mantém a comunidade viva e paga o número dedicado, a Marina Castelo das personas da casa. Quando a comunidade pertence a um clube, o coordenador de assessoria também usa, o Felipe Martins. A audiência do dado para aí: o radar é visto por quem administra aquela comunidade, e nunca vira perfil público de ninguém.</p>
+</section>
+
+<section class="grupo">
+  <h2>As job stories</h2>
+  <p class="abertura">Cada capacidade aparece como o progresso que o organizador quer fazer, e não como a tela que a entrega. São doze, agrupadas nos quatro trabalhos que ele contratou o radar para resolver, mais a conciliação entre participante e cliente. Cada grupo termina com o que aquele bloco honestamente não entrega.</p>
+
+  <h3>Compreender a própria base <span class="conta">3 job stories</span></h3>
+  <p class="abertura">Trocar sensação por evidência sobre volume, horário e movimento de gente.</p>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> eu olho a minha comunidade e só tenho a sensação de que ela anda ativa, <b>quero</b> ver o volume de conversa dia a dia, <b>para</b> trocar a sensação por evidência.</p>
+    <p class="desc">O gráfico mostra quantas mensagens houve em cada dia do período escolhido. Dia em que o radar ficou fora do ar parte do tempo aparece marcado como parcial, e dia em que não dá para saber quanto foi coberto tem marca própria, nunca a de dia cheio.</p>
+  </div>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> eu quero saber a que horas a minha comunidade fala, <b>quero</b> um mapa de hora do dia por dia da semana, <b>para</b> escolher quando publicar o que eu tenho a dizer.</p>
+    <p class="desc">O mapa usa o fuso do organizador, e não o do servidor. A faixa de pico fica legível sem ninguém precisar contar nada.</p>
+  </div>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> entra e sai gente do grupo sem eu perceber, <b>quero</b> ver entradas, saídas, o saldo e o tamanho do grupo ao longo do tempo, <b>para</b> saber se a base está crescendo ou vazando.</p>
+    <p class="desc">O bloco entrega contagem, não lista: quem entrou e quem saiu não é nomeado em lugar nenhum. Dia sem publicação aparece como ausente, e não como zero, porque dia sem movimento e dia sem dado são coisas diferentes.</p>
+  </div>
+
+  <div class="limite">
+    <span class="rotulo">Limite honesto</span>
+    <p>Este grupo mostra o que aconteceu, não por quê. Uma queda de volume pode ser a comunidade esfriando ou o radar tendo ficado fora do ar, e é por isso que a cobertura de cada dia aparece junto do gráfico, em vez de morar numa tela de diagnóstico à parte.</p>
+  </div>
+
+  <h3>Insights de demandas <span class="conta">2 job stories</span></h3>
+  <p class="abertura">Escolher o assunto da próxima experiência sem rolar mil mensagens.</p>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> eu preciso escolher o tema da próxima experiência, <b>quero</b> ver as palavras que mais apareceram no período e por quanta gente diferente, <b>para</b> decidir com evidência em vez de palpite.</p>
+    <p class="desc">A tela lista as quinze palavras mais faladas, cada uma com quantas vezes apareceu e por quantas pessoas distintas. Quando nada se repetiu o bastante no período, o bloco diz isso, em vez de mostrar ruído.</p>
+  </div>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> duas palavras aparecem o mesmo tanto de vezes, <b>quero</b> a que veio de mais gente na frente, <b>para</b> não confundir assunto da comunidade com assunto de uma pessoa só.</p>
+    <p class="desc">O número de pessoas distintas é o critério de desempate da lista. Assunto espalhado vale mais do que assunto repetido por um.</p>
+  </div>
+
+  <div class="limite">
+    <span class="rotulo">Limite honesto</span>
+    <p>Frequência de palavra é assunto, não demanda. Uma lista com "treino", "prova" e "camiseta" não separa elogio de reclamação, e quem ler isso como pedido da comunidade vai errar. A frase que diz isso fica visível junto da lista, na própria tela, e não atrás de dica flutuante ou de link.</p>
+    <p>A alternativa mais forte foi recusada por escrito: resumir a conversa automaticamente serviria melhor esse trabalho, mas resumo é derivado do texto, e o texto morre no computador do organizador. Reabre por decisão nova do dono.</p>
+  </div>
+
+  <h3>Reconhecer os membros mais engajados <span class="conta">2 job stories</span></h3>
+  <p class="abertura">Saber pelo nome quem aparece na comunidade.</p>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> eu quero reconhecer quem aparece na minha comunidade, <b>quero</b> a lista de quem mais falou no período, pelo nome, com os dias ativos ao lado da contagem, <b>para</b> separar quem está sempre lá de quem falou muito num dia só.</p>
+    <p class="desc">Cada linha traz o nome do participante, o total de mensagens e em quantos dias distintos ele falou. O título da lista diz o que ela mede, sem promessa a mais: quem mais falou no período.</p>
+  </div>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> um participante aparece sem nome, <b>quero</b> a linha identificada e a ação de nomear ao lado, <b>para</b> não ficar com um buraco no meio da lista.</p>
+    <p class="desc">Nome ausente é caso previsto, não erro: nem todo participante mostra um nome no WhatsApp. A linha aparece com rótulo próprio e o caminho de corrigir ali mesmo.</p>
+  </div>
+
+  <div class="limite">
+    <span class="rotulo">Limite honesto</span>
+    <p>A lista mostra quem falou mais, não quem sustenta a comunidade. Cinquenta reações curtas passam à frente de quem responde a dúvida de cada recém-chegado, e essa leitura continua sendo do organizador. Os dias ativos existem por isso, ao lado da contagem: eles separam o constante do episódico.</p>
+  </div>
+
+  <h3>Conciliar participante e cliente <span class="conta">2 job stories</span></h3>
+  <p class="abertura">Parar de casar duas listas de cabeça: quem fala na comunidade e quem já é membro do cadastro.</p>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> eu reconheço alguém da lista como um membro do meu cadastro, <b>quero</b> confirmar esse vínculo na própria linha, <b>para</b> parar de casar duas listas de memória.</p>
+    <p class="desc">O painel sugere candidatos do cadastro de membros daquele clube por semelhança de nome, e o organizador confirma ou recusa. Sugestão nunca é aceita sozinha. Depois de confirmado, a linha passa a mostrar o nome do cadastro; desfeito o vínculo, ela volta ao nome do WhatsApp.</p>
+  </div>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> o nome que veio do WhatsApp é apelido, está errado ou falta, <b>quero</b> corrigir à mão, <b>para</b> a lista ficar legível para mim.</p>
+    <p class="desc">O nome digitado pelo organizador vence o que vier do WhatsApp nas publicações seguintes. Número de telefone digitado no lugar do nome é recusado, com o motivo na tela. Corrigir o nome funciona até em comunidade que não tem clube ligado; conciliar precisa de um cadastro para comparar, e a tela diz isso quando não há.</p>
+  </div>
+
+  <div class="limite">
+    <span class="rotulo">Limite honesto</span>
+    <p>O vínculo mora do lado do radar e não cria perfil de ninguém no cadastro comercial. Nenhum dado do radar entra lá, e nenhum caminho do cadastro comercial lê o radar. A separação é sustentada por política e por um teste que reprova quando alguém abre um caminho novo entre os dois, e não por uma parede que impeça a travessia.</p>
+  </div>
+
+  <h3>Gerir as comunidades <span class="conta">3 job stories</span></h3>
+  <p class="abertura">Ver qual comunidade está esfriando, e continuar chegando a todas elas.</p>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> eu tenho mais de uma comunidade, <b>quero</b> ver todas lado a lado no mesmo período, <b>para</b> perceber qual está esfriando antes de ela morrer.</p>
+    <p class="desc">A comparação mostra volume, gente ativa e saldo de entradas e saídas por comunidade. Um grupo cujo ritmo dos últimos sete dias está abaixo do ritmo dos últimos trinta aparece sinalizado. Quem tem uma comunidade só não vê o bloco, em vez de ver o bloco vazio.</p>
+  </div>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> uma comunidade perde mais gente do que ganha duas semanas seguidas, <b>quero</b> ela destacada, <b>para</b> não descobrir a debandada quando já for tarde.</p>
+    <p class="desc">O destaque sai do saldo de entradas e saídas de duas janelas de sete dias em sequência. É o sinal que sempre chega tarde demais quando ninguém está olhando.</p>
+  </div>
+
+  <div class="story">
+    <p class="frase"><b>Quando</b> o clube de uma comunidade sai do ar, <b>quero</b> chegar ao radar dela por uma lista dos meus radares, <b>para</b> não perder nem o histórico nem o caminho de apagar os dados de quem pedir.</p>
+    <p class="desc">A lista mostra os radares do organizador com o nome do grupo, o clube ligado a cada um, o último dia coberto e o tamanho atual. Comunidade sem clube ligado aparece do mesmo jeito e abre igual. A lista existe só para quem tem o radar ligado.</p>
+  </div>
+
+  <div class="limite">
+    <span class="rotulo">Limite honesto</span>
+    <p>A comparação mede ritmo, não saúde. Ela não ordena as comunidades por qualidade nem diz qual é a melhor: nomeia o que mede e devolve a leitura ao organizador.</p>
+  </div>
+</section>
+
+<section>
+  <h2>O que o organizador vê</h2>
+  <p>Duas superfícies, e nenhuma delas aparece para quem não foi convidado.</p>
+  <ul class="marcada">
+    <li><b>A aba do radar dentro do clube.</b> Mora junto de membros, desafios, parcerias e comunicação, e só aparece para o organizador que tem o radar ligado. É onde ficam os blocos de conteúdo e a lista de quem mais falou.</li>
+    <li><b>A lista de radares.</b> Uma página própria dentro da área de clubes, alcançada por uma entrada na tela inicial dessa área, que reúne as comunidades observadas. É por aqui que se chega ao radar de uma comunidade cujo clube saiu do ar, e por consequência ao caminho de apagar os dados de um participante que pediu esquecimento.</li>
+  </ul>
+  <p>Antes de qualquer coisa aparecer, o organizador precisa ter aceitado o termo do radar. Sem esse aceite o radar não liga, e a tela nem chega a ser pedida.</p>
+
+  <h3>Os oito estados da tela</h3>
+  <p class="abertura">Vale listar porque a maior parte do trabalho de tela está aqui, e não no caso feliz.</p>
+  <div class="rolagem">
+    <table>
+      <thead>
+        <tr><th scope="col">Situação</th><th scope="col">O que a tela mostra</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>O radar está ligado e o programa ainda não foi instalado</td><td>A instrução de instalar, e nenhum bloco de conteúdo desenhado</td></tr>
+        <tr><td>O programa está instalado e o número ainda não foi conectado</td><td>A instrução de conectar, e nenhum botão que envie coisa alguma</td></tr>
+        <tr><td>Nenhuma comunidade publicou dado ainda</td><td>A frase que nomeia o que falta acontecer, em vez de blocos vazios</td></tr>
+        <tr><td>O período escolhido não tem nenhum dia com dado</td><td>Cada bloco mostra o próprio vazio, com a data do último dia coberto ao lado</td></tr>
+        <tr><td>O radar está sem dar sinal há mais de 26 horas</td><td>Uma faixa de aviso com a data do último dia coberto</td></tr>
+        <tr><td>O radar ficou fora do ar parte de um dia</td><td>Aquele ponto do gráfico marcado como parcial</td></tr>
+        <tr><td>Não dá para saber quanto daquele dia foi coberto</td><td>O ponto marcado como cobertura desconhecida, nunca como dia cheio</td></tr>
+        <tr><td>O radar está pausado</td><td>O dado até o dia em que ele parou, uma faixa dizendo desde quando, e nenhuma ação da tela que o religue sozinha</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>O que o produto não faz, de propósito</h2>
+  <ul class="marcada">
+    <li><b>Não envia nada, nunca.</b> Nenhuma linha da lista oferece caminho para mensagem, ligação ou comunicado, e a tela do radar não se conecta à área de comunicação do clube, que é a vizinha dela. A prova exigida é de comportamento, não de configuração: zero envio ao fim do período medido. Se um dia essa ponte existir, ela nasce de decisão declarada do dono, e nunca de proximidade de tela.</li>
+    <li><b>Não sobe texto de mensagem, telefone nem identificador de WhatsApp.</b> Essas três coisas morrem no computador do organizador. O que chega ao painel são números e o nome do participante.</li>
+    <li><b>Não resume conversa.</b> Existe capacidade técnica para isso e ela foi recusada por escrito, porque resumo é conteúdo de conversa com outro nome.</li>
+    <li><b>Não diz quem sustenta a comunidade.</b> Diz quem falou mais, com os dias ativos ao lado, e deixa a interpretação com quem conhece as pessoas.</li>
+    <li><b>Não diz qual comunidade está mais saudável.</b> Compara ritmo, e não ordena por qualidade.</li>
+    <li><b>Não nomeia quem entrou e quem saiu.</b> Entradas e saídas são contagem.</li>
+    <li><b>Não aparece no catálogo.</b> O radar não é oferecido para organizador que não foi convidado, e nem a existência dele vaza para quem não faz parte do piloto.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Decisões de produto vigentes</h2>
+  <p class="abertura">Todas tomadas pelo dono ou registradas com a razão dele. A coluna da direita diz o que faria cada uma voltar à mesa.</p>
+  <div class="rolagem">
+    <table>
+      <thead>
+        <tr><th scope="col">Decisão</th><th scope="col">O que vale hoje</th><th scope="col">Reabre quando</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Nome nos rankings</td>
+          <td>Nome real, sem apelido inventado pelo sistema. A razão do dono é o trabalho dele: enxergar a pirâmide de engajamento e reconhecer usuários, clientes e membros mais engajados</td>
+          <td>Parecer do advogado, incidente com dado de participante, ou a chegada da fase de vários organizadores</td>
+        </tr>
+        <tr>
+          <td>De onde vem o nome</td>
+          <td>O nome que a própria pessoa mostra na comunidade do WhatsApp, até ela virar cliente. A partir daí o cadastro da Leela manda, e o nome do WhatsApp vira histórico</td>
+          <td>Mesma condição acima</td>
+        </tr>
+        <tr>
+          <td>Correção do nome</td>
+          <td>O organizador corrige à mão, participante a participante, e o valor dele vence a publicação seguinte. É a saída para nome ausente, apelido irreconhecível e nome com cara de telefone</td>
+          <td>Sem condição registrada</td>
+        </tr>
+        <tr>
+          <td>Quem paga o número</td>
+          <td>O organizador, com um chip dedicado só ao radar, que nunca serve para conversa pessoal e nunca é compartilhado entre organizadores</td>
+          <td>Sem condição registrada</td>
+        </tr>
+        <tr>
+          <td>Aviso no grupo</td>
+          <td>Nenhum. A transparência com o participante fica em duas camadas passivas: o perfil do número, chamado "Radar · nome da experiência", com a descrição de que ele só conta e nunca envia, e o termo que o organizador aceita</td>
+          <td>O dono vetar o formato do nome do perfil</td>
+        </tr>
+        <tr>
+          <td>Quem pode usar</td>
+          <td>Só convidados, enquanto o risco de o número ser banido não estiver medido. Cada organizador do piloto entra com máquina identificada, responsável nomeado e guia de instalação escrito</td>
+          <td>A abertura tem número: dois organizadores além do dono por 30 dias liberam a fase da tela, e dez liberam a última</td>
+        </tr>
+        <tr>
+          <td>Onde o radar roda</td>
+          <td>No computador do organizador. Ele é o controlador do texto das conversas, e nada disso entra na infraestrutura da Leela</td>
+          <td>Mudar essa hospedagem reabre a frente jurídica antes, e não depois</td>
+        </tr>
+        <tr>
+          <td>Clube fora do ar</td>
+          <td>A base fica. O radar sobrevive ao clube, e o acesso passa a ser pela lista de radares</td>
+          <td>Parecer que aponte prazo máximo de retenção</td>
+        </tr>
+        <tr>
+          <td>Por quanto tempo os dados ficam</td>
+          <td>400 dias na Leela, o que permite comparar com o mesmo mês do ano anterior. No computador do organizador, o texto das mensagens vive 90 dias e é apagado depois que os números daquele período subiram e foram confirmados</td>
+          <td>Parecer com prazo diferente, ou custo de armazenamento virar peso na última fase</td>
+        </tr>
+        <tr>
+          <td>Risco jurídico</td>
+          <td>Assumido pelo dono agora, em 9 de agosto. A conversa com o advogado continua correndo em paralelo, sem travar o produto</td>
+          <td>Quando o parecer sair</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>As fases</h2>
+  <p class="abertura">A primeira decide se o produto continua existindo. Nada é construído dentro da Leela antes de ela fechar verde.</p>
+
+  <div class="fase">
+    <div class="topo"><span class="nome">F0 · o número sobrevive</span> <span class="selo">pronto para começar</span></div>
+    <p>Um chip dedicado entra numa comunidade real e fica mudo por catorze dias corridos. No fim, três coisas têm de ser verdade: o número está vivo, o radar esteve conectado em pelo menos 95% do tempo, e nenhum envio saiu. Se o número for banido dentro dos catorze dias, o produto volta para a mesa e nada é construído.</p>
+  </div>
+
+  <div class="fase">
+    <div class="topo"><span class="nome">F0.b · a ponte de dados</span> <span class="selo espera">espera o F0</span></div>
+    <p>O caminho pelo qual os números saem do computador do organizador e chegam à Leela, provado antes de existir tela cuidada. O que se prova aqui: o mesmo lote reenviado não duplica nada, dado de um organizador nunca alcança o outro, e o que não pode subir é recusado na porta.</p>
+  </div>
+
+  <div class="fase">
+    <div class="topo"><span class="nome">F1 · a tela</span> <span class="selo espera">espera a ponte</span></div>
+    <p>A aba do radar com os oito estados, os blocos de conteúdo, a lista de quem mais falou, a conciliação com o cadastro e a lista de radares. Todas as doze job stories desta página são desta fase. Ela deixou de esperar o advogado em 9 de agosto e depende só da ponte; dentro dela, as contas por dia feitas do lado do organizador são a peça que destrava o resto.</p>
+  </div>
+
+  <div class="fase">
+    <div class="topo"><span class="nome">F2 · vários organizadores sem uma máquina para cada um</span> <span class="selo aberto">em definição</span></div>
+    <p>Tirar o produto do piloto convidado. Tem histórias esboçadas e nenhuma tela desenhada, então nada dela pode ser prometido a cliente. A pré-condição não é técnica: rodar o radar em máquina da Leela inverte a promessa central do produto, porque o texto das conversas de todas as comunidades deixaria de morrer no computador do organizador. Essa reavaliação vem antes, junto do custo de hospedagem, que é decisão do sócio.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Pendências abertas</h2>
+  <p class="abertura">Cinco, e nenhuma delas se resolve dentro do time de produto.</p>
+  <ul class="marcada">
+    <li><b>Base legal e termo do organizador.</b> Está com o advogado. O dono assumiu o risco agora, e a pergunta continua aberta na forma certa: com o radar mudo e sem aviso no grupo, pedir consentimento ao participante é impossível de construir, então o que se pergunta é qual base legal cobre medir e nomear alguém que nunca contratou nada com o organizador, num canal que ele não controla. O parecer é a condição de reabertura de quase tudo nesta página.</li>
+    <li><b>Hospedagem e custo recorrente da última fase.</b> Está com o sócio. Não é só decisão de dinheiro, porque trocar onde o radar roda reabre a frente jurídica.</li>
+    <li><b>Resumo de conversa gerado automaticamente.</b> Declinado por escrito. Serviria melhor o trabalho de descobrir demandas, e reabre se o dono aceitar que conteúdo derivado do texto saia do computador dele.</li>
+    <li><b>Uma versão do radar sem nome real.</b> Declinada por agora. Foi recomendada com o argumento de que pode ser a única possível depois do parecer, e volta à mesa antes de a tela ser refeita se o parecer limitar o uso do nome.</li>
+    <li><b>Um campo do contrato de dados sem consumidor.</b> A contagem por dia da semana que sobe junto do resto não é lida por nenhuma tela, porque o mapa de horários deriva isso sozinho. Tirar do contrato é decisão de quem é dono dele, numa rodada que toque a ponte.</li>
+  </ul>
+</section>
+
+<section class="tecnicas">
+  <h2>Referências técnicas</h2>
+  <p>Rastro para quem for abrir a especificação. Nada aqui é necessário para ler as seções acima.</p>
+  <div class="rolagem">
+    <table>
+      <thead>
+        <tr><th scope="col">Seção desta página</th><th scope="col">Onde está escrito</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Compreender a própria base</td><td>LEELA-S2005 (S2005-T1, S2005-T2) · RN-524, RN-527, RN-535</td></tr>
+        <tr><td>Insights de demandas</td><td>LEELA-S2006 (S2006-T1) · RN-523, RN-527</td></tr>
+        <tr><td>Membros mais engajados</td><td>LEELA-S2003 (S2003-T2) · RN-521, RN-532, RN-535</td></tr>
+        <tr><td>Conciliar participante e cliente</td><td>LEELA-S2008 (S2008-T1, S2008-T2) · RN-531, RN-532, RN-533</td></tr>
+        <tr><td>Gerir as comunidades</td><td>LEELA-S2007 (S2007-T1) · RN-522, RN-527, RN-535</td></tr>
+        <tr><td>A lista de radares</td><td>LEELA-S2009 (S2009-T1) · RN-522, RN-526, RN-527, RN-534, RN-536</td></tr>
+        <tr><td>Os oito estados da tela</td><td>LEELA-S2003, critérios de aceite · critério de sucesso do épico</td></tr>
+        <tr><td>Sem envios</td><td>RN-520</td></tr>
+        <tr><td>Nome real, origem e correção</td><td>RN-521, RN-532 · decisões do dono 1, 10 e 11</td></tr>
+        <tr><td>Fronteira com o cadastro comercial</td><td>RN-531, com as cinco bordas do gate · decisão do dono 9</td></tr>
+        <tr><td>Retenção e esquecimento</td><td>RN-524, RN-536</td></tr>
+        <tr><td>Onde o radar roda</td><td>RN-530 · decisão do dono 6</td></tr>
+        <tr><td>Rollout por convite</td><td>RN-526 · decisão do dono 8</td></tr>
+        <tr><td>Sem aviso no grupo</td><td>RN-525 · decisão do dono 7</td></tr>
+        <tr><td>Risco jurídico assumido</td><td>Decisão do dono 12</td></tr>
+        <tr><td>F0, F0.b e F2</td><td>LEELA-S2001, LEELA-S2002, LEELA-S2004</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Documentos: épico <code>LEELA-E20-radar-comunidade</code>, contrato <code>ponte-radar-whatsapp</code> e o registro de decisões do dono da rodada de 9 de agosto de 2026. Estado da especificação em 10 de agosto de 2026, depois do fechamento dos gaps.</p>
+</section>
+
+</div>
+</body>
+</html>
