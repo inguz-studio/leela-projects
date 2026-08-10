@@ -36,6 +36,14 @@ data: 2026-08-09
 
 O handoff constrói o tema `dark-wine`; a ordem do dono aplica o sistema em **brasa** com glass. As duas coisas convivem — o dark-wine entra no DS como terceiro tema, e o que muda de default é o brasa+glass no painel — mas a leitura é do executor com o README na mão, e qualquer divergência entre handoff e ordem volta ao dono como pergunta, não como escolha.
 
+### Ratificação do dono, 10/08 (pós-incidente)
+
+Perguntado diretamente (veto por AskUserQuestion), o dono confirmou: **o painel segue em brasa com
+glass ligado como padrão**. O `dark-wine` fica disponível no DS, sem caminho de seleção por ora. O
+**seletor de tema** dos protótipos (que nenhuma lane construiu — o painel fixa `theme="brasa"` em
+código e não tem controle de troca na interface) vira **card futuro no backlog**, não escopo desta
+rodada. Registro feito no mesmo ato da resposta.
+
 ## Ordem de implementação (do README, §9)
 
 Tokens → ThemeProvider → glass → tipografia do brasa → tela de Engajamento. **Duas conversas separadas** (tokens e tela têm critérios de revisão diferentes). Aceites do gate: `pnpm generate-tokens` limpo, testes de contraste passando, temas brasa/wine intocados além do que o README pede, e o guia visual do projeto como régua (L-011: gate de código não prova marca).
