@@ -18,8 +18,10 @@
 import { describe, it, expect } from 'vitest';
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
 import primitivesWine from '../../../tokens/primitives.wine.json';
+import primitivesDarkWine from '../../../tokens/primitives.dark-wine.json';
 import semanticBase from '../../../tokens/semantic.json';
 import semanticWine from '../../../tokens/semantic.wine.json';
+import semanticDarkWine from '../../../tokens/semantic.dark-wine.json';
 import component from '../../../tokens/component.json';
 import shadcnAliases from '../../../tokens/shadcn.json';
 import {
@@ -117,15 +119,45 @@ const wine: FlatTokens = generateRNTheme(
   component as TokenRecord,
 );
 
+const darkWine: FlatTokens = generateRNTheme(
+  primitivesDarkWine as TokenRecord,
+  mergeTokens(semanticBase as TokenRecord, semanticDarkWine as TokenRecord),
+  component as TokenRecord,
+);
+
 const themes: Array<[string, FlatTokens]> = [
   ['brasa', brasa],
   ['wine', wine],
+  ['dark-wine', darkWine],
 ];
+
+// dark-wine (REDESIGN-DS-0809) define surface-overlay como tint alpha sobre
+// surface-base (rgba literal) em vez de hex opaco — brasa/wine sempre
+// resolveram surface-overlay/high a hex. Composição local mínima (mesma
+// razão da cópia de contraste acima: não acoplar arquivos de teste).
+function parseRgbaLocal(value: string): { r: number; g: number; b: number; a: number } {
+  const match = /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/.exec(value);
+  if (!match) throw new Error(`valor não é rgba(): ${value}`);
+  return { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]), a: Number(match[4]) };
+}
+
+function composeOverLocal(rgba: string, bgHex: string): string {
+  const { r, g, b, a } = parseRgbaLocal(rgba);
+  const clean = bgHex.replace('#', '');
+  const bg = [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16),
+  ] as const;
+  const out = [r, g, b].map((c, i) => Math.round(a * c + (1 - a) * bg[i]!));
+  return `#${out.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
 
 function resolveAlias(tokens: FlatTokens, alias: string): string {
   const semantic = ALIAS_TO_SEMANTIC[alias];
   const value = semantic !== undefined ? tokens[semantic] : undefined;
   if (value === undefined) throw new Error(`alias ${alias} não resolve`);
+  if (/^rgba\(/.test(value)) return composeOverLocal(value, tokens['surface-base']!);
   return value;
 }
 
@@ -141,17 +173,17 @@ describe('Aliases shadcn — integridade do mapa', () => {
   });
 
   for (const [themeName, tokens] of themes) {
-    it(`todo alias de cor resolve a hex no tema ${themeName}`, () => {
+    it(`todo alias de cor resolve a hex ou rgba compositável no tema ${themeName}`, () => {
       for (const [alias, semantic] of Object.entries(ALIAS_TO_SEMANTIC)) {
         if (alias === 'radius') continue; // dimensional, não cor
-        expect(tokens[semantic], `alias ${alias} → ${semantic} ausente`).toMatch(
-          /^#[0-9a-fA-F]{6}$/,
-        );
+        const value = tokens[semantic];
+        const valido = /^#[0-9a-fA-F]{6}$/.test(value ?? '') || /^rgba\(/.test(value ?? '');
+        expect(valido, `alias ${alias} → ${semantic} não é hex nem rgba: ${value}`).toBe(true);
       }
     });
   }
 
-  it('CSS gerado emite --<alias>: var(--<semantic>) para os 2 temas', () => {
+  it('CSS gerado emite --<alias>: var(--<semantic>) para os 3 temas', () => {
     const brasaCSS = generateCSS(
       'brasa',
       primitivesBrasa as TokenRecord,
@@ -166,10 +198,18 @@ describe('Aliases shadcn — integridade do mapa', () => {
       component as TokenRecord,
       { aliases: shadcnAliases as TokenRecord },
     );
+    const darkWineCSS = generateCSS(
+      'dark-wine',
+      primitivesDarkWine as TokenRecord,
+      mergeTokens(semanticBase as TokenRecord, semanticDarkWine as TokenRecord),
+      component as TokenRecord,
+      { aliases: shadcnAliases as TokenRecord },
+    );
     for (const [alias, semantic] of Object.entries(ALIAS_TO_SEMANTIC)) {
       const expected = `  --${alias}: var(--${semantic});`;
       expect(brasaCSS, `brasa sem ${expected}`).toContain(expected);
       expect(wineCSS, `wine sem ${expected}`).toContain(expected);
+      expect(darkWineCSS, `dark-wine sem ${expected}`).toContain(expected);
     }
   });
 });

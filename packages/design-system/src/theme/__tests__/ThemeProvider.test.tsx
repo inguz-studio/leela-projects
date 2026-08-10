@@ -51,6 +51,25 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('wine');
   });
 
+  it('sets data-theme="dark-wine" when prop is dark-wine', () => {
+    render(
+      <ThemeProvider theme="dark-wine">
+        <ThemeDisplay />
+      </ThemeProvider>,
+    );
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark-wine');
+  });
+
+  it('restaura preferência "dark-wine" do localStorage no mount (sem prop theme)', () => {
+    localStorage.setItem('leela-theme-preference', 'dark-wine');
+    const { getByTestId } = render(
+      <ThemeProvider>
+        <ThemeDisplay />
+      </ThemeProvider>,
+    );
+    expect(getByTestId('theme-value').textContent).toBe('dark-wine');
+  });
+
   it('exposes theme name via useTheme', () => {
     const { getByTestId } = render(
       <ThemeProvider theme="brasa">
@@ -191,5 +210,11 @@ describe('getThemeInitScript', () => {
     localStorage.setItem('leela-theme-preference', 'hacker');
     new Function(getThemeInitScript('wine'))();
     expect(document.documentElement.getAttribute('data-theme')).toBe('wine');
+  });
+
+  it('aplica a preferência persistida "dark-wine" antes do paint', () => {
+    localStorage.setItem('leela-theme-preference', 'dark-wine');
+    new Function(getThemeInitScript('brasa'))();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark-wine');
   });
 });

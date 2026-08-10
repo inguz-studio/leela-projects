@@ -35,6 +35,7 @@ const preview: Preview = {
         items: [
           { value: 'brasa', title: 'Brasa (#FF450C · Exo 2)' },
           { value: 'wine', title: 'Wine (Oxblood/Lima)' },
+          { value: 'dark-wine', title: 'Dark Wine (#7A1520 · Geist)' },
         ],
         dynamicTitle: true,
       },

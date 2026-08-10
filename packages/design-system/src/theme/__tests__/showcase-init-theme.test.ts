@@ -47,7 +47,11 @@ function scriptAntiFouc(): string {
 /** Temas que os arquivos publicados realmente definem. */
 function temasComBloco(): Set<string> {
   const css = readFileSync(resolve(RAIZ_DS, 'themes/index.css'), 'utf8');
-  return new Set([...css.matchAll(/\[data-theme="([a-z]+)"\]/g)].map((m) => m[1] ?? ''));
+  // [a-z-]+ (não [a-z]+): tema hifenizado (dark-wine) ficava INVISÍVEL para
+  // este regex — o bloco existia no CSS mas o helper silenciosamente não o
+  // enxergava, e os testes abaixo passavam medindo um conjunto errado
+  // (achado da lane REDESIGN-DS-0809 ao introduzir o dark-wine).
+  return new Set([...css.matchAll(/\[data-theme="([a-z-]+)"\]/g)].map((m) => m[1] ?? ''));
 }
 
 /**
@@ -56,12 +60,12 @@ function temasComBloco(): Set<string> {
  * retrocompat 'leela' → 'wine' coberto por teste próprio.
  */
 function temaDoMount(guardado: string | null): string {
-  if (guardado === 'brasa' || guardado === 'wine') return guardado;
+  if (guardado === 'brasa' || guardado === 'wine' || guardado === 'dark-wine') return guardado;
   if (guardado === 'leela') return 'wine';
   return 'brasa';
 }
 
-const PREFERENCIAS = [null, 'brasa', 'wine', 'leela', 'lixo-de-outro-produto'] as const;
+const PREFERENCIAS = [null, 'brasa', 'wine', 'dark-wine', 'leela', 'lixo-de-outro-produto'] as const;
 
 describe('o script anti-FOUC do showroom estampa um tema que existe', () => {
   beforeEach(() => {
@@ -99,6 +103,6 @@ describe('o script anti-FOUC do showroom estampa um tema que existe', () => {
   it('FALSIFICAÇÃO: um tema inventado no script derrubaria o caso acima', () => {
     // Sem este caso, os anteriores poderiam estar medindo um conjunto vazio.
     expect(temasComBloco()).not.toContain('leela');
-    expect(temasComBloco()).toEqual(new Set(['brasa', 'wine']));
+    expect(temasComBloco()).toEqual(new Set(['brasa', 'wine', 'dark-wine']));
   });
 });

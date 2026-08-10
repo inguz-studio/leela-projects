@@ -85,6 +85,18 @@ describe('ThemeProviderRN', () => {
     );
   });
 
+  it('restaura preferência "dark-wine" do storage no mount (sem prop theme)', async () => {
+    const storage = makeStorage('dark-wine');
+    const { getByTestId } = render(
+      <ThemeProviderRN storage={storage}>
+        <ThemeDisplay />
+      </ThemeProviderRN>,
+    );
+    await waitFor(() =>
+      expect(getByTestId('theme-value').textContent).toBe('dark-wine'),
+    );
+  });
+
   it('retrocompat: valor "leela" no storage migra p/ "wine"', async () => {
     const storage = makeStorage('leela');
     const { getByTestId } = render(

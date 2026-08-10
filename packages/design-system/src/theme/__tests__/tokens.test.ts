@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
 import primitivesWine from '../../../tokens/primitives.wine.json';
+import primitivesDarkWine from '../../../tokens/primitives.dark-wine.json';
 import semantic from '../../../tokens/semantic.json';
 import semanticWineOverrides from '../../../tokens/semantic.wine.json';
+import semanticDarkWineOverrides from '../../../tokens/semantic.dark-wine.json';
 import component from '../../../tokens/component.json';
 import {
   collectRefs,
@@ -19,14 +21,17 @@ import {
 
 const brasa = primitivesBrasa as TokenRecord;
 const wine = primitivesWine as TokenRecord;
+const darkWine = primitivesDarkWine as TokenRecord;
 const sem   = semantic as TokenRecord;
-// Semantic efetiva do tema wine = base + overrides (mesmo pipeline do gerador)
+// Semantic efetiva por tema = base + overrides (mesmo pipeline do gerador)
 const semWine = mergeTokens(sem, semanticWineOverrides as TokenRecord);
+const semDarkWine = mergeTokens(sem, semanticDarkWineOverrides as TokenRecord);
 const comp  = component as TokenRecord;
 
 const componentRefs = collectRefs(comp);
 const brasaRefs = [...collectRefs(sem), ...componentRefs];
 const wineRefs = [...collectRefs(semWine), ...componentRefs];
+const darkWineRefs = [...collectRefs(semDarkWine), ...componentRefs];
 
 // ---------------------------------------------------------------------------
 // RULE: every {ref} in semantic (per-theme) + component resolves in its theme
@@ -46,6 +51,15 @@ describe('Semantic tokens resolve to existing primitives', () => {
     it(`"${ref}" → wine`, () => {
       const path = ref.slice(1, -1).split('.');
       const value = resolvePath(wine, path);
+      expect(value).toBeDefined();
+      expect(typeof value).toBe('string');
+    });
+  }
+
+  for (const ref of darkWineRefs) {
+    it(`"${ref}" → dark-wine`, () => {
+      const path = ref.slice(1, -1).split('.');
+      const value = resolvePath(darkWine, path);
       expect(value).toBeDefined();
       expect(typeof value).toBe('string');
     });
@@ -110,6 +124,21 @@ describe('generateCSS', () => {
     expect(css).toMatch(/--surface-base:\s*var\(--neutral-50\)/);
   });
 
+  it('dark-wine CSS contains [data-theme="dark-wine"] block', () => {
+    const css = generateCSS('dark-wine', darkWine, semDarkWine, comp);
+    expect(css).toContain('[data-theme="dark-wine"]');
+  });
+
+  it('dark-wine CSS contains o lime da marca #C8E84A (accent, ação do tema)', () => {
+    const css = generateCSS('dark-wine', darkWine, semDarkWine, comp);
+    expect(css).toContain('#C8E84A');
+  });
+
+  it('dark-wine CSS: surface-base continua escuro (vinho, não inverte como o wine)', () => {
+    const css = generateCSS('dark-wine', darkWine, semDarkWine, comp);
+    expect(css).toMatch(/--surface-base:\s*var\(--neutral-950\)/);
+  });
+
   it('CSS semantic var references a CSS var (not a raw hex)', () => {
     const css = generateCSS('brasa', brasa, sem, comp);
     // surface-base should chain to a primitive var, not a raw hex
@@ -164,6 +193,25 @@ describe('generateRNTheme', () => {
     expect(tokens['surface-base']).toBe('#FDFAF7');
   });
 
+  it('dark-wine RN theme has no unresolved {refs}', () => {
+    const tokens = generateRNTheme(darkWine, semDarkWine, comp);
+    for (const [, value] of Object.entries(tokens)) {
+      expect(value).not.toMatch(/^\{.+\}$/);
+    }
+  });
+
+  it('dark-wine surface-base resolves to #080306', () => {
+    const tokens = generateRNTheme(darkWine, semDarkWine, comp);
+    expect(tokens['surface-base']).toBe('#080306');
+  });
+
+  it('dark-wine action-primary resolves ao lime da marca (accent.400, não vinho)', () => {
+    const tokens = generateRNTheme(darkWine, semDarkWine, comp);
+    // README §1: vinho é atmosfera (fundo/glow/bordas), lime é ação — nunca o
+    // inverso. action-primary tem que ser o accent, não o primary (vinho).
+    expect(tokens['action-primary']).toBe('#C8E84A');
+  });
+
   it('brasa action-primary resolves to #D63500 (D4: laranja escurecido p/ fg branco AA)', () => {
     const tokens = generateRNTheme(brasa, sem, comp);
     // D-PATCH D4 (decisão Vitor): fg branco + bg escurecido até branco ≥ 4.5:1.
@@ -189,8 +237,8 @@ describe('Chaves $doc não vazam para o output', () => {
     expect(Object.keys(rn).some((k) => k.includes('$'))).toBe(false);
   });
 
-  it('meio-passos do mockup existem nos 2 temas (2/6/10/14px)', () => {
-    for (const prims of [brasa, wine]) {
+  it('meio-passos do mockup existem nos 3 temas (2/6/10/14px)', () => {
+    for (const prims of [brasa, wine, darkWine]) {
       expect(resolvePath(prims, ['spacing', '0-5'])).toBe('2px');
       expect(resolvePath(prims, ['spacing', '1-5'])).toBe('6px');
       expect(resolvePath(prims, ['spacing', '2-5'])).toBe('10px');

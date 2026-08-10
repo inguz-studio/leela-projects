@@ -1042,7 +1042,7 @@ export const darkWineTheme: FlatTokens = {
   "action-destructive-fg": "#080306",
   "border-subtle": "#1F0F14",
   "border-default": "#2C161C",
-  "border-strong": "#48252C",
+  "border-strong": "#7A666A",
   "border-brand": "#C8E84A",
   "border-focus": "#C8E84A",
   "border-focus-ring-shadow": "0 0 0 3px rgba(200, 232, 74, 0.18)",

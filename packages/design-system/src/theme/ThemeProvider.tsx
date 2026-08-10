@@ -34,7 +34,7 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-export type Theme = 'brasa' | 'wine';
+export type Theme = 'brasa' | 'wine' | 'dark-wine';
 
 export interface ThemeContextValue {
   /** The active theme name. */
@@ -62,7 +62,7 @@ function readStoredTheme(defaultTheme: Theme): Theme {
   if (typeof window === 'undefined') return defaultTheme;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'brasa' || stored === 'wine') return stored;
+    if (stored === 'brasa' || stored === 'wine' || stored === 'dark-wine') return stored;
     // Retrocompat: o tema 'leela' foi renomeado para 'wine'. Um valor antigo
     // persistido continua válido e migra na leitura, sem quebrar a sessão.
     if (stored === 'leela') return 'wine';
@@ -91,7 +91,7 @@ export function getThemeInitScript(defaultTheme: Theme = 'brasa'): string {
     `var t=localStorage.getItem(${JSON.stringify(STORAGE_KEY)});` +
     // Retrocompat: valor antigo 'leela' migra p/ 'wine' antes de validar.
     'if(t==="leela")t="wine";' +
-    'if(t!=="brasa"&&t!=="wine")' +
+    'if(t!=="brasa"&&t!=="wine"&&t!=="dark-wine")' +
     `t=${JSON.stringify(defaultTheme)};` +
     'document.documentElement.setAttribute("data-theme",t);' +
     '}catch(e){' +

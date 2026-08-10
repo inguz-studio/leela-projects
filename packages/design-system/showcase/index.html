@@ -26,7 +26,7 @@
         try {
           var t = localStorage.getItem('leela-theme-preference');
           if (t === 'leela') t = 'wine';
-          if (t !== 'brasa' && t !== 'wine') t = 'brasa';
+          if (t !== 'brasa' && t !== 'wine' && t !== 'dark-wine') t = 'brasa';
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'brasa');

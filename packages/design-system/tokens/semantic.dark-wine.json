@@ -40,7 +40,7 @@
   "border": {
     "subtle": "{neutral.800}",
     "default": "{neutral.750}",
-    "strong": "{neutral.700}",
+    "strong": "{neutral.500}",
     "brand": "{accent.400}",
     "focus": "{accent.400}",
     "focus-ring-shadow": "0 0 0 3px rgba(200, 232, 74, 0.18)",

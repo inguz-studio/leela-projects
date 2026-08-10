@@ -7,7 +7,7 @@ trace: leela-build-2d6ee98d (gate GATE-DS-W1 · squad magic-ds + mind brad-frost
 
 ## Regras do design system
 - Import canônico único: import { ... } from '@leela/design-system' — nunca importe de caminhos internos (src/components/...).
-- Dois temas via atributo data-theme no root: "brasa" (escuro, default) e "wine" (claro). O tema claro chamava-se "leela"; o valor de DOM "leela" NÃO existe mais nos CSS — só o ThemeProvider migra storage antigo. Troca de tema é responsabilidade do ThemeProvider (web) ou ThemeProviderRN (React Native).
+- Três temas via atributo data-theme no root: "brasa" (escuro, default), "wine" (claro) e "dark-wine" (escuro, vinho + acento lime). O tema claro chamava-se "leela"; o valor de DOM "leela" NÃO existe mais nos CSS — só o ThemeProvider migra storage antigo. Troca de tema é responsabilidade do ThemeProvider (web) ou ThemeProviderRN (React Native).
 - Zero valor cru: nenhuma cor (hex/rgb/hsl), espaçamento (px/rem), raio ou duração literal em style inline ou className arbitrária. Somente tokens var(--*) e classes de alias do preset (bg-card, text-foreground, ring-ring, etc.).
 - Zero dark:: o DS não usa o modificador dark: do Tailwind. Tema é resolvido por tokens sob data-theme, nunca por classes condicionais de tema.
 - Flat é o DEFAULT global dos form primitives (Input/Select/Textarea/SearchInput): sem borda em repouso, fill inset + focus ring. Opt-out via variant="bordered" — nunca reponha borda à mão.

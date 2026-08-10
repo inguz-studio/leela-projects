@@ -18,13 +18,13 @@ import {
   type ReactNode,
 } from 'react';
 import type { FlatTokens } from './generate';
-import { brasaTheme, wineTheme } from './rn-themes';
+import { brasaTheme, wineTheme, darkWineTheme } from './rn-themes';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type Theme = 'brasa' | 'wine';
+export type Theme = 'brasa' | 'wine' | 'dark-wine';
 
 /** Minimal async storage interface (compatible with AsyncStorage). */
 export interface StorageAdapter {
@@ -47,7 +47,9 @@ const RNThemeContext = createContext<RNThemeContextValue | null>(null);
 const STORAGE_KEY = 'leela-theme-preference';
 
 function resolveTokens(theme: Theme): FlatTokens {
-  return theme === 'brasa' ? brasaTheme : wineTheme;
+  if (theme === 'wine') return wineTheme;
+  if (theme === 'dark-wine') return darkWineTheme;
+  return brasaTheme;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +95,7 @@ export function ThemeProviderRN({
       .getItem(STORAGE_KEY)
       .then((stored) => {
         if (cancelled) return;
-        if (stored === 'brasa' || stored === 'wine') {
+        if (stored === 'brasa' || stored === 'wine' || stored === 'dark-wine') {
           setThemeState(stored);
         } else if (stored === 'leela') {
           // Retrocompat: tema 'leela' foi renomeado p/ 'wine'.

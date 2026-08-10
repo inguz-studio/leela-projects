@@ -1085,7 +1085,7 @@
   --action-destructive-fg: var(--neutral-950);
   --border-subtle: var(--neutral-800);
   --border-default: var(--neutral-750);
-  --border-strong: var(--neutral-700);
+  --border-strong: var(--neutral-500);
   --border-brand: var(--accent-400);
   --border-focus: var(--accent-400);
   --border-focus-ring-shadow: 0 0 0 3px rgba(200, 232, 74, 0.18);

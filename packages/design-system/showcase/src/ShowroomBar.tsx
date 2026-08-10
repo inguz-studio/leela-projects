@@ -23,6 +23,7 @@ interface ThemeOption {
 const THEME_OPTIONS: ThemeOption[] = [
   { id: 'brasa', label: 'Brasa' },
   { id: 'wine', label: 'Wine' },
+  { id: 'dark-wine', label: 'Dark Wine' },
 ];
 
 // ---------------------------------------------------------------------------

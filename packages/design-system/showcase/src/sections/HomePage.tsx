@@ -18,17 +18,23 @@ import {
 } from '@leela/design-system';
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
 import primitivesWine from '../../../tokens/primitives.wine.json';
+import primitivesDarkWine from '../../../tokens/primitives.dark-wine.json';
 import { Section, TokenLabel } from '../ui';
 import { BrandLogo } from '../BrandLogo';
 
-// Info por tema — a home reage ao tema ativo (o showroom alterna brasa↔wine),
-// então nome, fonte display e hex primário nunca podem ficar cravados em brasa.
+// Info por tema — a home reage ao tema ativo (o showroom alterna entre os 3
+// temas), então nome, fonte display e hex primário nunca podem ficar cravados
+// em brasa. Record<Theme, ...> é exaustivo por construção: tema novo sem
+// entrada aqui quebra o compilador (showcase/src não está no tsconfig do
+// pacote — pnpm type-check não cobre este arquivo — mas o TS ainda barra a
+// chave faltante em qualquer editor/build que resolva o tipo completo).
 type PrimitiveMap = Record<string, Record<string, string>>;
 const primary500 = (p: unknown): string => (p as PrimitiveMap).primary?.['500'] ?? '';
 
 const THEME_INFO: Record<Theme, { name: string; displayFont: string; primaryHex: string }> = {
   brasa: { name: 'Brasa', displayFont: 'Exo 2', primaryHex: primary500(primitivesBrasa) },
   wine: { name: 'Wine', displayFont: 'Syne', primaryHex: primary500(primitivesWine) },
+  'dark-wine': { name: 'Dark Wine', displayFont: 'Geist', primaryHex: primary500(primitivesDarkWine) },
 };
 
 // Colorways do wordmark (recolor do mesmo escrito). Hex = valor da própria
@@ -45,7 +51,7 @@ const COLORWAYS = [
 // de contraste (35 texto + 21 não-texto, contrast.test.ts) — recontados no GATE-DS-W1.
 const STATS = [
   { value: '46', label: 'componentes' },
-  { value: '2', label: 'temas (brasa e wine)' },
+  { value: '3', label: 'temas (brasa, wine e dark-wine)' },
   { value: '56', label: 'pares AA validados' },
 ];
 
