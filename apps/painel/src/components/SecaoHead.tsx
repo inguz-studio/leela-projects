@@ -15,13 +15,33 @@
 // =============================================================================
 
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
-import { cn } from '@leela/design-system';
+import { ChevronRight, HelpCircle } from 'lucide-react';
+import {
+  IconButton,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  cn,
+} from '@leela/design-system';
 
 export interface SecaoHeadProps {
   titulo: string;
   /** Uma linha de contexto sob o título (o "subtítulo" dos blocos da v3). */
   descricao?: string;
+  /**
+   * Explicação do bloco atrás de um "?" ao lado do título (REFACTOR item 12).
+   *
+   * O subtítulo descritivo ocupa uma linha inteira em TODO card, o tempo todo,
+   * para uma informação que se lê uma vez. Atrás do "?" ele fica a um clique de
+   * quem precisa e some da varredura de quem já sabe.
+   *
+   * O conteúdo abre em PORTAL, na raiz do documento (REFACTOR item 8). A causa
+   * é concreta: basta um ancestral com `transform` — um card com
+   * `translateY(-2px)` no hover, por exemplo — para virar bloco de contenção, e
+   * aí `position: fixed` passa a se ancorar no card, com a dica indo parar
+   * atrás do vizinho. Em portal, o problema não pode acontecer.
+   */
+  ajuda?: string;
   /**
    * Controle de RECORTE DO PRÓPRIO CARD, à esquerda do link de ação
    * (REFACTOR item 9). Fica aqui, e não numa barra de filtros da tela, porque
@@ -38,6 +58,7 @@ export interface SecaoHeadProps {
 export function SecaoHead({
   titulo,
   descricao,
+  ajuda,
   controle,
   acaoRotulo,
   onAcao,
@@ -45,16 +66,41 @@ export function SecaoHead({
   return (
     <div className="flex items-baseline justify-between gap-[var(--spacing-3)] mb-[var(--layout-section-head-mb)]">
       <div className="min-w-0">
-        <h2
-          className={cn(
-            'font-display italic',
-            'text-[length:var(--section-title-size)] font-[var(--font-weight-bold)]',
-            'tracking-[var(--section-title-spacing)]',
-            'text-[var(--text-primary)]',
-          )}
-        >
-          {titulo}
-        </h2>
+        <div className="flex items-center gap-[var(--spacing-1)]">
+          <h2
+            className={cn(
+              'font-display italic',
+              'text-[length:var(--section-title-size)] font-[var(--font-weight-bold)]',
+              'tracking-[var(--section-title-spacing)]',
+              'text-[var(--text-primary)]',
+            )}
+          >
+            {titulo}
+          </h2>
+          {ajuda ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                {/* O nome acessível cita o bloco: numa tela com seis "?", seis
+                    botões chamados "ajuda" não dizem ajuda sobre o quê. */}
+                <IconButton aria-label={`O que "${titulo}" mostra`}>
+                  <HelpCircle aria-hidden />
+                </IconButton>
+              </PopoverTrigger>
+              <PopoverContent
+                className={cn(
+                  'max-w-xs px-[var(--spacing-3)] py-[var(--spacing-2)]',
+                  // Fonte DECLARADA, não herdada (REFACTOR item 8): fora da
+                  // árvore do painel, o conteúdo em portal deixa de herdar a
+                  // família e cai na fonte do sistema.
+                  'font-[family-name:var(--font-family-ui)]',
+                  'text-[length:var(--font-size-sm)] text-[var(--text-secondary)]',
+                )}
+              >
+                {ajuda}
+              </PopoverContent>
+            </Popover>
+          ) : null}
+        </div>
         {descricao ? (
           <p className="mt-[var(--spacing-1)] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             {descricao}
