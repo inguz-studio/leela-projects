@@ -1928,9 +1928,14 @@ Três exigências, e elas valem com ou sem reserva de vaga:
 3. **Toda superfície de vagas diz "N acima do configurado"** em vez de "0 disponíveis". Zero
    disponível e estouro são estados diferentes, e quem opera precisa saber em qual está.
 
-**O que a regra não decide:** se a vaga passa a ser reservada, fechando a venda dupla na origem.
-É mudança de modelo e é do dono — item **ESTOURO-1** de [[DECISOES-ABERTAS]]. Se ele escolher a
-reserva, o delta é na RN-158, não aqui.
+**O que a regra não decidia — ✅ DECIDIDO pelo dono em 09/08 (ESTOURO-1):** *"Se um pedido está
+com pagamento pendente, a vaga não está disponível para compra."* A reserva existe e é regra
+própria: **RN-543** (a vaga sai do estoque quando a cobrança nasce), **RN-544** (a reserva morre
+pelas três portas e a vaga volta) e **RN-545** (a varredura agendada do PIX vencido), nesta mesma
+seção, pela rodada `2026-08-10-estouro-reserva/`. O delta da RN-158 está no épico dono dela
+([[LEELA-E12-landing]]). As três exigências desta RN-498 continuam valendo **com** a reserva: o
+pago nunca é recusado, e o excedente residual (porta manual, corrida residual, reserva de cartão
+vencida — RN-546/ESTOURO-2) continua aparecendo como `lote_excedido` e "N acima do configurado".
 
 **Sem interseção com a RN-487.** Aquela governa `qtdInscritos`, o contador que congela a
 configuração comercial e conta qualquer status. Este estouro é de `vendidos`, escrito só por
@@ -2310,3 +2315,87 @@ que fazer: o lote exige uma modalidade existente.
 **Diretriz:** o círculo fechado entre duas telas — cada uma mandando o organizador para a outra, e
 nenhuma fazendo o que promete — é a forma que uma lacuna de produto assume quando ninguém a nomeia.
 O conserto barato é a tela contar o estado real; o conserto de verdade é a **S316**.
+
+## Delta a reserva do pedido pendente (SPEC-ESTOURO-RESERVA · 2026-08-10)
+
+O dono decidiu o **ESTOURO-1** em 09/08 — *"Se um pedido está com pagamento pendente, a vaga não
+está disponível para compra"* — e esta rodada o formaliza contra o código real. Registro da
+decisão em `2026-08-09-decisoes-dono/01-decisoes-dono.md` (bloco 5); medição linha a linha, spec
+e fila em `02-rodadas/2026-08-10-estouro-reserva/`. Quatro regras novas (RN-543 a RN-546, a
+última condicionada ao vetável **ESTOURO-2**) e duas histórias (S322 e S323 — a S321 foi
+consumida pelo E01 em 08/08, o pulo é deliberado).
+
+O fato estrutural que a spec resolve: a expiração do PIX pendente **não acontece automaticamente
+hoje** — `expirarPixPendente` é `https.onCall` do comprador, e o OVERDUE do Asaas chega com ~1
+dia de atraso (dueDate é DIA). Então a frente tem duas peças que sobem juntas ou nenhuma: a
+varredura agendada primeiro (útil sozinha), a reserva depois.
+
+### RN-543 (nova, dona · 2026-08-10) · a vaga sai do estoque quando a cobrança nasce
+
+Um pedido `'pendente'` **reserva** as vagas das linhas dele, por lote (`pedido.itens[].loteId`).
+A reserva vive num contador `reservas` no doc do lote, de escrita exclusiva de Function no mesmo
+regime do `vendidos` (`firestore.rules:1109-1117` é o molde; parse Postel, ausente = 0). O gate
+roda dentro da transação de `criarDocsDeCheckout` (`createInscricaoCharge.ts:1367`):
+`vendidos + reservas + linhasDaVenda > quantidadeLimite` ⇒ `failed-precondition` com motivo
+tipado, sem criar doc nenhum. Três fronteiras: **reserva nunca dispara virada nem carimbo**
+(`loteEsgotado`, `motivoEncerramento` e o ratchet do `virarLote` seguem lendo só `vendidos` —
+RN-300 intocada; indisponível ≠ encerrado); **reserva não é dinheiro** (RN-182 intocada, provada
+por teste na fila); **a RN-498 continua inteira** (pago nunca recusado; excedente residual segue
+visível). Falsificação: lote de 20 com 19 confirmados + 1 reserva viva recusa a 21ª cobrança sem
+criar docs; a reserva morrendo, a mesma tentativa passa; nenhum carimbo nasce em nenhum dos dois
+estados. **Estado:** regra selada, código não construído (S323).
+
+### RN-544 (nova, dona · 2026-08-10) · a reserva morre por uma das três portas, e a vaga volta
+
+A liberação acontece **na mesma transação** que dá ao pagamento o estado terminal ou o confirma:
+(1) varredura agendada expira o PIX vencido (`pendente → cancelado`, gateway-primeiro, fail-safe
+herdado); (2) webhook `'failed'` (OVERDUE/captura recusada — `webhookPagamento.ts:361-368`)
+libera, e webhook `'confirmed'` **converte** (decrementa `reservas`; `vendidos` sobe pelo
+recompute do gatilho de inscrito); (3) o onCall do comprador expira o próprio pedido. A guarda de
+transição única faz a liberação ser exactly-once; a varredura fecha cada rodada com **recontagem
+absoluta** de `reservas` (substitui, não soma — `reservas` não é ratchet, reserva sobe e desce).
+A vaga volta **para o lote da linha**, sem fila de espera; lote encerrado por data não reabre
+(RN-300); encerrado por quantidade com reserva viva é irrepresentável pelo desenho; estorno segue
+não devolvendo vaga (decisão #1 do `virarLote`). Falsificação: expirar pela varredura e reenviar
+o mesmo OVERDUE decrementa **uma vez**; lote encerrado por data não volta a vender quando a
+reserva morre. **Estado:** regra selada, código não construído (S323).
+
+### RN-545 (nova, dona · 2026-08-10) · o vencimento do PIX tem varredura agendada, com minuto explícito
+
+Nasce a Function agendada `varrerPixVencidos` (nome proposto), padrão ADR-015: cron **explícito**
+`3-58/5 * * * *` + `America/Sao_Paulo` (minuto fixado pela expressão; a grade `:03/:08/…` foge dos
+instantes 03:00/03:05/03:10/03:20 dos noturnos — lição da REV da Onda 1 de 10/08,
+`rollups.ts:189-193`, com teste de agendamento no molde `adminVisaoOnda1Agendamento`); query
+`pagamentos` `status == 'pendente'` + `pixExpiraEm <= agora` com teto por rodada (exige **um
+índice composto novo**, o primeiro da coleção, declarado na fila); efeito por item REUSA
+`expirarPixPendenteCore` com **chamador de sistema** (`{uid} | {sistema:true}`; a porta pública
+continua exigindo o dono — precedente de reuso: `encerrarPixAnteriorNaCriacao`); secrets
+`ASAAS_API_KEY` + `ASAAS_WEBHOOK_AUTH_TOKEN` no molde `varrerEstornosOrfaos`. Observabilidade:
+log `pix_varredura_rodada` `{encontrados, expirados, recusadosGateway, naoElegiveis, erros}` +
+`pix_varredura_item_falhou`, sem PII; `gatewayCancelado` no doc. Limite declarado: sem política
+de alerta na plataforma (pendência do CTO), o log é casável pela doutrina de incidente mas não
+acorda ninguém — a spec não finge o contrário. Falsificação: pendente vencido flipa em até uma
+rodada com o gateway cancelado antes dos docs; reprocessar no-opa; trocar a expressão por
+`every 5 minutes` derruba o teste. **Materializa a RN-157; é pré-requisito da RN-543.**
+**Estado:** regra selada, código não construído (S322).
+
+### RN-546 (nova, dona · 2026-08-10 · condicionada ao ESTOURO-2) · o pendente de cartão reserva com teto próprio
+
+A letra do dono não distingue meio, e o pedido de cartão também nasce `'pendente'` — mas cartão
+não tem vencimento natural (não há `pixExpiraEm` dele), e um webhook perdido deixaria a vaga
+presa para sempre. **Se o dono ratificar o default** (ESTOURO-2, opção 1): a reserva de cartão
+tem teto de 30 minutos (a mesma constante da RN-157); vencido o teto, a vaga volta e o **pedido
+continua vivo** (nada é cancelado no gateway — dinheiro em voo não se toca); confirmação atrasada
+entra (RN-498) e o excedente eventual aparece pelo caminho que a RN-498 já exige; a liberação por
+teto é da mesma varredura, por recontagem. Se ele escolher outra opção, esta RN nasce na forma da
+resposta. Opções e custos em [[DECISOES-ABERTAS]] §ESTOURO-2. **Estado:** retida pelo veto;
+nenhuma linha de cartão entra antes da resposta (S323-T7).
+
+### Histórias novas · S322 e S323
+
+**S322 · a varredura do PIX vencido** — 4 tarefas (`S322-T1` a `S322-T4`), backend só, sobe
+primeiro e sozinha. **S323 · a reserva do pedido pendente** — 7 tarefas (`S323-T1` a `S323-T7`,
+a T7 retida pelo ESTOURO-2), **depende da S322 no ar e provada**. Job stories, Given/When/Then e
+territórios em `02-rodadas/2026-08-10-estouro-reserva/03-spec.md` e `04-fila-codigo.md`.
+**Nada construído.** ⚔ contador de vaga dentro da transação do dinheiro: rota opus, review
+antagonista (dupla na S323), lane própria, sem carona em deploy.
