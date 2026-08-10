@@ -219,7 +219,7 @@ O carimbo `radarExpurgadoEm` fica no documento do grupo, com timestamp de servid
 
 O expurgo tem uma quarta responsabilidade desde esta rodada: **janela parada expira**. Documento em `janelas/` e em `radarFrota/` sem republicação há mais de 120 dias é apagado, porque a maior janela cobre 90 dias e uma parada de 120 descreve um período que já saiu inteiro do alcance do produto. Sem isso, instância morta deixa nome de participante congelado para sempre num documento que ninguém substitui (RN-536).
 
-O expurgo **não** olha o estado do clube. Clube fora do ar mantém o radar, que é a decisão do dono de 09/08 sobre clube excluído reter a base, e o acesso passa a ser pela lista de radares do tenant, para o dado não ficar vivo e inalcançável ao mesmo tempo (RN-534).
+O expurgo **não** olha o estado do clube. Clube fora do ar mantém o radar, que é a decisão do dono de 09/08 sobre clube excluído reter a base, e o acesso passa a ser pela lista de radares do tenant, construída pela S2009, para o dado não ficar vivo e inalcançável ao mesmo tempo (RN-534). O expurgo, sendo função, prova só que o documento não foi apagado; a alcançabilidade é testada do lado da tela.
 
 Prazos em RN-524. O TTL nativo do Firestore foi considerado e recusado: exclusão por esforço, sem hora garantida, sem carimbo e sem trilha, que é justamente a prova de cumprimento que o runbook valoriza.
 

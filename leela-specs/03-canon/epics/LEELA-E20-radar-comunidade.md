@@ -37,6 +37,7 @@ Antes desta rodada, quatro dessas cinco linhas não tinham história nenhuma, e 
 - O organizador abre `/clubes/:slug/radar` e reconhece a própria comunidade nos números, com os oito estados de tela cobertos (sem instância, sem pareamento, sem grupo, sem dado no período, sincronismo atrasado, dia parcial, cobertura desconhecida, radar pausado).
 - A tela entrega os quatro blocos de conteúdo, e não só o ranking: volume por dia, mapa de horários, palavras e saldo de entradas e saídas. Uma tela que renderize apenas o ranking e os oito estados passaria em todos os critérios da versão anterior desta spec e não entregaria três dos quatro jobs.
 - Nenhuma superfície do produto oferece envio a partir do radar; a varredura de código não acha caminho do ranking para qualquer canal de saída, e a prova é comportamental: zero job de envio na instância ao fim da medição.
+- O radar de uma comunidade cujo clube saiu do ar continua alcançável pela lista de radares do tenant, e o caminho de exclusão de participante continua ao alcance de quem pede esquecimento (RN-534, RN-536).
 - Um tenant nunca lê o ramo do outro, provado por teste dirigido de rules e pela recusa de ingestão com tenant divergente.
 - Republicar o mesmo lote não muda `atualizadoEm`: a idempotência é observável, não presumida.
 - O expurgo roda com carimbo por grupo, no mesmo formato de incidente do expurgo de saúde, sem criar uma segunda política de alerta.
@@ -353,6 +354,7 @@ Registrar o aceite com versão, finalidade, impressão digital do texto e hora d
 **Contexto & referências**
 - Ordem de gate da casa: crítica de design com veto do UX antes do gate de fidelidade; JTBD declarado no brief.
 - Os quatro blocos de conteúdo têm história e critério próprios: S2005 (o tempo), S2006 (as palavras), S2007 (a frota) e o ranking, que é desta história. Esta tarefa monta a casca, os oito estados e o ranking; os blocos entram por elas.
+- **A tela recebe o grupo por `grupoHash`, não pelo slug do clube.** A rota do clube resolve `clubeSlug` para `grupoHash` antes de montá-la; a S2009 monta a mesma tela passando o hash direto, que é o que mantém o radar alcançável quando o clube sai do ar (RN-534). Amarrar a tela ao clube obrigaria a existir uma segunda tela de radar só para esse caso.
 
 **Arquivos (criar/editar)**
 - `apps/painel/src/routes/clubes/ClubesRoutes.tsx` e o arquivo da sub-navegação do contexto de clube, que ganha o item do radar **condicionado ao tenant ter radar ligado** — a RN-526 proíbe o radar aparecer para quem não foi convidado, e um sétimo item fixo na SubNav vazaria a existência dele para todo mundo.
@@ -376,7 +378,7 @@ Apagar dia vencido às 03h25 no fuso de São Paulo, com núcleo puro de relógio
 
 **Critérios de aceite (testáveis)**
 - **Dado** um grupo já carimbado, **quando** o expurgo roda, **então** ele ainda sonda um documento, porque dia novo pode ter chegado depois do último carimbo.
-- **Dado** um clube com soft-delete e radar ligado, **quando** o expurgo roda, **então** os documentos do radar continuam lá e continuam alcançáveis pela lista de radares do tenant.
+- **Dado** um clube com soft-delete e radar ligado, **quando** o expurgo roda, **então** os documentos do radar continuam lá. O expurgo é função e prova o que função pode provar: o documento não foi apagado. A alcançabilidade que a RN-534 promete é critério da S2009, e é lá que ela é testada.
 - **Dado** uma janela sem republicação há 121 dias, **quando** o expurgo roda, **então** ela é apagada.
 
 #### LEELA-S2003-T4 · Poda do texto local depois que o agregado sobe
@@ -635,6 +637,56 @@ Dar ao admin, na linha do ranking, a ação de corrigir o nome e a de conciliar 
 
 ---
 
+### LEELA-S2009 · A lista de radares do tenant (F1)
+
+**Como** organizadora, **quero** uma lista dos meus radares que não dependa de eu entrar pelo clube, **para** continuar chegando ao radar de uma comunidade cujo clube saiu do ar.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel · **RNs:** RN-522, RN-526, RN-527, RN-534, RN-536
+- **Depende de:** S2002-T4 (as rules), S2003-T2 (a tela de destino existe)
+- **Lê apenas dado já contratado:** `radarGrupos/{grupoHash}.{nomeGrupo, clubeSlug, primeiroDia, ultimoDia, membrosAtuais, radarExpurgadoEm}` e `radarInstancias/{instanciaId}.{status, ultimoContatoEm}`. Nenhuma coleta nova.
+
+**Por que esta história existe.** A RN-534 promete que clube fora do ar não deixa o radar inalcançável, e o caminho que ela nomeia é esta lista. Sem ela a promessa não tem quem a construa: a única entrada especificada é `/clubes/:slug/radar`, que deixa de resolver quando o clube sai do ar. A consequência não é de navegação. Quem perde a entrada perde junto o caminho até a exclusão de participante da RN-536, que é o que a casa oferece a quem pede esquecimento — e o que fica do outro lado são 400 dias de nome de gente num documento que ninguém mais abre. Dado nominal retido sem superfície é a pior das duas metades da RN-534.
+
+**Por que a superfície é mínima, e onde ela mora.** É uma rota estática dentro da área de clubes, irmã de `/clubes/engajamento`, que já existe em produção pela mesma razão registrada no roteador: a análise que atravessa clubes mora junto do assunto. Nada de área nova no menu e nada de item fixo de navegação, porque a RN-526 proíbe o radar aparecer para organizador que não foi convidado.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um tenant com radar ligado e três grupos publicados, **quando** abro a lista, **então** vejo os três com o nome do grupo, o clube ligado a cada um, o último dia coberto e o tamanho atual.
+- **Dado** um grupo cujo clube saiu do ar, **quando** a lista renderiza, **então** ele aparece com o rótulo de clube fora do ar e o caminho até o radar dele não passa pela rota do clube.
+- **Dado** um tenant sem radar ligado, **quando** alguém tenta a rota, **então** ela não monta, e nenhum item de navegação apontou para lá (RN-526).
+- **Dado** o organizador do tenant A, **quando** ele tenta alcançar o ramo do tenant B pela lista, **então** a rule nega (RN-522).
+- **Dado** um tenant com radar ligado e nenhum grupo publicado ainda, **quando** abro, **então** a lista diz que nenhum grupo publicou dado e mostra o estado da instância, em vez de tela vazia.
+- **Dado** o carregamento da lista, **quando** ela busca os grupos, **então** a leitura é a coleção `radarGrupos` do próprio tenant ordenada por identificador de documento, sem filtro composto e sem índice declarado (RN-527).
+
+**Tasks:** LEELA-S2009-T1.
+
+#### LEELA-S2009-T1 · Rota da lista e entrada do radar sem passar pelo clube
+- **Tipo:** screen · **Depende de:** S2002-T4, S2003-T2 · **Estimativa:** M
+
+**Objetivo**
+Montar a lista dos radares do tenant e a segunda entrada da tela do radar, a que usa o grupo como chave em vez do clube.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/clubes/ClubesRoutes.tsx` — duas rotas estáticas, `radares` e `radares/:grupoHash`, declaradas **antes** do coringa `:slug`, pela mesma razão que o arquivo já registra para `novo` e para `engajamento`: rota estática depois do coringa cai no detalhe de clube e renderiza clube não encontrado.
+- `apps/painel/src/routes/clubes/radares/` — a página da lista.
+
+**Contexto & referências**
+- A tela do radar da S2003-T2 recebe o grupo por `grupoHash`. A rota do clube resolve `clubeSlug` para `grupoHash` antes de montá-la, e esta rota passa o hash direto. É a mesma tela por duas entradas; sem essa chave, a promessa da RN-534 exigiria uma segunda tela de radar, que é custo em quatro camadas para mostrar a mesma coisa.
+
+**Regras de negócio a respeitar**
+- RN-522, RN-526, RN-527, RN-534.
+
+**Critérios de aceite (testáveis)**
+- **Dado** o roteador montado, **quando** o caminho `radares` é resolvido, **então** ele casa a rota da lista e não o coringa `:slug`, provado pelo mesmo teste de rota que hoje cobre `novo` e `engajamento`.
+- **Dado** um grupo cujo `clubeSlug` aponta para clube que saiu do ar, **quando** abro o radar dele pela lista, **então** a tela monta pelo `grupoHash` e não consulta o clube.
+- **Dado** um tenant sem instância registrada, **quando** a rota é pedida, **então** ela não monta.
+- **Dado** a lista carregada, **quando** olho as consultas emitidas, **então** há uma leitura de coleção por identificador e nenhuma consulta filtrada.
+
+**Fora de escopo**
+- Qualquer bloco de conteúdo do radar: eles são da S2003 e das histórias de bloco, e esta rota reusa a tela em vez de recriá-la.
+- Item fixo de navegação para a lista (RN-526).
+
+---
+
 ### LEELA-S2004 · Multi-locação e autoatendimento (F2)
 
 **Como** operação da Leela, **quero** rodar dez radares sem uma máquina por organizador, **para** que o produto saia do piloto convidado.
@@ -653,11 +705,11 @@ Dar ao admin, na linha do ranking, a ação de corrigir o nome e a de conciliar 
 
 ## Ordem sugerida
 
-`S2001 (sobrevivência) → S2002 (ponte no emulador) → S2003 (tela, ranking e expurgo) → S2005, S2006, S2007 e S2008 (o conteúdo da tela, em paralelo) → S2004 (multi-locação)`.
+`S2001 (sobrevivência) → S2002 (ponte no emulador) → S2003 (tela, ranking e expurgo) → S2005, S2006, S2007, S2008 e S2009 (o conteúdo da tela e a lista, em paralelo) → S2004 (multi-locação)`.
 
-A S2001 é portão de produto e a única que pode começar hoje. A S2002 é despachável assim que a S2001 fechar verde. A S2003 **deixou de esperar o advogado** em 09/08 (decisão 12) e agora depende só da S2002; dentro dela, a S2002-T3 é a tarefa que destrava tudo, porque sem métricas por dia não existe lote de dias para publicar. As quatro histórias de conteúdo dependem da casca da S2003-T2 e podem correr em paralelo entre si.
+A S2001 é portão de produto e a única que pode começar hoje. A S2002 é despachável assim que a S2001 fechar verde. A S2003 **deixou de esperar o advogado** em 09/08 (decisão 12) e agora depende só da S2002; dentro dela, a S2002-T3 é a tarefa que destrava tudo, porque sem métricas por dia não existe lote de dias para publicar. As quatro histórias de conteúdo dependem da casca da S2003-T2 e podem correr em paralelo entre si. A S2009 depende da mesma casca e entra no mesmo bloco, com uma nota de ordem: ela é a que fecha a promessa da RN-534, então sai do F1 junto com a tela, e não depois.
 
-Os identificadores não seguem a ordem de leitura: a S2004 é do F2 e fecha o arquivo, enquanto S2005 a S2008 nasceram na rodada de reparo de 09/08 e são do F1.
+Os identificadores não seguem a ordem de leitura: a S2004 é do F2 e fecha o arquivo, enquanto S2005 a S2008 nasceram na rodada de reparo de 09/08 e a S2009 na rodada de fechamento de gaps de 10/08 — as cinco são do F1.
 
 ---
 
@@ -790,7 +842,7 @@ Sem esta regra, o épico entregava duas listas e a tarefa de casar na memória, 
 
 Os documentos do radar moram sob `tenants/`, então a deleção de clube não os alcança. Sem regra, um clube deletado levaria o `clubeSlug` junto e deixaria `radarGrupos` órfão: nome de grupo, nomes de participantes e 400 dias de contagem correndo atrás de uma rota que responde 404.
 
-A decisão do dono de 09/08 sobre clube excluído é reter a base, e ela vale aqui: **o radar sobrevive ao clube.** O expurgo não olha o estado do clube, o `clubeSlug` fica gravado como histórico e o acesso passa a ser pela lista de radares do tenant, que não depende do clube existir. Dado retido e alcançável, ou nenhum dos dois.
+A decisão do dono de 09/08 sobre clube excluído é reter a base, e ela vale aqui: **o radar sobrevive ao clube.** O expurgo não olha o estado do clube, o `clubeSlug` fica gravado como histórico e o acesso passa a ser pela lista de radares do tenant, que não depende do clube existir e é construída pela **S2009**. Dado retido e alcançável, ou nenhum dos dois — e a segunda metade dessa frase só vale porque a lista tem história, tarefa e critério, em vez de ser promessa sem dono.
 
 Condição de reabertura: parecer do advogado que aponte prazo máximo de retenção para dado de participante, que é a mesma condição da RN-524.
 
