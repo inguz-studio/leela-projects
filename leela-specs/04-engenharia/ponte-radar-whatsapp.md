@@ -59,7 +59,7 @@ tenants/{tenantId}/radarVinculos/{participanteHash}
 
 `radarVinculos/{participanteHash}` é o único documento do conjunto que nasce de um gesto humano, e não do motor: `nomeManual` (a correção que o admin digita), `atletaId` ou `membroId` quando o admin concilia o participante com alguém do cadastro, `vinculadoPor`, `vinculadoEm` e `origemNome`. Ele é escrito por Function, nunca pelo cliente, e o motor não o lê nem o recebe de volta — nada flui para o lado local. As regras dele são a RN-532 (o nome) e a RN-533 (o vínculo).
 
-Os dados ficam sob `tenants/`, e não sob `clubes/`, porque o catch-all de subcoleção de clube é fechado por decisão declarada. A tela mora na rota do clube e encontra os documentos pelo `clubeSlug`.
+Os dados ficam sob `tenants/`, e não sob `clubes/`, porque o catch-all de subcoleção de clube é fechado por decisão declarada. A tela mora na rota do clube, que resolve o `clubeSlug` para o `grupoHash` antes de montá-la. A tela em si é chaveada pelo `grupoHash`, e é isso que permite a segunda entrada, pela lista de radares do tenant, quando o clube já não existe (RN-534, S2009).
 
 **Divergência do estudo, registrada.** A coleção `rotulos/{participanteHash}`, que existia para o organizador digitar um nome sobre o pseudônimo, sai do contrato. Ela era o mecanismo do nível de identidade que o dono descartou: com nome real no ranking (RN-521), o rótulo digitado perde a função e manteria a única coleção do conjunto com escrita de cliente, junto de uma validação de shape que ninguém precisa. Reabre se o organizador pedir para corrigir nome de exibição errado, e aí volta como decisão nova.
 

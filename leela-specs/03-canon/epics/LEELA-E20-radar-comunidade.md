@@ -436,7 +436,7 @@ Dar ao organizador e à operação um caminho de esquecimento que não dependa d
 - **Tipo:** screen · **Depende de:** S2002-T3, S2003-T2 · **Estimativa:** M
 
 **Objetivo**
-Renderizar, dentro da casca do radar, o volume de mensagens por dia e o mapa de hora do dia por dia da semana, lendo os documentos de dia do grupo daquele clube.
+Renderizar, dentro da casca do radar, o volume de mensagens por dia e o mapa de hora do dia por dia da semana, lendo os documentos de dia do grupo aberto na tela.
 
 **Arquivos (criar/editar)**
 - `apps/painel/src/routes/clubes/clube/radar/` — a pasta da aba do radar, criada pela S2003-T2; os dois blocos entram como componentes dela.
@@ -554,6 +554,7 @@ Mostrar lado a lado os grupos do mesmo organizador na janela escolhida, com o si
 - RN-522 — a leitura é só do ramo do próprio tenant; a rule da frota é da S2002-T4.
 - RN-527 — `radarFrota/{7d|30d|90d}` e a série de `dias` são lidos por identificador de documento; nenhuma consulta filtrada nasce aqui.
 - RN-535 — a comparação nomeia o que mede e não afirma qual comunidade é a mais saudável.
+- Governança de agregado do E11, e a fronteira dela neste bloco: a conta que a tela faz é soma e razão sobre número que a Function já publicou. A ordem de quem falou mais continua vindo do documento de janela, e nenhum ranking é recalculado no cliente.
 
 **Critérios de aceite (testáveis)**
 - **Dado** um organizador com três grupos publicados na janela, **quando** abro a comparação, **então** os três aparecem com volume, gente ativa e saldo de entradas e saídas da mesma janela.
@@ -639,6 +640,7 @@ Dar ao admin, na linha do ranking, a ação de corrigir o nome e a de conciliar 
 - **Dado** um participante sem nome, **quando** uso a correção manual, **então** o nome digitado aparece na linha e permanece depois da publicação seguinte do motor.
 - **Dado** um nome com forma de telefone digitado na correção, **quando** confirmo, **então** a tela mostra a recusa que a função devolveu e a linha não muda.
 - **Dado** um clube sem nenhum membro cadastrado, **quando** abro a ação de conciliar, **então** ela diz que não há cadastro para comparar, em vez de lista vazia.
+- **Dado** um grupo aberto pela lista da S2009, cujo clube saiu do ar ou que nunca teve clube ligado, **quando** abro a ação de conciliar, **então** ela diz que não há cadastro disponível para aquele grupo, e a correção manual do nome continua funcionando. Conciliação precisa de cadastro; corrigir nome, não.
 
 **Fora de escopo**
 - Escrita direta do cliente em `radarVinculos`, negada pela rule da S2002-T4.
@@ -661,7 +663,9 @@ Dar ao admin, na linha do ranking, a ação de corrigir o nome e a de conciliar 
 **Critérios de aceite (Given/When/Then):**
 - **Dado** um tenant com radar ligado e três grupos publicados, **quando** abro a lista, **então** vejo os três com o nome do grupo, o clube ligado a cada um, o último dia coberto e o tamanho atual.
 - **Dado** um grupo cujo clube saiu do ar, **quando** a lista renderiza, **então** ele aparece com o rótulo de clube fora do ar e o caminho até o radar dele não passa pela rota do clube.
-- **Dado** um tenant sem radar ligado, **quando** alguém tenta a rota, **então** ela não monta, e nenhum item de navegação apontou para lá (RN-526).
+- **Dado** um grupo sem `clubeSlug`, **quando** a lista renderiza, **então** ele aparece como comunidade sem clube ligado, e o radar dele abre do mesmo jeito. O `clubeSlug` é opcional no contrato, e a lista não pode depender dele.
+- **Dado** um tenant com radar ligado, **quando** abro o hub de clubes, **então** existe uma entrada para a lista de radares; **dado** um tenant sem radar ligado, **então** ela não existe. A entrada é condicionada pelo mesmo motivo do item de sub-navegação do clube (RN-526), e existe porque lista sem entrada é a mesma promessa sem dono que esta história veio fechar.
+- **Dado** um tenant sem radar ligado, **quando** alguém tenta a rota direto, **então** ela não monta.
 - **Dado** o organizador do tenant A, **quando** ele tenta alcançar o ramo do tenant B pela lista, **então** a rule nega (RN-522).
 - **Dado** um tenant com radar ligado e nenhum grupo publicado ainda, **quando** abro, **então** a lista diz que nenhum grupo publicou dado e mostra o estado da instância, em vez de tela vazia.
 - **Dado** o carregamento da lista, **quando** ela busca os grupos, **então** a leitura é a coleção `radarGrupos` do próprio tenant ordenada por identificador de documento, sem filtro composto e sem índice declarado (RN-527).
@@ -677,22 +681,25 @@ Montar a lista dos radares do tenant e a segunda entrada da tela do radar, a que
 **Arquivos (criar/editar)**
 - `apps/painel/src/routes/clubes/ClubesRoutes.tsx` — duas rotas estáticas, `radares` e `radares/:grupoHash`, declaradas **antes** do coringa `:slug`, pela mesma razão que o arquivo já registra para `novo` e para `engajamento`: rota estática depois do coringa cai no detalhe de clube e renderiza clube não encontrado.
 - `apps/painel/src/routes/clubes/radares/` — a página da lista.
+- `apps/painel/src/routes/clubes/hub/HubClubes.tsx` — a entrada para a lista, renderizada só quando o tenant tem radar ligado.
 
 **Contexto & referências**
 - A tela do radar da S2003-T2 recebe o grupo por `grupoHash`. A rota do clube resolve `clubeSlug` para `grupoHash` antes de montá-la, e esta rota passa o hash direto. É a mesma tela por duas entradas; sem essa chave, a promessa da RN-534 exigiria uma segunda tela de radar, que é custo em quatro camadas para mostrar a mesma coisa.
 
 **Regras de negócio a respeitar**
 - RN-522, RN-526, RN-527, RN-534.
+- RN-536 — esta lista é o caminho até a função de exclusão de participante quando o clube já não existe. É por isso que ela é do F1 e não do F2.
 
 **Critérios de aceite (testáveis)**
 - **Dado** o roteador montado, **quando** o caminho `radares` é resolvido, **então** ele casa a rota da lista e não o coringa `:slug`, provado pelo mesmo teste de rota que hoje cobre `novo` e `engajamento`.
 - **Dado** um grupo cujo `clubeSlug` aponta para clube que saiu do ar, **quando** abro o radar dele pela lista, **então** a tela monta pelo `grupoHash` e não consulta o clube.
 - **Dado** um tenant sem instância registrada, **quando** a rota é pedida, **então** ela não monta.
+- **Dado** um tenant com radar ligado, **quando** o hub de clubes renderiza, **então** a entrada para a lista aparece; **dado** um tenant sem radar ligado, **então** ela não aparece no HTML renderizado, e não só escondida por estilo.
 - **Dado** a lista carregada, **quando** olho as consultas emitidas, **então** há uma leitura de coleção por identificador e nenhuma consulta filtrada.
 
 **Fora de escopo**
 - Qualquer bloco de conteúdo do radar: eles são da S2003 e das histórias de bloco, e esta rota reusa a tela em vez de recriá-la.
-- Item fixo de navegação para a lista (RN-526).
+- Item fixo no menu principal ou na sub-navegação: a entrada é condicionada e mora no hub de clubes (RN-526).
 
 ---
 
