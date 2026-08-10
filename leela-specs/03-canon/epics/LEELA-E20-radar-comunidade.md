@@ -325,12 +325,18 @@ Renderizar sem capricho visual os números de um organizador, lendo direto do Fi
 **Critérios de aceite (Given/When/Then):**
 - **Dado** um tenant sem termo aceito, **quando** alguém tenta ligar o radar dele, **então** a ativação é recusada. O termo é do produto, e deixa de depender de parecer.
 - **Dado** uma instância sem pareamento, **quando** abro a tela, **então** vejo a instrução de pareamento e nenhum botão que envie coisa alguma.
+- **Dado** um tenant com radar ligado e nenhuma instância registrada, **quando** abro a tela, **então** vejo a instrução de instalar o motor e nenhum bloco de conteúdo é renderizado.
+- **Dado** uma instância pareada e nenhum grupo publicado ainda, **quando** abro, **então** a tela diz que nenhuma comunidade publicou dado e nomeia o que falta acontecer, em vez de mostrar blocos vazios.
+- **Dado** um grupo publicado e nenhum documento de dia dentro do período escolhido, **quando** abro, **então** cada bloco mostra o próprio vazio com a data do último dia coberto ao lado.
+- **Dado** uma instância com status pausado, **quando** abro, **então** vejo o dado até o dia em que o radar parou, uma faixa dizendo desde quando ele está pausado, e nenhuma ação da tela religa o radar sem gesto explícito.
 - **Dado** `ultimoContatoEm` acima de 26 horas, **quando** abro, **então** uma faixa de aviso mostra a data do último dia coberto.
 - **Dado** um dia com `cobertura` presente e abaixo de 0,9, **quando** o gráfico renderiza, **então** aquele ponto é marcado como parcial.
 - **Dado** um dia sem `cobertura`, **quando** o gráfico renderiza, **então** o ponto aparece como cobertura desconhecida, e nunca como dia cheio.
 - **Dado** o ranking, **quando** ele renderiza, **então** cada linha mostra o nome do participante, o total de mensagens e os dias ativos, o título diz "quem mais falou no período" e nenhuma linha oferece caminho para mensagem, ligação ou comunicado.
 - **Dado** um participante sem nome, **quando** a linha renderiza, **então** ela aparece com rótulo próprio e a ação de nomear ao lado, em vez de linha em branco.
 - **Dado** um documento de dia com mais de 400 dias, **quando** o expurgo roda de madrugada, **então** ele é apagado e o grupo recebe carimbo de expurgo.
+
+Os oito estados que o critério de sucesso do épico cobra estão todos aqui, um critério cada. O primeiro critério da lista, o do termo, não é um deles: ele é pré-condição de ligar o radar, e a tela nem chega a ser pedida quando ele falha.
 
 **Tasks:** LEELA-S2003-T1 a LEELA-S2003-T5.
 
@@ -357,7 +363,10 @@ Registrar o aceite com versão, finalidade, impressão digital do texto e hora d
 - **A tela recebe o grupo por `grupoHash`, não pelo slug do clube.** A rota do clube resolve `clubeSlug` para `grupoHash` antes de montá-la; a S2009 monta a mesma tela passando o hash direto, que é o que mantém o radar alcançável quando o clube sai do ar (RN-534). Amarrar a tela ao clube obrigaria a existir uma segunda tela de radar só para esse caso.
 
 **Arquivos (criar/editar)**
-- `apps/painel/src/routes/clubes/ClubesRoutes.tsx` e o arquivo da sub-navegação do contexto de clube, que ganha o item do radar **condicionado ao tenant ter radar ligado** — a RN-526 proíbe o radar aparecer para quem não foi convidado, e um sétimo item fixo na SubNav vazaria a existência dele para todo mundo.
+- `apps/painel/src/routes/clubes/ClubesRoutes.tsx` — a rota `radar` do clube, irmã de membros, desafios, parcerias, comunicação e configurações.
+- `apps/painel/src/routes/clubes/_lib/subnav.ts` — a sub-navegação do contexto de clube. Ela se declara hoje como fonte única de seis abas, no tipo `ClubeAbaId` e na lista `ABAS`, e ganha o item do radar **condicionado ao tenant ter radar ligado**: a RN-526 proíbe o radar aparecer para quem não foi convidado, e um sétimo item fixo vazaria a existência dele para todo mundo.
+- `apps/painel/src/routes/clubes/_lib/__tests__/subnav.test.ts` — o teste que hoje afirma as seis abas, e que passa a afirmar a sétima só sob a condição.
+- `apps/painel/src/routes/clubes/clube/radar/` — a pasta da aba, irmã de `overview` e `membros`, onde moram a casca, os oito estados e o ranking; os blocos das S2005 a S2008 entram aqui.
 
 **Fora de escopo**
 - Conexão com a área de comunicação, em qualquer forma (RN-520).
