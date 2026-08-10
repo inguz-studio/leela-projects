@@ -18,9 +18,12 @@
 // =============================================================================
 
 import {
+  DEFAULT_SIDEBAR_NAV_ICONS,
   DEFAULT_SIDEBAR_SECTIONS,
+  railNavIcon,
   sidebarNavIcon,
   type SidebarItem,
+  type SidebarRailItem,
   type SidebarSection,
 } from '@leela/design-system';
 import { Banknote, Building2, CreditCard, FileText, Gauge, Percent, Tags, TicketCheck, Undo2, type LucideIcon } from 'lucide-react';
@@ -154,4 +157,51 @@ export function shellSidebarSections(
     return platformSections(pathname, navigate);
   }
   return producerSections(painelActiveId(pathname), navigate, pathname, eventosAtivos);
+}
+
+/**
+ * Itens do RAIL FLUTUANTE (HIFI-REC, protótipo Visao Geral v3): lista PLANA —
+ * o protótipo não tem rótulo de seção (OPERAÇÃO/CONTA são anatomia da Sidebar
+ * clássica, que segue viva no Drawer < lg). Mesmos ids, rótulos, destinos,
+ * badge real de eventos e regra href+onClick SPA da nav clássica; ícones nos
+ * tokens do rail (21px, traço 2 — `railNavIcon`).
+ * @pure
+ */
+export function shellRailItems(
+  pathname: string,
+  navigate: NavegarSpa,
+  eventosAtivos?: number | null
+): SidebarRailItem[] {
+  if (pathname.startsWith('/plataforma')) {
+    const ativo = activeNavId(pathname);
+    return PLATFORM_NAV.map((item): SidebarRailItem => {
+      const Icon = PLATFORM_NAV_ICONS[item.id];
+      const base: SidebarRailItem = {
+        id: item.id,
+        label: item.label,
+        icon: Icon ? railNavIcon(Icon) : null,
+        active: item.id === ativo,
+      };
+      if (item.badge !== undefined) base.badge = item.badge;
+      if (item.href) {
+        base.href = item.href;
+        base.onClick = onClickSpa(navigate, item.href, pathname);
+      }
+      return base;
+    });
+  }
+  const ativoId = painelActiveId(pathname);
+  return DEFAULT_SIDEBAR_NAV_ICONS.map(({ id, label, Icon }): SidebarRailItem => {
+    const href = HREF_POR_ID[id];
+    return {
+      id,
+      label,
+      icon: railNavIcon(Icon),
+      active: id === ativoId,
+      ...(id === 'eventos' && typeof eventosAtivos === 'number' && eventosAtivos > 0
+        ? { badge: eventosAtivos }
+        : {}),
+      ...(href ? { href, onClick: onClickSpa(navigate, href, pathname) } : {}),
+    };
+  });
 }

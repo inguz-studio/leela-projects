@@ -60,6 +60,12 @@ export interface SidebarRailProps {
   onFooterClick?: () => void;
   /** Estado inicial. O protótipo nasce FECHADO (84px). */
   defaultOpen?: boolean;
+  /**
+   * Slot extra entre marca e itens, visível SÓ com o rail aberto. Existe para
+   * função que o protótipo não previu e não pode sumir do desktop (ex.:
+   * alternador de painel do papel duplo) — divergência nomeada no handoff.
+   */
+  slotAberto?: React.ReactNode;
   className?: string;
 }
 
@@ -112,6 +118,7 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
       footerSubtitle,
       onFooterClick,
       defaultOpen = false,
+      slotAberto,
       className,
     },
     ref,
@@ -268,6 +275,10 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
             ) : null}
           </div>
         )}
+
+        {open && slotAberto ? (
+          <div className="w-full px-[var(--rail-px)]">{slotAberto}</div>
+        ) : null}
 
         {/* Itens (protótipo: gap 10, pt 34, px 14, rola só na vertical). */}
         <div

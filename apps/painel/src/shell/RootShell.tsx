@@ -34,8 +34,9 @@ import {
   SCROLL_Y_ONLY,
   Sidebar,
   SidebarFooter,
+  SidebarRail,
 } from '@leela/design-system';
-import { shellSidebarSections } from './sidebar';
+import { shellRailItems, shellSidebarSections } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
 import { usePaineisDaConta } from './paineis';
@@ -106,8 +107,47 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
     />
   ) : undefined;
 
+  // HIFI-REC · rail flutuante do protótipo Visao Geral v3 (ordem do dono,
+  // 10/08): ≥ lg a navegação é o SidebarRail — pílula flutuante fechada em
+  // 84px, aberta em 248px. A Sidebar clássica NÃO morreu: é o conteúdo do
+  // Drawer < lg (anatomia certa para off-canvas, com brand/seções/rodapé).
+  // O AlternadorDePainel (papel duplo) entra no slot aberto do rail — função
+  // que o protótipo não previu e não pode sumir do desktop (divergência
+  // nomeada no handoff da lane).
+  const rail = (
+    <SidebarRail
+      items={shellRailItems(location.pathname, navigate, eventosAtivos)}
+      brandIcon={<img src="/leela-icon.svg" alt="" className="w-full h-full" />}
+      brandLogo={<img src="/leela-logo-brasa.svg" alt="Leela" className="h-full w-auto" />}
+      {...(nome ? { footerName: nome } : {})}
+      footerSubtitle="Ver perfil"
+      onFooterClick={() => navigate('/conta')}
+      // Rail aberto NOMEIA o painel (conquista PAPEL-DUPLO — o rótulo não
+      // mente no master) e oferece o alternador para quem alcança os dois.
+      slotAberto={
+        <div className="flex flex-col gap-[var(--spacing-3)] text-center">
+          <p className="text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
+            {nomeDoPainelAtual(location.pathname)}
+          </p>
+          {paineis.podeAlternar ? (
+            <AlternadorDePainel podeAlternar={paineis.podeAlternar} />
+          ) : null}
+        </div>
+      }
+    />
+  );
+
   return (
-    <AppShell sidebar={<Sidebar brand={brand} sections={sections} footer={footer} />}>
+    <AppShell
+      sidebar={rail}
+      sidebarFlutuante
+      drawerSidebar={<Sidebar brand={brand} sections={sections} footer={footer} />}
+      // GLOW DA PÁGINA na RAIZ da moldura (protótipo: background-image no flex
+      // que contém nav+main): o rail é vidro translúcido e precisa do glow POR
+      // BAIXO — pintado só no contêiner que rola, a faixa do rail ficava sobre
+      // preto chapado. `fixed` mantém a âncora no viewport (regra §2 nº 1).
+      className="[background-image:var(--page-glow)] [background-attachment:fixed]"
+    >
       {/* Área principal: único contêiner de rolagem da PÁGINA — a sidebar não
           rola junto, e o eixo horizontal é fechado (BUILD-SCROLL-PADRAO).
           O `overflow-y-auto` sozinho não entregava um contêiner de rolagem,
@@ -129,26 +169,15 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
           `<main>` do AppShell já é `relative` e barra a fuga; aqui a `relative`
           resolve o outro lado, que é a semântica: o absoluto pertence ao
           conteúdo que rola, não à moldura parada. */}
-      {/* GLOW DA PÁGINA (REDESIGN-DS §2, regra não-negociável nº 1): o brilho
-          de fundo é FIXO NO VIEWPORT. Se ele rolasse com o conteúdo, o
-          desfoque do vidro perderia o referencial e o efeito morreria — o card
-          translúcido revelaria sempre a mesma cor chapada.
-
-          Mora aqui, no contêiner que rola, e não no <body>: o AppShell pinta
-          `--surface-base` OPACO na raiz da moldura, então um glow no documento
-          ficaria escondido atrás dela. `background-attachment: fixed` faz a
-          área de posicionamento ser o viewport (é o que os raios em
-          porcentagem do token esperam) enquanto a pintura fica contida nesta
-          caixa — e como a Sidebar é opaca, não pintar o glow sob o rail é
-          visualmente idêntico a pintar.
-
-          `--page-glow` é `none` fora do modo vidro: na administração da
-          plataforma esta mesma linha não desenha nada, e o fundo preto do
-          `--surface-base` é o que o dono pediu. Nenhum valor cru aqui — só o
-          token que a lane TOKENS publicou. */}
-      <div
-        className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY} [background-image:var(--page-glow)] [background-attachment:fixed]`}
-      >
+      {/* GLOW DA PÁGINA (REDESIGN-DS §2, regra nº 1): o brilho é FIXO NO
+          VIEWPORT e SUBIU para a raiz da moldura (className do AppShell,
+          acima) na lane HIFI-REC. O argumento antigo para pintá-lo AQUI era
+          "a Sidebar é opaca, não pintar sob o rail é idêntico a pintar" — o
+          SidebarRail derrubou a premissa: ele é vidro translúcido flutuando
+          sobre a página, e o glow precisa existir POR BAIXO dele. O token
+          continua sendo a única fonte (`none` fora do modo vidro: a
+          administração segue preta). GlowDaPagina.test.tsx acompanhou. */}
+      <div className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY}`}>
         {children}
       </div>
     </AppShell>

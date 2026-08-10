@@ -59,82 +59,100 @@ function nav(): HTMLElement {
   return screen.getByRole('navigation', { name: 'Navegação principal' });
 }
 
+// HIFI-REC: >= lg a navegação é o SidebarRail do protótipo — nasce FECHADO
+// (84px, rótulos em sr-only, badges/rodapé/alternador só abertos). Abrir o
+// rail é parte do fluxo real do usuário; os casos que dependem da anatomia
+// aberta fazem exatamente isso.
+async function abrirRail(): Promise<void> {
+  await userEvent.click(screen.getByRole('button', { name: 'Abrir menu' }));
+}
+
 describe('RootShell (Lote B3 — shell raiz)', () => {
   it('monta a sidebar do produtor na Visão Geral com o item ativo', () => {
     renderAt('/');
-    const ativo = within(nav()).getByText('Visão Geral').closest('a,button');
+    const ativo = within(nav()).getByRole('link', { name: 'Visão Geral' });
     expect(ativo).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('main')).toContainElement(screen.getByTestId('path'));
   });
 
   it('/eventos tem sidebar (bug do diagnóstico corrigido) com "Eventos" ativo', () => {
     renderAt('/eventos');
-    const ativo = within(nav()).getByText('Eventos').closest('a,button');
+    const ativo = within(nav()).getByRole('link', { name: 'Eventos' });
     expect(ativo).toHaveAttribute('aria-current', 'page');
   });
 
   it('tela interna de evento mantém "Eventos" ativo', () => {
     renderAt('/eventos/corrida-do-campeche/inscritos');
-    const ativo = within(nav()).getByText('Eventos').closest('a,button');
+    const ativo = within(nav()).getByRole('link', { name: 'Eventos' });
     expect(ativo).toHaveAttribute('aria-current', 'page');
   });
 
   it('/clubes tem sidebar com "Clubs" ativo', () => {
     renderAt('/clubes/trail-club/membros');
-    const ativo = within(nav()).getByText('Clubs').closest('a,button');
+    const ativo = within(nav()).getByRole('link', { name: 'Clubs' });
     expect(ativo).toHaveAttribute('aria-current', 'page');
   });
 
-  it('/plataforma monta a nav própria do super-admin (Tenants ativo, Billing "em breve")', () => {
+  it('/plataforma monta a nav própria do super-admin (Tenants ativo, Billing "em breve")', async () => {
     renderAt('/plataforma/tenants');
-    const sidebar = nav();
-    const ativo = within(sidebar).getByText('Tenants').closest('a,button');
+    const ativo = within(nav()).getByRole('link', { name: 'Tenants' });
     expect(ativo).toHaveAttribute('aria-current', 'page');
-    expect(within(sidebar).getByText('em breve')).toBeInTheDocument();
-    expect(within(sidebar).queryByText('Visão Geral')).not.toBeInTheDocument();
+    // Badge é anatomia do rail ABERTO (protótipo: display none fechado).
+    await abrirRail();
+    expect(within(nav()).getByText('em breve')).toBeInTheDocument();
+    expect(within(nav()).queryByRole('link', { name: 'Visão Geral' })).not.toBeInTheDocument();
   });
 
   it('navegar pela sidebar troca só o conteúdo — a sidebar permanece', async () => {
     renderAt('/');
-    await userEvent.click(within(nav()).getByText('Eventos'));
+    await userEvent.click(within(nav()).getByRole('link', { name: 'Eventos' }));
     expect(screen.getByTestId('path')).toHaveTextContent('/eventos');
     expect(nav()).toBeInTheDocument();
-    const ativo = within(nav()).getByText('Eventos').closest('a,button');
+    const ativo = within(nav()).getByRole('link', { name: 'Eventos' });
     expect(ativo).toHaveAttribute('aria-current', 'page');
   });
 
   it('os 6 itens do produtor renderizam com ícone (RN-233 · menu de 6 áreas)', () => {
     renderAt('/');
-    const svgs = nav().querySelectorAll('svg[aria-hidden="true"]');
     // 6 itens do DS: Visão Geral · Eventos · Clubs · CRM · Marcas · Configurações.
-    expect(svgs.length).toBe(6);
+    const itens = within(nav()).getAllByRole('link');
+    expect(itens).toHaveLength(6);
+    for (const item of itens) {
+      expect(item.querySelector('svg')).not.toBeNull();
+    }
   });
 
   it('RN-233: a nav mostra CRM e não mostra mais Financeiro nem Analytics', () => {
     renderAt('/');
     const sidebar = nav();
-    expect(within(sidebar).getByText('CRM')).toBeInTheDocument();
-    expect(within(sidebar).queryByText('Financeiro')).not.toBeInTheDocument();
-    expect(within(sidebar).queryByText('Analytics')).not.toBeInTheDocument();
+    expect(within(sidebar).getByRole('link', { name: 'CRM' })).toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'Financeiro' })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'Analytics' })).not.toBeInTheDocument();
   });
 
-  it('rodapé mostra avatar + nome da sessão (B4 — dados do consumidor)', () => {
+  it('rodapé mostra avatar + nome da sessão (B4 — dados do consumidor)', async () => {
     renderAt('/');
-    const sidebar = nav();
-    expect(within(sidebar).getByText('Marina Castelo')).toBeInTheDocument();
-    expect(within(sidebar).getByText('Ver perfil')).toBeInTheDocument();
+    // Fechado: só as iniciais (anatomia do protótipo). Aberto: nome + link.
+    expect(within(nav()).getByText('MC')).toBeInTheDocument();
+    await abrirRail();
+    expect(within(nav()).getByText('Marina Castelo')).toBeInTheDocument();
+    expect(within(nav()).getByText('Ver perfil')).toBeInTheDocument();
   });
 
-  it('brand slot do consumidor: wordmark Leela + "Painel do Organizador" (T2)', () => {
+  it('marca no rail: wordmark Leela + "Painel do Organizador" no rail aberto (T2)', async () => {
     renderAt('/');
-    const sidebar = nav();
-    const logo = within(sidebar).getByRole('img', { name: 'Leela' });
+    // Fechado o wordmark está em crossfade oculto (aria-hidden) — a marca
+    // acessível é a do rail ABERTO, junto com o rótulo de contexto
+    // (conquista PAPEL-DUPLO: a moldura NOMEIA o painel).
+    await abrirRail();
+    const logo = within(nav()).getByRole('img', { name: 'Leela' });
     expect(logo).toHaveAttribute('src', '/leela-logo-brasa.svg');
-    expect(within(sidebar).getByText('Painel do Organizador')).toBeInTheDocument();
+    expect(within(nav()).getByText('Painel do Organizador')).toBeInTheDocument();
   });
 
   it('nav-badge de Eventos com contagem REAL de ativos (2 de 3 — encerrado fora)', async () => {
     renderAt('/');
+    await abrirRail();
     await waitFor(() => {
       expect(within(nav()).getByText('2')).toBeInTheDocument();
     });
@@ -196,6 +214,7 @@ describe('RootShell (Adendo 13 — sem barra superior)', () => {
 describe('RootShell · alternador de painéis', () => {
   it('conta de organizador NÃO vê alternador — ela só tem um painel', async () => {
     renderAt('/');
+    await abrirRail();
     await waitFor(() => expect(screen.getByText('Painel do Organizador')).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /Ir para o Painel/ })).toBeNull();
   });
@@ -207,6 +226,7 @@ describe('RootShell · alternador de painéis', () => {
       platformAdmin: true,
     };
     renderAt('/');
+    await abrirRail();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Ir para o Painel Master' })).toBeInTheDocument(),
     );
@@ -223,6 +243,7 @@ describe('RootShell · alternador de painéis', () => {
       platformAdmin: true,
     };
     renderAt('/plataforma/tenants');
+    await abrirRail();
     await waitFor(() => expect(screen.getByText('Painel Master')).toBeInTheDocument());
     expect(
       screen.getByRole('button', { name: 'Ir para o Painel do Organizador' }),
@@ -237,6 +258,7 @@ describe('RootShell · alternador de painéis', () => {
     };
     const usuario = userEvent.setup();
     renderAt('/');
+    await abrirRail();
     const alternar = await screen.findByRole('button', { name: 'Ir para o Painel Master' });
     await usuario.click(alternar);
     expect(screen.getByTestId('path')).toHaveTextContent('/plataforma');
@@ -245,6 +267,7 @@ describe('RootShell · alternador de painéis', () => {
   it('admin LEGADO (sem tenant) não alterna — não há painel de organizador para ir', async () => {
     cracha.atual = { role: 'platform_admin' };
     renderAt('/plataforma');
+    await abrirRail();
     await waitFor(() => expect(screen.getByText('Painel Master')).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /Ir para o Painel/ })).toBeNull();
   });

@@ -34,25 +34,32 @@ vi.mock('@leela/api-client', () => ({
 }));
 
 function montarConteudo(): HTMLElement {
-  render(
+  const { container } = render(
     <MemoryRouter initialEntries={['/']}>
       <RootShell>
         <p>conteúdo da página</p>
       </RootShell>
     </MemoryRouter>,
   );
-  // O contêiner de rolagem é o pai do conteúdo da página (mesma âncora que o
-  // teste de scroll usa) — subimos por ele para não depender de test-id novo.
-  const alvo = screen.getByText('conteúdo da página').parentElement;
-  if (!alvo) throw new Error('contêiner de rolagem da página não encontrado');
+  // HIFI-REC: o glow SUBIU do contêiner que rola para a RAIZ da moldura
+  // (AppShell). O argumento antigo — "a Sidebar é opaca, pintar sob o rail é
+  // igual a não pintar" — caiu com o SidebarRail do protótipo: o rail é vidro
+  // translúcido flutuando sobre a página e precisa do glow por baixo. A raiz
+  // da moldura é o primeiro elemento renderizado pelo RootShell.
+  const alvo = container.firstElementChild as HTMLElement | null;
+  if (!alvo) throw new Error('raiz da moldura não encontrada');
   return alvo;
 }
 
 describe('glow da página', () => {
-  it('é pintado no contêiner que rola', () => {
-    const rolador = montarConteudo();
-    expect(rolador.className).toMatch(/overflow-y-auto/);
-    expect(rolador.className).toContain('[background-image:var(--page-glow)]');
+  it('é pintado na raiz da moldura — por baixo do rail de vidro e do conteúdo', () => {
+    const raiz = montarConteudo();
+    expect(raiz.className).toContain('[background-image:var(--page-glow)]');
+    // …e o conteúdo continua rolando num contêiner SEM fundo próprio: nada
+    // se interpõe entre o glow da raiz e os cards translúcidos.
+    const rolador = screen.getByText('conteúdo da página').parentElement;
+    expect(rolador?.className).toMatch(/overflow-y-auto/);
+    expect(rolador?.className).not.toMatch(/bg-\[|background-color/);
   });
 
   it('fica ancorado no viewport, não no conteúdo', () => {

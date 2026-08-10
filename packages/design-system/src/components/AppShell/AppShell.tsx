@@ -39,6 +39,17 @@ export interface AppShellProps {
   menuLabel?: string;
   /** Nome acessível do drawer de navegação (mobile). Default: 'Menu de navegação'. */
   drawerLabel?: string;
+  /**
+   * Rail flutuante (HIFI-REC): o wrapper desktop perde o `overflow-hidden`
+   * para o toggle do SidebarRail vazar a borda direita (o rail traz margem e
+   * altura próprias). Default false = anatomia clássica intocada.
+   */
+  sidebarFlutuante?: boolean;
+  /**
+   * Conteúdo do Drawer < lg quando diferente do rail desktop (ex.: a Sidebar
+   * clássica, que é a anatomia certa para off-canvas). Default: `sidebar`.
+   */
+  drawerSidebar?: React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,6 +62,8 @@ function AppShell({
   className,
   menuLabel = 'Abrir menu de navegação',
   drawerLabel = 'Menu de navegação',
+  sidebarFlutuante = false,
+  drawerSidebar,
 }: AppShellProps): JSX.Element {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -63,16 +76,24 @@ function AppShell({
       )}
     >
       {/* Rail fixo da Sidebar — só a partir de lg (desktop 1440 intocado).
-          Abaixo de lg some do fluxo: o <main> recupera a largura total. */}
-      <div className="hidden lg:block shrink-0 h-full overflow-hidden">
+          Abaixo de lg some do fluxo: o <main> recupera a largura total.
+          Rail FLUTUANTE (HIFI-REC): sem clip — o toggle do SidebarRail fica
+          meio para fora da borda direita, por desenho do protótipo. */}
+      <div
+        className={cn(
+          'hidden lg:block shrink-0 h-full',
+          !sidebarFlutuante && 'overflow-hidden',
+        )}
+      >
         {sidebar}
       </div>
 
-      {/* Drawer mobile (< lg): a MESMA Sidebar off-canvas. Fecha ao navegar
-          (clique borbulha do item para o wrapper) e nas vias do Radix. */}
+      {/* Drawer mobile (< lg): a MESMA Sidebar off-canvas (ou a variante que
+          o consumidor mandar — o rail flutuante não é anatomia de drawer).
+          Fecha ao navegar (clique borbulha) e nas vias do Radix. */}
       <Drawer open={menuOpen} onOpenChange={setMenuOpen} title={drawerLabel}>
         <div className="contents" onClick={() => setMenuOpen(false)}>
-          {sidebar}
+          {drawerSidebar ?? sidebar}
         </div>
       </Drawer>
 
