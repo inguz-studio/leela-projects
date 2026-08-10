@@ -2,11 +2,14 @@
 tags: [leela, radar, whatsapp, contrato, ingestao, idempotencia, firestore, rules, lgpd]
 atualizado: 2026-08-09
 trace: 60ebd3f5-7a71-4841-8603-cf549ee294f9
+reparo: 662b9248-be60-4aae-bf5e-3a40c19bd987 (pós-review antagonista 3ed45e7f)
 ---
 
 # Leela · contrato da ponte do radar de WhatsApp
 
-Contrato normativo entre o motor que observa as comunidades e a Leela. É derivado do estudo de arquitetura do trace `c5a4a8bd-e9e4-4759-869c-a70f874c9c52`, que continua sendo a fonte do raciocínio, das medições contra o código real e das alternativas recusadas. Este documento não repete o estudo: ele fixa o que a implementação tem de obedecer. Divergência entre os dois está marcada abaixo, com o porquê.
+Contrato normativo entre o motor que observa as comunidades e a Leela. É derivado do estudo de arquitetura do trace `c5a4a8bd-e9e4-4759-869c-a70f874c9c52`, que continua sendo a fonte do raciocínio, das medições contra o código real e das alternativas recusadas. Este documento não repete o estudo: ele fixa o que a implementação tem de obedecer.
+
+**O estudo é registro histórico do raciocínio, e onde os dois divergirem este contrato vence** — inclusive nas seções que o estudo escreveu antes das decisões do dono e que continuam lá: o bloco de rules com escrita de cliente sobre `rotulos`, a recomendação de identidade por pseudônimo e a tabela de correspondência com o motor. A rodada anterior afirmava que a lista de divergências abaixo era completa, e não era: quem for implementar abre o estudo pelas tarefas e encontra desenho já derrubado. As divergências que o contrato registra por escrito estão marcadas ao longo do texto, e a regra geral acima cobre o resto.
 
 O épico dono é [[LEELA-E20-radar-comunidade]], e as regras citadas aqui vivem lá.
 
@@ -23,6 +26,19 @@ Contagem por hora, por dia e volume total são aditivas, então somam para qualq
 
 É o mesmo par que a casa já usa em `analyticsSnapshots/{YYYY-MM-DD}` (retrato diário) e `demografia/current` (agregado recomputado por inteiro). O radar copia as duas convenções em vez de criar uma terceira.
 
+### O dia é um recorte, e todo campo do item de dia é medido dentro dele
+
+O `dia` é a data no **fuso do organizador** — o mesmo `fusoMinutos` que viaja no envelope — e **todos os campos do item de dia são medidos dentro daquele recorte**: mensagens, mídias, links, participantes ativos, entradas, saídas, tamanho do grupo no fim e as 24 posições de `porHora`. Um campo de dia nunca carrega total de período.
+
+Está escrito assim porque o motor hoje não entrega assim, e o caminho errado é plausível. No código do fork, `total`, `media_count`, `link_count`, `joins`, `leaves` e `member_count.end` são contagens sobre a janela `since..until` inteira; a única série por dia que existe, `message_volume.per_day`, agrupa por `date(timestamp, 'unixepoch')`, ou seja, em **UTC**; e o histograma de horas aplica o fuso (`strftime('%H', timestamp + offset)`). A tabela de correspondência do estudo (linha 334) mapeia justamente esses campos de período, e **vale só para o item de janela**.
+
+Duas consequências que a implementação tem de tratar como requisito, não como detalhe:
+
+1. **Montar um lote de dias com os números do período grava o total do mês dentro de cada dia**, e a invariante `soma(porHora) == mensagens` não pega, porque os dois lados vêm da mesma fonte errada. O painel mostraria trinta dias idênticos sem nada reclamar na borda.
+2. **Misturar o dia em UTC com as horas no fuso local produz recusa de dado correto.** Em Brasília, toda mensagem entre 21h e 23h59 do dia local cai no dia seguinte em UTC, que é a faixa de pico de uma comunidade de corrida. A ingestão devolveria 422 quase todo dia com conversa à noite, e quem depurasse iria procurar o defeito na contagem.
+
+O recorte por dia no fuso local é trabalho novo do lado do motor, declarado na S2002-T3. Enquanto ele não existir, não há lote de dias para publicar — publicar dia com número de período é pior do que não publicar.
+
 ## Coleções
 
 ```
@@ -32,11 +48,14 @@ tenants/{tenantId}/radarGrupos/{grupoHash}
 tenants/{tenantId}/radarGrupos/{grupoHash}/dias/{YYYY-MM-DD}
 tenants/{tenantId}/radarGrupos/{grupoHash}/janelas/{7d|30d|90d}
 tenants/{tenantId}/radarFrota/{7d|30d|90d}
+tenants/{tenantId}/radarVinculos/{participanteHash}
 ```
 
 `radarInstancias/{instanciaId}` é o registro da instância e a marca d'água: `tenantId`, `status`, `ultimoSeq`, `ultimoDiaPublicado`, `ultimoContatoEm`, `versaoSchema`, `aceiteTermo`, `criadoEm`, `atualizadoEm`. É contra ele que a ingestão confere o tenant, e dele que o painel tira o aviso de atraso.
 
 `radarGrupos/{grupoHash}` guarda `nomeGrupo`, `membrosAtuais`, `primeiroDia`, `ultimoDia`, `radarExpurgadoEm` e `clubeSlug` opcional, que é o que liga a comunidade do WhatsApp ao clube da Leela.
+
+`radarVinculos/{participanteHash}` é o único documento do conjunto que nasce de um gesto humano, e não do motor: `nomeManual` (a correção que o admin digita), `atletaId` ou `membroId` quando o admin concilia o participante com alguém do cadastro, `vinculadoPor`, `vinculadoEm` e `origemNome`. Ele é escrito por Function, nunca pelo cliente, e o motor não o lê nem o recebe de volta — nada flui para o lado local. As regras dele são a RN-532 (o nome) e a RN-533 (o vínculo).
 
 Os dados ficam sob `tenants/`, e não sob `clubes/`, porque o catch-all de subcoleção de clube é fechado por decisão declarada. A tela mora na rota do clube e encontra os documentos pelo `clubeSlug`.
 
@@ -52,13 +71,23 @@ Uma requisição carrega **ou** um lote de dias **ou** um lote de janelas, nunca
 
 Envelope comum: `versaoSchema`, `instanciaId`, `tenantId`, `publishSeq`, `computadoEm`, `fusoMinutos`, `tipo`, `itens`.
 
-Item de dia: `grupoHash`, `nomeGrupo`, `dia`, `cobertura`, `mensagens`, `midias`, `links`, `participantesAtivos`, `membrosFim`, `entradas`, `saidas`, `porHora` (24 inteiros).
+Item de dia: `grupoHash`, `nomeGrupo`, `dia`, `cobertura` (opcional), `mensagens`, `midias`, `links`, `participantesAtivos`, `membrosFim`, `entradas`, `saidas`, `porHora` (24 inteiros). Todos medidos no recorte daquele dia, no fuso do organizador.
 
-Item de janela: `grupoHash`, `janela`, `de`, `ate`, `mensagens`, `cobertura`, `palavras[{palavra, n, remetentes}]`, `participantes[{hash, nome, posicao, n}]`, `porDiaSemana` (7 inteiros), `porHora` (24 inteiros). O lote de janelas pode carregar `frota`, com o mesmo shape agregado por organizador.
+Item de janela: `grupoHash`, `janela`, `de`, `ate`, `mensagens`, `cobertura` (opcional), `palavras[{palavra, n, remetentes}]`, `participantes[{hash, nome, diasAtivos, posicao, n}]`, `porDiaSemana` (7 inteiros), `porHora` (24 inteiros). O lote de janelas pode carregar `frota`, com o mesmo shape agregado por organizador.
 
-**Divergência do estudo, registrada.** O item de participante ganha o campo `nome`, que é o nome de exibição do WhatsApp, por decisão do dono (RN-521). O `hash` continua sendo a chave estável de continuidade entre períodos, porque nome muda e chave não. `jid`, telefone e qualquer identificador de contato seguem descartados na origem e não existem no tipo (RN-523). O `nome` tem tamanho máximo declarado no schema.
+O campo de origem de `porHora`, nos dois itens, é o histograma **com fuso aplicado** — `peak_hours_local` no JSON do motor, nunca `peak_hours`, que é UTC. Os dois campos convivem no mesmo objeto e têm a mesma forma, então pegar o errado não aparece numa inspeção rápida. O teste de projeção usa fixture com fuso diferente de zero, que é a única condição em que as duas listas divergem e o erro fica visível.
 
-O campo `remetentes` por palavra não existe hoje no cálculo do motor. É trabalho novo, pequeno, e está na tarefa S2002-T3.
+**Divergência do estudo, registrada.** O item de participante ganha o campo `nome`, por decisão do dono (RN-521). O `hash` continua sendo a chave estável de continuidade entre períodos, porque nome muda e chave não. `jid`, telefone e qualquer identificador de contato seguem descartados na origem e não existem no tipo (RN-523). O `nome` tem tamanho máximo declarado no schema, **é opcional** e obedece à RN-532 na origem e na forma.
+
+### De onde vem o `nome`, e o que ele pode não ser
+
+O publicador usa o `notify_name` do participante, que é o nome que ele mesmo mostra na comunidade, e **não** o `display_name`. Os dois existem na tabela `contacts` do motor e o cálculo hoje resolve `coalesce(display_name, notify_name, verified_name)`, com o `display_name` descrito no próprio esquema como "nome no catálogo local / pushName": é o catálogo da máquina do organizador, não o nome público de quem falou. Num chip novo o catálogo tende a estar vazio e os dois coincidem, o que faz a diferença passar despercebida até o dia em que o organizador parear um número que já tinha agenda. A ordem fica fixada aqui: `notify_name`, e ausente quando ele não existe.
+
+`nome` ausente é caso normal, não erro — o motor devolve `string | null` porque a origem é um `LEFT JOIN contacts`. O lote não é recusado por isso e a tela tem rótulo próprio para a linha sem nome (RN-532).
+
+`nome` também é a única string livre que atravessa a fronteira, e o schema fechado não protege contra **valor** ruim: ele bloqueia um campo `telefone` e deixa passar `nome: "+55 11 98888-7777"`. Quem usa o número como nome de exibição não é raro, e conta business preenche `verified_name` com o que quiser. Por isso existe a invariante de forma de telefone na tabela abaixo, e por isso a prova da tarefa do publicador confere valor, não campo.
+
+**Lacunas do motor que a S2002-T3 tem de fechar antes de existir payload.** A rodada anterior declarava uma só, e a lista real é maior: recorte por dia no fuso local, mídias e links por dia, entradas e saídas por dia, participantes ativos por dia, `diasAtivos` por participante, `cobertura` (ver adiante) e `remetentes` por palavra. Nenhuma delas é grande sozinha; juntas são uma tarefa de métricas por dia, separada da tarefa do publicador desde esta rodada.
 
 ## Invariantes conferidos na borda
 
@@ -67,15 +96,20 @@ A ingestão recusa antes de escrever qualquer coisa. Validar na fronteira é mai
 | Invariante | Resposta se quebrar |
 |---|---|
 | Schema fechado: campo desconhecido no payload | 400 `SCHEMA_INVALIDO` |
-| `soma(porHora) == mensagens` | 422 `INVARIANTE_QUEBRADA` |
+| `soma(porHora) == mensagens`, os dois medidos no mesmo recorte de dia e no mesmo fuso | 422 `INVARIANTE_QUEBRADA` |
 | `porHora` com 24 inteiros não negativos; `porDiaSemana` com 7 | 422 |
 | `tenantId` diferente do registrado em `radarInstancias/{instanciaId}` | 403 `TENANT_NAO_CONFERE` |
 | `versaoSchema` desconhecida | 400 `SCHEMA_DESCONHECIDO` |
-| `dia` fora do formato `YYYY-MM-DD`, ou no futuro | 422 |
+| `dia` fora do formato `YYYY-MM-DD`, ou no futuro pelo fuso do envelope | 422 |
 | String livre além de `palavra` (mínimo 3 letras, sem dígito), `nomeGrupo` e `nome` do participante | 400 |
+| `nome` que, removidos espaços e pontuação, tenha 8 ou mais dígitos, ou comece com `+` | 400 `NOME_COM_FORMA_DE_TELEFONE` |
+| `cobertura` presente e fora do intervalo de 0 a 1 | 422 |
+| `diasAtivos` maior que o número de dias da janela | 422 |
 | Lote acima de 100 itens | 413 |
 
-O schema fechado é a trava mais importante do desenho, e o motivo está na RN-523.
+`nome` ausente e `cobertura` ausente **não** quebram invariante: são estados previstos, tratados na tela.
+
+O schema fechado é a trava mais importante do desenho, e o motivo está na RN-523. A invariante de forma de telefone existe porque o schema fechado sozinho não fecha a porta: ele confere chaves, e o furo estava no valor de `nome`. Os três casos do teste são `"+55 11 98888-7777"` e `"5511988887777"`, que têm de ser recusados, e `"Maria"`, que passa.
 
 ## Idempotência: livro-razão por entrega e sequência monótona
 
@@ -98,6 +132,18 @@ Cada dia é gravado por substituição total no documento cujo identificador é 
 Ao acordar, o publicador compara `ultimoDiaPublicado` com hoje e enfileira o que faltou, em lotes de 100. Como o dia é idempotente por identificador, repetir não faz mal.
 
 Duas sutilezas evitam número errado. O publicador **sempre republica os últimos 3 dias**, porque o espelho continua crescendo para trás quando o histórico chega na reconexão; o número de um dia estabiliza em 72 horas em vez de congelar cedo e errado. E o campo `cobertura` carrega a fração do dia em que o listener esteve conectado: abaixo de 0,9 a tela marca o dia como parcial.
+
+### `cobertura` não tem fonte hoje, e nasce anulável por isso
+
+O estudo dizia que a cobertura sairia "do registro de saúde que o supervisor do fork já mantém". Esse registro não existe com resolução histórica. O que o motor guarda é `connection_status` e `last_disconnect` em `runtime_state`, que é tabela chave-valor sobrescrita a cada evento, e dois eventos de auditoria (`connection_degraded`, disparado só depois de N falhas seguidas, e `connection_recovered`). A tabela `channel_state`, que tem coluna `health`, é do canal de e-mail. Nenhuma das migrations guarda janela de conexão por dia.
+
+O caso que a cobertura existe para pegar é exatamente o que não deixa rastro: uma queda de dez minutos que reconecta na primeira tentativa. Preencher o campo com número inventado é pior do que não ter campo, porque ele existe para ser honesto.
+
+Então, nesta versão do contrato:
+
+- `cobertura` é **opcional** no schema da versão 1. Ausente significa desconhecida, e a tela diz isso em vez de fingir 1,0.
+- O estado "dia parcial" fica atrás da **presença** do campo com valor abaixo de 0,9, nunca atrás de um valor default.
+- A fonte de verdade a construir é uma tabela `connection_log(instance_id, at, event)` no motor, alimentada nos dois ramos de `connection.update` que já existem, mais a consulta que integra o tempo conectado por dia no fuso local. É trabalho declarado da S2002-T3, e o teste dele é derrubar a conexão por 3h num dia sintético de 24h e assertar cobertura entre 0,86 e 0,88.
 
 Limitação declarada, não resolvida: se o participante falou enquanto o listener estava fora e o WhatsApp não entregou aquele histórico na reconexão, o dado se perdeu e ninguém consegue saber. A cobertura é a única defesa honesta contra isso, e ela é aproximada.
 
@@ -144,7 +190,14 @@ match /tenants/{tenantId}/radarFrota/{janela} {
   allow read: if isTenantWriter(tenantId) || isPlatformAdmin();
   allow write: if false;
 }
+
+match /tenants/{tenantId}/radarVinculos/{participanteHash} {
+  allow read: if isTenantWriter(tenantId) || isPlatformAdmin();
+  allow write: if false;
+}
 ```
+
+`radarVinculos` é escrito por Function mesmo sendo o único documento que nasce de gesto do admin: a alternativa seria abrir escrita de cliente numa coleção que carrega nome de pessoa e ligação com o cadastro, que é a classe de dado onde a casa menos aceita cliente escrevendo. O caminho é a função de conciliação da S2008.
 
 Três regras da casa que o bloco obedece, e cada uma custou um defeito. `allow write: if false` significa negado para todo cliente, administrador de plataforma incluído: em Firestore os matches compõem por OR, então `if isPlatformAdmin()` re-concederia escrita de cliente sobre agregados. Subcoleção sensível ganha match próprio, nunca catch-all. E `isTenantWriter` na leitura, e não `isTenantMember`, porque retrato de comunidade é informação de gestão, na mesma classe das coleções de dinheiro e de dado pessoal.
 
@@ -162,13 +215,21 @@ O registro de incidente é o que já existe: a união de tipos de expurgo ganha 
 
 O carimbo `radarExpurgadoEm` fica no documento do grupo, com timestamp de servidor, e **sem pulo cego**: grupo já carimbado ainda leva uma sondagem de um documento, porque dia novo pode ter chegado depois do último expurgo.
 
+O expurgo tem uma quarta responsabilidade desde esta rodada: **janela parada expira**. Documento em `janelas/` e em `radarFrota/` sem republicação há mais de 120 dias é apagado, porque a maior janela cobre 90 dias e uma parada de 120 descreve um período que já saiu inteiro do alcance do produto. Sem isso, instância morta deixa nome de participante congelado para sempre num documento que ninguém substitui (RN-536).
+
+O expurgo **não** olha o estado do clube. Clube fora do ar mantém o radar, que é a decisão do dono de 09/08 sobre clube excluído reter a base, e o acesso passa a ser pela lista de radares do tenant, para o dado não ficar vivo e inalcançável ao mesmo tempo (RN-534).
+
 Prazos em RN-524. O TTL nativo do Firestore foi considerado e recusado: exclusão por esforço, sem hora garantida, sem carimbo e sem trilha, que é justamente a prova de cumprimento que o runbook valoriza.
 
 ## Mapa instância ↔ tenant
 
 Um para um, e é a fronteira de locação inteira. O identificador de instância do motor é a chave do documento em `radarInstancias`, e o `tenantId` gravado ali é a única autoridade sobre a que organizador aquela instância pertence. A ingestão confere o par a cada requisição, antes de qualquer escrita, e recusa com 403 quando ele não bate. O sal usado no hash de participante é por organizador e nunca sai da máquina que roda a instância, o que significa que a Leela sozinha não reidentifica ninguém a partir do hash.
 
-Esquecimento de participante se resolve nos dois lados: o hash entra em lista de bloqueio local e a próxima publicação de janela já sai sem ele. Como o sal fica fora da nuvem, a exclusão depende da máquina do organizador estar viva, e isso é limitação declarada.
+A máquina que roda a instância é do organizador, e ele é o controlador do texto bruto que mora nela (RN-530). Isso não é detalhe de operação: é a frase que sustenta a promessa de que mensagem, telefone e identificador morrem fora da Leela. Mudar a hospedagem muda o sujeito dessa frase, e é por isso que o F2 reabre a frente jurídica em vez de herdá-la calada.
+
+Esquecimento de participante se resolve nos dois lados, e agora os dois existem. Do lado local, o hash entra em lista de bloqueio e a próxima publicação de janela já sai sem ele. Do lado da nuvem, uma função de exclusão invocada pelo organizador ou pela operação remove o participante das janelas correntes e do `radarVinculos` pelo Admin SDK, e carimba o pedido (RN-536).
+
+O lado da nuvem passou a ser obrigatório por dois motivos. O mecanismo antigo dependia de a máquina estar viva **e** de haver próxima publicação: instância morta ou radar abandonado congela o nome dentro das janelas, que são substituídas e não expiram. E o argumento que justificava o sal local — a Leela sozinha não reidentifica ninguém a partir do hash — perdeu força no dia em que o nome real passou a viajar no mesmo documento, ao lado do hash. O sal continua fora da nuvem porque protege a **reidentificação retroativa**, não porque o nome esteja escondido.
 
 ## O que este contrato proíbe
 
@@ -177,6 +238,9 @@ Esquecimento de participante se resolve nos dois lados: o hash entra em lista de
 - Pacote de terceiro que se venda como proteção contra banimento. O precedente é o caso de abril de 2026, com credenciais de sessão e mensagens exfiltradas por um pacote com 56 mil downloads.
 - Índice composto novo e `fieldOverride` novo (RN-527).
 - Coleção do radar sob `clubes/`.
+- Lote de dias montado com número de período, e dia em UTC misturado com hora em fuso local.
+- `nome` com forma de telefone, ainda que o campo se chame `nome` (RN-523 pelo valor, não só pela chave).
+- Escrita de cliente em qualquer coleção do radar, `radarVinculos` incluída.
 
 ## Vizinhos
 
