@@ -239,3 +239,21 @@ outra lane pode estar na mesma árvore.
 | Landing (frase da sexta recusa) | ❌ **fora do ar** | bundle idêntico byte a byte ao baseline de 08/08 23:37 (mesmo hash); a frase nova ausente nos 22 chunks de `/minha-conta` |
 | Divergência | ⚠️ **explicada** | functions no ar + landing fora do ar = o cliente antigo cai no fallback `indisponivel` para a sexta recusa — degradação graciosa, sem crash, alcance estreito |
 | Board | ⚠️ **nota da REV-CORTE parcialmente desatualizada** (T14, lado functions) | não editado — sem card `DEPLOY-CORTE`; registrado aqui |
+
+---
+
+## Adendo · completado pela lane DEPLOY-CORTE-RET (09/08, mesma noite)
+
+O que esta medição registrou como faltante foi resolvido. Handoff completo da lane de deploy:
+`.nirvana/handoffs/leela-deploy-corte-ret-20260809.md`. Resumo, medido pelo ar (não pela memória):
+
+| Frente | Estado agora | Prova |
+|---|---|---|
+| Painel (OVERLAY + fix crítico `d9394f51` + PARSE) | ✅ **NO AR desde 09/08 ~23:55** | `index-CfBX04Vv.js` → `index-_EVW2ljU.js`; as 4 strings do PARSE presentes no JS baixado; `d9394f51` provado por comparação de build contra o commit pai (`e0d9b001`) — bundles diferem no byte 3530, tamanhos diferentes |
+| Landing (frase da sexta recusa) | ✅ **NO AR desde 09/08 ~00:0x** | `main-app-e695e72d2f035e50` → `main-app-a3edf82a1b6d0150`; "Fale com o time Leela para liberar o seu acesso" presente no chunk `app/(public)/minha-conta/page-9fa6ff203c4c7b3f.js`, achado fora dos chunks referenciados diretamente pelo HTML (estava embutido na carga de flight data do App Router) |
+| Divergência functions×landing | ✅ **fechada** | a landing agora reconhece `conta_inelegivel` e mostra a frase nomeada, em vez do fallback genérico `indisponivel` |
+
+Build feito num worktree pinado em `9fbcd9ab` (o mesmo HEAD que este documento mediu), nunca na
+árvore principal. Deploy só de hosting, painel e landing, nessa ordem — nenhum comando tocou
+functions, rules, índices ou storage. Board atualizado nos quatro cards que a nota acima citava
+(`S1242-T1`, `S1242-T5`, `S1242-T14`, `S1234-T7`).
