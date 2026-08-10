@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leela — Engajamento (estudo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta name="fonte-alternativa" content="Switzer/General Sans indisponíveis no bundle">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600;1,700;1,800&family=Geist:wght@400;500;600;700;800&family=Lato:wght@400;700;900&family=Rubik:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Varela+Round&family=Barlow:wght@400;500;600;700;800&family=Ubuntu:wght@400;500;700&family=Baloo+Bhai+2:wght@400;500;600;700;800&family=Fugaz+One&family=Work+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Chakra+Petch:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700;800&family=Syne:wght@400..800&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 9999px;
+  --card-radius: var(--radius-lg);
+  --sidebar-width: 240px;
+  --icon-stroke: 1.75;
+  --motion-duration-fast: 150ms;
+  --motion-easing-default: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html.dc-anim [data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1) }
+html.dc-anim [data-reveal].dc-in { opacity: 1; transform: none }
+@media (prefers-reduced-motion: reduce) { html.dc-anim [data-reveal] { opacity: 1; transform: none; transition: none } }
+@keyframes dcFade2 { from { opacity: 0 } to { opacity: 1 } }
+@keyframes dcArea { from { opacity: 0; transform: scaleY(.55) } to { opacity: 1; transform: scaleY(1) } }
+@keyframes dcArea2 { from { opacity: 0; transform: scaleY(.55) } to { opacity: 1; transform: scaleY(1) } }
+@keyframes dcBar2 { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+:root { --peso-display: 800; --peso-forte: 700; --peso-medio: 600; --peso-suave: 500 }
+
+@keyframes dcFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes dcPop { from { opacity: 0; transform: translateY(-6px) scale(0.98) } to { opacity: 1; transform: none } }
+@keyframes dcRise { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+@keyframes dcBar { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes dcGrow { from { opacity: 0; transform: scaleY(0.2) } to { opacity: 1; transform: scaleY(1) } }
+
+/* ---- tema DARK WINE (novo — default) ---------------------------------- */
+:root:not([data-theme]), [data-theme="dark-wine"] {
+  --font-family-display: var(--dw-font-display, var(--dw-font, "Geist")), sans-serif;
+  --font-family-ui: var(--dw-font-text, var(--dw-font, "Geist")), sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --primary-300: #E85662; --primary-400: #C42C3A; --primary-500: #7A1520;
+  --accent-300: #DDF594; --accent-400: #C8E84A; --accent-500: #B3D424;
+  --peso-display: 800; --peso-forte: 700; --peso-medio: 600; --peso-suave: 500;
+  --card-blur: blur(14px);
+  --chart-accent-2: oklch(0.75 0.13 75);
+  --surface-base: #080306;
+  --surface-raised: rgba(28, 11, 16, 0.55);
+  --surface-overlay: rgba(255, 255, 255, 0.028);
+  --surface-high: rgba(255, 255, 255, 0.055);
+  --text-primary: #F7F2F3; --text-secondary: #C9B6BA; --text-tertiary: #9A8388; --text-disabled: #6A585C;
+  --text-brand: #C8E84A;
+  --border-subtle: #1F0F14; --border-default: #2C161C; --border-strong: #48252C;
+  --border-brand: #C8E84A; --border-focus: #C8E84A;
+  --action-primary: #C8E84A; --action-primary-hover: #D5F065; --action-primary-fg: #12160A;
+  --action-secondary: #1C0C11; --action-secondary-hover: #281218; --action-secondary-fg: #F7F2F3;
+  --action-brand-tint: rgba(200,232,74,0.12); --action-brand-tint-fg: #C8E84A;
+  --feedback-success: #A3D93B; --feedback-success-fg: #C8E84A; --feedback-success-surface: #1B2410;
+  --feedback-danger: #FF5E5C; --feedback-danger-fg: #FF8888; --feedback-danger-surface: #3A1315;
+  --feedback-warning: #F2BE1B; --feedback-warning-fg: #FCD34D; --feedback-warning-surface: #33260B;
+  --feedback-info-fg: #F9619A; --feedback-info-surface: #351322;
+  --countdown-bg: radial-gradient(120% 85% at 100% 0%, rgba(196,44,58,.24), transparent 58%), radial-gradient(100% 100% at 0% 100%, rgba(200,232,74,.05), transparent 60%);
+  --countdown-border: rgba(200,232,74,0.16);
+  --countdown-number-gradient: linear-gradient(135deg, #DDF594, #B3D424);
+  --page-glow: radial-gradient(95% 65% at 32% -5%, rgba(122,21,32,.46), transparent 62%), radial-gradient(70% 60% at 105% 105%, rgba(122,21,32,.20), transparent 60%);
+  --chart-track: #1E0C13; --chart-accent: #C8E84A;
+  --thumb-corrida: linear-gradient(135deg, #D0434F, #38070E);
+  --thumb-teste: linear-gradient(135deg, #A82330, #1A0407);
+  --elevation-1: 0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.05);
+  --elevation-2: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --elevation-rail: 0 8px 32px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --glow-brand: 0 0 0 1px rgba(200,232,74,0.25), 0 0 22px 2px rgba(200,232,74,0.38);
+}
+
+/* ---- tema DARK SEA (navy + prateado) ---------------------------------- */
+[data-theme="dark-sea"] {
+  --font-family-display: var(--dw-font-display, var(--dw-font, "Geist")), sans-serif;
+  --font-family-ui: var(--dw-font-text, var(--dw-font, "Geist")), sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --peso-display: 800; --peso-forte: 700; --peso-medio: 600; --peso-suave: 500;
+  --card-blur: blur(14px);
+  --primary-300: #6E9BD6; --primary-400: #3D6FB4; --primary-500: #16305C;
+  --accent-300: #F2F5F8; --accent-400: #D8E0E8; --accent-500: #B4C2D2;
+  --surface-base: #04070C;
+  --surface-raised: rgba(14, 26, 44, 0.55);
+  --surface-overlay: rgba(255, 255, 255, 0.028);
+  --surface-high: rgba(255, 255, 255, 0.055);
+  --text-primary: #F3F6FA; --text-secondary: #B7C3D2; --text-tertiary: #8394A8; --text-disabled: #566475;
+  --text-brand: #D8E0E8;
+  --border-subtle: #0F1A2A; --border-default: #17263B; --border-strong: #2C4260;
+  --border-brand: #D8E0E8; --border-focus: #D8E0E8;
+  --action-primary: #D8E0E8; --action-primary-hover: #ECF1F6; --action-primary-fg: #0A1220;
+  --action-secondary: #101C2E; --action-secondary-hover: #17263B; --action-secondary-fg: #F3F6FA;
+  --action-brand-tint: rgba(216,224,232,0.12); --action-brand-tint-fg: #D8E0E8;
+  --feedback-success: #5FC9A0; --feedback-success-fg: #86E0BC; --feedback-success-surface: #0C2320;
+  --feedback-danger: #FF6B72; --feedback-danger-fg: #FF9298; --feedback-danger-surface: #2A1219;
+  --feedback-warning: #E9B84A; --feedback-warning-fg: #F6CE72; --feedback-warning-surface: #2A2210;
+  --feedback-info-fg: #7FB6FF; --feedback-info-surface: #12233A;
+  --countdown-bg: radial-gradient(120% 85% at 100% 0%, rgba(61,111,180,.28), transparent 58%), radial-gradient(100% 100% at 0% 100%, rgba(216,224,232,.05), transparent 60%);
+  --countdown-border: rgba(216,224,232,0.16);
+  --countdown-number-gradient: linear-gradient(135deg, #F2F5F8, #A9BACE);
+  --page-glow: radial-gradient(95% 65% at 32% -5%, rgba(22,48,92,.72), transparent 62%), radial-gradient(70% 60% at 105% 105%, rgba(22,48,92,.34), transparent 60%);
+  --chart-track: #132236; --chart-accent: #D8E0E8; --chart-accent-2: #C8E84A;
+  --thumb-corrida: linear-gradient(135deg, #4E85C8, #0B1A31);
+  --thumb-teste: linear-gradient(135deg, #3D6FB4, #060E1A);
+  --elevation-1: 0 1px 2px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,255,255,0.05);
+  --elevation-2: 0 4px 16px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --elevation-rail: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --glow-brand: 0 0 0 1px rgba(216,224,232,0.22), 0 0 22px 2px rgba(216,224,232,0.30);
+}
+
+/* ---- tema BRASA (escuro, default do produto) -------------------------- */
+[data-theme="brasa"] {
+  --font-family-display: var(--dw-font-display, var(--dw-font, "Exo 2")), sans-serif;
+  --font-family-ui: var(--dw-font-text, var(--dw-font, "Exo 2")), sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --primary-300: #FF8244; --primary-400: #FF6520; --primary-500: #FF450C;
+  --accent-300: #FF8244; --accent-400: #FF6520; --accent-500: #FF450C;
+  --surface-base: #0C0C0C;
+  --surface-raised: #161616;
+  --surface-overlay: #1C1C1C;
+  --surface-high: #292929;
+  --text-primary: #F9F9F9; --text-secondary: #BFBFBF; --text-tertiary: #999999; --text-disabled: #545454;
+  --text-brand: #FF450C;
+  --border-subtle: #242424; --border-default: #383838; --border-strong: #737373;
+  --border-brand: #FF450C; --border-focus: #FF6520;
+  --action-primary: #D63500; --action-primary-hover: #DC3700; --action-primary-fg: #FFFFFF;
+  --action-secondary: #242424; --action-secondary-hover: #383838; --action-secondary-fg: #F9F9F9;
+  --action-brand-tint: rgba(255,69,12,0.10); --action-brand-tint-fg: #FF6520;
+  --feedback-success: #2D9315; --feedback-success-fg: #5CB73B; --feedback-success-surface: #0D1F0A;
+  --feedback-danger: #FF2F2D; --feedback-danger-fg: #FF5E5C; --feedback-danger-surface: #331010;
+  --feedback-warning: #E8B100; --feedback-warning-fg: #E8B100; --feedback-warning-surface: #342A0A;
+  --feedback-info-fg: #F9619A; --feedback-info-surface: #351322;
+  --countdown-bg: radial-gradient(120% 80% at 100% 0%, rgba(255,69,12,.25), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(237,53,133,.18), transparent 60%);
+  --countdown-border: rgba(255, 69, 12, 0.25);
+  --countdown-number-gradient: linear-gradient(135deg, #FF8244, #FF450C);
+  --page-glow: none;
+  --chart-track: #1C1C1C; --chart-accent: #FF450C; --chart-accent-2: #C8E84A;
+  --thumb-corrida: linear-gradient(135deg, #FF450C, #8C2100);
+  --thumb-teste: linear-gradient(135deg, #9C7600, #4E3A00);
+  --elevation-1: 0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04);
+  --elevation-2: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --elevation-rail: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.08);
+  --glow-brand: 0 0 0 1px rgba(255,69,12,0.30), 0 0 22px 2px rgba(255,69,12,0.42);
+}
+
+/* ---- tema WINE (claro) ------------------------------------------------ */
+[data-theme="wine"] {
+  --font-family-display: var(--dw-font-display, var(--dw-font, "Syne")), sans-serif;
+  --font-family-ui: var(--dw-font-text, var(--dw-font, "Figtree")), sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --primary-300: #E85662; --primary-400: #C42C3A; --primary-500: #7A1520;
+  --accent-300: #CFEE62; --accent-400: #C8E84A; --accent-500: #B3D424;
+  --surface-base: #FDFAF7;
+  --surface-raised: #FFFFFF;
+  --surface-overlay: #F5F1EC;
+  --surface-high: #EAE4DD;
+  --text-primary: #262220; --text-secondary: #57514B; --text-tertiary: #6E6862; --text-disabled: #A8A199;
+  --text-brand: #7A1520;
+  --border-subtle: #EAE4DD; --border-default: #D8D1C8; --border-strong: #8A837B;
+  --border-brand: #7A1520; --border-focus: #7A1520;
+  --action-primary: #7A1520; --action-primary-hover: #C42C3A; --action-primary-fg: #FFFFFF;
+  --action-secondary: #F5F1EC; --action-secondary-hover: #EAE4DD; --action-secondary-fg: #262220;
+  --action-brand-tint: rgba(122,21,32,0.08); --action-brand-tint-fg: #7A1520;
+  --feedback-success: #15803D; --feedback-success-fg: #166534; --feedback-success-surface: #DCFCE7;
+  --feedback-danger: #CC2222; --feedback-danger-fg: #880808; --feedback-danger-surface: #FFDDDD;
+  --feedback-warning: #B45309; --feedback-warning-fg: #78350F; --feedback-warning-surface: #FEF3C7;
+  --feedback-info-fg: #770F3E; --feedback-info-surface: #FCC9DE;
+  --countdown-bg: radial-gradient(120% 80% at 100% 0%, rgba(122,21,32,.18), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(237,53,133,.12), transparent 60%);
+  --countdown-border: rgba(122, 21, 32, 0.25);
+  --countdown-number-gradient: linear-gradient(135deg, #C42C3A, #7A1520);
+  --page-glow: none;
+  --chart-track: #EAE4DD; --chart-accent: #7A1520; --chart-accent-2: #7E9B12;
+  --thumb-corrida: linear-gradient(135deg, #D0434F, #38070E);
+  --thumb-teste: linear-gradient(135deg, #D97706, #78350F);
+  --elevation-1: none;
+  --elevation-2: none;
+  --elevation-rail: 0 10px 30px -6px rgba(38,7,13,0.22), 0 2px 8px -2px rgba(38,7,13,0.12);
+  --glow-brand: 0 0 0 1px rgba(122,21,32,0.22), 0 0 20px 2px rgba(122,21,32,0.28);
+}
+
+html { color-scheme: dark; scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
+[data-theme="wine"] { color-scheme: light; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 9999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Breakpoints do DS (tailwind-preset.ts): sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536.
+   lg é o ponto de colapso do shell: acima, rail fixo; abaixo, drawer off-canvas. */
+@media (min-width: 1024px) {
+  [data-burger], [data-scrim] { display: none !important; }
+}
+@media (max-width: 1023.98px) {
+  [data-nav] { position: fixed !important; top: 0 !important; left: 0 !important; height: 100vh !important; margin: 0 !important; border-radius: 0 !important; width: 248px !important; transform: translateX(-100%); transition: transform 240ms var(--motion-easing-default); z-index: 80 !important; }
+  [data-shell][data-drawer="1"] [data-nav] { transform: translateX(0); }
+  [data-rail-toggle] { display: none !important; }
+  [data-rail-tip] { display: none !important; }
+  [data-grid="main"] { grid-template-columns: minmax(0,1fr) !important; }
+  [data-grid="main"] > * { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 767.98px) {
+  [data-pad] { padding-left: 20px !important; padding-right: 20px !important; }
+  [data-h1] { font-size: 1.875rem !important; }
+  [data-kpi4] { grid-template-columns: repeat(2, minmax(0,1fr)) !important; row-gap: 22px !important; }
+  [data-split2] { grid-template-columns: minmax(0,1fr) !important; gap: 28px !important; }
+  [data-scrollx] { overflow-x: auto; }
+}
+@media (max-width: 479.98px) {
+  [data-kpi4] { grid-template-columns: minmax(0,1fr) !important; }
+  [data-legend2] { grid-template-columns: minmax(0,1fr) !important; }
+  [data-kpi4] > * { padding-left: 0 !important; padding-right: 0 !important; border-left: 0 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-nav] { transition: none !important; }
+}
+
+[data-rail-item] { position: relative; }
+[data-rail-tip] { opacity: 0; transform: translateX(-6px); pointer-events: none; transition: opacity 150ms, transform 150ms; }
+[data-rail-item]:hover [data-rail-tip] { opacity: 1; transform: translateX(0); }
+[data-rail-open="1"] [data-rail-tip] { display: none; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--surface-base); }
+body { -webkit-font-smoothing: antialiased; }
+svg { stroke-width: var(--icon-stroke); }
+a { color: var(--text-brand); text-decoration: none; }
+a:hover { color: var(--action-brand-tint-fg); text-decoration: underline; }
+</style>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#180A0E"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#C8E84A"/><rect x="38" y="38" width="10" height="10" rx="2.5" fill="#12160A"/><rect x="52" y="38" width="10" height="10" rx="2.5" fill="#12160A"/><rect x="38" y="52" width="10" height="10" rx="2.5" fill="#12160A"/><rect x="52" y="52" width="10" height="10" rx="2.5" fill="#12160A"/></svg></template>
+</helmet>
+
+<div data-shell="" data-drawer="{{ drawerAberto }}" style="display:flex; min-height:100vh; background:var(--surface-base); background-image:var(--page-glow); background-repeat:no-repeat; background-attachment:fixed; background-size:cover; font-family:var(--font-family-ui); color:var(--text-primary); transition:background-color 240ms var(--motion-easing-default)">
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <sc-if value="{{ drawerVisivel }}" hint-placeholder-val="{{ false }}">
+    <div data-scrim="" onClick="{{ fecharDrawer }}" aria-hidden="true" style="position:fixed; inset:0; z-index:70; background:rgba(4,1,3,0.62); animation:dcFade .24s ease-out both"></div>
+  </sc-if>
+
+  <nav aria-label="Navegação principal" data-nav="" data-rail-open="{{ railAberto }}" style="{{ estiloNav }}">
+      <button type="button" data-rail-toggle="" onClick="{{ alternarMenu }}" aria-label="{{ rotuloToggle }}" title="{{ rotuloToggle }}" style="position:absolute; top:34px; right:-16px; z-index:30; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; border-radius:9999px; background:var(--surface-base); color:var(--text-tertiary); cursor:pointer; box-shadow:var(--elevation-rail)" style-hover="background:var(--surface-high); color:var(--text-primary)">
+        <span aria-hidden="true" style="display:flex; align-items:center; justify-content:center; transform:{{ giroToggle }}; transition:transform 650ms cubic-bezier(0.2,0.8,0.2,1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+      </button>
+
+      <div style="position:relative; width:100%; height:42px; display:flex; align-items:center; justify-content:center; margin-bottom:18px; padding:0 14px; box-sizing:content-box">
+        <img src="packages/design-system/showcase/public/leela-icon.svg" alt="Leela" style="{{ estiloMarcaIcone }}">
+        <img src="packages/design-system/showcase/public/leela-logo-brasa.svg" alt="Leela" style="{{ estiloMarcaTexto }}">
+      </div>
+
+      <div style="flex:1; width:100%; display:flex; flex-direction:column; gap:10px; padding:34px 14px 0; overflow-y:auto; overflow-x:hidden">
+        <a href="#" aria-current="page" data-rail-item="" style="{{ estiloItemAtivo }}">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg></span>
+          <span style="{{ estiloRotulo }}">Visão Geral</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:var(--peso-medio); white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Visão Geral</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path></svg></span>
+          <span style="{{ estiloRotulo }}">Eventos</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:var(--peso-medio); white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Eventos</span>
+          <span style="{{ estiloBadge }}">2</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path></svg></span>
+          <span style="{{ estiloRotulo }}">Clubs</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:var(--peso-medio); white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Clubs</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+          <span style="{{ estiloRotulo }}">CRM</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:var(--peso-medio); white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">CRM</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"></path><path d="M8 6v8"></path></svg></span>
+          <span style="{{ estiloRotulo }}">Marcas</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:var(--peso-medio); white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Marcas</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+          <span style="{{ estiloRotulo }}">Configurações</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:var(--peso-medio); white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Configurações</span>
+        </a>
+      </div>
+
+
+      <div style="width:100%; padding:0 14px 4px; display:flex; align-items:center; gap:12px; justify-content:center; border-top:1px solid var(--border-subtle); padding-top:16px">
+        <span aria-hidden="true" style="position:relative; width:44px; height:44px; flex-shrink:0; border-radius:var(--radius-pill); display:flex; align-items:center; justify-content:center; font-size:0.875rem; font-weight:var(--peso-forte); background:var(--action-brand-tint); color:var(--action-brand-tint-fg)">VP<span style="position:absolute; right:1px; bottom:1px; width:10px; height:10px; border-radius:var(--radius-pill); background:var(--feedback-success); box-shadow:0 0 8px var(--feedback-success)"></span></span>
+        <span style="{{ estiloRodape }}">
+          <span style="display:block; font-size:0.8125rem; font-weight:var(--peso-forte); color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ nomeUsuario }}</span>
+          <span style="display:block; font-size:0.6875rem; color:var(--text-tertiary); white-space:nowrap">Ver perfil</span>
+        </span>
+      </div>
+  </nav>
+
+  <!-- ============================= MAIN ============================== -->
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column">
+
+    <header data-pad="" style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:32px 40px 0">
+      <div style="display:flex; align-items:flex-start; gap:14px; min-width:0">
+        <button type="button" data-burger="" onClick="{{ abrirDrawer }}" aria-label="Abrir menu" aria-expanded="{{ drawerExpandido }}" style="width:40px; height:40px; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:4px; border:none; border-radius:12px; background:var(--surface-overlay); color:var(--text-primary); cursor:pointer" style-hover="background:var(--surface-high)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"></path><path d="M4 12h16"></path><path d="M4 19h16"></path></svg></button>
+        <div style="min-width:0">
+        <h1 style="margin:0; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:2.5rem; letter-spacing:-0.01em; line-height:1.1; color:var(--text-primary)" data-h1="">Visão Geral</h1>
+        <p style="margin:8px 0 0; font-size:0.9375rem; color:var(--text-secondary)">Olá, <strong style="color:var(--text-brand); font-weight:var(--peso-forte)">{{ primeiroNome }}</strong>, aqui está o panorama do seu ecossistema.</p>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+        <sc-if value="{{ mostrarAlternador }}" hint-placeholder-val="{{ true }}">
+          <div role="group" aria-label="Tema" style="display:flex; align-items:center; gap:4px; padding:4px; border-radius:var(--radius-pill); border:1px solid var(--border-subtle); background:var(--surface-raised)">
+            <button type="button" onClick="{{ setBrasa }}" style="{{ estiloBrasa }}">Brasa</button>
+            <button type="button" onClick="{{ setWine }}" style="{{ estiloWine }}">Wine</button>
+            <button type="button" onClick="{{ setDarkWine }}" style="{{ estiloDarkWine }}">Dark Wine</button>
+            <button type="button" onClick="{{ setDarkSea }}" style="{{ estiloDarkSea }}">Dark Sea</button>
+          </div>
+        </sc-if>
+        <span style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:var(--radius-pill); border:1px solid var(--border-subtle); background:var(--surface-raised); font-size:0.8125rem; color:var(--text-secondary)">
+          <span aria-hidden="true" style="width:6px; height:6px; border-radius:var(--radius-pill); background:var(--feedback-success); box-shadow:0 0 8px var(--feedback-success)"></span>
+          Quinta-feira, 6 de Agosto <span style="color:var(--text-disabled)">•</span> 16:36
+        </span>
+      </div>
+    </header>
+
+    <div data-grid="main" data-pad="" style="display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:20px; align-items:stretch; padding:24px 40px 48px">
+      <div style="grid-column:1; display:flex; flex-direction:column; gap:20px; min-width:0">
+        <section aria-label="Próximo evento" style="display:flex; flex-direction:column; position:relative; overflow:hidden; border-radius:var(--card-radius); background-color:var(--surface-raised); background-image:var(--countdown-bg); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-2)">
+          <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path></svg> Próximo evento</h2>
+          <p style="margin:0 0 8px; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.25rem; line-height:1.2; letter-spacing:-0.015em; color:var(--text-primary); text-wrap:pretty">Corrida de Inverno Floripa 2026</p>
+          <p style="margin:0 0 20px; display:flex; align-items:center; gap:8px; font-size:0.8125rem; color:var(--text-tertiary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path></svg> 21 set <span style="color:var(--text-disabled)">•</span> Parque de Coqueiros, Florianópolis/SC</p>
+          <div data-kpi4="" style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px; padding:18px 0; border-top:1px solid var(--border-subtle); border-bottom:1px solid var(--border-subtle); margin-bottom:20px">
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.5rem; line-height:1; color:var(--text-brand)">46</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">dias restantes</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">91</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">inscritos</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">23%</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">ocupado</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">R$ 18.400</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">receita confirmada</span></div>
+          </div>
+          <div style="flex:1"></div>
+          <button type="button" style="width:100%; height:48px; display:flex; align-items:center; justify-content:center; gap:10px; border:none; border-radius:var(--radius-md); background:var(--action-primary); color:var(--action-primary-fg); font-family:var(--font-family-ui); font-size:0.9375rem; font-weight:var(--peso-forte); cursor:pointer" style-hover="background:var(--action-primary-hover)">Gerenciar evento <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+        </section>
+
+        <section aria-label="Clubs" style="border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-1); display:flex; flex-direction:column">
+          <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path></svg> Clubs</h2>
+          <div style="display:flex; align-items:center; gap:14px; padding-bottom:18px; border-bottom:1px solid var(--border-subtle); margin-bottom:18px">
+            <span aria-hidden="true" style="width:44px; height:44px; flex-shrink:0; border-radius:9999px; display:flex; align-items:center; justify-content:center; font-size:0.8125rem; font-weight:var(--peso-forte); background-image:var(--thumb-corrida); color:#fff">FC</span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.9375rem; font-weight:var(--peso-forte); color:var(--text-primary)">Floripa Run Coletivo</span>
+              <span style="display:block; margin-top:3px; font-size:0.8125rem; color:var(--text-tertiary)">14 membros ativos</span>
+            </span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-bottom:20px">
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">18</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">membros ativos</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">342</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">check-ins</span></div>
+          </div>
+          <div style="flex:1"></div>
+          <button type="button" style="width:100%; height:44px; display:flex; align-items:center; justify-content:center; gap:10px; border:none; border-radius:var(--radius-md); background:var(--surface-high); color:var(--text-primary); font-family:var(--font-family-ui); font-size:0.875rem; font-weight:var(--peso-medio); cursor:pointer">Gerenciar clubs <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+        </section>
+      </div>
+
+      <section aria-label="Agenda de eventos e desafios" style="grid-column:2; display:flex; flex-direction:column; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-1)">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px">
+          <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg); margin:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path></svg> Agenda</h2>
+          <span style="display:flex; align-items:center; gap:16px; font-size:0.75rem; color:var(--text-tertiary)">
+            <span style="display:inline-flex; align-items:center; gap:6px"><span aria-hidden="true" style="width:6px; height:6px; border-radius:9999px; background:var(--text-brand)"></span>Eventos</span>
+            <span style="display:inline-flex; align-items:center; gap:6px"><span aria-hidden="true" style="width:6px; height:6px; border-radius:9999px; background:var(--feedback-warning)"></span>Desafios</span>
+          </span>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px">
+          <button type="button" onClick="{{ mesAnterior }}" aria-label="Mês anterior" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:9999px; background:var(--surface-overlay); color:var(--text-secondary); cursor:pointer" style-hover="background:var(--surface-high); color:var(--text-primary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+          <span style="font-size:0.9375rem; font-weight:var(--peso-forte); color:var(--text-primary)">{{ nomeMes }}</span>
+          <button type="button" onClick="{{ mesSeguinte }}" aria-label="Mês seguinte" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:9999px; background:var(--surface-overlay); color:var(--text-secondary); cursor:pointer" style-hover="background:var(--surface-high); color:var(--text-primary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+        </div>
+        <div role="presentation" style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); margin-bottom:6px">
+          <sc-for list="{{ diasSemana }}" as="ds" hint-placeholder-count="7">
+            <span style="height:22px; display:flex; align-items:center; justify-content:center; font-size:0.625rem; font-weight:var(--peso-medio); letter-spacing:0.06em; color:var(--text-tertiary)">{{ ds.letra }}</span>
+          </sc-for>
+        </div>
+        <div role="grid" aria-label="{{ nomeMes }}" style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:3px 0; margin-bottom:18px">
+          <sc-for list="{{ celas }}" as="c" hint-placeholder-count="35">
+            <button type="button" onClick="{{ c.aoClicar }}" aria-label="{{ c.rotulo }}" aria-hidden="{{ c.oculto }}" disabled="{{ c.vazio }}" style="{{ c.estilo }}">
+              {{ c.dia }}
+              <span aria-hidden="true" style="{{ c.estiloPontos }}">
+                <span style="{{ c.estiloPontoEvento }}"></span>
+                <span style="{{ c.estiloPontoDesafio }}"></span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <p style="margin:0 0 12px; padding-top:18px; border-top:1px solid var(--border-subtle); font-size:0.875rem; font-weight:var(--peso-forte); color:var(--text-primary)">{{ tituloDia }}</p>
+        <ul role="list" style="list-style:none; margin:0; padding:0 4px 0 0; display:flex; flex-direction:column; gap:8px; flex:1; min-height:120px; overflow-y:auto">
+          <sc-for list="{{ itensDia }}" as="it" hint-placeholder-count="3">
+            <li style="display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:var(--radius-md); background:var(--surface-overlay)">
+              <span aria-hidden="true" style="{{ it.estiloTile }}">{{ it.sigla }}</span>
+              <span style="flex:1; min-width:0">
+                <span style="display:block; font-size:0.875rem; font-weight:var(--peso-forte); color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ it.titulo }}</span>
+                <span style="display:block; margin-top:3px; font-size:0.8125rem; color:var(--text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ it.sub }}</span>
+              </span>
+              <span style="{{ it.estiloTag }}">{{ it.tag }}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="display:flex; justify-content:center; padding-top:16px"><a href="#" style="display:inline-flex; align-items:center; gap:8px; font-size:0.8125rem; font-weight:var(--peso-medio); color:var(--text-brand); text-decoration:none">Ver agenda completa <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></div>
+      </section>
+
+      <section aria-label="Últimos 7 dias" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-1)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg> Últimos 7 dias</h2>
+        <div data-kpi4="" style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr))">
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px 0 0; ">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:var(--peso-medio); text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Receita 7 dias</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">R$ 23.490</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:var(--peso-medio); color:var(--feedback-success)">↑ 12%</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px; border-left:1px solid var(--border-subtle)">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:var(--peso-medio); text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Inscrições 7 dias</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">93</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:var(--peso-medio); color:var(--feedback-success)">↑ 8%</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px; border-left:1px solid var(--border-subtle)">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:var(--peso-medio); text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Membros ativos</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">18</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:var(--peso-medio); color:var(--feedback-success)">↑ 6%</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px; border-left:1px solid var(--border-subtle)">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="m9 15 2 2 4-4"></path></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:var(--peso-medio); text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Check-ins 7 dias</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">128</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:var(--peso-medio); color:var(--feedback-success)">↑ 14%</span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Insights da Leela" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal=""
+        style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <div style="display:flex; align-items:flex-start; gap:14px; margin-bottom:20px">
+          <span aria-hidden="true" style="width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:12px; background:var(--action-brand-tint); color:var(--action-brand-tint-fg)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg></span>
+          <div style="min-width:0">
+            <p style="margin:0 0 3px; font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:1rem; color:var(--text-primary)">Insights da Leela</p>
+            <p style="margin:0; font-size:0.8125rem; color:var(--text-tertiary)">Leitura automática dos seus números das últimas 4 semanas.</p>
+          </div>
+        </div>
+        <ul role="list" style="list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px">
+          <sc-for list="{{ insights }}" as="i" hint-placeholder-count="3">
+            <li style="display:flex; flex-direction:column; gap:10px; padding:18px; border-radius:14px; background:var(--surface-overlay); transition:background .2s ease, transform .2s ease" style-hover="background:var(--surface-high); transform:translateY(-2px)">
+              <span style="{{ i.estiloTag }}">{{ i.tag }}</span>
+              <span style="font-size:0.9375rem; font-weight:var(--peso-medio); line-height:1.4; color:var(--text-primary); text-wrap:pretty">{{ i.titulo }}</span>
+              <span style="font-size:0.8125rem; line-height:1.5; color:var(--text-secondary); text-wrap:pretty">{{ i.detalhe }}</span>
+              <a href="#" style="display:inline-flex; align-items:center; gap:8px; margin-top:2px; font-size:0.8125rem; font-weight:var(--peso-medio); color:var(--text-brand); text-decoration:none">{{ i.acao }} <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+            </li>
+          </sc-for>
+        </ul>
+      </section>
+
+      <div style="grid-column:1 / -1; display:flex; align-items:baseline; gap:14px; margin:14px 0 -4px">
+        <h2 style="margin:0; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.0625rem; letter-spacing:-0.01em; color:var(--text-primary); white-space:nowrap">Clubs</h2>
+        <span style="font-size:0.8125rem; color:var(--text-tertiary); text-wrap:pretty">A comunidade em si: quem aparece, com que frequência e em que pilares.</span>
+        <span style="flex:1; height:1px; background:var(--border-subtle)"></span>
+      </div>
+
+      <section aria-label="Check-ins e pilares" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal="" style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap">
+          <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Check-ins realizados</h2>
+          <div style="position:relative">
+            <button type="button" onClick="{{ alternarCalendario }}" aria-expanded="{{ calendarioAberto }}" style="{{ estiloGatilho }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path></svg>
+              {{ rotuloPeriodo }}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+            </button>
+            <sc-if value="{{ calendarioAberto }}" hint-placeholder-val="{{ false }}">
+              <div role="dialog" aria-label="Escolher período" style="position:absolute; top:calc(100% + 8px); right:0; z-index:20; display:flex; border-radius:16px; animation:dcPop .18s ease-out both; background:var(--surface-base); box-shadow:0 18px 50px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.08); overflow:hidden">
+                <div style="display:flex; flex-direction:column; gap:2px; padding:12px; min-width:156px; background:var(--surface-overlay)">
+                  <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+                    <button type="button" onClick="{{ p.aoClicar }}" style="{{ p.estilo }}">{{ p.nome }}</button>
+                  </sc-for>
+                </div>
+                <div style="display:flex; flex-direction:column; padding:16px">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px">
+                    <button type="button" onClick="{{ mesCalAnterior }}" aria-label="Mês anterior" style="width:26px; height:26px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:var(--text-tertiary); cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+                    <span style="font-size:0.8125rem; font-weight:var(--peso-forte); color:var(--text-primary)">{{ nomeMesCal }}</span>
+                    <button type="button" onClick="{{ mesCalSeguinte }}" aria-label="Próximo mês" style="width:26px; height:26px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:var(--text-tertiary); cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></button>
+                  </div>
+                  <div style="display:grid; grid-template-columns:repeat(7, 32px); gap:2px 0; margin-bottom:4px">
+                    <sc-for list="{{ diasSemanaCal }}" as="d" hint-placeholder-count="7">
+                      <span style="text-align:center; font-size:0.6875rem; font-weight:var(--peso-forte); color:var(--text-tertiary)">{{ d.letra }}</span>
+                    </sc-for>
+                  </div>
+                  <div role="grid" aria-label="{{ nomeMesCal }}" style="display:grid; grid-template-columns:repeat(7, 32px); gap:2px 0">
+                    <sc-for list="{{ celasCal }}" as="c" hint-placeholder-count="35">
+                      <button type="button" onClick="{{ c.aoClicar }}" aria-label="{{ c.rotulo }}" disabled="{{ c.vazio }}" style="{{ c.estilo }}">{{ c.dia }}</button>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:14px">
+                    <span style="font-size:0.75rem; color:var(--text-tertiary)">{{ dicaCalendario }}</span>
+                    <button type="button" onClick="{{ alternarCalendario }}" style="padding:7px 14px; border:none; border-radius:var(--radius-pill); background:var(--action-primary); color:var(--action-primary-fg); font:inherit; font-size:0.75rem; font-weight:var(--peso-forte); cursor:pointer">Aplicar</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <p style="margin:0 0 4px; font-family:var(--font-family-display); font-weight:var(--peso-display); letter-spacing:-0.02em; color:var(--text-primary); font-size:2rem; line-height:1">{{ totalCheckins }}</p>
+        <p style="margin:0 0 26px; font-size:0.8125rem; color:var(--text-tertiary); text-wrap:pretty">{{ fraseEquilibrio }}</p>
+        <div data-split2="" style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:40px">
+          <div style="display:flex; flex-direction:column; gap:24px">
+            <sc-for list="{{ pilares }}" as="p" hint-placeholder-count="3">
+              <div>
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px">
+                  <span style="display:flex; align-items:center; gap:9px; font-size:0.875rem; font-weight:var(--peso-medio); color:var(--text-primary)"><i style="{{ p.estiloPonto }}"></i>{{ p.nome }}</span>
+                  <span style="font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap"><b style="font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.375rem; letter-spacing:-0.02em; color:var(--text-primary)">{{ p.pct }}</b> · {{ p.valor }}</span>
+                </div>
+                <span style="position:relative; display:block; height:12px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden">
+                  <i style="{{ p.estiloBarraPilar }}"></i>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px">
+              <div role="group" aria-label="Pilar" style="display:flex; gap:4px; padding:4px; border-radius:var(--radius-pill); background:var(--surface-overlay)">
+                <sc-for list="{{ abasPilar }}" as="a" hint-placeholder-count="3">
+                  <button type="button" onClick="{{ a.aoClicar }}" style="{{ a.estilo }}">{{ a.nome }}</button>
+                </sc-for>
+              </div>
+              <button type="button" onClick="{{ abrirTop10 }}" style="display:inline-flex; align-items:center; gap:7px; padding:0; border:none; background:transparent; font:inherit; font-size:0.8125rem; font-weight:var(--peso-medio); color:var(--text-brand); cursor:pointer">Ver top 10 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+            </div>
+            <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:16px">
+              <sc-for list="{{ acoes }}" as="a" hint-placeholder-count="5">
+                <li style="display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:8px 12px">
+                  <span style="font-size:0.8125rem; font-weight:var(--peso-suave); color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ a.nome }}</span>
+                  <span style="text-align:right; font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap"><b style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.9375rem; color:var(--text-primary)">{{ a.total }}</b> {{ a.unidade }}</span>
+                  <span style="grid-column:1 / -1; position:relative; display:block; height:10px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden"><i style="{{ a.estiloBarra }}"></i></span>
+                </li>
+              </sc-for>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Mapa de check-ins" style="grid-column:1; display:flex; flex-direction:column; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal="" style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Mapa de Check-ins <span style="position:relative; display:inline-flex"><button type="button" onMouseEnter="{{ mostrarDicaMapa }}" onMouseLeave="{{ esconderDicaMapa }}" onFocus="{{ mostrarDicaMapa }}" onBlur="{{ esconderDicaMapa }}" aria-label="O que é isso" style="{{ estiloDicaMapa }}">?</button><sc-if value="{{ dicaMapaAberta }}" hint-placeholder-val="{{ false }}"><span role="tooltip" style="position:absolute; top:calc(100% + 8px); left:-8px; z-index:30; width:290px; padding:14px 16px; border-radius:12px; background:var(--surface-base); box-shadow:0 16px 44px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.09); font-size:0.8125rem; line-height:1.55; color:var(--text-secondary); animation:dcPop .16s ease-out both; pointer-events:none; text-wrap:pretty; text-transform:none; letter-spacing:0; font-weight:400">{{ legendaHeat }}</span></sc-if></span></h2>
+        <div style="display:flex; align-items:center; justify-content:flex-end; min-height:34px; margin:0 0 18px">
+          <div role="group" aria-label="Recorte" style="display:flex; gap:4px; padding:4px; border-radius:var(--radius-pill); background:var(--surface-overlay)">
+            <sc-for list="{{ abasMapa }}" as="a" hint-placeholder-count="2">
+              <button type="button" onClick="{{ a.aoClicar }}" style="{{ a.estilo }}">{{ a.nome }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div data-scrollx="" style="{{ estiloGradeHeat }}">
+          <span></span>
+          <sc-for list="{{ heatCols }}" as="d" hint-placeholder-count="7">
+            <span style="text-align:center; font-size:0.6875rem; font-weight:var(--peso-forte); color:var(--text-tertiary)">{{ d.letra }}</span>
+          </sc-for>
+          <sc-for list="{{ heatmap }}" as="l" hint-placeholder-count="6">
+            <span style="font-size:0.6875rem; color:var(--text-tertiary); padding-right:6px; white-space:nowrap">{{ l.semana }}</span>
+            <sc-for list="{{ l.dias }}" as="c" hint-placeholder-count="7">
+              <span title="{{ c.rotulo }}" onMouseEnter="{{ c.aoEntrar }}" onMouseMove="{{ c.aoMover }}" onMouseLeave="{{ c.aoSair }}" style="{{ c.estilo }}">{{ c.valor }}</span>
+            </sc-for>
+          </sc-for>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin:auto 0 0; padding-top:22px; min-height:22px; flex-shrink:0">
+          <span style="font-size:0.6875rem; color:var(--text-tertiary)">menos</span>
+          <sc-for list="{{ escalaHeat }}" as="e" hint-placeholder-count="5">
+            <span style="{{ e.estilo }}"></span>
+          </sc-for>
+          <span style="font-size:0.6875rem; color:var(--text-tertiary)">mais</span>
+        </div>
+      </section>
+
+      <section aria-label="Pilares ao longo das semanas" style="grid-column:2; display:flex; flex-direction:column; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal="" style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Volume de Check-ins <span style="position:relative; display:inline-flex"><button type="button" onMouseEnter="{{ mostrarDicaVolume }}" onMouseLeave="{{ esconderDicaVolume }}" onFocus="{{ mostrarDicaVolume }}" onBlur="{{ esconderDicaVolume }}" aria-label="O que é isso" style="{{ estiloDicaVolume }}">?</button><sc-if value="{{ dicaVolumeAberta }}" hint-placeholder-val="{{ false }}"><span role="tooltip" style="position:absolute; top:calc(100% + 8px); left:-8px; z-index:30; width:290px; padding:14px 16px; border-radius:12px; background:var(--surface-base); box-shadow:0 16px 44px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.09); font-size:0.8125rem; line-height:1.55; color:var(--text-secondary); animation:dcPop .16s ease-out both; pointer-events:none; text-wrap:pretty; text-transform:none; letter-spacing:0; font-weight:400">{{ legendaPilarTempo }}</span></sc-if></span></h2>
+        <div style="display:flex; align-items:center; justify-content:flex-end; min-height:34px; margin:0 0 18px">
+          <div role="group" aria-label="Recorte" style="display:flex; gap:4px; padding:4px; border-radius:var(--radius-pill); background:var(--surface-overlay)">
+            <sc-for list="{{ abasVolume }}" as="a" hint-placeholder-count="2">
+              <button type="button" onClick="{{ a.aoClicar }}" style="{{ a.estilo }}">{{ a.nome }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="position:relative; padding-left:46px">
+          <sc-for list="{{ eixoY }}" as="y" hint-placeholder-count="5">
+            <span style="{{ y.estiloRotulo }}">{{ y.valor }}</span>
+          </sc-for>
+          <svg viewBox="0 0 560 210" preserveAspectRatio="none" role="img" aria-label="Check-ins por pilar ao longo das semanas" style="width:100%; height:210px; display:block">
+            <defs><linearGradient id="gradPilar0" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-accent)" stop-opacity="0.75"></stop><stop offset="100%" stop-color="var(--chart-accent)" stop-opacity="0.10"></stop></linearGradient><linearGradient id="gradPilar1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-accent-2)" stop-opacity="0.55"></stop><stop offset="100%" stop-color="var(--chart-accent-2)" stop-opacity="0.08"></stop></linearGradient><linearGradient id="gradPilar2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-accent)" stop-opacity="0.22"></stop><stop offset="100%" stop-color="var(--chart-accent)" stop-opacity="0.03"></stop></linearGradient></defs>
+            <sc-for list="{{ eixoY }}" as="y" hint-placeholder-count="5">
+              <line x1="0" x2="560" y1="{{ y.y }}" y2="{{ y.y }}" stroke="var(--chart-track)" stroke-width="1"></line>
+            </sc-for>
+            <g style="{{ estiloAreas }}">
+              <sc-for list="{{ areasPilar }}" as="a" hint-placeholder-count="3">
+                <path d="{{ a.d }}" fill="{{ a.grad }}" stroke="{{ a.cor }}" stroke-width="1.5" stroke-opacity="0.55" stroke-linejoin="round"></path>
+              </sc-for>
+            </g>
+            <sc-if value="{{ tooltipVisivel }}" hint-placeholder-val="{{ false }}">
+              <line x1="{{ tooltipX }}" x2="{{ tooltipX }}" y1="0" y2="210" stroke="var(--chart-accent)" stroke-width="1" stroke-opacity="0.6" stroke-dasharray="4 4"></line>
+            </sc-if>
+          </svg>
+          <div style="position:absolute; inset:0 0 0 46px; display:flex">
+            <sc-for list="{{ zonas }}" as="z" hint-placeholder-count="6">
+              <span onMouseEnter="{{ z.aoEntrar }}" onMouseLeave="{{ z.aoSair }}" style="flex:1"></span>
+            </sc-for>
+          </div>
+          <sc-if value="{{ tooltipVisivel }}" hint-placeholder-val="{{ false }}">
+            <div role="tooltip" style="{{ estiloTooltip }}">
+              <p style="margin:0 0 10px; font-size:0.75rem; font-weight:var(--peso-forte); color:var(--text-primary)">{{ tooltipSemana }}</p>
+              <ul role="list" style="list-style:none; margin:0 0 10px; padding:0; display:flex; flex-direction:column; gap:7px">
+                <sc-for list="{{ tooltipItens }}" as="t" hint-placeholder-count="3">
+                  <li style="display:flex; align-items:center; gap:9px; white-space:nowrap">
+                    <i style="{{ t.estiloPonto }}"></i>
+                    <span style="flex:1; font-size:0.75rem; color:var(--text-secondary)">{{ t.nome }}</span>
+                    <span style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.8125rem; color:var(--text-primary)">{{ t.valor }}</span>
+                  </li>
+                </sc-for>
+              </ul>
+              <p style="margin:0; padding-top:9px; font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap; box-shadow:inset 0 1px 0 var(--border-subtle)">{{ tooltipTotal }} check-ins</p>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin:10px 0 0 46px; flex-shrink:0">
+          <sc-for list="{{ semanasRotulos }}" as="s" hint-placeholder-count="6">
+            <span style="font-size:0.6875rem; color:var(--text-tertiary)">{{ s.nome }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex; gap:16px; margin:auto 0 0; padding-top:22px; min-height:22px; align-items:center; flex-wrap:wrap; flex-shrink:0">
+          <sc-for list="{{ pilares }}" as="p" hint-placeholder-count="3">
+            <span style="display:flex; align-items:center; gap:7px; font-size:0.75rem; color:var(--text-secondary)"><i style="{{ p.estiloPonto }}"></i>{{ p.nome }}</span>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-label="Modalidades favoritas dos clubs" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal=""
+        style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Top 5 modalidades de interesse</h2>
+        <p style="margin:0 0 20px; font-size:0.8125rem; color:var(--text-tertiary); text-wrap:pretty">Modalidades declaradas como interesse pelos {{ baseMembros }} membros ativos da base.</p>
+        <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:16px">
+          <sc-for list="{{ modalidades }}" as="m" hint-placeholder-count="5">
+            <li style="display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:8px 12px">
+              <span style="font-size:0.8125rem; font-weight:var(--peso-suave); color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.nome }}</span>
+              <span style="text-align:right; font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap"><b style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.9375rem; color:var(--text-primary)">{{ m.pct }}</b> · {{ m.membros }}</span>
+              <span style="grid-column:1 / -1; position:relative; display:block; height:10px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden"><i style="{{ m.estiloBarra }}"></i></span>
+            </li>
+          </sc-for>
+        </ul>
+      </section>
+
+      <div style="grid-column:1 / -1; display:flex; align-items:baseline; gap:14px; margin:14px 0 -4px">
+        <h2 style="margin:0; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.0625rem; letter-spacing:-0.01em; color:var(--text-primary); white-space:nowrap">Do club para o evento</h2>
+        <span style="font-size:0.8125rem; color:var(--text-tertiary); text-wrap:pretty">A ponte: quanto da comunidade vira participação em evento.</span>
+        <span style="flex:1; height:1px; background:var(--border-subtle)"></span>
+      </div>
+
+      <section aria-label="Clubs que viram evento" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal="" style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px">
+          <div style="display:flex; align-items:center; gap:8px">
+            <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg); margin:0">Conversão da base</h2>
+            <span style="position:relative; display:inline-flex">
+              <button type="button" onMouseEnter="{{ mostrarDica }}" onMouseLeave="{{ esconderDica }}" onFocus="{{ mostrarDica }}" onBlur="{{ esconderDica }}" aria-label="O que é isso" style="{{ estiloDica }}">?</button>
+              <sc-if value="{{ dicaAberta }}" hint-placeholder-val="{{ false }}">
+                <span role="tooltip" style="position:absolute; top:calc(100% + 8px); left:-8px; z-index:30; width:290px; padding:14px 16px; border-radius:12px; background:var(--surface-base); box-shadow:0 16px 44px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.09); font-size:0.8125rem; line-height:1.55; color:var(--text-secondary); animation:dcPop .16s ease-out both; pointer-events:none; text-wrap:pretty">{{ textoDica }}</span>
+              </sc-if>
+            </span>
+          </div>
+          <div role="group" aria-label="Visualização" style="display:flex; gap:4px; padding:4px; border-radius:var(--radius-pill); background:var(--surface-overlay)">
+            <button type="button" onClick="{{ verFunil }}" style="{{ estiloVerFunil }}">Funil</button>
+            <button type="button" onClick="{{ verClubs }}" style="{{ estiloVerClubs }}">Por club</button>
+          </div>
+        </div>
+
+        <sc-if value="{{ modoFunil }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px">
+              <div style="min-width:0">
+                <p style="margin:0 0 2px; font-family:var(--font-family-display); font-weight:var(--peso-display); letter-spacing:-0.02em; color:var(--text-primary); font-size:2.25rem; line-height:1">{{ taxaConversao }}</p>
+                <p style="margin:0; font-size:0.8125rem; color:var(--text-tertiary); text-wrap:pretty">{{ legendaConversao }}</p>
+              </div>
+              <div style="position:relative">
+                <button type="button" onClick="{{ alternarClubes }}" aria-expanded="{{ listaClubsAberta }}" style="{{ estiloGatilhoClube }}">
+                  {{ nomeClubeSel }}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                </button>
+                <sc-if value="{{ listaClubsAberta }}" hint-placeholder-val="{{ false }}">
+                  <div role="listbox" aria-label="Club analisado" style="position:absolute; top:calc(100% + 6px); right:0; z-index:20; min-width:210px; padding:6px; border-radius:12px; animation:dcPop .16s ease-out both; background:var(--surface-base); box-shadow:0 18px 50px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.08)">
+                    <sc-for list="{{ opcoesClubs }}" as="o" hint-placeholder-count="5">
+                      <button type="button" role="option" aria-selected="{{ o.ativo }}" onClick="{{ o.aoClicar }}" style="{{ o.estilo }}">
+                        <span style="{{ o.estiloCheck }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                        {{ o.nome }}
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:14px">
+              <sc-for list="{{ funil }}" as="e" hint-placeholder-count="3">
+                <div style="display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:8px 12px">
+                  <span style="font-size:0.8125rem; color:var(--text-secondary)">{{ e.nome }}</span>
+                  <span style="text-align:right; font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap"><b style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.9375rem; color:var(--text-primary)">{{ e.valor }}</b> · {{ e.pct }}</span>
+                  <span style="grid-column:1 / -1; position:relative; display:block; height:10px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden"><i style="{{ e.estiloBarra }}"></i></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ modoClubs }}" hint-placeholder-val="{{ false }}">
+          <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px">
+            <sc-for list="{{ conversaoClubs }}" as="c" hint-placeholder-count="4">
+              <li style="display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:6px 12px">
+                <span style="{{ c.estiloNome }}">{{ c.nome }}</span>
+                <span style="text-align:right; font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap"><b style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:1.0625rem; color:var(--text-primary)">{{ c.pct }}</b> · {{ c.detalhe }}</span>
+                <span style="grid-column:1 / -1; position:relative; display:block; height:10px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden"><i style="{{ c.estiloBarra }}"></i></span>
+              </li>
+            </sc-for>
+          </ul>
+        </sc-if>
+      </section>
+
+      <div style="grid-column:1 / -1; display:flex; align-items:baseline; gap:14px; margin:14px 0 -4px">
+        <h2 style="margin:0; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.0625rem; letter-spacing:-0.01em; color:var(--text-primary); white-space:nowrap">Eventos</h2>
+        <span style="font-size:0.8125rem; color:var(--text-tertiary); text-wrap:pretty">O resultado: ocupação das provas e como as pessoas pagam.</span>
+        <span style="flex:1; height:1px; background:var(--border-subtle)"></span>
+      </div>
+
+      <section aria-label="Ocupação dos últimos 5 eventos" style="grid-column:1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal=""
+        style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Ocupação dos últimos 5 eventos</h2>
+        <p style="margin:0 0 20px; font-size:0.8125rem; color:var(--text-tertiary); text-wrap:pretty">Inscritos sobre as vagas oferecidas em cada evento.</p>
+        <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:16px">
+          <sc-for list="{{ ocupacao }}" as="o" hint-placeholder-count="5">
+            <li style="display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:8px 12px">
+              <span style="font-size:0.8125rem; font-weight:var(--peso-suave); color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ o.nome }}</span>
+              <span style="text-align:right; font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap"><b style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.9375rem; color:var(--text-primary)">{{ o.inscritos }}</b>/{{ o.vagas }}</span>
+              <span style="grid-column:1 / -1; position:relative; display:block; height:10px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden"><i style="{{ o.estiloBarra }}"></i></span>
+            </li>
+          </sc-for>
+        </ul>
+      </section>
+
+      <section aria-label="Formas de pagamento" style="grid-column:2; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px; transition:transform .25s ease, box-shadow .25s ease" data-reveal=""
+        style-hover="transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:var(--peso-forte); text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Formas de pagamento</h2>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:22px">
+          <svg viewBox="0 0 120 120" role="img" aria-label="Distribuição por forma de pagamento" style="width:180px; height:180px; flex-shrink:0; transform:rotate(-90deg)">
+            <circle cx="60" cy="60" r="46" fill="none" stroke="var(--chart-track)" stroke-width="16"></circle>
+            <sc-for list="{{ fatias }}" as="s" hint-placeholder-count="4">
+              <circle cx="60" cy="60" r="46" fill="none" stroke="{{ s.cor }}" stroke-width="16" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}" stroke-linecap="butt" style="transition:stroke-dasharray .6s cubic-bezier(.4,0,.2,1), stroke-dashoffset .6s cubic-bezier(.4,0,.2,1)"></circle>
+            </sc-for>
+          </svg>
+          <ul role="list" data-legend2="" style="list-style:none; margin:0; padding:0; width:100%; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px 24px">
+            <sc-for list="{{ fatias }}" as="s" hint-placeholder-count="4">
+              <li style="display:flex; align-items:center; gap:10px">
+                <i style="width:9px; height:9px; border-radius:3px; background:{{ s.cor }}; flex-shrink:0"></i>
+                <span style="flex:1; min-width:0; font-size:0.8125rem; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ s.nome }}</span>
+                <span style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.875rem; color:var(--text-primary)">{{ s.valor }}</span>
+                <span style="width:42px; text-align:right; font-size:0.75rem; color:var(--text-tertiary)">{{ s.pct }}</span>
+              </li>
+            </sc-for>
+          </ul>
+        </div>
+      </section>
+
+      <sc-if value="{{ top10Aberto }}" hint-placeholder-val="{{ false }}">
+        <div role="dialog" aria-modal="true" aria-label="Top 10 ações" style="position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:32px; background:rgba(4,1,3,0.72); animation:dcFade .16s ease-out both">
+          <div style="width:min(560px, 100%); max-height:80vh; overflow:auto; padding:28px; border-radius:20px; background:var(--surface-base); box-shadow:0 30px 80px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.09); animation:dcPop .2s ease-out both">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px">
+              <div style="min-width:0">
+                <p style="margin:0 0 4px; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.25rem; letter-spacing:-0.01em; color:var(--text-primary)">Top 10 ações</p>
+                <p style="margin:0; font-size:0.8125rem; color:var(--text-tertiary)">Todos os pilares, no período selecionado.</p>
+              </div>
+              <button type="button" onClick="{{ fecharTop10 }}" aria-label="Fechar" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; border-radius:10px; background:var(--surface-overlay); color:var(--text-secondary); cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+            </div>
+            <ol role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px">
+              <sc-for list="{{ top10 }}" as="a" hint-placeholder-count="10">
+                <li style="display:grid; grid-template-columns:22px minmax(0,1fr) auto; align-items:baseline; gap:8px 12px">
+                  <span style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.8125rem; color:var(--text-tertiary)">{{ a.posicao }}</span>
+                  <span style="display:flex; align-items:baseline; gap:9px; min-width:0"><span style="font-size:0.875rem; font-weight:var(--peso-suave); color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ a.nome }}</span><span style="{{ a.estiloTag }}">{{ a.pilar }}</span></span>
+                  <span style="text-align:right; font-size:0.75rem; color:var(--text-tertiary); white-space:nowrap"><b style="font-family:var(--font-family-display); font-weight:var(--peso-forte); font-size:0.9375rem; color:var(--text-primary)">{{ a.total }}</b> {{ a.unidade }}</span>
+                  <span style="grid-column:2 / -1; position:relative; display:block; height:9px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden"><i style="{{ a.estiloBarra }}"></i></span>
+                </li>
+              </sc-for>
+            </ol>
+          </div>
+        </div>
+      </sc-if>
+
+      </section>
+    </div>
+  </main>
+</div>
+
+  <sc-if value="{{ celaTipAberto }}" hint-placeholder-val="{{ false }}">
+    <div role="tooltip" style="{{ estiloCelaTip }}">
+      <p style="margin:0 0 2px; font-size:0.6875rem; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-tertiary)">{{ celaTipTitulo }}</p>
+      <p style="margin:0 0 12px; font-family:var(--font-family-display); font-weight:var(--peso-display); font-size:1.25rem; line-height:1; color:var(--text-primary)">{{ celaTipTotal }}</p>
+      <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px">
+        <sc-for list="{{ celaTipPartes }}" as="p" hint-placeholder-count="3">
+          <li style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color:var(--text-secondary)">
+            <i style="{{ p.estiloPonto }}"></i>
+            <span style="flex:1; min-width:0">{{ p.nome }}</span>
+            <b style="font-weight:var(--peso-forte); color:var(--text-primary)">{{ p.total }}</b>
+            <span style="width:34px; text-align:right; color:var(--text-tertiary)">{{ p.pct }}</span>
+          </li>
+        </sc-for>
+      </ul>
+    </div>
+  </sc-if>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000},&quot;mostrarAlternador&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;tema&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark-wine&quot;,&quot;dark-sea&quot;,&quot;brasa&quot;,&quot;wine&quot;],&quot;default&quot;:&quot;brasa&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;glass&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;fonteTitulosDarkWine&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Exo 2&quot;,&quot;Baloo Bhai 2&quot;,&quot;Fugaz One&quot;,&quot;Space Mono&quot;,&quot;Chakra Petch&quot;,&quot;Geist&quot;,&quot;Syne&quot;,&quot;Rubik&quot;,&quot;Varela Round&quot;,&quot;Lato&quot;,&quot;Nunito&quot;,&quot;Barlow&quot;,&quot;Ubuntu&quot;,&quot;Neue Montreal (Switzer)&quot;,&quot;Aeonik Pro (General Sans)&quot;],&quot;default&quot;:&quot;Exo 2&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;fonteDarkWine&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Geist&quot;,&quot;Exo 2&quot;,&quot;Work Sans&quot;,&quot;Plus Jakarta Sans&quot;,&quot;Public Sans&quot;,&quot;Lato&quot;,&quot;Rubik&quot;,&quot;Nunito&quot;,&quot;Varela Round&quot;,&quot;Barlow&quot;,&quot;Ubuntu&quot;,&quot;Baloo Bhai 2&quot;,&quot;Neue Montreal (Switzer)&quot;,&quot;Aeonik Pro (General Sans)&quot;],&quot;default&quot;:&quot;Rubik&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tema&quot;}}">
+class Component extends DCLogic {
+  state = { tema: null, menuAberto: false, drawer: false, mes: 7, diaSel: '2026-08-06', periodo: '30d', mesCal: 7, ini: null, fim: null, clube: 'todos', calAberto: false, vista: 'funil', dica: false, listaClubs: false, semanaHover: null, pilar: 'Físico', top10: false };
+
+  static MESES = [
+    { ano: 2026, mes: 7, nome: 'Agosto 2026', dias: 31, offset: 6 },
+    { ano: 2026, mes: 8, nome: 'Setembro 2026', dias: 30, offset: 2 },
+    { ano: 2026, mes: 9, nome: 'Outubro 2026', dias: 31, offset: 4 }
+  ];
+
+  static EVENTOS = [
+    { nome: 'Corrida de Inverno Floripa 2026', sub: 'Parque de Coqueiros, Florianópolis/SC', dia: '2026-09-21', tag: 'Publicado' }
+  ];
+
+  static DESAFIOS = [
+    { nome: 'Desafio 100K', sub: 'Floripa Run Coletivo', sigla: 'FC', ini: '2026-08-01', fim: '2026-08-31' },
+    { nome: 'Semana do Ritmo', sub: 'Ritmo Forte Assessoria', sigla: 'RA', ini: '2026-08-10', fim: '2026-08-16' },
+    { nome: 'Base Forte', sub: 'Leela Runners', sigla: 'LE', ini: '2026-08-20', fim: '2026-09-05' }
+  ];
+
+  iso(ano, mes, dia) {
+    return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+  }
+
+  doDia(iso) {
+    const C = Component;
+    const eventos = C.EVENTOS.filter((e) => e.dia === iso);
+    const desafios = C.DESAFIOS.filter((d) => iso >= d.ini && iso <= d.fim);
+    return { eventos, desafios };
+  }
+
+  itemBase(aberto) {
+    return 'display:flex; align-items:center; gap:14px; height:46px; padding:0 ' + (aberto ? '13px' : '12px') +
+      '; border-radius:14px; text-decoration:none; font-size:0.875rem; font-weight:var(--peso-suave); white-space:nowrap; overflow:hidden;' +
+      ' justify-content:' + (aberto ? 'flex-start' : 'center') + ';' +
+      ' transition:background-color 150ms, color 150ms, box-shadow 240ms;';
+  }
+
+  componentDidMount() {
+    this.revelar();
+    const inicial = this.props.tema || localStorage.getItem('leela-tema') || 'dark-wine';
+    this._temaProp = this.props.tema;
+    this.aplicar(inicial);
+  }
+
+  componentDidUpdate(prev) {
+    if (prev.tema !== this.props.tema && this.props.tema) this.aplicar(this.props.tema);
+  }
+
+  aplicar(tema) {
+    document.documentElement.setAttribute('data-theme', tema);
+    try { localStorage.setItem('leela-tema', tema); } catch (e) {}
+    this.setState({ tema });
+  }
+
+  pill(tema) {
+    const ativo = this.state.tema === tema;
+    return [
+      'padding:5px 12px', 'border:none', 'cursor:pointer',
+      'border-radius:9999px', 'font-family:var(--font-family-ui)',
+      'font-size:0.75rem', 'font-weight:' + (ativo ? 'var(--peso-forte)' : 'var(--peso-suave)'),
+      'background:' + (ativo ? 'var(--action-brand-tint)' : 'transparent'),
+      'color:' + (ativo ? 'var(--action-brand-tint-fg)' : 'var(--text-tertiary)'),
+      'transition:background-color 150ms, color 150ms'
+    ].join(';');
+  }
+
+  static PRESETS = [
+    ['7d', 'Últimos 7 dias', 7],
+    ['30d', 'Últimos 30 dias', 30],
+    ['mes', 'Este mês', 31],
+    ['mespassado', 'Mês passado', 31],
+    ['90d', 'Últimos 90 dias', 90],
+    ['custom', 'Personalizado', 30]
+  ];
+
+  revelar() {
+    const achar = () => Array.from(document.querySelectorAll('[data-reveal]'));
+    const mostrar = (el, i) => {
+      el.style.transitionDelay = ((i % 2) * 90) + 'ms';
+      el.classList.add('dc-in');
+    };
+    const varrer = () => {
+      const alvos = achar();
+      if (!alvos.length) return;
+      const tudo = document.visibilityState !== 'visible';
+      alvos.forEach((el, i) => {
+        if (el.classList.contains('dc-in')) return;
+        if (tudo || el.getBoundingClientRect().top < window.innerHeight * 0.95) mostrar(el, i);
+      });
+      if (achar().every(el => el.classList.contains('dc-in'))) parar();
+    };
+    const parar = () => {
+      window.removeEventListener('scroll', varrer);
+      window.removeEventListener('resize', varrer);
+      document.removeEventListener('visibilitychange', varrer);
+    };
+    this._pararRevelar = parar;
+    const iniciar = () => {
+      document.documentElement.classList.add('dc-anim');
+      window.addEventListener('scroll', varrer, { passive: true });
+      window.addEventListener('resize', varrer, { passive: true });
+      document.addEventListener('visibilitychange', varrer);
+      varrer();
+      // rede de segurança: se nada foi revelado, mostra tudo
+      this._fallbackRevelar = setTimeout(() => {
+        if (achar().some(el => !el.classList.contains('dc-in'))) { achar().forEach(mostrar); parar(); }
+      }, 2500);
+    };
+    if (achar().length) { iniciar(); return; }
+    const mo = new MutationObserver(() => {
+      if (!achar().length) return;
+      mo.disconnect();
+      iniciar();
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    this._moRevelar = mo;
+  }
+
+  componentWillUnmount() {
+    if (this._pararRevelar) this._pararRevelar();
+    if (this._moRevelar) this._moRevelar.disconnect();
+    clearTimeout(this._fallbackRevelar);
+  }
+
+  periodo() {
+    const C = Component;
+    const s = this.state;
+    const m = C.MESES.find(x => x.mes === s.mesCal) || C.MESES[0];
+    const iso = (d) => m.ano + '-' + String(m.mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+
+    const celasCal = [];
+    for (let b = 0; b < m.offset; b++) {
+      celasCal.push({ dia: '', rotulo: undefined, vazio: true, aoClicar: undefined, estilo: 'width:32px; height:30px; border:none; background:transparent; pointer-events:none' });
+    }
+    for (let d = 1; d <= m.dias; d++) {
+      const key = iso(d);
+      const dentro = s.ini && s.fim && key > s.ini && key < s.fim;
+      const ponta = key === s.ini || key === s.fim;
+      let cor = 'color:var(--text-secondary); background:transparent;';
+      if (ponta) cor = 'color:var(--action-primary-fg); background:var(--action-primary); font-weight:var(--peso-forte);';
+      else if (dentro) cor = 'color:var(--text-brand); background:var(--action-brand-tint);';
+      celasCal.push({
+        dia: String(d), rotulo: d + ' de ' + m.nome, vazio: false,
+        aoClicar: () => this.setState(st => (!st.ini || (st.ini && st.fim))
+          ? { ini: key, fim: null, periodo: 'custom' }
+          : (key < st.ini ? { ini: key, fim: st.ini, periodo: 'custom', tickPeriodo: (st.tickPeriodo || 0) + 1 } : { fim: key, periodo: 'custom', tickPeriodo: (st.tickPeriodo || 0) + 1 })),
+        estilo: 'width:32px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; font:inherit; font-size:0.75rem; cursor:pointer; transition:background .18s ease, color .18s ease; ' + cor
+      });
+    }
+
+    const def = C.PRESETS.find(p => p[0] === s.periodo) || C.PRESETS[1];
+    let dias = def[2];
+    let rotulo = def[1];
+    if (s.periodo === 'custom') {
+      if (s.ini && s.fim) {
+        dias = Math.max(1, Math.round((Date.parse(s.fim) - Date.parse(s.ini)) / 86400000) + 1);
+        rotulo = Number(s.ini.slice(8)) + ' a ' + Number(s.fim.slice(8)) + ' de ' + m.nome.toLowerCase();
+      } else {
+        rotulo = 'Escolha o intervalo';
+      }
+    }
+
+    const presets = C.PRESETS.map(p => {
+      const ativo = p[0] === s.periodo;
+      return {
+        nome: p[1],
+        aoClicar: () => this.setState(st => (p[0] === 'custom' ? { periodo: 'custom' } : { periodo: p[0], ini: null, fim: null, tickPeriodo: (st.tickPeriodo || 0) + 1 })),
+        estilo: 'padding:8px 12px; text-align:left; border:none; border-radius:9px; font:inherit; font-size:0.8125rem; font-weight:' + (ativo ? 'var(--peso-forte)' : 'var(--peso-suave)') +
+          '; cursor:pointer; transition:background .18s ease, color .18s ease; background:' + (ativo ? 'var(--action-brand-tint)' : 'transparent') +
+          '; color:' + (ativo ? 'var(--action-brand-tint-fg)' : 'var(--text-secondary)')
+      };
+    });
+
+    return {
+      dias,
+      ui: {
+        rotuloPeriodo: rotulo,
+        calendarioAberto: !!s.calAberto,
+        alternarCalendario: () => this.setState(st => ({ calAberto: !st.calAberto })),
+        estiloGatilho: 'display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:none; border-radius:var(--radius-pill); font:inherit; font-size:0.75rem; font-weight:var(--peso-medio); cursor:pointer; transition:background .2s ease; background:' +
+          (s.calAberto ? 'var(--surface-high)' : 'var(--surface-overlay)') + '; color:var(--text-primary)',
+        presets,
+        nomeMesCal: m.nome,
+        diasSemanaCal: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((l, i) => ({ letra: l, i })),
+        celasCal,
+        dicaCalendario: s.ini && !s.fim ? 'Agora escolha a data final.' : 'Clique em duas datas para o intervalo.',
+        mesCalAnterior: () => this.setState(st => ({ mesCal: Math.max(C.MESES[0].mes, st.mesCal - 1) })),
+        mesCalSeguinte: () => this.setState(st => ({ mesCal: Math.min(C.MESES[C.MESES.length - 1].mes, st.mesCal + 1) }))
+      }
+    };
+  }
+
+  agenda() {
+    const C = Component;
+    const idx = C.MESES.findIndex((m) => m.mes === this.state.mes);
+    const m = C.MESES[Math.max(0, idx)];
+    const hoje = '2026-08-06';
+    const sel = this.state.diaSel;
+
+    const celas = [];
+    for (let b = 0; b < m.offset; b++) {
+      celas.push({ dia: '', rotulo: undefined, oculto: 'true', vazio: true, aoClicar: undefined, estilo: 'height:34px; border:none; background:transparent; pointer-events:none;', estiloPontos: 'display:none;', estiloPontoEvento: 'display:none;', estiloPontoDesafio: 'display:none;' });
+    }
+    for (let d = 1; d <= m.dias; d++) {
+      const iso = this.iso(m.ano, m.mes, d);
+      const { eventos, desafios } = this.doDia(iso);
+      const eHoje = iso === hoje;
+      const eSel = iso === sel;
+      let cor = 'color:var(--text-secondary); background:transparent;';
+      if (eSel) cor = 'color:var(--action-primary-fg); background:var(--action-primary); font-weight:var(--peso-forte);';
+      else if (eHoje) cor = 'color:var(--text-brand); background:var(--action-brand-tint); font-weight:var(--peso-forte);';
+      celas.push({
+        dia: String(d),
+        rotulo: d + ' de ' + m.nome,
+        oculto: undefined,
+        vazio: false,
+        aoClicar: () => this.setState({ diaSel: iso }),
+        estilo: 'position:relative; height:34px; display:flex; align-items:center; justify-content:center;' +
+          ' border:none; border-radius:10px; cursor:pointer; font-family:var(--font-family-ui); font-size:0.8125rem;' +
+          ' transition:background-color 150ms, color 150ms; ' + cor,
+        estiloPontos: (eventos.length || desafios.length)
+          ? 'position:absolute; bottom:4px; left:50%; transform:translateX(-50%); display:flex; gap:3px;'
+          : 'display:none;',
+        estiloPontoEvento: eventos.length
+          ? 'width:4px; height:4px; border-radius:9999px; background:' + (eSel ? 'var(--action-primary-fg)' : 'var(--text-brand)') + ';'
+          : 'display:none;',
+        estiloPontoDesafio: desafios.length
+          ? 'width:4px; height:4px; border-radius:9999px; background:' + (eSel ? 'var(--action-primary-fg)' : 'var(--feedback-warning)') + ';'
+          : 'display:none;'
+      });
+    }
+
+    const tile = (fundo, cor) => 'width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center;' +
+      ' border-radius:9999px; font-size:0.75rem; font-weight:var(--peso-forte); background-image:' + fundo + '; color:' + cor + ';';
+    const tag = (bg, fg) => 'flex-shrink:0; padding:5px 10px; border-radius:var(--radius-sm); background:' + bg +
+      '; font-size:0.75rem; font-weight:var(--peso-medio); color:' + fg + '; white-space:nowrap;';
+
+    const { eventos, desafios } = this.doDia(sel);
+    const itensDia = [
+      ...eventos.map((e) => ({
+        sigla: 'EV', titulo: e.nome, sub: e.sub, tag: 'Evento',
+        estiloTile: tile('var(--thumb-corrida)', '#fff'),
+        estiloTag: tag('var(--action-brand-tint)', 'var(--action-brand-tint-fg)')
+      })),
+      ...desafios.map((d) => ({
+        sigla: d.sigla, titulo: d.nome, sub: d.sub, tag: 'Desafio',
+        estiloTile: tile('var(--thumb-teste)', '#fff'),
+        estiloTag: tag('var(--feedback-warning-surface)', 'var(--feedback-warning-fg)')
+      }))
+    ];
+    if (itensDia.length === 0) {
+      itensDia.push({
+        sigla: '—', titulo: 'Nada agendado', sub: 'Nenhum evento ou desafio neste dia', tag: '',
+        estiloTile: 'width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-high); color:var(--text-tertiary); font-size:0.75rem; font-weight:var(--peso-forte);',
+        estiloTag: 'display:none;'
+      });
+    }
+
+    const dia = Number(sel.slice(8));
+    const nomeMesSel = C.MESES.find((x) => x.mes === Number(sel.slice(5, 7)) - 1);
+    return {
+      nomeMes: m.nome,
+      diasSemana: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((l, i) => ({ letra: l, i })),
+      celas,
+      itensDia,
+      tituloDia: dia + ' de ' + (nomeMesSel ? nomeMesSel.nome : m.nome),
+      mesAnterior: () => this.setState((s) => ({ mes: Math.max(C.MESES[0].mes, s.mes - 1) })),
+      mesSeguinte: () => this.setState((s) => ({ mes: Math.min(C.MESES[C.MESES.length - 1].mes, s.mes + 1) }))
+    };
+  }
+
+  aplicaGlass() {
+    const r = document.documentElement.style;
+    if (this.props.glass === false) {
+      r.removeProperty('--card-blur'); r.removeProperty('--surface-raised');
+      r.removeProperty('--page-glow'); r.removeProperty('--elevation-2'); r.removeProperty('--surface-overlay');
+      return;
+    }
+    const sea = this.state.tema === 'dark-sea';
+    const brasa = this.state.tema === 'brasa';
+    r.setProperty('--card-blur', 'blur(24px) saturate(1.45)');
+    r.setProperty('--surface-raised', sea ? 'rgba(18, 34, 58, 0.34)' : (brasa ? 'rgba(30, 11, 16, 0.42)' : 'rgba(46, 18, 26, 0.34)'));
+    r.setProperty('--surface-overlay', 'rgba(255, 255, 255, 0.045)');
+    r.setProperty('--page-glow', sea
+      ? 'radial-gradient(75% 55% at 22% -8%, rgba(28,62,118,.78), transparent 62%), radial-gradient(55% 45% at 96% 8%, rgba(216,224,232,.07), transparent 60%), radial-gradient(65% 55% at 108% 104%, rgba(22,48,92,.50), transparent 62%)'
+      : (brasa
+        ? 'radial-gradient(75% 55% at 22% -8%, rgba(92,16,26,.72), transparent 62%), radial-gradient(55% 45% at 96% 8%, rgba(255,69,12,.06), transparent 60%), radial-gradient(65% 55% at 108% 104%, rgba(70,12,20,.48), transparent 62%)'
+        : 'radial-gradient(75% 55% at 22% -8%, rgba(146,26,40,.70), transparent 62%), radial-gradient(55% 45% at 96% 8%, rgba(200,232,74,.07), transparent 60%), radial-gradient(65% 55% at 108% 104%, rgba(122,21,32,.42), transparent 62%)'));
+    r.setProperty('--elevation-2', '0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.075), inset 0 0 0 0.5px rgba(255,255,255,0.045)');
+  }
+
+  aplicaFonte() {
+    const mapa = {
+      'Neue Montreal (Switzer)': 'Switzer',
+      'Aeonik Pro (General Sans)': 'General Sans'
+    };
+    const nome = (v, alt) => '"' + (mapa[v] || v || alt) + '"';
+    const texto = this.props.fonteDarkWine || '';
+    const titulo = this.props.fonteTitulosDarkWine || texto;
+    const r = document.documentElement.style;
+    if (texto) r.setProperty('--dw-font-text', nome(texto)); else r.removeProperty('--dw-font-text');
+    if (titulo) r.setProperty('--dw-font-display', nome(titulo)); else r.removeProperty('--dw-font-display');
+
+    // pesos reais disponíveis em cada família — evita negrito sintético
+    const PESOS = {
+      'Fugaz One': [400],
+      'Varela Round': [400],
+      'Space Mono': [400, 700],
+      'Lato': [400, 700, 900],
+      'Chakra Petch': [400, 500, 600, 700],
+      'Baloo Bhai 2': [400, 500, 600, 700, 800]
+    };
+    const disp = (titulo && PESOS[mapa[titulo] || titulo]) || [400, 500, 600, 700, 800];
+    const tem = (w) => disp.indexOf(w) >= 0;
+    const maior = disp[disp.length - 1];
+    const display = Math.min(maior, tem(800) ? 800 : maior);
+    const forte = tem(700) ? 700 : maior;
+    const medio = tem(600) ? 600 : (tem(500) ? 500 : forte);
+    const suave = tem(500) ? 500 : 400;
+    r.setProperty('--peso-display', String(display));
+    r.setProperty('--peso-forte', String(forte));
+    r.setProperty('--peso-medio', String(medio));
+    r.setProperty('--peso-suave', String(suave));
+    // sem escala de peso, a hierarquia vem do tamanho e da cor
+    r.setProperty('--tracking-display', disp.length === 1 ? '-0.005em' : '-0.02em');
+  }
+
+  dadosGraficos() {
+    const botaoDica = (ativo) => 'width:20px; height:20px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; font:inherit; font-size:0.6875rem; font-weight:var(--peso-forte); cursor:pointer; transition:background .2s ease; background:' +
+      (ativo ? 'var(--action-brand-tint)' : 'var(--surface-overlay)') + '; color:var(--text-tertiary)';
+    const escala = (i, n) => 'color-mix(in oklab, var(--chart-accent) ' + Math.round(100 - (i / Math.max(1, n - 1)) * 82) + '%, var(--chart-accent-2))';
+    const clubs = [['Pix', 148], ['Crédito 1x', 96], ['Crédito 2 a 6x', 61], ['Crédito 7 a 12x', 24]]
+      .map((c, i, arr) => [c[0], c[1], escala(i, arr.length)]);
+    const totalClubs = clubs.reduce((a, c) => a + c[1], 0);
+    const circ = 2 * Math.PI * 46;
+    let acc = 0;
+    const fatias = clubs.map(c => {
+      const frac = c[1] / totalClubs;
+      const dash = (frac * circ - 1.5).toFixed(2) + ' ' + circ.toFixed(2);
+      const offset = (-acc * circ).toFixed(2);
+      acc += frac;
+      return { nome: c[0], valor: c[1], cor: c[2], dash, offset, pct: Math.round(frac * 100) + '%' };
+    });
+
+    const eventos = [
+      ['Corrida noturna — Ibirapuera', 42, 50],
+      ['Teste de performance', 28, 30],
+      ['Treino de força — unidade Sul', 19, 35],
+      ['Mobilidade & recuperação', 12, 25],
+      ['Clínica de estreantes', 8, 40]
+    ];
+    const ocupacao = eventos.map((e, i) => {
+      const pct = Math.round((e[1] / e[2]) * 100);
+      const cor = escala(i, eventos.length);
+      return {
+        nome: e[0], inscritos: e[1], vagas: e[2],
+        estiloBarra: 'position:absolute; inset:0 auto 0 0; width:' + pct + '%; border-radius:var(--radius-pill); background:' + cor
+      };
+    });
+
+    const serie = (itens) => {
+      const total = itens.reduce((a, i) => a + i[1], 0);
+      return itens.map(i => {
+        const pct = (i[1] / total) * 100;
+        return {
+          nome: i[0], valor: i[1], pct: Math.round(pct) + '%',
+          estiloSeg: 'width:' + pct + '%; transform-origin:left center; animation:dcBar .75s cubic-bezier(.22,1,.36,1) both; transition:width .5s cubic-bezier(.4,0,.2,1); background:' + i[2],
+          estiloPonto: 'width:9px; height:9px; border-radius:3px; flex-shrink:0; background:' + i[2]
+        };
+      });
+    };
+    const nomeAnim = (n) => ((n || 0) % 2 ? 'dcBar2' : 'dcBar');
+    const animFunil = nomeAnim((this.state.tickClube || 0) + (this.state.tickVista || 0));
+    const animAcoes = nomeAnim((this.state.tickPeriodo || 0) + (this.state.tickPilar || 0));
+    const animPilar = nomeAnim(this.state.tickPeriodo || 0);
+    const animArea = ((this.state.tickVolume || 0) + (this.state.tickPeriodo || 0)) % 2 ? 'dcArea2' : 'dcArea';
+    const estiloAreas = 'transform-origin:50% 100%; animation:' + animArea + ' .6s cubic-bezier(.22,1,.36,1) both';
+    const animJanela = (this.state.tickMapa || 0) % 2 ? 'dcFade2' : 'dcFade';
+    const barra = (pct, cor, anim) => 'position:absolute; inset:0 auto 0 0; width:' + pct + '%; border-radius:var(--radius-pill); transform-origin:left center; animation:' + (anim || 'dcBar') + ' .75s cubic-bezier(.22,1,.36,1) both; transition:width .5s cubic-bezier(.4,0,.2,1); background:' + cor;
+    const baseMembros = 412;
+
+    const clubsConv = [
+      ['Corrida da Ilha', 186, 138], ['Pedal Norte', 78, 44],
+      ['Funcional Centro', 62, 39], ['Movimento Yoga', 38, 14]
+    ];
+    const sel = this.state.clube || 'todos';
+    const alvo = clubsConv.find(c => c[0] === sel);
+    const totalBase = alvo ? alvo[1] : baseMembros;
+    const converteram = alvo ? alvo[2] : 268;
+    const visitaram = Math.round(totalBase * 0.80);
+    const etapas = [
+      [alvo ? 'Membros ativos do club' : 'Membros ativos nos clubs', totalBase],
+      ['Visitaram a página de um evento', visitaram],
+      ['Compraram ou participaram', converteram]
+    ].map((e, i, arr) => [e[0], e[1], escala(i, arr.length)]);
+    const funil = etapas.map(e => ({
+      nome: e[0], valor: e[1], pct: Math.round((e[1] / totalBase) * 100) + '%',
+      estiloBarra: barra((e[1] / totalBase) * 100, e[2], animFunil)
+    }));
+    const taxaConversao = Math.round((converteram / totalBase) * 100) + '%';
+    const legendaConversao = alvo
+      ? 'dos ' + totalBase + ' membros de ' + alvo[0] + ' compraram ou participaram de um evento no ciclo'
+      : 'dos ' + baseMembros + ' membros ativos compraram ou participaram de um evento no ciclo';
+    const vista = this.state.vista || 'funil';
+    const itemOpcao = (ativo) => 'width:100%; display:flex; align-items:center; gap:9px; padding:8px 10px; border:none; border-radius:8px; font:inherit; font-size:0.8125rem; font-weight:' +
+      (ativo ? 'var(--peso-medio)' : '400') + '; text-align:left; cursor:pointer; transition:background .15s ease; background:transparent; color:var(--text-primary)';
+    const opcoesClubs = [{ valor: 'todos', nome: 'Todos os clubs' }]
+      .concat(clubsConv.map(c => ({ valor: c[0], nome: c[0] })))
+      .map(o => ({
+        nome: o.nome, ativo: o.valor === sel ? 'true' : 'false',
+        aoClicar: () => this.setState(st => ({ clube: o.valor, listaClubs: false, tickClube: (st.tickClube || 0) + 1 })),
+        estilo: itemOpcao(o.valor === sel),
+        estiloCheck: 'display:flex; width:16px; flex-shrink:0; color:var(--text-brand); opacity:' + (o.valor === sel ? '1' : '0')
+      }));
+    const pillVista = (ativo) => 'padding:6px 14px; border:none; border-radius:var(--radius-pill); font:inherit; font-size:0.75rem; font-weight:var(--peso-medio); cursor:pointer; transition:background .2s ease, color .2s ease; background:' +
+      (ativo ? 'var(--action-primary)' : 'transparent') + '; color:' + (ativo ? 'var(--action-primary-fg)' : 'var(--text-tertiary)');
+    const maxConv = Math.max(...clubsConv.map(c => c[2] / c[1]));
+    const conversaoClubs = clubsConv.map((c, i) => {
+      const taxa = c[2] / c[1];
+      const ativo = c[0] === sel;
+      return {
+        nome: c[0], pct: Math.round(taxa * 100) + '%', detalhe: c[2] + ' de ' + c[1],
+        estiloNome: 'font-size:0.8125rem; font-weight:' + (ativo ? 'var(--peso-forte)' : 'var(--peso-suave)') + '; color:var(--text-primary); opacity:' + (sel === 'todos' || ativo ? '1' : '0.5') + '; transition:opacity .3s ease; overflow:hidden; text-overflow:ellipsis; white-space:nowrap',
+        estiloBarra: barra((taxa / maxConv) * 100, ativo || sel === 'todos' ? escala(i, clubsConv.length) : 'color-mix(in oklab, var(--chart-accent-2) 40%, var(--chart-track))', animFunil)
+      };
+    });
+    const mods = [
+      ['Corrida de rua', 186], ['Ciclismo', 78], ['Funcional', 62],
+      ['Caminhada', 48], ['Bem-estar/Yoga', 38]
+    ];
+    const maxMod = mods[0][1];
+    const modalidades = mods.map((m, i) => ({
+      nome: m[0], membros: m[1], pct: Math.round((m[1] / baseMembros) * 100) + '%',
+      estiloBarra: barra((m[1] / maxMod) * 100, escala(i, mods.length))
+    }));
+
+    const p = this.periodo();
+    const fator = p.dias / 30;
+    const CATALOGO = [
+      ['Correr', 1284, 'km', 'Físico'], ['Treinar musculação', 742, 'sessões', 'Físico'],
+      ['Caminhar', 615, 'km', 'Físico'], ['Pedalar', 388, 'km', 'Físico'],
+      ['Dormir 7h+', 276, 'noites', 'Físico'], ['Yoga / alongamento', 214, 'min', 'Físico'],
+      ['Nadar', 132, 'metros', 'Físico'],
+      ['Ler', 276, 'páginas', 'Mental'], ['Estudar / curso', 188, 'min', 'Mental'],
+      ['Trabalho focado', 141, 'sessões', 'Mental'], ['Escrever / journaling', 96, 'sessões', 'Mental'],
+      ['Limitar tela à noite', 63, 'dias', 'Mental'],
+      ['Meditar', 388, 'min', 'Espiritual'], ['Respiração consciente', 152, 'sessões', 'Espiritual'],
+      ['Gratidão diária', 118, 'dias', 'Espiritual'], ['Desconexão digital', 74, 'horas', 'Espiritual']
+    ].map(a => [a[0], Math.round(a[1] * fator), a[2], a[3]]);
+    const pilarSel = this.state.pilar || 'Físico';
+    const acoesBrutas = CATALOGO.filter(a => a[3] === pilarSel).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const abasPilar = ['Físico', 'Mental', 'Espiritual'].map(nome => {
+      const ativo = nome === pilarSel;
+      return {
+        nome,
+        aoClicar: () => this.setState(st => ({ pilar: nome, tickPilar: (st.tickPilar || 0) + 1 })),
+        estilo: 'padding:6px 12px; border:none; border-radius:var(--radius-pill); font:inherit; font-size:0.75rem; font-weight:var(--peso-medio); cursor:pointer; transition:background .2s ease, color .2s ease; background:' +
+          (ativo ? 'var(--action-primary)' : 'transparent') + '; color:' + (ativo ? 'var(--action-primary-fg)' : 'var(--text-tertiary)')
+      };
+    });
+    const dezMaiores = CATALOGO.slice().sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const maxDez = dezMaiores[0][1];
+    const top10 = dezMaiores.map((a, i) => ({
+      posicao: i + 1, nome: a[0], total: a[1].toLocaleString('pt-BR'), unidade: a[2], pilar: a[3],
+      estiloTag: 'flex-shrink:0; padding:2px 8px; border-radius:var(--radius-pill); font-size:0.625rem; font-weight:var(--peso-forte); letter-spacing:0.04em; text-transform:uppercase; background:var(--surface-overlay); color:var(--text-tertiary)',
+      estiloBarra: 'position:absolute; inset:0 auto 0 0; width:' + ((a[1] / maxDez) * 100).toFixed(1) + '%; border-radius:var(--radius-pill); background:' + escala(i, 10)
+    }));
+    const maxAcao = acoesBrutas[0][1];
+    const acoes = acoesBrutas.map((a, i) => ({
+      nome: a[0], total: a[1].toLocaleString('pt-BR'), unidade: a[2],
+      estiloBarra: barra((a[1] / maxAcao) * 100, escala(i, acoesBrutas.length), animAcoes)
+    }));
+    const totalCheckins = CATALOGO.reduce((s, a) => s + a[1], 0).toLocaleString('pt-BR');
+    const pilaresBrutos = ['Físico', 'Mental', 'Espiritual'].map((nome, i) => [
+      nome,
+      CATALOGO.filter(a => a[3] === nome).reduce((s, a) => s + a[1], 0),
+      escala(i, 3)
+    ]);
+    const maxPilar = pilaresBrutos[0][1];
+    const totalPil = pilaresBrutos.reduce((a, x) => a + x[1], 0);
+    const pilares = serie(pilaresBrutos).map((p, i) => {
+      const frac = pilaresBrutos[i][1] / totalPil;
+      return {
+        ...p,
+        valor: pilaresBrutos[i][1].toLocaleString('pt-BR'),
+        estiloBarraPilar: barra(frac * 100, pilaresBrutos[i][2], animPilar)
+      };
+    });
+    const dominante = pilaresBrutos.reduce((a, b) => (b[1] > a[1] ? b : a));
+    const fraseEquilibrio = dominante[0] + ' concentra ' + Math.round((dominante[1] / totalPil) * 100) + '% dos check-ins do período.';
+
+
+    // heatmap dia da semana x semana
+    const matriz = [
+      [18, 42, 51, 38, 47, 66, 29],
+      [22, 39, 58, 41, 52, 71, 33],
+      [15, 45, 49, 36, 44, 63, 25],
+      [24, 51, 62, 47, 55, 78, 31],
+      [27, 48, 66, 52, 61, 82, 38],
+      [21, 55, 71, 49, 58, 88, 42]
+    ];
+    const maxCel = Math.max(...matriz.flat());
+    const minCel = Math.min(...matriz.flat());
+    const DIAS_NOME = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+    const dd = (d) => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+    const REF = new Date(2026, 7, 8);
+    const intervaloSemana = (i, n) => {
+      const fim = new Date(REF); fim.setDate(REF.getDate() - (n - 1 - i) * 7);
+      const ini = new Date(fim); ini.setDate(fim.getDate() - 6);
+      return dd(ini) + '–' + dd(fim);
+    };
+    const cs = getComputedStyle(document.documentElement);
+    const rgb = (v) => {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 1;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = (v || '').trim() || '#888';
+      ctx.fillRect(0, 0, 1, 1);
+      const d = ctx.getImageData(0, 0, 1, 1).data;
+      return [d[0], d[1], d[2]];
+    };
+    const A = rgb(cs.getPropertyValue('--chart-accent'));
+    const B = rgb(cs.getPropertyValue('--chart-accent-2'));
+    const T = rgb(cs.getPropertyValue('--chart-track'));
+    const mix = (x, y, t) => x.map((v, i) => Math.round(v + (y[i] - v) * t));
+    const lum = (c) => {
+      const f2 = c.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      return 0.2126 * f2[0] + 0.7152 * f2[1] + 0.0722 * f2[2];
+    };
+    const razao = (a, b) => { const l1 = lum(a), l2 = lum(b); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
+    const FUNDO = rgb(cs.getPropertyValue('--surface-base'));
+    // uma única escala de opacidade para células e legenda
+    const alfaHeat = (k) => 0.06 + Math.pow(Math.max(0, Math.min(1, k)), 0.75) * 0.94;
+    // o mapa é MONOCROMÁTICO: um só tom (o mais quente do tema), variando só a opacidade
+    const TOM = (A[0] - A[2]) >= (B[0] - B[2]) ? A : B;
+    // a célula é translúcida: 70% de transparência no piso, opaca no topo
+    const celaHeat = (v) => {
+      // normaliza no intervalo REAL da série: com valores agrupados, 0→max
+      // esmaga as diferenças e todas as células ficam no mesmo tom
+      const k = Math.max(0, Math.min(1, (v - minCel) / Math.max(1, maxCel - minCel)));
+      const tom = TOM;
+      const alfa = alfaHeat(k);
+      const claro = [255, 255, 255], escuro = [12, 12, 12];
+      let comp = mix(FUNDO, tom, alfa);
+      let fg = razao(comp, claro) >= razao(comp, escuro) ? claro : escuro;
+      let a = alfa;
+      // célula apagada: o número é que carrega o contraste, não o fundo
+      for (let i = 0; i < 10 && razao(comp, fg) < 4.6; i++) {
+        a = Math.min(1, a + 0.04);
+        comp = mix(FUNDO, tom, a);
+        fg = razao(comp, claro) >= razao(comp, escuro) ? claro : escuro;
+      }
+      return 'display:flex; align-items:center; justify-content:center; height:30px; border-radius:7px; cursor:default; animation:' + animJanela + ' .5s ease-out both; font-size:0.6875rem; font-weight:var(--peso-medio); transition:background .3s ease, color .3s ease, transform .15s ease; background:rgba(' +
+        tom.join(',') + ',' + a.toFixed(3) + '); color:rgb(' + fg.join(',') + ')';
+    };
+    // divisão por pilar dentro de uma célula — determinística a partir do total
+    const PILAR_COR = ['Físico', 'Mental', 'Espiritual'].map((n, i) => escala(i, 3));
+    const divisaoPilar = (v, i, j) => {
+      const fis = 0.58 + ((i * 7 + j * 3) % 9) * 0.012;
+      const men = 0.24 - ((i * 5 + j) % 7) * 0.008;
+      const esp = 1 - fis - men;
+      const partes = [['Físico', fis], ['Mental', men], ['Espiritual', esp]].map((p, k) => ({
+        nome: p[0],
+        total: Math.round(v * p[1]),
+        pct: Math.round(p[1] * 100) + '%',
+        estiloPonto: 'width:8px; height:8px; flex-shrink:0; border-radius:50%; background:' + PILAR_COR[k]
+      }));
+      partes[0].total = v - partes[1].total - partes[2].total;
+      return partes;
+    };
+    const FAIXAS = ['5–8h', '8–11h', '11–14h', '14–17h', '17–20h', '20–23h'];
+    const porHora = [
+      [62, 38, 12, 9, 28, 14],
+      [88, 41, 16, 11, 74, 22],
+      [96, 44, 19, 14, 91, 26],
+      [84, 39, 15, 12, 83, 21],
+      [92, 46, 21, 16, 88, 24],
+      [118, 58, 27, 19, 96, 31],
+      [74, 96, 48, 34, 41, 18]
+    ];
+    const celaObj = (v, i, j, estilo, rotulo) => ({
+      valor: v, rotulo: v + ' check-ins — ' + rotulo, estilo,
+      aoEntrar: (ev) => this.setState({ celaTip: { titulo: rotulo, total: v.toLocaleString('pt-BR'), partes: divisaoPilar(v, i, j), x: ev.clientX, y: ev.clientY } }),
+      aoMover: (ev) => this.setState(st => (st.celaTip ? { celaTip: { ...st.celaTip, x: ev.clientX, y: ev.clientY } } : null)),
+      aoSair: () => this.setState({ celaTip: null })
+    });
+    const jMapa = this.state.janelaMapa === 'hora' ? 'hora' : 'semana';
+    const jVol = this.state.janelaVolume === 'semana' ? 'semana' : 'hora';
+    const maxHora = Math.max(...porHora.flat());
+    const minHora = Math.min(...porHora.flat());
+    const celaHora = (v) => celaHeat(minCel + ((v - minHora) / Math.max(1, maxHora - minHora)) * (maxCel - minCel));
+    const heatmap = jMapa === 'hora'
+      ? porHora.map((linha, i) => ({
+          semana: DIAS_NOME[i].slice(0, 3),
+          dias: linha.map((v, j) => celaObj(v, i, j, celaHora(v), DIAS_NOME[i] + ', ' + FAIXAS[j]))
+        }))
+      : matriz.map((linha, i) => ({
+          semana: intervaloSemana(i, matriz.length),
+          dias: linha.map((v, j) => celaObj(v, i, j, celaHeat(v), DIAS_NOME[j] + ', ' + intervaloSemana(i, matriz.length)))
+        }));
+    const heatCols = (jMapa === 'hora' ? FAIXAS : ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']).map(l => ({ letra: l }));
+    const estiloGradeHeat = 'display:grid; grid-template-columns:auto repeat(' + heatCols.length + ', minmax(0,1fr)); gap:6px; align-content:start; align-items:center; min-height:270px';
+    const legendaHeat = jMapa === 'hora'
+      ? 'Check-ins por faixa de horário em cada dia da semana. Quanto mais claro, mais movimento.'
+      : 'Check-ins por dia da semana nas últimas 6 semanas. Quanto mais claro, mais movimento.';
+    const fazAbas = (atual, chave, tick) => [['hora', 'Hora do dia'], ['semana', 'Semana']].map(a => {
+      const ativo = a[0] === atual;
+      return {
+        nome: a[1],
+        aoClicar: () => this.setState(st => { const o = {}; o[chave] = a[0]; o[tick] = (st[tick] || 0) + 1; return o; }),
+        estilo: 'padding:6px 12px; border:none; border-radius:var(--radius-pill); font:inherit; font-size:0.75rem; font-weight:var(--peso-medio); cursor:pointer; transition:background .2s ease, color .2s ease; background:' +
+          (ativo ? 'var(--action-primary)' : 'transparent') + '; color:' + (ativo ? 'var(--action-primary-fg)' : 'var(--text-tertiary)')
+      };
+    });
+    const abasMapa = fazAbas(jMapa, 'janelaMapa', 'tickMapa');
+    const abasVolume = fazAbas(jVol, 'janelaVolume', 'tickVolume');
+    const escalaHeat = [0.1, 0.3, 0.55, 0.8, 1].map(k => {
+      const tom = TOM;
+      const a = alfaHeat(k);
+      return { estilo: 'display:block; width:16px; height:16px; border-radius:5px; background:rgba(' + tom.join(',') + ',' + a.toFixed(3) + ')' };
+    });
+
+    // área empilhada por semana
+    const semanasPilar = jVol === 'hora'
+      ? [[386, 41, 88], [204, 96, 61], [88, 74, 34], [66, 112, 29], [418, 83, 47], [112, 58, 96]]
+      : [[318, 74, 44], [352, 81, 47], [301, 69, 39], [389, 92, 53], [412, 98, 58], [441, 104, 61]];
+    const WA = 560, HA = 200;
+    const maxSem = Math.max(...semanasPilar.map(s => s[0] + s[1] + s[2]));
+    const xa = i => (i * WA) / (semanasPilar.length - 1);
+    const ya = v => (HA + 10) - (v / maxSem) * HA;
+    const suave = (pts, mover) => pts.map((p, i) => {
+      if (i === 0) return (mover ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+      const a = pts[i - 1];
+      const cx = (a[0] + p[0]) / 2;
+      return 'C' + cx.toFixed(1) + ' ' + a[1].toFixed(1) + ' ' + cx.toFixed(1) + ' ' + p[1].toFixed(1) + ' ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+    }).join(' ');
+    const areasPilar = [0, 1, 2].map(k => {
+      const topo = semanasPilar.map((s, i) => [xa(i), ya(s.slice(0, k + 1).reduce((a, v) => a + v, 0))]);
+      const base = semanasPilar.map((s, i) => [xa(i), ya(s.slice(0, k).reduce((a, v) => a + v, 0))]).reverse();
+      return { d: suave(topo, true) + ' ' + suave(base, false) + ' Z', cor: pilaresBrutos[k][2], grad: 'url(#gradPilar' + k + ')' };
+    }).reverse();
+    const semanasRotulos = semanasPilar.map((s, i) => ({ nome: jVol === 'hora' ? FAIXAS[i] : intervaloSemana(i, semanasPilar.length) }));
+    const legendaPilarTempo = jVol === 'hora'
+      ? 'Check-ins por pilar em cada faixa de horário. Passe o mouse para ver os números da faixa.'
+      : 'Volume semanal de check-ins empilhado por pilar. Passe o mouse para ver os números da semana.';
+
+    const passo = Math.ceil(maxSem / 4 / 50) * 50;
+    const eixoY = [0, 1, 2, 3, 4].map(k => {
+      const v = passo * k;
+      const y = ya(v);
+      return {
+        valor: v.toLocaleString('pt-BR'), y: y.toFixed(1),
+        estiloRotulo: 'position:absolute; left:0; width:38px; text-align:right; top:' + ((y / 210) * 100).toFixed(2) + '%; transform:translateY(-50%); font-size:0.6875rem; color:var(--text-tertiary)'
+      };
+    }).filter(t => Number(t.y) >= -2);
+
+    const hs = this.state.semanaHover;
+    const zonas = semanasPilar.map((s, i) => ({
+      aoEntrar: () => this.setState({ semanaHover: i }),
+      aoSair: () => this.setState({ semanaHover: null })
+    }));
+    const temTip = hs !== null && hs !== undefined && !!semanasPilar[hs];
+    const linhaTip = temTip ? semanasPilar[hs] : null;
+    const tooltipItens = temTip ? pilaresBrutos.map((p, k) => ({
+      nome: p[0], valor: linhaTip[k].toLocaleString('pt-BR'),
+      estiloPonto: 'width:9px; height:9px; border-radius:3px; flex-shrink:0; background:' + p[2]
+    })) : [];
+    const posX = temTip ? (hs / (semanasPilar.length - 1)) * 100 : 0;
+    const ladoDireita = temTip && hs > (semanasPilar.length - 1) / 2;
+
+    const insights = [
+      ['Atenção', 'var(--feedback-danger-surface)', 'var(--feedback-danger-fg)',
+       'R$ 1.240 aguardando pagamento', 'Nove inscrições em Pix pendente há mais de 48h. O lote vira sexta e elas caem sem aviso.', 'Ver pendências'],
+      ['Atenção', 'var(--feedback-warning-surface)', 'var(--feedback-warning-fg)',
+       '3 inscrições incompletas', 'Pararam na etapa de dados do atleta. Um lembrete por WhatsApp costuma recuperar metade.', 'Ver inscrições'],
+      ['Oportunidade', 'var(--action-brand-tint)', 'var(--action-brand-tint-fg)',
+       'Seus clubs sustentam a recompra', 'Quem participa de um club recompra 2,3x mais. 142 compradores do ciclo ainda não entraram em nenhum club.', 'Convidar para um club']
+    ];
+    const insightsUI = insights.map(i => ({
+      tag: i[0], titulo: i[3], detalhe: i[4], acao: i[5],
+      estiloTag: 'align-self:flex-start; padding:4px 10px; border-radius:var(--radius-pill); font-size:0.6875rem; font-weight:var(--peso-forte); letter-spacing:0.06em; text-transform:uppercase; background:' + i[1] + '; color:' + i[2]
+    }));
+
+    return {
+      taxaConversao, funil, conversaoClubs, legendaConversao, opcoesClubs, ...p.ui,
+      modoFunil: vista === 'funil',
+      modoClubs: vista === 'clubs',
+      verFunil: () => this.setState(st => ({ vista: 'funil', tickVista: (st.tickVista || 0) + 1 })),
+      verClubs: () => this.setState(st => ({ vista: 'clubs', tickVista: (st.tickVista || 0) + 1 })),
+      estiloVerFunil: pillVista(vista === 'funil'),
+      estiloVerClubs: pillVista(vista === 'clubs'),
+      dicaAberta: !!this.state.dica,
+      mostrarDica: () => this.setState({ dica: true }),
+      esconderDica: () => this.setState({ dica: false }),
+      estiloDica: 'width:20px; height:20px; display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; font:inherit; font-size:0.6875rem; font-weight:var(--peso-forte); cursor:pointer; transition:background .2s ease; background:' +
+        (this.state.dica ? 'var(--action-brand-tint)' : 'var(--surface-overlay)') + '; color:var(--text-tertiary)',
+      textoDica: vista === 'funil'
+        ? 'Funil: de todos os membros ativos dos clubs, quantos chegaram a olhar um evento e quantos de fato compraram ou participaram. Use o seletor à direita para ver o funil de um club específico.'
+        : 'Por club: a taxa de conversão de cada club — membros que compraram ou participaram de um evento sobre o total de membros ativos daquele club. Serve para achar quais clubs alimentam seus eventos e quais não.',
+      nomeClubeSel: sel === 'todos' ? 'Todos os clubs' : sel,
+      listaClubsAberta: !!this.state.listaClubs,
+      alternarClubes: () => this.setState(st => ({ listaClubs: !st.listaClubs })),
+      estiloGatilhoClube: 'display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:none; border-radius:var(--radius-pill); font:inherit; font-size:0.75rem; font-weight:var(--peso-medio); cursor:pointer; transition:background .2s ease; background:' +
+        (this.state.listaClubs ? 'var(--surface-high)' : 'var(--surface-overlay)') + '; color:var(--text-primary)',
+      baseMembros, modalidades, acoes, totalCheckins, abasPilar, top10,
+      top10Aberto: !!this.state.top10,
+      abrirTop10: () => this.setState({ top10: true }),
+      fecharTop10: () => this.setState({ top10: false }), pilares, fraseEquilibrio, insights: insightsUI,
+      heatmap, escalaHeat, areasPilar, semanasRotulos, eixoY, zonas, estiloAreas,
+      tooltipVisivel: !!temTip,
+      tooltipX: temTip ? xa(hs).toFixed(1) : '0',
+      tooltipSemana: temTip ? (jVol === 'hora' ? FAIXAS[hs] : intervaloSemana(hs, semanasPilar.length)) : '',
+      tooltipItens,
+      tooltipTotal: temTip ? linhaTip.reduce((a, v) => a + v, 0).toLocaleString('pt-BR') : '',
+      heatCols, estiloGradeHeat, legendaHeat, abasMapa, abasVolume, legendaPilarTempo,
+      celaTipAberto: !!this.state.celaTip,
+      celaTipTitulo: this.state.celaTip ? this.state.celaTip.titulo : '',
+      celaTipTotal: this.state.celaTip ? this.state.celaTip.total : '',
+      celaTipPartes: this.state.celaTip ? this.state.celaTip.partes : [],
+      estiloCelaTip: this.state.celaTip
+        ? 'position:fixed; z-index:200; left:' + Math.round(this.state.celaTip.x) + 'px; top:' + Math.round(this.state.celaTip.y - 18) + 'px; transform:translate(-50%, -100%); width:210px; padding:14px 16px; border-radius:12px; font-family:var(--font-family-ui); background:var(--surface-base); box-shadow:0 16px 44px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.09); pointer-events:none'
+        : 'display:none',
+      dicaMapaAberta: !!this.state.dicaMapa,
+      mostrarDicaMapa: () => this.setState({ dicaMapa: true }),
+      esconderDicaMapa: () => this.setState({ dicaMapa: false }),
+      estiloDicaMapa: botaoDica(!!this.state.dicaMapa),
+      dicaVolumeAberta: !!this.state.dicaVolume,
+      mostrarDicaVolume: () => this.setState({ dicaVolume: true }),
+      esconderDicaVolume: () => this.setState({ dicaVolume: false }),
+      estiloDicaVolume: botaoDica(!!this.state.dicaVolume),
+      estiloTooltip: 'position:absolute; top:8px; z-index:15; padding:14px 16px; border-radius:12px; animation:dcFade .14s ease-out both; background:var(--surface-base); box-shadow:0 14px 40px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.09); pointer-events:none; ' +
+        (ladoDireita ? 'right:calc(' + (100 - posX).toFixed(1) + '% + 14px);' : 'left:calc(' + posX.toFixed(1) + '% + 60px);'),
+      fatias, ocupacao
+    };
+  }
+
+  renderVals() {
+    this.aplicaFonte();
+    this.aplicaGlass();
+    const nomeUsuario = this.props.nomeUsuario ?? 'Vitor Pereira';
+    const aberto = this.state.menuAberto;
+    const base = this.itemBase(aberto);
+    return {
+      ...this.dadosGraficos(),
+      nomeUsuario,
+      alternarMenu: () => this.setState((s) => ({ menuAberto: !s.menuAberto })),
+      drawerAberto: this.state.drawer ? '1' : '0',
+      drawerVisivel: !!this.state.drawer,
+      drawerExpandido: this.state.drawer ? 'true' : 'false',
+      abrirDrawer: () => this.setState({ drawer: true, menuAberto: true }),
+      fecharDrawer: () => this.setState({ drawer: false }),
+      ...this.agenda(),
+      rotuloToggle: aberto ? 'Recolher menu' : 'Abrir menu',
+      giroToggle: aberto ? 'rotate(180deg)' : 'rotate(0deg)',
+      estiloNav: 'position:sticky; top:20px; align-self:flex-start; flex-shrink:0;' +
+        ' z-index:5;' +
+        ' width:' + (aberto ? '248px' : '84px') + '; height:calc(100vh - 40px); margin:20px 0 20px 20px;' +
+        ' display:flex; flex-direction:column; align-items:center; padding:18px 0 14px;' +
+        ' border-radius:26px; background:var(--surface-raised); box-shadow:var(--elevation-rail);' +
+        ' transition:width 650ms cubic-bezier(0.2,0.8,0.2,1);',
+      estiloItem: base + ' width:100%; color:var(--text-tertiary);',
+      estiloItemAtivo: base + ' width:100%; background:var(--action-primary); color:var(--action-primary-fg); font-weight:var(--peso-forte);' +
+        ' box-shadow:var(--glow-brand);',
+      railAberto: aberto ? '1' : '0',
+      estiloRotulo: aberto
+        ? 'flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; text-align:left;'
+        : 'display:none;',
+      estiloBadge: 'display:' + (aberto ? 'inline-flex' : 'none') +
+        '; align-items:center; padding:2px 7px; border-radius:var(--radius-xs); font-size:0.625rem; font-weight:var(--peso-forte);' +
+        ' background:var(--surface-high); color:var(--text-secondary);',
+      estiloRodape: 'display:' + (aberto ? 'flex' : 'none') + '; flex-direction:column; flex:1; min-width:0;',
+      alinhaTopo: aberto ? 'space-between' : 'center',
+      estiloMarcaIcone: 'position:absolute; top:0; left:50%; width:42px; height:42px; border-radius:14px;' +
+        ' transform:translateX(-50%) scale(' + (aberto ? '1.35' : '1') + ');' +
+        ' opacity:' + (aberto ? '0' : '1') + '; pointer-events:none;' +
+        ' transition:opacity 650ms cubic-bezier(0.2,0.8,0.2,1), transform 650ms cubic-bezier(0.2,0.8,0.2,1);',
+      estiloMarcaTexto: 'position:absolute; top:4px; left:50%; height:34px; width:auto;' +
+        ' transform:translateX(-50%) scale(' + (aberto ? '1' : '0.62') + ');' +
+        ' transform-origin:center; opacity:' + (aberto ? '1' : '0') + '; pointer-events:none;' +
+        ' transition:opacity 650ms cubic-bezier(0.2,0.8,0.2,1), transform 650ms cubic-bezier(0.2,0.8,0.2,1);',
+      estiloToggle: 'display:flex; align-items:center; justify-content:center;' +
+        ' width:38px; height:38px; flex-shrink:0;' +
+        ' border:none; border-radius:12px; background:transparent; color:var(--text-tertiary); cursor:pointer;',
+      primeiroNome: nomeUsuario.split(' ')[0].toUpperCase(),
+      mostrarAlternador: this.props.mostrarAlternador ?? true,
+      atividades: [
+        { iniciais: 'AT', texto: 'Alice Teixeira se inscreveu em Corrida de Inverno Floripa 2026', quando: 'há 2 horas', cor: 'var(--feedback-success)' },
+        { iniciais: 'BT', texto: 'Benício Teixeira está com pagamento pendente', quando: 'há 5 horas', cor: 'var(--feedback-warning)' },
+        { iniciais: 'AS', texto: 'Alice Sales se inscreveu em Corrida de Inverno Floripa 2026', quando: 'há 1 dia', cor: 'var(--feedback-success)' }
+      ],
+      setBrasa: () => this.aplicar('brasa'),
+      setWine: () => this.aplicar('wine'),
+      setDarkWine: () => this.aplicar('dark-wine'),
+      setDarkSea: () => this.aplicar('dark-sea'),
+      estiloBrasa: this.pill('brasa'),
+      estiloWine: this.pill('wine'),
+      estiloDarkWine: this.pill('dark-wine'),
+      estiloDarkSea: this.pill('dark-sea')
+    };
+  }
+}
+</script>
+</body>
+</html>
