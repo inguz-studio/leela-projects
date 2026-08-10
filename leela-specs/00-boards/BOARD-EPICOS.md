@@ -80,11 +80,11 @@ Antecipada por decisão de 2026-07-18: fecha o produto web antes do app. **Item 
 | [[LEELA-E14-integracoes-treino]] | Importar treino e corrida do Strava e afins | 🧊 Onda 6 — esqueleto escrito; com PWA a camada do aparelho (Health) some e o Strava vira a primeira camada viável |
 | [[LEELA-E06-marketing]] · avançado | Segmentação além do evento e novos gatilhos | 🧊 Onda 6 — sem lacuna de V1; a primeira parcela do avançado chega pelo E19 |
 
-## Radar da comunidade (WhatsApp) — 📋 spec pronta, fora de onda
+## Radar da comunidade (WhatsApp) — 📋 spec reparada, fora de onda
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| [[LEELA-E20-radar-comunidade]] | Retrato da comunidade WhatsApp do organizador dentro do Painel: volume, horários, palavras mais faladas, entradas e saídas, pirâmide de engajamento com nome real | 📋 spec escrita 09/08 (RN-520 a RN-529 + `04-engenharia/ponte-radar-whatsapp.md`, do estudo trace `c5a4a8bd`); **F0.a despachável** (número dedicado sobrevive 14 dias observando 1 comunidade real, sem nuvem) → F0.b ponte no emulador → **F1 🚫 bloqueada pela quarta frente do LGPD-1** (base legal + termo, advogado) → F2 multi-locação. Radar mudo por RN-520; rollout só convidados; review antagonista da spec DEVIDA antes de código |
+| [[LEELA-E20-radar-comunidade]] | Retrato da comunidade WhatsApp do organizador dentro do Painel: volume por dia, mapa de horários, palavras mais faladas, entradas e saídas, comparação entre comunidades e a lista de quem mais falou, pelo nome | 📋 spec escrita 09/08 e **reparada no mesmo dia** depois da review antagonista (trace `3ed45e7f`, 25 achados; reparo pelo trace `662b9248`). RN-520 a RN-536 + `04-engenharia/ponte-radar-whatsapp.md`. **F1 destravado**: o LGPD-1 deixou de ser gate pela decisão 12 do dono, que assumiu o risco jurídico com condição de reabertura registrada; a frente do advogado corre em paralelo. **F0.a despachável** (número sobrevive 14 dias, mudez provada por zero job de envio, `auto_update` congelado) → F0.b ponte no emulador, com a S2002-T3 (métricas por dia no fuso local e `cobertura`) como a tarefa que destrava tudo → F1 tela com oito estados, mais S2005 (pulso no tempo), S2006 (palavras), S2007 (frota) e S2008 (conciliação participante↔cliente) → F2 multi-locação, que reabre a RN-530 e a frente jurídica. Radar mudo por RN-520; rollout só convidados; item do radar na sub-navegação condicionado ao tenant. **Pendências externas:** hospedagem e custo do F2 (sócio); parecer do advogado (LGPD-1, sem gate). **Follow-up de spec:** o [[LEELA-E05-clubs]] grafa `/clubs/[slug]` com seis abas e o painel em produção usa `/clubes/:slug` — reconciliar na fonte é trabalho do E05 |
 
 ## Onda 7 · Creator Studio — 🧊
 

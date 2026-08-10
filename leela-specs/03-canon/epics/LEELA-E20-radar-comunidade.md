@@ -309,7 +309,7 @@ Renderizar sem capricho visual os números de um organizador, lendo direto do Fi
 - `apps/painel/src/routes/clubes/ClubesRoutes.tsx` — rota irmã de membros, desafios, parcerias, comunicação e configurações.
 
 **Fora de escopo**
-- Os sete estados, o cuidado visual e os gates de design, que são da S2003.
+- Os oito estados, o cuidado visual e os gates de design, que são da S2003.
 - Qualquer elemento que leve à tela de comunicação.
 
 ---
