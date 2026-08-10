@@ -11,7 +11,7 @@
 // uma. Modalidade sem lote → dica + botão para configurar o primeiro.
 // =============================================================================
 
-import { Badge, Button, EmptyState, Skeleton, Table } from '@leela/design-system';
+import { Badge, Button, Card, EmptyState, Skeleton, Table } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import { capacidadeDoLote, loteAtivo, precoVigente, type Evento, type Lote } from '@leela/core';
 import { Plus } from 'lucide-react';
@@ -201,9 +201,14 @@ function ModalidadeBloco({
   ];
 
   return (
-    <section
+    // Card CANÔNICO, não <section> cru com bg (mesma família do D-1008-R11):
+    // sob o vidro --surface-raised é filme translúcido que só lê como cartão
+    // com a receita blur+borda+elevação do Card. role="region" + aria-label
+    // preservam o landmark que o <section> nomeado dava.
+    <Card
+      role="region"
       aria-label={`Lotes da modalidade ${modalidade}`}
-      className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-5)]"
+      className="flex flex-col gap-[var(--spacing-3)] p-[var(--spacing-5)]"
     >
       <header className="flex flex-wrap items-center justify-between gap-[var(--spacing-3)]">
         <div className="flex flex-col gap-[var(--spacing-1)]">
@@ -279,7 +284,7 @@ function ModalidadeBloco({
           );
         }}
       />
-    </section>
+    </Card>
   );
 }
 

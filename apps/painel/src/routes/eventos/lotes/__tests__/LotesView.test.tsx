@@ -87,6 +87,17 @@ describe('LotesView', () => {
     expect(screen.getByRole('status', { name: /Carregando lotes/i })).toBeInTheDocument();
   });
 
+  it('bloco de modalidade desenha a superfície pelo Card canônico (família D-1008-R11)', () => {
+    renderView();
+    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    // A receita completa do Card (sob o vidro, o bg cru é filme invisível —
+    // ver superficie-cartoes.test.tsx dos kits para a prova na cascata real).
+    expect(bloco.className).toContain('bg-card');
+    expect(bloco.className).toContain('border-border');
+    expect(bloco.className).toContain('shadow-elev-1');
+    expect(bloco.className).not.toContain('bg-[var(--surface-raised)]');
+  });
+
   // -------------------------------------------------------------------------
   // Frente D — os três números da vaga, na tabela. Leva 3 do dono
   // (D-1008-R12): a coluna ÚNICA "Vagas (vendidas · disponíveis · total)"
