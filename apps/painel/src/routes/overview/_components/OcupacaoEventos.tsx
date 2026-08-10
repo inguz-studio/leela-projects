@@ -25,7 +25,7 @@ import { CalendarRange } from 'lucide-react';
 import type { OcupacaoDosEventos } from '../_lib/ocupacao';
 import { formatInt } from '../_lib/format';
 import { PanelError } from './PanelError';
-import { SecaoHead } from './SecaoHead';
+import { SecaoHead } from '../../../components/SecaoHead';
 
 export interface OcupacaoEventosProps {
   ocupacao: OcupacaoDosEventos | null;

@@ -24,6 +24,7 @@ export function HubRoute(): JSX.Element {
       onAbrirAssessorias={() => navigate('/clubes/assessorias')}
       onAbrirInfluenciadores={() => navigate('/clubes/influenciadores')}
       onAbrirMinhasAfiliacoes={() => navigate('/clubes/minhas-afiliacoes')}
+      onAbrirEngajamento={() => navigate('/clubes/engajamento')}
     />
   );
 }

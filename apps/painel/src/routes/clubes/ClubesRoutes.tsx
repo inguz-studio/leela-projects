@@ -19,6 +19,7 @@ import { NovoClubePage } from './novo/NovoClubePage';
 import { AssessoriasPage } from './assessorias/AssessoriasPage';
 import { CadastrarAssessoriaPage } from './assessorias/CadastrarAssessoriaPage';
 import { ParceriaDetailPage } from './assessorias/ParceriaDetailPage';
+import { EngajamentoPage } from './engajamento/EngajamentoPage';
 import { InfluenciadoresPage } from './influenciadores/InfluenciadoresPage';
 import { MinhasAfiliacoesPage } from './influenciadores/MinhasAfiliacoesPage';
 import { ClubeLayout } from './clube/ClubeLayout';
@@ -43,6 +44,12 @@ export function ClubesRoutes(): JSX.Element {
         {/* Rota estática ANTES do coringa :slug (fix #14 — o CTA do hub caía
             no :slug e renderizava "Club não encontrado"). */}
         <Route path="novo" element={<NovoClubePage />} />
+        {/* Engajamento (REDESIGN-DS): a análise da comunidade inteira, cross-club.
+            Vive na área Clubs porque a análise mora com o assunto — a mesma
+            razão que levou a análise de vendas para dentro do CRM (RN-823).
+            Rota ESTÁTICA antes do coringa `:slug`, senão "engajamento" cairia
+            no detalhe de club e renderizaria "Club não encontrado". */}
+        <Route path="engajamento" element={<EngajamentoPage />} />
         {/* Assessorias parceiras (E18) — rotas estáticas ANTES do coringa :slug. */}
         <Route path="assessorias" element={<AssessoriasPage />} />
         <Route path="assessorias/nova" element={<CadastrarAssessoriaPage />} />

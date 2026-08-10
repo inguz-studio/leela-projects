@@ -26,6 +26,8 @@ export interface HubClubesProps {
   onAbrirInfluenciadores?: () => void;
   /** Abre "minhas afiliações" (R9-E · RN-318/319 — lado clube/influenciador). */
   onAbrirMinhasAfiliacoes?: () => void;
+  /** Abre a análise de engajamento da comunidade (REDESIGN-DS · lane TELA). */
+  onAbrirEngajamento?: () => void;
 }
 
 interface KpisGlobais {
@@ -70,6 +72,7 @@ export function HubClubes({
   onAbrirAssessorias,
   onAbrirInfluenciadores,
   onAbrirMinhasAfiliacoes,
+  onAbrirEngajamento,
   onAbrirClube,
 }: HubClubesProps): JSX.Element {
   const [busca, setBusca] = useState('');
@@ -102,6 +105,11 @@ export function HubClubes({
         subtitle="Comunidades em torno dos seus eventos"
         actions={
           <div className="flex items-center gap-[var(--spacing-2)]">
+            {/* Engajamento primeiro entre as secundárias: é a leitura de TODA a
+                lista abaixo, não mais um destino lateral. */}
+            <Button variant="secondary" onClick={() => onAbrirEngajamento?.()}>
+              Engajamento
+            </Button>
             <Button variant="secondary" onClick={() => onAbrirMinhasAfiliacoes?.()}>
               Minhas afiliações
             </Button>

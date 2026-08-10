@@ -9,8 +9,9 @@
 //
 // Não sobe ao design system porque é composição de tela, não primitivo: o DS já
 // publica o `PageHeader` (cabeçalho de PÁGINA) e não tem — nem precisa ter —
-// opinião sobre como um bloco interno se anuncia. Fica aqui, na Visão Geral,
-// como o denominador comum dos blocos dela.
+// opinião sobre como um bloco interno se anuncia. Fica em `src/components`
+// porque a tela de Engajamento usa a MESMA anatomia: um cabeçalho de bloco que
+// muda de lugar conforme a tela não é cabeçalho de bloco, é enfeite.
 // =============================================================================
 
 import { ChevronRight } from 'lucide-react';
