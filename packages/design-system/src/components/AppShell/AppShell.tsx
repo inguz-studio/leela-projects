@@ -108,7 +108,23 @@ function AppShell({
             'border-b border-b-[var(--border-subtle)]',
           )}
         >
-          <IconButton aria-label={menuLabel} onClick={() => setMenuOpen(true)}>
+          {/* REDESIGN-V2 · item 5. `aria-expanded` fecha uma pendência que três
+              lanes registraram e nenhuma pôde tocar: sem ele, o leitor de tela
+              anuncia "Abrir menu de navegação, botão" com o drawer JÁ aberto —
+              o nome acessível é imperativo e não carrega estado, então o
+              usuário de AT não tem como saber que o menu está aberto sem varrer
+              a página. É a única mudança desta lane no shell.
+
+              Sem `aria-controls` de propósito: o painel do Drawer não expõe id
+              estável (o `useId` interno nomeia só o título), e plumbar um id
+              para fora mexeria no Drawer — superfície que o incidente de tela
+              preta de 10/08 pede para não alargar sem necessidade.
+              `aria-expanded` sozinho é válido e entrega o estado. */}
+          <IconButton
+            aria-label={menuLabel}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+          >
             <Menu aria-hidden />
           </IconButton>
         </div>
