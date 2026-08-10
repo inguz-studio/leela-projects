@@ -113,21 +113,21 @@ tags:
 - [ ] **[E16] O painel master passa a mostrar cada produtora por dentro, e o sistema inteiro por cima** — você abre uma produtora e vê os eventos, os clubs, os clientes, as vendas, o que ela gerou, o que ela tem a receber, em que plano está e quem responde por ela; e passa a ter as listas de todos os eventos e de todos os clubs do sistema 📋 especificado em 09/08 · a conferência achou que o administrador **já** cruza a fronteira em 9 dos 11 itens, então quase nada é permissão e quase tudo é tela · **fica com você:** **V-1** (o que "faturamento" nomeia), **V-2** (clientes: comportamento ou contato), **V-3** (responsável é o dono da conta?), **V-4** (CPF no diretório) e **V-5** (o gatilho do aviso) [[LEELA-E16-plataforma-superadmin]]
     - [ ] **S1612 · A ficha do tenant: o que ele produz e para quem** — uma rota com abas, não sete endereços
         - [ ] S1612-T1 a SubNav da ficha nasce sem reescrever o resumo que já está no ar
-        - [ ] S1612-T2 leitura por tenant de eventos e clubs, paginada
+        - [x] S1612-T2 leitura por tenant de eventos e clubs, paginada · `354116a9`
         - [ ] S1612-T3 a aba de eventos da produtora
         - [ ] S1612-T4 a aba de clubs da produtora
-        - [ ] S1612-T5 os clientes chegam por servidor, e a regra que os protege continua fechada
+        - [x] S1612-T5 os clientes chegam por servidor, e a regra que os protege continua fechada · `135978a9`/`69e70de8`
         - [ ] S1612-T6 a aba de clientes, sem contato e sem documento
-        - [ ] S1612-T7 o canário que impede alguém de "resolver" o problema abrindo a regra
+        - [x] S1612-T7 o canário que impede alguém de "resolver" o problema abrindo a regra · `73eae392`
     - [ ] **S1613 · A ficha do tenant: a economia dele** — o número vem do carimbo, nunca da conta refeita
-        - [ ] S1613-T1 leitura por tenant de pedidos e pagamentos, paginada
+        - [x] S1613-T1 leitura por tenant de pedidos e pagamentos, paginada · `17f17088`
         - [ ] S1613-T2 a aba de vendas, com o líquido certo também no modo repassada ⚔
-        - [ ] S1613-T3 o agregado macro deixa de depender de alguém lembrar de clicar
+        - [x] S1613-T3 o agregado macro deixa de depender de alguém lembrar de clicar · `7541ffdf`
         - [ ] S1613-T4 o faturamento da produtora, com a idade do número à mostra ⚔
         - [ ] S1613-T5 repasses e saldo da produtora dentro da ficha
         - [ ] S1613-T6 o plano aplicado aparece, e a tela avisa quando o termo já não é ele
     - [ ] **S1614 · Todos os eventos e todos os clubs do sistema** — duas listas, sem regra nova
-        - [ ] S1614-T1 leitura global paginada, com contagem que não mente
+        - [x] S1614-T1 leitura global paginada, com contagem que não mente · `e80ab899`
         - [ ] S1614-T2 a lista de todos os eventos, com a produtora em cada linha
         - [ ] S1614-T3 a lista de todos os clubs
         - [ ] S1614-T4 os dois endereços entram no menu do painel master
@@ -359,6 +359,8 @@ tags:
 ## ✅ Feito
 
 - [x] **[E01] O design system ganha um terceiro tema (dark-wine) e a camada glass, ligável por tema** — o dono redesenhou o DS e pediu brasa com glass ligado no painel do organizador e o admin em preto opaco (decisão em `leela-specs/02-rodadas/2026-08-09-redesign-ds/00-decisao.md`); esta é a lane 1 de 2 (TOKENS), a que constrói a base — a tela de Engajamento é a lane 2, separada. Dark-wine (vinho escuro + acento lime, atmosfera×ação nunca invertidos) entra pelo mesmo pipeline do wine, sem mexer em brasa/wine além do que a camada glass e a tipografia pedem (provado por diff, não por olho: zero valor existente mudou nos 2 temas antigos, só adição). Glass vira par opaco/glass por tema com `[data-glass="on"]` e fallback `@supports`, sem nenhum componente saber que ela existe. O brasa fica pareado (Exo 2 nos títulos, Rubik no texto corrido) com 4 papéis de peso que se adaptam ao corte que a fonte realmente carrega ✅ **09/08, suíte do DS 1579/1579** (tsc 0, eslint 0) — handoff `.nirvana/handoffs/leela-redesign-ds-20260809-TOKENS.md` · **2 vetáveis abertos no handoff**: a cor clara do gradiente `virtual` do dark-wine falha AA num ponto do ícone (2,45:1, precisa 3:1) e não há stop de outro tema pra copiar; e o guia visual (`governanca-design.md`, fora do meu território) continua com "leela" em vez de "wine"/"dark-wine" — achado, não consertado [[LEELA-E01-design-system]]
+
+- [x] **[E01/E02/E05] O painel do organizador ganha o vidro, e a comunidade ganha tela** — a lane 2 de 2 do redesign, a que encosta os tokens na tela. O vidro passa a seguir a ÁREA: painel do organizador com a camada ligada e o brilho de fundo preso ao viewport, administração da plataforma desligada sobre o preto opaco — os dois se distinguem antes de qualquer rótulo, que é o que o dono pediu. O Rubik entra de verdade no painel e os títulos voltam a falar Exo 2 (sem isso a lane 1 teria apagado a voz da marca da tela inteira). A Visão Geral ganha o resumo dos clubs, que fecha um buraco entre a story e a tela (o épico promete consolidar eventos E clubes; a tela consolidava só eventos), e a ocupação dos últimos eventos, derivada da mesma lista que ela já carregava. E nasce **Engajamento** (`/clubes/engajamento`): os quatro números da comunidade, o equilíbrio dos três pilares, a situação dos membros, a porta por onde cada um entrou, os desafios que mais movem gente e a única ponte club→evento que o dado carrega. O que não tem fonte **não virou gráfico zerado**: frequência, mapa de horários, volume no tempo e conversão da base recebem um vazio que nomeia a métrica e a causa ✅ **09/08, suíte do painel verde** (tsc 0, eslint 0, zero hex/px no diff da lane) — handoff `.nirvana/handoffs/leela-redesign-ds-20260809-TELA.md` · **fica com você:** o desfoque do vidro ainda não acontece (o `--card-blur` não tem consumidor, e os cards são do design system), a rampa lime→âmbar dos gráficos não existe no tema brasa, e a lista de métricas de comunidade que precisam de backend novo para sair do vazio honesto [[LEELA-E01-design-system]]
 
 - [x] **[E00/E01/E03/E12] Dez perguntas do painel fecham com o default que já estava em vigor** — o corte de 09/08 não gera tarefa nenhuma para elas: o default que já rodava virou a decisão, com o porquê e a condição de volta escritos ✅ 09/08 · lane PAINEL-CORTE [[01-decisoes-maestro]]
     - [x] **S1244 · As dez que fecham sem construir nada** — SCROLLBAR-1 (a barra nativa temada fica) · CONTA-1 (o código e o link convivem) · RESPIRO-1 (os vinte pixels ficam) · QUALIF-4 (era exemplo de fluxo, não programa de indicação) · VITRINE-1 (publicar segue livre, com o alerta crítico) · CODPED-1 (o prefixo é `PED-`) · PROJPED-1 (campo novo no pedido nasce visível ao comprador) · PDF-SPINNER-1 (a página do ingresso fica sem JavaScript de cliente) · ADMIN-VE-AREA-1 (a conta de administração continua vendo a própria área) · PERFIL-1 (`/@castelo` fica)
