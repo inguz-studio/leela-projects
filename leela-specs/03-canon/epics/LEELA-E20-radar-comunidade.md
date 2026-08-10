@@ -417,9 +417,52 @@ Dar ao organizador e à operação um caminho de esquecimento que não dependa d
 - **Dado** o mesmo período, **quando** olho o bloco de gente, **então** vejo entradas, saídas, o saldo e o tamanho do grupo ao longo do tempo.
 - **Dado** um período sem nenhuma mensagem, **quando** abro, **então** cada bloco mostra o próprio vazio e diz desde quando não há dado, em vez de gráfico em branco.
 
-**Tasks:** S2005-T1 (blocos de tempo e horário), S2005-T2 (bloco de entra e sai), cada um com o estado vazio próprio.
+**Tasks:** LEELA-S2005-T1, LEELA-S2005-T2.
 
 **O limite honesto.** Este bloco mostra o que aconteceu, não por quê. Uma queda de volume pode ser comunidade esfriando ou listener desconectado, e é por isso que a cobertura aparece junto do gráfico, e não numa tela de diagnóstico à parte.
+
+#### LEELA-S2005-T1 · Bloco de volume por dia e mapa de horários
+- **Tipo:** screen · **Depende de:** S2002-T3, S2003-T2 · **Estimativa:** M
+
+**Objetivo**
+Renderizar, dentro da casca do radar, o volume de mensagens por dia e o mapa de hora do dia por dia da semana, lendo os documentos de dia do grupo daquele clube.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/clubes/clube/radar/` — a pasta da aba do radar, criada pela S2003-T2; os dois blocos entram como componentes dela.
+
+**Regras de negócio a respeitar**
+- RN-524 — o período oferecido na tela não passa dos 400 dias de retenção; pedir mais do que isso mostra vazio, não erro.
+- RN-527 — a leitura é por identificador de documento na subcoleção `dias` do grupo, sem filtro composto e sem índice declarado.
+- Governança de agregado do E11 — o cliente não recalcula ranking; ele lê o que a Function publicou.
+
+**Critérios de aceite (testáveis)**
+- **Dado** três dias com 10, 20 e 30 mensagens, **quando** o bloco de volume renderiza, **então** cada dia mostra o próprio número e nenhum ponto mostra 60. É o fixture da S2002-T1 visto do lado da tela.
+- **Dado** um dia com `cobertura` presente e abaixo de 0,9, **quando** o gráfico renderiza, **então** aquele ponto é marcado como parcial; **dado** um dia sem `cobertura`, **então** ele é marcado como desconhecida, com marca distinta da de parcial.
+- **Dado** 10 mensagens às 22h de Brasília, **quando** o mapa de horários renderiza, **então** elas aparecem na posição 22 do dia local, e a soma das 24 posições daquele dia é igual a `mensagens` dele.
+- **Dado** um período sem nenhum documento de dia, **quando** abro, **então** o bloco diz desde quando não há dado e nomeia o último dia coberto, em vez de gráfico em branco.
+
+**Fora de escopo**
+- Qualquer diagnóstico de conexão em tela própria: a cobertura mora junto do gráfico, pelo motivo escrito no limite honesto desta história.
+
+#### LEELA-S2005-T2 · Bloco de entra e sai
+- **Tipo:** screen · **Depende de:** S2002-T3, S2003-T2 · **Estimativa:** S
+
+**Objetivo**
+Mostrar entradas, saídas, saldo e tamanho do grupo ao longo do período, a partir dos mesmos documentos de dia.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/clubes/clube/radar/` — componente do bloco de gente.
+
+**Regras de negócio a respeitar**
+- RN-524, RN-527.
+
+**Critérios de aceite (testáveis)**
+- **Dado** 30 dias com dado, **quando** o bloco renderiza, **então** ele mostra `entradas`, `saidas`, o saldo de cada dia e `membrosFim` como a linha do tamanho do grupo.
+- **Dado** um dia sem documento dentro do período, **quando** o bloco renderiza, **então** aquele dia aparece como ausente e não como zero: dia sem publicação e dia sem movimento são coisas diferentes, e a linha do tamanho do grupo não pode cair para zero por falta de dado.
+- **Dado** um período sem nenhuma entrada nem saída, **quando** abro, **então** o bloco diz isso e mantém a linha do tamanho do grupo visível.
+
+**Fora de escopo**
+- Nome de quem entrou ou saiu: o contrato entrega contagem, não lista de pessoas (RN-523).
 
 ---
 
@@ -440,6 +483,31 @@ Dar ao organizador e à operação um caminho de esquecimento que não dependa d
 
 A alternativa mais forte existe e foi recusada por escrito: o fork tem uma capability de resumo de grupo que serviria melhor o job, e ela está na seção "Fora de escopo" do épico, com o motivo — resumo é derivado do texto, e o texto morre na origem por RN-523. Reabre por decisão do dono.
 
+**Tasks:** LEELA-S2006-T1.
+
+#### LEELA-S2006-T1 · Bloco de palavras, com o limite honesto na própria tela
+- **Tipo:** screen · **Depende de:** S2002-T3, S2003-T2 · **Estimativa:** S
+
+**Objetivo**
+Renderizar as palavras mais faladas da janela escolhida, cada uma com quantas vezes apareceu e por quanta gente distinta, e deixar visível o que a lista não é.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/clubes/clube/radar/` — componente do bloco de palavras.
+
+**Regras de negócio a respeitar**
+- RN-523 — a tela lê `palavras[{palavra, n, remetentes}]` do documento de janela e nada mais; texto de mensagem não existe deste lado da fronteira para ser mostrado.
+- RN-527 — leitura do documento de janela por identificador (`7d`, `30d` ou `90d`), sem consulta filtrada.
+
+**Critérios de aceite (testáveis)**
+- **Dado** uma janela com palavras publicadas, **quando** o bloco renderiza, **então** aparecem as 15 primeiras, cada uma com `n` e `remetentes` à vista.
+- **Dado** duas palavras com o mesmo `n`, **quando** a lista ordena, **então** a de mais `remetentes` vem antes.
+- **Dado** um documento de janela com `palavras` vazio, porque nada alcançou o piso de frequência, **quando** abro, **então** o bloco diz que não houve palavra recorrente naquela janela e nomeia a janela, em vez de mostrar lista vazia.
+- **Dado** o bloco renderizado com qualquer conteúdo, **quando** leio a tela, **então** a frase que separa assunto de demanda está visível junto da lista, e não atrás de dica flutuante ou de link.
+
+**Fora de escopo**
+- Resumo de conversa por qualquer via, inclusive gerado na máquina local (seção "Fora de escopo" do épico).
+- Qualquer caminho da palavra para quem a falou: a lista é de assunto, não de pessoa.
+
 ---
 
 ### LEELA-S2007 · Comparar as minhas comunidades (F1)
@@ -454,9 +522,37 @@ A alternativa mais forte existe e foi recusada por escrito: o fork tem uma capab
 
 **Critérios de aceite (Given/When/Then):**
 - **Dado** um organizador com três grupos, **quando** abro a comparação, **então** vejo os três com volume, gente ativa e saldo de entradas e saídas na mesma janela.
-- **Dado** um grupo cujo volume caiu contra a janela anterior, **quando** a comparação renderiza, **então** a queda é visível sem eu abrir grupo por grupo.
-- **Dado** um grupo com saldo de saídas negativo em duas janelas seguidas, **quando** abro, **então** ele aparece destacado, porque debandada é o sinal que chega tarde demais quando ninguém olha.
+- **Dado** um grupo cujo ritmo dos últimos 7 dias está abaixo do ritmo dos últimos 30, **quando** a comparação renderiza, **então** a queda é visível sem eu abrir grupo por grupo.
+- **Dado** um grupo com saldo de saídas negativo em duas janelas de 7 dias seguidas, **quando** abro, **então** ele aparece destacado, porque debandada é o sinal que chega tarde demais quando ninguém olha.
 - **Dado** um organizador com um grupo só, **quando** abro, **então** o bloco não aparece, em vez de aparecer vazio.
+
+**De onde sai a comparação com o passado.** O documento de frota é substituído por inteiro a cada publicação e não guarda a janela anterior, então "esfriando" não pode ser lido de dois documentos de frota em sequência. Ele sai de duas contas sobre o que já está publicado: o ritmo é `mensagens` de `7d` dividido por 7 contra `mensagens` de `30d` dividido por 30, os dois do mesmo documento de frota por janela; e o saldo de duas janelas seguidas sai da série de `dias` do grupo, que é aditiva e vive 400 dias. Nenhuma das duas pede campo novo no contrato.
+
+**Tasks:** LEELA-S2007-T1.
+
+#### LEELA-S2007-T1 · Bloco de comparação entre as comunidades do organizador
+- **Tipo:** screen · **Depende de:** S2002-T4, S2003-T2 · **Estimativa:** M
+
+**Objetivo**
+Mostrar lado a lado os grupos do mesmo organizador na janela escolhida, com o sinal de esfriamento e o de debandada calculados sobre agregado já publicado.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/clubes/clube/radar/` — componente do bloco de frota.
+
+**Regras de negócio a respeitar**
+- RN-522 — a leitura é só do ramo do próprio tenant; a rule da frota é da S2002-T4.
+- RN-527 — `radarFrota/{7d|30d|90d}` e a série de `dias` são lidos por identificador de documento; nenhuma consulta filtrada nasce aqui.
+- RN-535 — a comparação nomeia o que mede e não afirma qual comunidade é a mais saudável.
+
+**Critérios de aceite (testáveis)**
+- **Dado** um organizador com três grupos publicados na janela, **quando** abro a comparação, **então** os três aparecem com volume, gente ativa e saldo de entradas e saídas da mesma janela.
+- **Dado** um grupo com 700 mensagens em `30d` e 105 em `7d`, **quando** o bloco calcula o ritmo, **então** ele marca o grupo como esfriando, porque 15 por dia está abaixo dos 23,3 por dia da janela larga; **dado** 210 em `7d`, **então** ele não marca.
+- **Dado** um grupo com mais saídas do que entradas nas duas últimas janelas de 7 dias, montadas a partir de `dias`, **quando** o bloco renderiza, **então** ele aparece destacado.
+- **Dado** um organizador com um grupo só, **quando** abro, **então** o bloco não é renderizado.
+- **Dado** nenhum documento de frota publicado para a janela pedida, **quando** abro, **então** o bloco diz que a comparação ainda não foi publicada, em vez de mostrar lista vazia.
+
+**Fora de escopo**
+- Qualquer ordenação que se apresente como ranking de comunidades: a leitura de qual está melhor continua sendo do organizador (RN-535).
 
 ---
 
@@ -465,7 +561,7 @@ A alternativa mais forte existe e foi recusada por escrito: o fork tem uma capab
 **Como** organizadora, **quero** dizer que aquele participante do ranking é aquele membro do meu cadastro, **para** parar de casar duas listas de cabeça.
 
 - **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel · **RNs:** RN-531, RN-532, RN-533
-- **Depende de:** S2003-T2
+- **Depende de:** S2002-T2 (a infraestrutura de function do radar nasce lá), S2002-T4 (a rule que fecha `radarVinculos` para todo cliente) e S2003-T2 (a casca da tela). Esta é a única história do épico que **escreve** dado, e por isso ela carrega uma Function, uma rule e um caminho de escrita de dado pessoal — quem planejar a onda precisa ver isso antes de tratá-la como mais uma história de tela.
 
 **Por que esta história existe.** A razão declarada do dono para pedir nome real foi identificar "usuários, clientes e membros mais engajados". A parte de clientes não fechava: o radar não coleta CPF, e-mail nem `atletaId`, que são as chaves do CRM, e não vai coletar. Sem conciliação, o épico entregava duas listas e devolvia ao organizador o trabalho manual que ele pagou para não fazer.
 
@@ -480,6 +576,62 @@ A alternativa mais forte existe e foi recusada por escrito: o fork tem uma capab
 - Sugestão automática aceita sozinha: o vínculo é sempre ato confirmado por gente.
 - Qualquer escrita no CRM. O vínculo mora do lado do radar e não cria perfil de ninguém.
 - Conciliação por telefone, que resolveria em um passo e está proibida pela RN-523.
+
+**Como a sugestão por semelhança de nome é resolvida, e por quê.** A comparação roda **no cliente**, sobre o cadastro de membros daquele clube que a tela já carrega. Nenhuma consulta por nome é emitida ao Firestore. A alternativa — consultar o cadastro filtrando por nome — seria a primeira query do conjunto que não é por identificador de documento, e o épico promete zero índice novo em quatro lugares (RN-527). A decisão fica escrita aqui em vez de cair no colo de quem implementar.
+
+**Tasks:** LEELA-S2008-T1, LEELA-S2008-T2.
+
+#### LEELA-S2008-T1 · Function de conciliação e de correção do nome
+- **Tipo:** api/function · **Depende de:** S2002-T2, S2002-T4 · **Bloqueia:** S2008-T2 · **Estimativa:** M
+
+**Objetivo**
+Criar a única porta de escrita de `radarVinculos`: a função que grava o nome corrigido pelo admin e o vínculo que ele confirma, com a invariante de forma de telefone aplicada pelo valor.
+
+**Arquivos (criar/editar)**
+- `functions/src/radar/radarVinculo.ts` — a função de conciliação e correção.
+- Reuso, sem cópia: `packages/core/src/radar/invariantes.ts`, criado pela S2002-T1. A invariante é a mesma da borda de ingestão, apontada para a outra porta.
+
+**Regras de negócio a respeitar**
+- RN-532 — a mesma invariante `NOME_COM_FORMA_DE_TELEFONE` vale para `nomeManual`, e a correção do admin vence a publicação seguinte do motor.
+- RN-533 — o vínculo é ato confirmado do admin, nada sobe do motor por causa dele e nada é escrito no CRM.
+- RN-531 — a escrita fica do lado do radar; a fronteira com o CRM está enumerada na própria regra.
+
+**Critérios de aceite (testáveis)**
+- **Dado** `nomeManual` igual a `"+55 11 98888-7777"` ou a `"5511988887777"`, **quando** chamo a função, **então** ela recusa com `NOME_COM_FORMA_DE_TELEFONE` e nada é gravado; com `"Maria"`, ela grava. São os três casos da borda, rodando contra o mesmo código do core.
+- **Dado** um chamador que não é `isTenantWriter` daquele tenant, **quando** ele chama, **então** a função recusa antes de escrever.
+- **Dado** um vínculo confirmado, **quando** ele é gravado, **então** `radarVinculos/{participanteHash}` passa a ter `atletaId` ou `membroId`, `vinculadoPor`, `vinculadoEm` e `origemNome`, e nenhum documento de `crmClientes` ou de `pessoas` é lido ou escrito na execução.
+- **Dado** um vínculo desfeito, **quando** ele é removido, **então** o documento perde o identificador do cadastro e mantém o `nomeManual`, se ele existir.
+
+**Testes a escrever**
+- unit da invariante apontada para `nomeManual`, com os três casos.
+- integração no emulador de preview: escrita pela função, escrita negada pelo cliente (o caso vive na S2002-T4 e é a outra metade desta porta), e o caso do gate `FronteiraPII.test.ts` nos dois sentidos.
+
+**Fora de escopo**
+- Qualquer escrita no CRM.
+- Vínculo aceito sem confirmação humana.
+
+#### LEELA-S2008-T2 · Conciliação e correção do nome na superfície do ranking
+- **Tipo:** screen · **Depende de:** S2008-T1, S2003-T2 · **Estimativa:** M
+
+**Objetivo**
+Dar ao admin, na linha do ranking, a ação de corrigir o nome e a de conciliar o participante com alguém do cadastro do clube.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/clubes/clube/radar/` — a ação na linha do ranking, que é da S2003-T2.
+
+**Regras de negócio a respeitar**
+- RN-532, RN-533, RN-527 (a sugestão roda no cliente, sem consulta por nome).
+
+**Critérios de aceite (testáveis)**
+- **Dado** um participante do ranking, **quando** abro a ação de conciliar, **então** os candidatos vêm do cadastro de membros daquele clube já carregado pela tela, ordenados por semelhança de nome, e nenhuma consulta nova é emitida ao Firestore.
+- **Dado** um vínculo confirmado, **quando** o ranking renderiza depois, **então** aquela linha mostra o nome do cadastro e não mais o do WhatsApp; **dado** o vínculo desfeito, **então** ela volta ao nome do WhatsApp.
+- **Dado** um participante sem nome, **quando** uso a correção manual, **então** o nome digitado aparece na linha e permanece depois da publicação seguinte do motor.
+- **Dado** um nome com forma de telefone digitado na correção, **quando** confirmo, **então** a tela mostra a recusa que a função devolveu e a linha não muda.
+- **Dado** um clube sem nenhum membro cadastrado, **quando** abro a ação de conciliar, **então** ela diz que não há cadastro para comparar, em vez de lista vazia.
+
+**Fora de escopo**
+- Escrita direta do cliente em `radarVinculos`, negada pela rule da S2002-T4.
+- Qualquer caminho da linha do ranking para mensagem, ligação ou comunicado (RN-520).
 
 ---
 
