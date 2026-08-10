@@ -64,6 +64,7 @@ describe('grupo rail — medidas do protótipo, byte a byte', () => {
     '--rail-toggle-top': '34px',
     '--rail-toggle-icon': '16px',
     '--rail-toggle-stroke': '2.25',
+    '--rail-icon-stroke': '2',
     '--rail-tip-gap': 'var(--spacing-3-5)',
     '--rail-tip-h': '34px',
     '--rail-tip-radius': '10px',

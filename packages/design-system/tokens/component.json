@@ -341,6 +341,7 @@
     "toggle-top":    "34px",
     "toggle-icon":   "16px",
     "toggle-stroke": "2.25",
+    "icon-stroke":   "2",
     "tip-gap":       "{spacing.3-5}",
     "tip-h":         "34px",
     "tip-radius":    "10px",
