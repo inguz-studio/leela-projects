@@ -76,6 +76,32 @@ function SubNav({
 }: SubNavProps): JSX.Element {
   const tabRefs = React.useRef<(HTMLAnchorElement | HTMLButtonElement | null)[]>([]);
 
+  // -------------------------------------------------------------------------
+  // Indicador DESLIZANTE (D-1008-R14): o sublinhado da aba ativa é UM elemento
+  // só, que viaja entre as posições quando a seleção troca — antes era um
+  // ::after POR aba (aparecia/sumia, sem movimento). Posição e largura vêm de
+  // MEDIÇÃO de layout (offsetLeft/offsetWidth da aba ativa — px de runtime,
+  // não px de design; nenhuma medida nova entrou na escala). Movimento pelos
+  // tokens de motion e desligado sob prefers-reduced-motion. O elemento só
+  // nasce DEPOIS da primeira medição — entra no DOM já em posição, sem
+  // animar do zero.
+  // -------------------------------------------------------------------------
+  const ativoIdx = tabs.findIndex((t) => t.active);
+  const [indicador, setIndicador] = React.useState<{ x: number; w: number } | null>(null);
+
+  React.useLayoutEffect(() => {
+    const el = ativoIdx >= 0 ? tabRefs.current[ativoIdx] : null;
+    if (!el) {
+      setIndicador(null);
+      return undefined;
+    }
+    const medir = (): void => setIndicador({ x: el.offsetLeft, w: el.offsetWidth });
+    medir();
+    // Largura de aba muda com fonte/viewport — re-mede no resize.
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, [ativoIdx, tabs]);
+
   function handleKeyDown(e: React.KeyboardEvent, index: number) {
     if (e.key === 'ArrowRight') {
       e.preventDefault();
@@ -90,7 +116,11 @@ function SubNav({
     <nav
       aria-label={ariaLabel}
       className={cn(
-        'bg-[var(--surface-base)]',
+        // `relative` ancora o indicador deslizante (D-1008-R14) — o nav é o
+        // offsetParent das abas, então offsetLeft e translateX falam a mesma
+        // régua, e o indicador rola JUNTO com o conteúdo (abs dentro do
+        // scroll container).
+        'relative bg-[var(--surface-base)]',
         'px-[var(--subnav-px)]',
         // Adendo 12 (R9-A · tablet/mobile): a barra de sub-navegação de eventos
         // tem N abas (Visão/Inscritos/Kits/…/Financeiro/Config) que estouravam a
@@ -143,12 +173,9 @@ function SubNav({
             isActive
               ? 'text-[var(--text-primary)] font-[var(--font-weight-semibold)]'
               : 'text-[var(--text-secondary)] font-[var(--font-weight-regular)] hover:text-[var(--text-primary)]',
-            // Underline indicator (Brasa 2px)
-            isActive && [
-              'after:absolute after:bottom-0 after:left-0 after:right-0',
-              'after:h-[var(--subnav-underline)] after:bg-[var(--border-brand)]',
-              'after:rounded-t-[var(--radius-sm)]',
-            ],
+            // O sublinhado da ativa NÃO mora mais aqui: desde a D-1008-R14 ele
+            // é o indicador deslizante ÚNICO (span [data-subnav-indicador] no
+            // nav) — um ::after por aba não desliza, só pisca de posição.
           );
 
           const content = (
@@ -205,6 +232,24 @@ function SubNav({
           );
         })}
       </ul>
+      {/* Indicador deslizante (D-1008-R14): o único sublinhado, viajando entre
+          as abas. Decorativo (aria-hidden) — a semântica da ativa segue no
+          aria-current. Largura/posição por medição (px de runtime, não de
+          design); movimento pelos tokens de motion, honrando motion-reduce. */}
+      {indicador ? (
+        <span
+          aria-hidden
+          data-subnav-indicador=""
+          className={cn(
+            'pointer-events-none absolute bottom-0 left-0',
+            'h-[var(--subnav-underline)] bg-[var(--border-brand)]',
+            'rounded-t-[var(--radius-sm)]',
+            'transition-[transform,width] duration-[var(--motion-duration-normal)] ease-[var(--motion-easing-default)]',
+            'motion-reduce:transition-none',
+          )}
+          style={{ width: indicador.w, transform: `translateX(${indicador.x}px)` }}
+        />
+      ) : null}
     </nav>
   );
 }

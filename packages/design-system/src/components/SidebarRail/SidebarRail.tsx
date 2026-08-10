@@ -155,6 +155,31 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
     const [menuPerfilAberto, setMenuPerfilAberto] = React.useState(false);
     const rotuloToggle = open ? 'Recolher menu' : 'Abrir menu';
 
+    // -----------------------------------------------------------------------
+    // Pill DESLIZANTE do item ativo (D-1008-R14): o fundo brasa + glow do item
+    // ativo é UM elemento só, que viaja verticalmente quando a seleção troca —
+    // antes cada item pintava o próprio fundo (aparecia/sumia, sem movimento).
+    // A posição vem de MEDIÇÃO (offsetTop do item ativo — px de runtime, não
+    // px de design); a LARGURA não se mede: o pill ancora em
+    // left/right = --rail-px e acompanha a largura do rail até durante a
+    // animação de abrir/fechar. Só nasce DEPOIS da primeira medição — entra no
+    // DOM já em posição, sem animar do zero. Semântica intacta: aria-current
+    // segue no item.
+    // -----------------------------------------------------------------------
+    const ativoId = items.find((i) => i.active)?.id ?? null;
+    const itemRefs = React.useRef<Map<string, HTMLElement>>(new Map());
+    const [indicadorY, setIndicadorY] = React.useState<number | null>(null);
+
+    React.useLayoutEffect(() => {
+      const el = ativoId ? itemRefs.current.get(ativoId) : null;
+      setIndicadorY(el ? el.offsetTop : null);
+    }, [ativoId, items, open]);
+
+    const registrarItem = (id: string) => (el: HTMLElement | null): void => {
+      if (el) itemRefs.current.set(id, el);
+      else itemRefs.current.delete(id);
+    };
+
     const avatar =
       footerAvatar ??
       (footerName ? (
@@ -360,16 +385,37 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
           <div className="w-full px-[var(--rail-px)]">{slotAberto}</div>
         ) : null}
 
-        {/* Itens (protótipo: gap 10, pt 34, px 14, rola só na vertical). */}
+        {/* Itens (protótipo: gap 10, pt 34, px 14, rola só na vertical).
+            `relative` ancora o pill deslizante — abs dentro do scroll
+            container rola JUNTO com os itens. */}
         <div
           className={cn(
-            'flex-1 w-full flex flex-col gap-[var(--rail-nav-gap)]',
+            'relative flex-1 w-full flex flex-col gap-[var(--rail-nav-gap)]',
             'pt-[var(--rail-nav-pt)] px-[var(--rail-px)]',
             SCROLL_Y_ONLY,
           )}
         >
+          {indicadorY !== null ? (
+            <span
+              aria-hidden
+              data-rail-indicador=""
+              className={cn(
+                'pointer-events-none absolute top-0 left-[var(--rail-px)] right-[var(--rail-px)]',
+                'h-[var(--rail-item-h)] rounded-[var(--rail-item-radius)]',
+                'bg-[var(--action-primary)] shadow-elev-brand',
+                'transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-easing-default)]',
+                'motion-reduce:transition-none',
+              )}
+              style={{ transform: `translateY(${indicadorY}px)` }}
+            />
+          ) : null}
           {items.map((item) => (
-            <RailNavItem key={item.id} item={item} open={open} />
+            <RailNavItem
+              key={item.id}
+              item={item}
+              open={open}
+              itemRef={registrarItem(item.id)}
+            />
           ))}
         </div>
 
@@ -387,9 +433,11 @@ SidebarRail.displayName = 'SidebarRail';
 interface RailNavItemProps {
   item: SidebarRailItem;
   open: boolean;
+  /** Ref do pill deslizante (D-1008-R14) — mede o offsetTop do item ativo. */
+  itemRef?: (el: HTMLElement | null) => void;
 }
 
-function RailNavItem({ item, open }: RailNavItemProps): JSX.Element {
+function RailNavItem({ item, open, itemRef }: RailNavItemProps): JSX.Element {
   const Comp: 'a' | 'button' = item.href ? 'a' : 'button';
 
   const sharedProps = {
@@ -407,11 +455,12 @@ function RailNavItem({ item, open }: RailNavItemProps): JSX.Element {
       '[transition:background-color_var(--motion-duration-fast),color_var(--motion-duration-fast),box-shadow_var(--motion-duration-normal)]',
       'motion-reduce:transition-none',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
+      // O FUNDO do ativo não mora mais aqui: desde a D-1008-R14 ele é o pill
+      // deslizante único ([data-rail-indicador]) — o item ativo fica com a
+      // tinta e o peso; o pill viaja por baixo (DOM anterior; itens são
+      // positioned e pintam por cima).
       item.active
-        ? cn(
-            'bg-[var(--action-primary)] text-[var(--action-primary-fg)]',
-            'font-[var(--font-weight-bold)] shadow-elev-brand',
-          )
+        ? 'text-[var(--action-primary-fg)] font-[var(--font-weight-bold)]'
         : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-overlay)] hover:text-[var(--text-primary)]',
     ),
   };
@@ -476,13 +525,13 @@ function RailNavItem({ item, open }: RailNavItemProps): JSX.Element {
 
   if (Comp === 'a') {
     return (
-      <a href={item.href} {...sharedProps}>
+      <a href={item.href} ref={itemRef} {...sharedProps}>
         {content}
       </a>
     );
   }
   return (
-    <button type="button" {...sharedProps}>
+    <button type="button" ref={itemRef} {...sharedProps}>
       {content}
     </button>
   );

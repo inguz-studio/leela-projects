@@ -10,14 +10,15 @@ verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
 import { SubNav, type SubNavProps, type SubNavTab } from '@leela/design-system'
 
 ## Quando usar
-Barra de sub-navegação entre ROTAS de uma seção (nav landmark + links com aria-current="page"). Tab ativa ganha underline Brasa 2px; contador opcional em pill.
+Barra de sub-navegação entre ROTAS de uma seção (nav landmark + links com aria-current="page"). O underline Brasa 2px da ativa é um indicador ÚNICO que DESLIZA entre as abas ao trocar seleção (D-1008-R14; motion por token, motion-reduce honrado); contador opcional em pill.
 
 ## Quando NÃO usar
 Não use para troca de conteúdo dentro da mesma página — isso é o Tabs (tablist ARIA). SubNav é navegação entre rotas, não tablist.
 
 ## Props válidas
-- tabs: SubNavTab[]   (obrigatório) — SubNavTab = { id: string; label: string; href?: string; count?: number; active?: boolean; onClick?: () => void }
+- tabs: SubNavTab[]   (obrigatório) — SubNavTab = { id: string; label: string; href?: string; count?: number; active?: boolean; onClick?: (event: React.MouseEvent) => void }
 - 'aria-label': string   (default: 'Navegação de seções')
+- divider: boolean   (default: false) — divisória inferior das sub-navs terciárias (RN-229)
 - className: string   (default: undefined)
 Nenhuma outra prop existe.
 
@@ -31,7 +32,8 @@ Nenhuma outra prop existe.
 - --font-weight-regular / --font-weight-semibold
 - --text-primary / --text-secondary
 - --radius-sm
-- --motion-duration-fast
+- --motion-duration-fast / --motion-duration-normal / --motion-easing-default (indicador deslizante)
+- --border-subtle (divider opcional)
 
 ## Proibido (do/don't)
 DON'T: props value/onValueChange/defaultTab — NÃO existem aqui (isso é Tabs); o estado ativo vem de tab.active.

@@ -99,12 +99,50 @@ describe('SidebarRail — abrir/fechar', () => {
 });
 
 describe('SidebarRail — item ativo e rodapé', () => {
-  it('ativo: aria-current="page" + action-primary + glow da marca', () => {
-    renderRail();
+  // D-1008-R14: o fundo brasa + glow do ativo saíram do ITEM e viraram o pill
+  // deslizante único ([data-rail-indicador]) — o item fica com aria-current,
+  // tinta e peso; o pill viaja entre posições ao trocar a seleção.
+  it('ativo: aria-current="page" + tinta do primário; o fundo mora no pill deslizante', () => {
+    const { container } = renderRail();
     const ativo = screen.getByRole('link', { name: 'Visão Geral' });
     expect(ativo.getAttribute('aria-current')).toBe('page');
-    expect(ativo.className).toContain('bg-[var(--action-primary)]');
-    expect(ativo.className).toContain('shadow-elev-brand');
+    expect(ativo.className).toContain('text-[var(--action-primary-fg)]');
+    expect(ativo.className).not.toContain('bg-[var(--action-primary)]');
+
+    const pill = container.querySelector('[data-rail-indicador]');
+    expect(pill).toBeTruthy();
+    expect((pill as HTMLElement).className).toContain('bg-[var(--action-primary)]');
+    expect((pill as HTMLElement).className).toContain('shadow-elev-brand');
+  });
+
+  it('pill deslizante: motion por token, motion-reduce honrado, decorativo e sem hitbox', () => {
+    const { container } = renderRail();
+    const pill = container.querySelector('[data-rail-indicador]') as HTMLElement;
+    expect(pill.className).toContain('transition-transform');
+    expect(pill.className).toContain('duration-[var(--motion-duration-normal)]');
+    expect(pill.className).toContain('ease-[var(--motion-easing-default)]');
+    expect(pill.className).toContain('motion-reduce:transition-none');
+    expect(pill.className).toContain('pointer-events-none');
+    expect(pill.getAttribute('aria-hidden')).toBe('true');
+    // Largura sem medição: ancora nos insets do padding dos itens — acompanha
+    // a largura do rail até DURANTE a animação de abrir/fechar.
+    expect(pill.className).toContain('left-[var(--rail-px)]');
+    expect(pill.className).toContain('right-[var(--rail-px)]');
+    // Altura/raio do item por token (mesma geometria do RailNavItem).
+    expect(pill.className).toContain('h-[var(--rail-item-h)]');
+    expect(pill.className).toContain('rounded-[var(--rail-item-radius)]');
+  });
+
+  it('sem item ativo, o pill não existe', () => {
+    render(
+      <SidebarRail
+        items={[
+          { id: 'a', label: 'A', icon: <svg aria-hidden /> },
+          { id: 'b', label: 'B', icon: <svg aria-hidden /> },
+        ]}
+      />,
+    );
+    expect(document.querySelector('[data-rail-indicador]')).toBeNull();
   });
 
   it('rodapé: iniciais do nome no avatar + dot de presença com glow tokenizado', () => {

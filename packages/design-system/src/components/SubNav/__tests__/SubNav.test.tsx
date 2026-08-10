@@ -260,4 +260,45 @@ describe('SubNav', () => {
     // Plano: sem divisor inferior; o sublinhado da aba ativa é o único indicador.
     expect(nav.className).not.toContain('border-b');
   });
+
+  // -------------------------------------------------------------------------
+  // Indicador DESLIZANTE (D-1008-R14): o sublinhado da ativa é UM elemento só
+  // que viaja entre as posições — não mais um ::after por aba. jsdom não faz
+  // layout (offsets = 0), então o contrato aqui é de ANATOMIA e ESTILO; o
+  // movimento real é conferência renderizada.
+  // -------------------------------------------------------------------------
+  describe('indicador deslizante (D-1008-R14)', () => {
+    it('existe UM indicador, decorativo, com o sublinhado brasa por token', () => {
+      const { container } = render(<SubNav tabs={tabs} />);
+      const indicadores = container.querySelectorAll('[data-subnav-indicador]');
+      expect(indicadores.length).toBe(1);
+      const ind = indicadores[0] as HTMLElement;
+      expect(ind.getAttribute('aria-hidden')).toBe('true');
+      expect(ind.className).toContain('h-[var(--subnav-underline)]');
+      expect(ind.className).toContain('bg-[var(--border-brand)]');
+      expect(ind.className).toContain('pointer-events-none');
+    });
+
+    it('desliza pelos tokens de motion e honra motion-reduce', () => {
+      const { container } = render(<SubNav tabs={tabs} />);
+      const ind = container.querySelector('[data-subnav-indicador]') as HTMLElement;
+      expect(ind.className).toContain('transition-[transform,width]');
+      expect(ind.className).toContain('duration-[var(--motion-duration-normal)]');
+      expect(ind.className).toContain('ease-[var(--motion-easing-default)]');
+      expect(ind.className).toContain('motion-reduce:transition-none');
+    });
+
+    it('a aba ativa NÃO desenha mais sublinhado próprio (::after morreu com a decisão)', () => {
+      render(<SubNav tabs={tabs} />);
+      const ativa = screen.getByRole('button', { name: /Visão Geral/i });
+      expect(ativa.className).not.toContain('after:bg-[var(--border-brand)]');
+    });
+
+    it('sem aba ativa, não há indicador', () => {
+      const { container } = render(
+        <SubNav tabs={[{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]} />,
+      );
+      expect(container.querySelector('[data-subnav-indicador]')).toBeNull();
+    });
+  });
 });
