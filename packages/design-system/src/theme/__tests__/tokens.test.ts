@@ -268,7 +268,8 @@ describe('REDESIGN-V2 item 2: rampa de dataviz existe nos três temas', () => {
   // aparecia em produção e os rankings caíam na paleta categórica. Este bloco
   // é o gate que impede a regressão nos três temas de uma vez.
   const casos = [
-    { tema: 'brasa', prims: brasa, semantic: semBrasa, accent: '#FF6520', accent2: '#C8E84A' },
+    // FLIP-ACCENT: chart.accent brasa = #FF450C ({primary.500}) — decisão do dono 10/08 (antes #FF6520/{primary.400}).
+    { tema: 'brasa', prims: brasa, semantic: semBrasa, accent: '#FF450C', accent2: '#C8E84A' },
     { tema: 'wine', prims: wine, semantic: semWine, accent: '#7A1520', accent2: '#7E9B12' },
     { tema: 'dark-wine', prims: darkWine, semantic: semDarkWine, accent: '#C8E84A' },
   ] as const;
@@ -303,7 +304,8 @@ describe('REDESIGN-V2 item 2: rampa de dataviz existe nos três temas', () => {
     // brasa não tem rampa `accent` em primitives — a ponta lime é literal de
     // propósito. Se alguém a trocar por {accent.400}, este teste cai.
     const css = generateCSS('brasa', brasa, semBrasa, comp, { rootFallback: true });
-    expect(css).toContain('--chart-accent: var(--primary-400);');
+    // FLIP-ACCENT: var(--primary-500) = #FF450C — decisão do dono 10/08.
+    expect(css).toContain('--chart-accent: var(--primary-500);');
     expect(css).toContain('--chart-accent-2: #C8E84A;');
     expect(css).not.toContain('var(--accent-400)');
   });

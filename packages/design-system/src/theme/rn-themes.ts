@@ -199,7 +199,7 @@ export const brasaTheme: FlatTokens = {
   "chart-cat-5": "#999999",
   "chart-track": "#1C1C1C",
   "chart-grid": "#242424",
-  "chart-accent": "#FF6520",
+  "chart-accent": "#FF450C",
   "chart-accent-2": "#C8E84A",
   "feedback-success": "#2D9315",
   "feedback-success-fg": "#5CB73B",
