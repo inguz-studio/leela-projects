@@ -572,7 +572,7 @@ Mostrar lado a lado os grupos do mesmo organizador na janela escolhida, com o si
 - **Dado** um vínculo confirmado, **quando** o ranking renderiza depois, **então** aquela linha mostra o nome do cadastro, e não mais o do WhatsApp.
 - **Dado** um participante com nome ausente ou irreconhecível, **quando** uso a edição manual, **então** o nome que eu digito vence a próxima publicação do motor.
 - **Dado** um vínculo desfeito, **quando** o ranking renderiza, **então** a linha volta ao nome que vem do WhatsApp.
-- **Dado** qualquer caminho do CRM, **quando** ele executa, **então** ele não lê documento do radar; e nenhum caminho do radar lê a base do CRM. O gate `FronteiraPII.test.ts` ganha esse caso nos dois sentidos.
+- **Dado** qualquer caminho do CRM, **quando** ele executa, **então** ele não lê documento do radar; e nenhum caminho do radar lê a base do CRM, que para efeito do gate é `crmClientes`, `pessoas` e as visões derivadas delas. O gate `FronteiraPII.test.ts` ganha esse caso nos dois sentidos, e as cinco bordas estão enumeradas na RN-531.
 
 **Fora de escopo**
 - Sugestão automática aceita sozinha: o vínculo é sempre ato confirmado por gente.
@@ -804,7 +804,7 @@ A regra existe porque a promessa central do épico — "mensagem bruta, telefone
 
 No F1, a consequência é operacional e está na RN-526: máquina identificada, responsável nomeado, runbook escrito, por organizador. O custo recorrente de hospedagem do F2 segue como decisão do sócio, fora deste épico.
 
-### RN-531 · agregado nominal de não-cliente é categoria própria, e a fronteira com o CRM é dura (nova, dona · 2026-08-09)
+### RN-531 · agregado nominal de não-cliente é categoria própria, e a fronteira com o CRM é declarada e testada por adição (nova, dona · 2026-08-09 · bordas enumeradas 10/08)
 
 O radar cria uma categoria de dado que o produto não tinha: **agregado nominal de não-cliente**. Nome de pessoa, com atributo comportamental (quantas mensagens, em que horário, em que posição do ranking), sobre gente que pode nunca ter comprado nada.
 
@@ -816,7 +816,27 @@ Ela não se encaixa em nenhuma das três fronteiras vizinhas, e a distinção pr
 
 O radar abre exceção declarada a esse padrão, por decisão 9 do dono, com dois limites: a audiência é o organizador daquela comunidade, nunca perfil público, e o dado é de gestão da comunidade dele. A base legal está **aberta** — o dono assumiu o risco em 09/08 (decisão 12) e o advogado responde depois.
 
-A fronteira contra o CRM é executável, não retórica: **nenhum caminho do CRM lê documento do radar, e nenhum caminho do radar lê a base do CRM.** O único ponto de contato é o vínculo manual da RN-533, que grava identificador do lado do radar e não devolve nada para o CRM. O gate de PII que o E19 já tem (`FronteiraPII.test.ts`, que reprova por adição) ganha o caso que prova essa separação nos dois sentidos.
+A fronteira contra o CRM é executável, não retórica: **nenhum caminho do CRM lê documento do radar, e nenhum caminho do radar lê a base do CRM.** O único ponto de contato é o vínculo manual da RN-533, que grava identificador do lado do radar e não devolve nada para o CRM. O gate de PII que o E19 já tem (`apps/painel/src/routes/crm/__tests__/FronteiraPII.test.ts`, que reprova por adição) ganha o caso que prova essa separação nos dois sentidos.
+
+"Fronteira testada por adição" é o que o desenho entrega, e a palavra importa: o gate reprova quando alguém acrescenta um caminho novo que a atravessa. Ele não é uma parede que impede a travessia por construção. Chamar isso de fronteira dura seria vender garantia estrutural onde existe disciplina de teste, e quem escrevesse o caso acreditando na palavra errada dimensionaria errado o que precisa provar.
+
+#### As bordas do gate, uma a uma, com a prova de cada lado
+
+A regra anterior nomeava o arquivo do gate e não dizia por onde ele passa. Quem fosse escrever o caso teria de decidir sozinho o que está dentro, e a decisão muda o resultado. As bordas são cinco:
+
+| Borda | O que atravessa | O que é recusado | A prova, e onde ela mora |
+|---|---|---|---|
+| **Ingestão da ponte** (motor → nuvem) | números e o `nome` do participante na forma da RN-532 | texto de mensagem, telefone, identificador de WhatsApp, mídia, transcrição; campo desconhecido; `nome` com forma de telefone | schema fechado mais a tabela de invariantes da ponte; teste de contrato do core com os três casos (S2002-T1) e asserção sobre o JSON serializado do publicador (S2002-T7) |
+| **`nomeManual`** (admin → nuvem) | o nome que o admin digita | a mesma forma de telefone, conferida pelo **valor** e não pelo nome do campo | a função de conciliação recusa com `NOME_COM_FORMA_DE_TELEFONE` usando o mesmo código do core; teste da S2008-T1 com os três casos |
+| **Projeção no Firestore** (nuvem → cliente) | leitura por `isTenantWriter` do próprio tenant | escrita de qualquer cliente, administrador de plataforma incluído; leitura cruzada entre tenants | match dedicado por coleção, sem catch-all; teste de rules da S2002-T4, com leitura cruzada e escrita por papel |
+| **Fronteira com o CRM** (radar ↔ CRM) | o identificador do cadastro gravado do lado do radar (`atletaId` ou `membroId`) e a leitura do cadastro de membros do clube pela S2008 | qualquer leitura de base do CRM por caminho do radar; qualquer leitura de documento do radar por caminho do CRM; qualquer escrita no CRM | `FronteiraPII.test.ts` ganha o caso nos dois sentidos (S2008-T1) |
+| **Expurgo e backup** (o que sai, e o que não pode sair sozinho) | dia acima de 400 dias; janela e frota paradas há mais de 120 dias; participante excluído a pedido | apagar `radarVinculos` como se fosse projeção descartável, em recálculo ou republicação | cron da S2003-T3 com carimbo por grupo; função de exclusão da S2003-T5, que remove o participante das janelas, da frota e de `radarVinculos` e carimba o pedido; a exceção do princípio está declarada na abertura da ponte |
+
+**O que é "base do CRM" para efeito do gate:** `tenants/{tenantId}/crmClientes/{clienteKey}`, a coleção raiz `pessoas/{cpf_hmac}` e qualquer visão derivada das duas. Nenhum caminho do radar lê nenhuma delas.
+
+**O que é leitura autorizada, e por quê:** o cadastro de membros do clube (`clubes/{clubId}/membros/{membroId}`, com `atletaId` e `atletaNome`) é lido pela S2008 para sugerir candidatos ao vínculo. Ele não é base do CRM: é o cadastro que o próprio organizador mantém do clube dele, sem atributo transacional nem valor gasto. A comparação roda no cliente, sobre a lista que a tela já carrega, e o que fica gravado do lado do radar é só o identificador que o admin confirmar. Sem esta linha, quem escrever o caso do gate decide sozinho se `clubes/*/membros` está dentro da fronteira, e as duas decisões possíveis dão resultados opostos: com ele dentro, a S2008 nasce reprovada; com ele fora e sem o motivo escrito, o gate passa a deixar entrar leitura de nome de pessoa por qualquer caminho do radar.
+
+**O que a fronteira não resolve, e fica dito.** `atletaId` é chave de ligação de último recurso do CRM, e ele passa a morar dentro de `radarVinculos`, ao lado de contagem de mensagem e nome de pessoa. A separação entre as duas bases é sustentada por política e por um gate que reprova por adição, não por impossibilidade estrutural. Quem for propor caminho novo entre as duas parte deste parágrafo, não da suposição de que a parede existe.
 
 ### RN-532 · o nome do participante tem origem declarada, pode faltar, e o admin corrige (nova, dona · 2026-08-09)
 
