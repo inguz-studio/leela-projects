@@ -14,9 +14,11 @@
 >
 > **Terceira troca de 10/08.** O **ARENA-2** saiu — você o decidiu em 09/08 (*"Nao temos essa listgem? de acordo com o spilares e modaldiades disponiveis? podemos usar de base"*) e a spec que o formaliza aterrissou (`02-rodadas/2026-08-10-arena-2-lista/`, RN-553 a RN-557: a lista de interesses da Arena deriva da taxonomia canônica — e a medição corrigiu a premissa do item: a listagem **existe**, é a RN-114 com os 3 pilares e as 16 ações, mais as 9 modalidades do clube). No lugar dele entrou o **ARENA-4**, a única pergunta que a sua frase não alcança: o corte do vocabulário exposto — a tabela derivada integral está lá, com fusões e rótulos marcados para o seu veto ser barato. A conta não muda.
 >
+> **A purga de dados de teste aterrissou em 10/08, fim de tarde, e a conta cai para 28.** O plano congelado rodou inteiro em produção: 247 exclusões, backup duplo tirado antes do primeiro delete, pós-check integral verde e as duas contas demo fora do Auth (21 → 19). Os quatro intocáveis (a compra real PED-8CDHM, o código T93N7F, o evento teste-taxa-repassada e a conta inguzbuilders) foram relidos depois de tudo por sonda independente: vivos, com o mesmo carimbo de antes. Dois itens fecham com ela. O **COMPROMETIDO-1** fecha pela purga: os três repasses vetados morreram com o resto do seed, o pós-check provou `comprometido = 0`, e o disponível para repasse voltou a bater com o dinheiro real. O **VITRINE-2** fecha sem objeto: os dois eventos sem preço já não existem em produção (a leitura de 10/08 devolve 404 para ambos), então não há mais o que precificar nem despublicar. Entra também a nota que a rodada de 09/08 deixou pronta para este registro: a tarefa **S318-T6**, o reparo dos dois kits de preço negativo em produção, fica **sem objeto** — a leitura de 10/08 encontra zero `itensKit` nos dois eventos.
+>
 > **Personagens dos exemplos.** Ana compra, Castelo organiza eventos, Marina opera o painel, Téo é influenciador afiliado. São ilustrativos, não pessoas do banco.
 >
-> **A conta de hoje: 30 itens abertos.** São **26** em "Decisões que dependem de você" e **4** em "Ações que só você pode executar" — contados à mão, um a um, contra as duas seções abaixo. Os cinco que entraram em 09/08 são os **ADMINVISAO-1 a ADMINVISAO-5**, da spec da visão master do painel admin: dois de dado pessoal, um de dinheiro, um de modelo e um de mecanismo. Eles fecham juntos, e a esteira não constrói as ondas que dependem deles enquanto isso não acontece. A "Fila de construção" no fim não é decisão e não entra na conta, agora sem exceção nenhuma: o **ADMIN-USUARIOS-1**, que morava lá dentro e pedia resposta sua, subiu para o bloco das decisões — você o decidiu em 09/08 e ele saiu na segunda troca de 10/08, dando lugar ao **ADMIN-USUARIOS-2**.
+> **A conta de hoje: 28 itens abertos.** São **25** em "Decisões que dependem de você" e **3** em "Ações que só você pode executar" — contados à mão, um a um, contra as duas seções abaixo, já sem o COMPROMETIDO-1 e o VITRINE-2, que a purga de 10/08 fechou. Os cinco que entraram em 09/08 são os **ADMINVISAO-1 a ADMINVISAO-5**, da spec da visão master do painel admin: dois de dado pessoal, um de dinheiro, um de modelo e um de mecanismo. Eles fecham juntos, e a esteira não constrói as ondas que dependem deles enquanto isso não acontece. A "Fila de construção" no fim não é decisão e não entra na conta, agora sem exceção nenhuma: o **ADMIN-USUARIOS-1**, que morava lá dentro e pedia resposta sua, subiu para o bloco das decisões — você o decidiu em 09/08 e ele saiu na segunda troca de 10/08, dando lugar ao **ADMIN-USUARIOS-2**.
 
 ## Decisões que dependem de você
 
@@ -128,6 +130,7 @@ Você acabou de dizer que a plataforma não vende desconto por dispensar o kit. 
 - **Por que a autorização continua sendo sua:** o reparo é escrito em **campo de preço** de produção, como **exceção declarada à RN-200**, que congela preço de kit depois da primeira venda — e os dois eventos têm 462 e 40 inscritos. **Você não consegue fazer isso pela tela do painel**: o campo aparece bloqueado e apagar o kit é negado. A régua desta casa é que dinheiro não anda sem você, e preço de kit é preço, mesmo quando a medição prova que não há comprador para proteger.
 - **Por que agora:** enquanto os dois documentos existem, a demonstração do produto ensina o contrário do que você decidiu. E há um detalhe de ordem que não pode ser esquecido: o seed de produção já rodou duas vezes, então **a fonte tem de ser corrigida antes do banco**, senão uma terceira execução ressuscita os dois.
 - **Onde aterrissa:** RN-509 em [[LEELA-E03-operacao-evento]]; tarefas 2a e 2b de `02-rodadas/2026-08-05-sem-kit/04-fila-codigo.md`. A tarefa da fonte sobe de qualquer forma; só o reparo em produção espera por você.
+- **+10/08 · o reparo em produção ficou sem objeto.** A leitura de 10/08 encontra zero `itensKit` nos dois eventos: os documentos de preço negativo já não existem, e a `S318-T6` fecha sem rodar. O que esta decisão ainda governa é a fonte do seed (`S318-T5`) e o comportamento de eventos futuros.
 
 ### SEMKIT-2 · a plataforma garante ao participante uma forma de se inscrever sem kit, ou isso é escolha do organizador
 
@@ -252,17 +255,6 @@ Sua decisão de 09/08 criou as duas portas de aprovação (código ou liberaçã
 - **Opções para a revogação:** **não nasce nesta fase** (**default proposto** — nenhum caso real a pediu, e revogar organizador com vendas vivas tem consequência em cascata) · revogação = suspender o tenant pelo lifecycle que já existe, sem apagar nada.
 - **Onde aterrissa:** RN-552 (nasce na forma da resposta); tarefa `S1616-T5`. Detalhe em `02-rodadas/2026-08-10-admin-usuarios/03-spec.md §Parte 5`.
 
-### COMPROMETIDO-1 · três repasses vetados comprometem R$ 167,00 contra eventos que o expurgo apagou
-
-O expurgo de 06/08 rodou limpo (2.873 operações, provadas contra o banco), e o saldo se recompôs sozinho no meio da corrida por um gatilho que ninguém tinha listado — hoje `vendidoBruto` está aritmeticamente certo, a soma exata dos dois eventos vivos. O que sobrou errado é o `comprometido = 16700`: três repasses vetados seguram esse valor, e dois deles apontam para eventos que não existem mais.
-
-- **Caso de uso:** o painel de caixa mostra dinheiro comprometido com evento apagado, e nenhuma tela de operador tem botão para desfazer isso.
-- **Job story:** quando eu abro o caixa para saber quanto posso repassar, eu quero que o disponível corresponda ao dinheiro que existe de verdade, para não segurar repasse por causa de um valor preso em evento que já não existe.
-- **O que fica com você:** decidir o destino dos três repasses vetados. É dinheiro, estava vetado antes do expurgo, e remendar por conta própria era exatamente o tipo de silêncio que você já proibiu.
-- **Por que agora:** enquanto eles existirem, o "disponível para repasse" nasce menor do que a realidade — o guard `disponível = entrou − comprometido` desconta valor preso em referência morta.
-- **Opções:** cancelar os três repasses vetados de vez, liberando o comprometido — os dois de evento apagado não têm mais contra o que correr · cancelar só os dois órfãos e manter o terceiro, que aponta para evento vivo · deixar como está até a próxima rodada de caixa, aceitando o disponível menor.
-- **Onde aterrissa:** os três documentos de `repasses` com status vetado; a medição completa está em `.nirvana/handoffs/leela-apply-limpeza-20260806.md`. A lacuna estrutural (recomputo de saldo sem caminho de operador) segue registrada na REV3.
-
 ### ADMINVISAO-1 · o que a ficha da produtora chama de "faturamento gerado"
 
 Você pediu "análise de faturamento gerado" por tenant. A palavra `faturamento` **não existe no código** — existem três números gravados que ela poderia nomear, e um quarto que não existe em lugar nenhum: `custoGateway`, `custoReal`, `receitaPlataforma` e qualquer cálculo de margem têm zero ocorrências em `packages/core`, `packages/api-client` e `functions/src`.
@@ -341,17 +333,6 @@ Sete coisas entraram no ar entre 02 e 03/08 e nenhuma delas tem gate de código 
 - **Entra no mesmo passeio quando for ao ar:** as telas da porta de entrada do organizador, construídas e já revisadas. Elas esperavam o **DEPLOY-1**, que foi decidido em 09/08 — a máquina sobe no próximo deploy, com o seed do primeiro convite retido pelo LGPD-1 —, então o passeio delas passa a depender do deploy, e não mais de uma resposta sua. O botão de pagar você confere depois da S1219, que troca a frase "Atualizando o total…" pelo spinner que você aprovou.
 - **+04/08 · os oito e-mails entraram nesta lista e agora estão em produção.** A moldura da marca subiu no deploy da lane DEPLOY-EMAIL, então o próximo e-mail que sair do sistema já vai com logo e fundo da identidade. A conferência é por arquivo, não por navegador: os oito renderizados com dados de exemplo estão em `.nirvana/outputs/leela-build-2d6ee98d/emails/` (`index.html` percorre os oito). O que vale olhar com cuidado é o **cabeçalho com a imagem bloqueada** — é o caso normal no Gmail, não a exceção, e é o `alt` estilizado que segura a marca ali.
 - **+05/08, atualizado em 06/08 · a tela de lotes entra nesta lista, e agora ela está no ar.** Seus seis achados foram atendidos, revisados por antagonista e subiram no deploy do painel de 05/08. Sete conferências, todas em `/eventos/{slug}/lotes`: o aviso acende no campo da **vaga** e não no do preço; dois campos vazios acendem juntos e o cursor cai no primeiro da ordem visual; a recusa por janela sobreposta traz o **nome** do outro lote e as datas com hora; os três números (vendidas · disponíveis · total) aparecem na tabela e dentro do modal, e o disponível cai **na hora** quando você digita um total menor em `Ajustar capacidade`; um lote com venda abre com o preço cinza e o atalho de capacidade logo abaixo da vaga; `Desativar` num lote vigente para a venda e mantém válido quem já comprou; e o menu secundário do evento não tem barra de rolagem nenhuma em 320, 768 e 1024 pixels, com as abas que não cabem ainda alcançáveis por gesto. **A janela de datas segue cinza de propósito** — ela é a única parte do seu pedido que não foi entregue, e agora tem tarefa própria, porque a trava vive numa regra de servidor.
-
-### VITRINE-2 · os dois eventos sem preço seguem publicados e visíveis
-
-Consertar código não os faz vender: falta dado. Enquanto ninguém cadastra preço, os dois continuam no ar dizendo que as inscrições acabaram.
-
-- **Caso de uso:** alguém chega hoje em `noturna-beira-mar-2026` ou em `retiro-bem-estar-rio-vermelho-2026`, lê "Inscrições encerradas" e conclui que a plataforma está quebrada. Os dois seguem no ar, com 60 e 28 inscritos já contabilizados.
-- **Job story:** quando eu abro a página de um evento que ainda vai acontecer, eu quero conseguir me inscrever ou entender por que não posso, para não ir embora achando que o site não funciona.
-- **O que fica com você:** cadastrar preço nos dois ou tirá-los do ar até que alguém cadastre.
-- **Por que agora:** são 60 e 28 inscritos já contabilizados, então despublicar tem efeito visível e não é decisão de máquina.
-- **Opções:** cadastrar lotes e deixar vender · despublicar até ter preço · deixar como está.
-- **Onde aterrissa:** dado de produção. A lane não tocou em nada — a apuração inteira foi leitura.
 
 ### JUROS-1 · salvar os termos comerciais no painel, para selar o rastro
 
