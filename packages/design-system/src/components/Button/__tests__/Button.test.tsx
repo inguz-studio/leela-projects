@@ -37,6 +37,46 @@ describe('Button', () => {
     expect(screen.getByRole('button')).toBeInTheDocument();
   });
 
+  // ── Forma CTA do protótipo v3 (L-021 · HIFI-REC-FIX) ────────────────────
+  // O CtaV3 do painel consome ESTA forma em vez de re-implementar <button>
+  // cru. As alturas 48/44 são contrato do protótipo — vêm dos tokens
+  // --v3-cta-h/-sm, pinados contra o .dc.html em rail-v3-tokens.test.ts;
+  // aqui pina-se que a forma vive no Button canônico, por token, sem px cru.
+  it('size cta: largura cheia, 48px por token, raio md e tipografia do protótipo', () => {
+    render(<Button size="cta">Gerenciar evento</Button>);
+    const btn = screen.getByRole('button', { name: 'Gerenciar evento' });
+    expect(btn).toHaveClass(
+      'h-[var(--v3-cta-h)]',
+      'w-full',
+      'rounded-[var(--radius-md)]',
+      'gap-[var(--spacing-2-5)]',
+      'text-[length:var(--font-size-base-plus)]',
+      'font-[var(--font-weight-bold)]',
+    );
+  });
+
+  it('size cta-sm: 44px por token, mesma forma de largura cheia', () => {
+    render(<Button size="cta-sm">Gerenciar clubs</Button>);
+    const btn = screen.getByRole('button', { name: 'Gerenciar clubs' });
+    expect(btn).toHaveClass(
+      'h-[var(--v3-cta-h-sm)]',
+      'w-full',
+      'rounded-[var(--radius-md)]',
+      'gap-[var(--spacing-2-5)]',
+      'text-[length:var(--font-size-base)]',
+    );
+  });
+
+  it('variant neutral: superfície alta com hover de ação secundária, por token', () => {
+    render(<Button variant="neutral">Neutro</Button>);
+    const btn = screen.getByRole('button', { name: 'Neutro' });
+    expect(btn).toHaveClass(
+      'bg-[var(--surface-high)]',
+      'text-[var(--text-primary)]',
+      'hover:bg-[var(--action-secondary-hover)]',
+    );
+  });
+
   // ── type="button" padrão ────────────────────────────────────────────────
   it('has type="button" by default to avoid accidental form submit', () => {
     render(<Button>OK</Button>);

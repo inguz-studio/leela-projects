@@ -67,6 +67,18 @@ const buttonVariants = cva(
           'hover:bg-[var(--action-destructive-hover)]',
           'active:bg-[var(--action-destructive-pressed)]',
         ].join(' '),
+
+        // Bloco neutro do protótipo "Visao Geral v3" (L-021 · HIFI-REC-FIX):
+        // superfície alta com texto primário, hover no cinza de ação
+        // secundária. Nasceu para o CtaV3 do painel consumir o Button
+        // canônico em vez de re-implementar `<button>` cru; pressed reusa o
+        // hover (mesma receita do ghost — o protótipo não desenha pressed
+        // próprio para o CTA neutro).
+        neutral: [
+          'bg-[var(--surface-high)] text-[var(--text-primary)]',
+          'hover:bg-[var(--action-secondary-hover)]',
+          'active:bg-[var(--action-secondary-hover)]',
+        ].join(' '),
       },
 
       size: {
@@ -78,6 +90,24 @@ const buttonVariants = cva(
         // da tríade de cor dos variants. Para o icon-btn GHOST da toolbar com
         // pip de notificação, use o átomo IconButton.
         icon: 'h-[var(--btn-height-md)] w-[var(--btn-height-md)] p-0 text-[length:var(--btn-font-size-md)]',
+
+        // Forma CTA do protótipo "Visao Geral v3" (L-021 · HIFI-REC-FIX): o
+        // botão de largura cheia dos cartões do dashboard — 48px primário /
+        // 44px neutro por token (--v3-cta-h/-sm, pinados contra o .dc.html em
+        // rail-v3-tokens.test.ts), raio md, gap 2.5 e tipografia própria.
+        // SEM px de propósito: o conteúdo centraliza na largura cheia, como o
+        // protótipo desenha. `cta` pareia com o CTA primário (base-plus bold);
+        // `cta-sm` com o neutro (base; peso fica no --btn-font-weight = 600,
+        // o semibold do protótipo).
+        cta: [
+          'h-[var(--v3-cta-h)] w-full rounded-[var(--radius-md)]',
+          'gap-[var(--spacing-2-5)] text-[length:var(--font-size-base-plus)]',
+          'font-[var(--font-weight-bold)]',
+        ].join(' '),
+        'cta-sm': [
+          'h-[var(--v3-cta-h-sm)] w-full rounded-[var(--radius-md)]',
+          'gap-[var(--spacing-2-5)] text-[length:var(--font-size-base)]',
+        ].join(' '),
       },
     },
     defaultVariants: {

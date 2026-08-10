@@ -13,7 +13,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { cn } from '@leela/design-system';
+import { Button, cn } from '@leela/design-system';
 
 // ---------------------------------------------------------------------------
 // Cascata — entrada da tela em cascata (README §5): fade + subida de 12px,
@@ -182,7 +182,13 @@ export function LinkV3({
 }
 
 // ---------------------------------------------------------------------------
-// CtaV3 — o botão de largura cheia do protótipo (primário 48px / neutro 44px)
+// CtaV3 — o botão de largura cheia do protótipo (primário 48px / neutro 44px).
+//
+// Desde HIFI-REC-FIX (cânone L-021) ele CONSOME o Button canônico do DS: a
+// forma do protótipo virou `size="cta"/"cta-sm"` + `variant="neutral"` no
+// próprio Button (packages/design-system, com teste). Aqui sobra só o
+// mapeamento do vocabulário do protótipo (primario/neutro) e a seta — o par
+// 48/44 segue vindo dos tokens --v3-cta-h/-sm, pinados no DS.
 // ---------------------------------------------------------------------------
 
 export function CtaV3({
@@ -194,32 +200,15 @@ export function CtaV3({
   onClick: () => void;
   variant?: 'primario' | 'neutro';
 }): JSX.Element {
+  const primario = variant === 'primario';
   return (
-    <button
-      type="button"
+    <Button
+      variant={primario ? 'primary' : 'neutral'}
+      size={primario ? 'cta' : 'cta-sm'}
       onClick={onClick}
-      className={cn(
-        'w-full flex items-center justify-center gap-[var(--spacing-2-5)]',
-        'border-none rounded-[var(--radius-md)] cursor-pointer',
-        'transition-colors duration-[var(--motion-duration-fast)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
-        variant === 'primario'
-          ? cn(
-              'h-[var(--v3-cta-h)]',
-              'bg-[var(--action-primary)] text-[var(--action-primary-fg)]',
-              'text-[length:var(--font-size-base-plus)] font-[var(--font-weight-bold)]',
-              'hover:bg-[var(--action-primary-hover)]',
-            )
-          : cn(
-              'h-[var(--v3-cta-h-sm)]',
-              'bg-[var(--surface-high)] text-[var(--text-primary)]',
-              'text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)]',
-              'hover:bg-[var(--action-secondary-hover)]',
-            ),
-      )}
     >
       {children}
       <ArrowRight aria-hidden className="w-[var(--v3-icon-sm)] h-[var(--v3-icon-sm)]" />
-    </button>
+    </Button>
   );
 }
