@@ -247,7 +247,14 @@
     "$description": "Duracao das superficies de sobreposicao (Dialog, Modal, Drawer, Toast, DropdownMenu). Mora no tier COMPARTILHADO de proposito: os dois temas usam o mesmo numero, entao trocar o ritmo do produto inteiro custa UMA linha aqui (mais `pnpm generate-tokens`). O easing continua em `motion.easing.*` do tier primitivo — `enter`/`exit` ja eram um PAR, e a duracao agora acompanha a mesma simetria. ⛔ ABRIR E FECHAR NAO SAO O MESMO MOVIMENTO (decisao do dono, 05/08, sobre a medida da REV-MOTION: com token unico de 800ms a pagina ficava 800ms exatos inerte a CADA fechamento — cortina interceptando clique, body sem rolar, dialogo ainda `aria-modal`). A abertura e onde a marca aparece, e 800ms compram esse tempo. O fechamento vem DEPOIS de a pessoa ja ter decidido sair: ali lentidao nao e marca, e pedagio — 250ms. `menu-duration` e um so para as duas direcoes e deliberadamente MENOR: menu e affordance de PONTEIRO, o item que voce esta mirando nao pode estar voando quando o dedo chega. ⚠️ `overlay-exit-duration` nao e so estetica: e ela que o JS le para segurar o no vivo (`usePresencaOverlay`), entao ela define a janela de inercia da pagina. Subir esse numero sem querer devolve o pedagio.",
     "overlay-enter-duration": "800ms",
     "overlay-exit-duration":  "250ms",
-    "menu-duration":          "120ms"
+    "menu-duration":          "120ms",
+    "$description-hifi": "Movimento do estudo de design (handoff 2026-08-09 §5), lane HIFI-REC: barras crescem da esquerda em 750ms cubic-bezier(.22,1,.36,1) — paga o impedimento nomeado pela Conversa 2, que usou duration-slow por falta deste token; areas empilhadas 600ms da base; calendario/overlays fade+pop 160ms; entrada de tela em cascata com passo de 60ms e subida de 12px. Tudo desliga sob prefers-reduced-motion no consumidor.",
+    "bar-duration":  "750ms",
+    "bar-easing":    "cubic-bezier(0.22, 1, 0.36, 1)",
+    "area-duration": "600ms",
+    "pop-duration":  "160ms",
+    "stagger":       "60ms",
+    "reveal-shift":  "12px"
   },
   "card": {
     "radius":        "{radius.lg}",
@@ -379,6 +386,14 @@
     "donut-size":     "132px",
     "tile":           "36px",
     "name-col":       "200px",
-    "count-col":      "88px"
+    "count-col":      "88px",
+    "icon-sm":        "15px",
+    "icon-md":        "20px",
+    "alert-icon-svg": "18px",
+    "cal-nav":        "30px",
+    "tag-py":         "5px",
+    "cta-h":          "48px",
+    "cta-h-sm":       "44px",
+    "label-spacing":  "0.06em"
   }
 }

@@ -85,6 +85,25 @@ describe('grupo rail — medidas do protótipo, byte a byte', () => {
   }
 });
 
+describe('grupo motion — §5 do estudo (paga o impedimento de 750ms da C2)', () => {
+  const esperado: Record<string, string> = {
+    '--motion-bar-duration': '750ms',
+    '--motion-bar-easing': 'cubic-bezier(0.22, 1, 0.36, 1)',
+    '--motion-area-duration': '600ms',
+    '--motion-pop-duration': '160ms',
+    '--motion-stagger': '60ms',
+    '--motion-reveal-shift': '12px',
+  };
+
+  for (const [nome, valor] of Object.entries(esperado)) {
+    it(`${nome}: ${valor}`, () => {
+      expect(css).toContain(`${nome}: ${valor};`);
+      expect(cssWine).toContain(`${nome}: ${valor};`);
+      expect(cssDarkWine).toContain(`${nome}: ${valor};`);
+    });
+  }
+});
+
 describe('grupo v3 — chrome das seções do protótipo', () => {
   const esperado: Record<string, string> = {
     '--v3-gap': 'var(--spacing-5)',
@@ -108,6 +127,14 @@ describe('grupo v3 — chrome das seções do protótipo', () => {
     '--v3-tile': '36px',
     '--v3-name-col': '200px',
     '--v3-count-col': '88px',
+    '--v3-icon-sm': '15px',
+    '--v3-icon-md': '20px',
+    '--v3-alert-icon-svg': '18px',
+    '--v3-cal-nav': '30px',
+    '--v3-tag-py': '5px',
+    '--v3-cta-h': '48px',
+    '--v3-cta-h-sm': '44px',
+    '--v3-label-spacing': '0.06em',
   };
 
   for (const [nome, valor] of Object.entries(esperado)) {
