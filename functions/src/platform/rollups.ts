@@ -18,11 +18,31 @@
 // RN-409: o doc é escrito SÓ por esta Function (Admin SDK bypassa Rules;
 // a Rule de `platform/**` nega toda escrita de cliente e restringe leitura
 // ao platform_admin). O callable é admin-only.
+//
+// RN-538 (ADMIN-VISAO · onda 1 · S1613-T3): até aqui o único escritor era
+// `recomputePlatformRollups`, um `https.onCall` PURO — sem `pubsub.schedule`
+// algum apontando para ele (achado 1 do handoff da spec,
+// `.nirvana/handoffs/leela-admin-visao-20260809.md`). `/plataforma/macro`
+// mostrava o retrato do último clique sem dizer que era isso. A idade já é
+// parte do contrato de leitura (o doc sempre carregou `atualizadoEm` —
+// `PlatformRollups.atualizadoEm`, lido por `getPlatformRollups`); o que
+// faltava era a ATUALIZAÇÃO deixar de depender de lembrança. `agendarRecompute
+// PlatformRollups` (ADR-015 — wrapper v1 fino + núcleo já testável) cobre
+// essa metade; a invocação manual (`recomputePlatformRollups`) é PRESERVADA
+// intacta — o botão de recompute manual da onda 2 (S1613-T4) continua vivo.
+// Cadência de 1h: `platform/rollups` alimenta um dashboard que o dono olha
+// para decidir preço, não uma superfície em tempo real, e o recompute é
+// FULL (varre `tenants/*`) — hora em hora é fresco o bastante sem virar
+// varredura contínua por um agregado que ninguém lê a cada minuto (Hightower
+// check: menor cadência que resolve, não a mais alta que cabe no orçamento).
+// Escalonamento: roda no minuto 15 para não colidir com o bloco 03:00-03:20
+// dos crons noturnos (RN-102/coletaDiaria/encerramento) nem com os de 5/15min
+// — nenhuma dependência de ordem com eles, cadência independente.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { https } from 'firebase-functions/v1';
+import { https, pubsub } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
   computeTaxa,
@@ -151,3 +171,17 @@ export const recomputePlatformRollups = https.onCall(
     return { success: true, ...result };
   }
 );
+
+// ---------------------------------------------------------------------------
+// Agendamento (RN-538 · S1613-T3 · ADR-015: wrapper v1 fino + núcleo já
+// testável direto, sem depender do scheduler — o Emulator --only
+// firestore,auth não sobe pubsub).
+// ---------------------------------------------------------------------------
+
+export const agendarRecomputePlatformRollups = pubsub
+  .schedule('every 1 hours')
+  .onRun(async () => {
+    const result = await recomputePlatformRollupsCore(admin.firestore());
+    logger.info('platform_rollups_recompute_agendado', { ...result });
+    return null;
+  });

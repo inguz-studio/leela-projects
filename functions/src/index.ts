@@ -71,6 +71,11 @@ export { promoverParaProfissional } from './platform/promoverParaProfissional';
 // Plataforma — rollups macro cross-tenant (E16-S1605-T2 · RN-409)
 export { recomputePlatformRollups } from './platform/rollups';
 
+// Plataforma — AGENDAMENTO do recompute de rollups (ADMIN-VISAO onda 1 ·
+// S1613-T3 · RN-538): o recompute deixa de depender de alguém clicar.
+// Invocação manual (`recomputePlatformRollups`, acima) preservada intacta.
+export { agendarRecomputePlatformRollups } from './platform/rollups';
+
 // Clubs — status derivado do membro (RN-102) + agregado ∑ qtdMembrosAtivos
 // por recontagem idempotente (E05-S103-T1)
 export { onMembroWrite } from './clubs/onMembroWrite';
@@ -479,3 +484,13 @@ export { registrarRepasseComissao } from './affiliation/registrarRepasse';
 // cancelada não entra; estornada fica no histórico fora do LTV. ⚠️ Fable
 // (PII individual — categoria distinta do RN-820).
 export { onInscritoWriteCrm } from './crm/agregarClientes';
+
+// Plataforma — VISÃO DE CLIENTES do painel master (ADMIN-VISAO onda 1 ·
+// S1612-T5 · RN-539): `crmClientes` fecha `isPlatformAdmin()` de propósito
+// nas Rules (perfil comportamental individual) — este callable cruza a
+// fronteira por Admin SDK, autorizado pelo predicado `isPlatformAdmin` do
+// core (as duas pernas — RN-401), com registro de acesso E de negativa em
+// `auditoriaAcessos`. Retorno minimizado (nome/qtdEventos/qtdInscricoes/
+// valorGasto/ltv/eventos) — nunca CPF/e-mail/telefone/endereço. ⚠️ Fable
+// (PII individual, cross-fronteira por servidor).
+export { listarClientesDoTenant } from './platform/listarClientesDoTenant';
