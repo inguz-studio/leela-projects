@@ -1313,6 +1313,7 @@ class Component extends DCLogic {
       [21, 55, 71, 49, 58, 88, 42]
     ];
     const maxCel = Math.max(...matriz.flat());
+    const minCel = Math.min(...matriz.flat());
     const DIAS_NOME = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
     const dd = (d) => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
     const REF = new Date(2026, 7, 8);
@@ -1341,17 +1342,24 @@ class Component extends DCLogic {
     };
     const razao = (a, b) => { const l1 = lum(a), l2 = lum(b); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
     const FUNDO = rgb(cs.getPropertyValue('--surface-base'));
+    // uma única escala de opacidade para células e legenda
+    const alfaHeat = (k) => 0.06 + Math.pow(Math.max(0, Math.min(1, k)), 0.75) * 0.94;
+    // o mapa é MONOCROMÁTICO: um só tom (o mais quente do tema), variando só a opacidade
+    const TOM = (A[0] - A[2]) >= (B[0] - B[2]) ? A : B;
     // a célula é translúcida: 70% de transparência no piso, opaca no topo
     const celaHeat = (v) => {
-      const k = Math.max(0, Math.min(1, v / maxCel));
-      const tom = mix(B, A, k);
-      const alfa = 0.30 + Math.pow(k, 0.7) * 0.70;
+      // normaliza no intervalo REAL da série: com valores agrupados, 0→max
+      // esmaga as diferenças e todas as células ficam no mesmo tom
+      const k = Math.max(0, Math.min(1, (v - minCel) / Math.max(1, maxCel - minCel)));
+      const tom = TOM;
+      const alfa = alfaHeat(k);
       const claro = [255, 255, 255], escuro = [12, 12, 12];
       let comp = mix(FUNDO, tom, alfa);
       let fg = razao(comp, claro) >= razao(comp, escuro) ? claro : escuro;
       let a = alfa;
+      // célula apagada: o número é que carrega o contraste, não o fundo
       for (let i = 0; i < 10 && razao(comp, fg) < 4.6; i++) {
-        a = Math.min(1, a + 0.05);
+        a = Math.min(1, a + 0.04);
         comp = mix(FUNDO, tom, a);
         fg = razao(comp, claro) >= razao(comp, escuro) ? claro : escuro;
       }
@@ -1392,7 +1400,8 @@ class Component extends DCLogic {
     const jMapa = this.state.janelaMapa === 'hora' ? 'hora' : 'semana';
     const jVol = this.state.janelaVolume === 'semana' ? 'semana' : 'hora';
     const maxHora = Math.max(...porHora.flat());
-    const celaHora = (v) => celaHeat((v / maxHora) * maxCel);
+    const minHora = Math.min(...porHora.flat());
+    const celaHora = (v) => celaHeat(minCel + ((v - minHora) / Math.max(1, maxHora - minHora)) * (maxCel - minCel));
     const heatmap = jMapa === 'hora'
       ? porHora.map((linha, i) => ({
           semana: DIAS_NOME[i].slice(0, 3),
@@ -1419,8 +1428,8 @@ class Component extends DCLogic {
     const abasMapa = fazAbas(jMapa, 'janelaMapa', 'tickMapa');
     const abasVolume = fazAbas(jVol, 'janelaVolume', 'tickVolume');
     const escalaHeat = [0.1, 0.3, 0.55, 0.8, 1].map(k => {
-      const tom = mix(B, A, k);
-      const a = 0.10 + Math.pow(k, 0.85) * 0.90;
+      const tom = TOM;
+      const a = alfaHeat(k);
       return { estilo: 'display:block; width:16px; height:16px; border-radius:5px; background:rgba(' + tom.join(',') + ',' + a.toFixed(3) + ')' };
     });
 

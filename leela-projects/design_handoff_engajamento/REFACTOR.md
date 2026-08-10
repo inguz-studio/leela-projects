@@ -18,8 +18,39 @@ Este documento **não pede para construir nada de novo**. Ele lista o que mudou 
 protótipo **depois** daquela entrega, arquivo por arquivo. Cada item é uma
 alteração cirúrgica em código que já existe.
 
+---
+
+## ⚠ Qual tela é esta — leia antes de qualquer coisa
+
+**Tudo neste documento é sobre a tela de ENGAJAMENTO**, na rota
+`/clubes/engajamento`, implementada em
+`apps/painel/src/routes/clubes/engajamento/`.
+
+**Nada aqui é sobre a Visão Geral** (`apps/painel/src/routes/overview/`). A Visão
+Geral não muda neste trabalho — `LEELA-E02` mantém analytics aprofundado fora
+dela.
+
+Há duas armadilhas que já causaram a leitura errada uma vez:
+
+1. **O protótipo tem "Visão Geral" escrito no H1.** O arquivo de referência é um
+   estudo montado dentro do shell do painel, e o cabeçalho ficou com o texto da
+   home. **Ignore o H1.** O que importa são os cards de análise abaixo dele:
+   Mapa de Check-ins, Volume de Check-ins, funil, pilares, ações. Esses são os
+   cards da tela de Engajamento.
+2. **A URL do Netlify serve esse mesmo estudo** — e portanto também mostra
+   "Visão Geral" no topo. Mesma regra: ignore o título, olhe os cards.
+
+**Arquivo de referência, único:**
+`design_handoff_engajamento/design/engajamento-referencia.dc.html`
+
+O pacote não contém nenhum outro arquivo de design. Se você encontrar um segundo,
+ele não é deste trabalho.
+
 **Referência visual viva:** https://leela-vis-o-geral-cd-cc500dffee.netlify.app
-Abra e interaja (troque tema, filtros, redimensione). Não copie HTML dela.
+Abra e interaja (troque tema, filtros, redimensione) — lembrando das duas
+armadilhas acima. Não copie HTML dela; é protótipo, não código de produção.
+
+---
 
 **Contexto de cautela:** existe um incidente aberto de 10/08
 (`.nirvana/handoffs/leela-incidente-tela-preta-20260810.md`) que menciona
@@ -171,9 +202,13 @@ abaixo de `md` mantidos.
 
 ---
 
-# Grupo C — dataviz (`apps/painel/src/routes/clubes/engajamento/`)
+# Grupo C — dataviz da tela de ENGAJAMENTO
 
+**Território:** `apps/painel/src/routes/clubes/engajamento/` — e só ele.
 Todos estes itens são de `EngajamentoView.tsx` e `_lib/engajamento.ts`.
+
+Se você se pegar editando qualquer arquivo em
+`apps/painel/src/routes/overview/`, pare: está na tela errada.
 
 ## 7. Mapa de Check-ins: monocromático + normalização min-max
 
@@ -303,9 +338,10 @@ o catálogo** — trocar de aba não muda o número-título.
   `SuperficieDoPainel.tsx`). O vidro é a marca de qual painel está aberto, não
   preferência do usuário. O estudo tem um switch de glass porque é protótipo —
   **não porte esse switch.**
-- **O escopo da Visão Geral.** `LEELA-E02` diz que analytics aprofundado está
-  fora dela. Os gráficos deste documento são da tela de Engajamento; não os mova
-  para a Visão Geral por parecerem bonitos lá.
+- **A Visão Geral inteira** (`apps/painel/src/routes/overview/`). Nenhum item
+  deste documento toca nela. `LEELA-E02` mantém analytics aprofundado fora da
+  Visão Geral — não mova os gráficos do Grupo C para lá por parecerem bonitos
+  lá, e não "aproveite" para harmonizar as duas telas.
 - **Os empty-states honestos** do Engajamento. Onde não há fonte, não há gráfico
   zerado — vale para tudo neste documento.
 - **Gradiente `thumb-virtual` do dark-wine** (vetável de marca em aberto, 2,45:1
