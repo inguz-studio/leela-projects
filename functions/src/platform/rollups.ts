@@ -38,6 +38,13 @@
 // Escalonamento: roda no minuto 15 para não colidir com o bloco 03:00-03:20
 // dos crons noturnos (RN-102/coletaDiaria/encerramento) nem com os de 5/15min
 // — nenhuma dependência de ordem com eles, cadência independente.
+// ONDA1-FIX · D-1 (review ONDA1-REV): o minuto 15 é CRON EXPLÍCITO
+// (`15 * * * *`), não `every 1 hours` — a sintaxe App Engine não fixa minuto
+// nenhum (o Scheduler escolhe o horário-base no deploy) e a garantia de não
+// colisão existiria só neste comentário. `.timeZone('America/Sao_Paulo')`
+// igual aos quatro crons noturnos da casa (coletaDiaria, encerrarEventos,
+// expurgarSaude, recalcularStatusMembros). Provado sem deploy em
+// `adminVisaoOnda1Agendamento.test.ts` (manifest da função construída).
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -179,7 +186,11 @@ export const recomputePlatformRollups = https.onCall(
 // ---------------------------------------------------------------------------
 
 export const agendarRecomputePlatformRollups = pubsub
-  .schedule('every 1 hours')
+  // Minuto 15 de cada hora, cron explícito (D-1): `every 1 hours` deixaria o
+  // Scheduler escolher o minuto e o full scan poderia aterrissar no bloco
+  // 03:00-03:20 dos crons noturnos. TimeZone da casa, como os quatro noturnos.
+  .schedule('15 * * * *')
+  .timeZone('America/Sao_Paulo')
   .onRun(async () => {
     const result = await recomputePlatformRollupsCore(admin.firestore());
     logger.info('platform_rollups_recompute_agendado', { ...result });
