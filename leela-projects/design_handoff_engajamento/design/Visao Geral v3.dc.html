@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leela — Visão Geral (variação)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600;1,700;1,800&family=Geist:wght@400;500;600;700;800&family=Lato:wght@400;700;900&family=Rubik:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Varela+Round&family=Barlow:wght@400;500;600;700;800&family=Ubuntu:wght@400;500;700&family=Baloo+Bhai+2:wght@400;500;600;700;800&family=Fugaz+One&family=Work+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Chakra+Petch:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700;800&family=Syne:wght@400..800&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 9999px;
+  --card-radius: var(--radius-lg);
+  --sidebar-width: 240px;
+  --icon-stroke: 1.75;
+  --motion-duration-fast: 150ms;
+  --motion-easing-default: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---- tema DARK WINE (novo — default) ---------------------------------- */
+:root:not([data-theme]), [data-theme="dark-wine"] {
+  --font-family-display: var(--dw-font-display, var(--dw-font, "Geist")), sans-serif;
+  --font-family-ui: var(--dw-font-text, var(--dw-font, "Geist")), sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --primary-300: #E85662; --primary-400: #C42C3A; --primary-500: #7A1520;
+  --accent-300: #DDF594; --accent-400: #C8E84A; --accent-500: #B3D424;
+  --card-blur: blur(14px);
+  --surface-base: #080306;
+  --surface-raised: rgba(28, 11, 16, 0.55);
+  --surface-overlay: rgba(255, 255, 255, 0.028);
+  --surface-high: rgba(255, 255, 255, 0.055);
+  --text-primary: #F7F2F3; --text-secondary: #C9B6BA; --text-tertiary: #9A8388; --text-disabled: #6A585C;
+  --text-brand: #C8E84A;
+  --border-subtle: #1F0F14; --border-default: #2C161C; --border-strong: #48252C;
+  --border-brand: #C8E84A; --border-focus: #C8E84A;
+  --action-primary: #C8E84A; --action-primary-hover: #D5F065; --action-primary-fg: #12160A;
+  --action-secondary: #1C0C11; --action-secondary-hover: #281218; --action-secondary-fg: #F7F2F3;
+  --action-brand-tint: rgba(200,232,74,0.12); --action-brand-tint-fg: #C8E84A;
+  --feedback-success: #A3D93B; --feedback-success-fg: #C8E84A; --feedback-success-surface: #1B2410;
+  --feedback-danger: #FF5E5C; --feedback-danger-fg: #FF8888; --feedback-danger-surface: #3A1315;
+  --feedback-warning: #F2BE1B; --feedback-warning-fg: #FCD34D; --feedback-warning-surface: #33260B;
+  --feedback-info-fg: #F9619A; --feedback-info-surface: #351322;
+  --countdown-bg: radial-gradient(120% 85% at 100% 0%, rgba(196,44,58,.24), transparent 58%), radial-gradient(100% 100% at 0% 100%, rgba(200,232,74,.05), transparent 60%);
+  --countdown-border: rgba(200,232,74,0.16);
+  --countdown-number-gradient: linear-gradient(135deg, #DDF594, #B3D424);
+  --page-glow: radial-gradient(95% 65% at 32% -5%, rgba(122,21,32,.46), transparent 62%), radial-gradient(70% 60% at 105% 105%, rgba(122,21,32,.20), transparent 60%);
+  --chart-track: #1E0C13; --chart-accent: #C8E84A;
+  --thumb-corrida: linear-gradient(135deg, #D0434F, #38070E);
+  --thumb-teste: linear-gradient(135deg, #A82330, #1A0407);
+  --elevation-1: 0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.05);
+  --elevation-2: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --elevation-rail: 0 8px 32px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --glow-brand: 0 0 0 1px rgba(200,232,74,0.25), 0 0 22px 2px rgba(200,232,74,0.38);
+}
+
+/* ---- tema DARK SEA (navy + prateado) ---------------------------------- */
+[data-theme="dark-sea"] {
+  --font-family-display: var(--dw-font-display, var(--dw-font, "Geist")), sans-serif;
+  --font-family-ui: var(--dw-font-text, var(--dw-font, "Geist")), sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --card-blur: blur(14px);
+  --primary-300: #6E9BD6; --primary-400: #3D6FB4; --primary-500: #16305C;
+  --accent-300: #F2F5F8; --accent-400: #D8E0E8; --accent-500: #B4C2D2;
+  --surface-base: #04070C;
+  --surface-raised: rgba(14, 26, 44, 0.55);
+  --surface-overlay: rgba(255, 255, 255, 0.028);
+  --surface-high: rgba(255, 255, 255, 0.055);
+  --text-primary: #F3F6FA; --text-secondary: #B7C3D2; --text-tertiary: #8394A8; --text-disabled: #566475;
+  --text-brand: #D8E0E8;
+  --border-subtle: #0F1A2A; --border-default: #17263B; --border-strong: #2C4260;
+  --border-brand: #D8E0E8; --border-focus: #D8E0E8;
+  --action-primary: #D8E0E8; --action-primary-hover: #ECF1F6; --action-primary-fg: #0A1220;
+  --action-secondary: #101C2E; --action-secondary-hover: #17263B; --action-secondary-fg: #F3F6FA;
+  --action-brand-tint: rgba(216,224,232,0.12); --action-brand-tint-fg: #D8E0E8;
+  --feedback-success: #5FC9A0; --feedback-success-fg: #86E0BC; --feedback-success-surface: #0C2320;
+  --feedback-danger: #FF6B72; --feedback-danger-fg: #FF9298; --feedback-danger-surface: #2A1219;
+  --feedback-warning: #E9B84A; --feedback-warning-fg: #F6CE72; --feedback-warning-surface: #2A2210;
+  --feedback-info-fg: #7FB6FF; --feedback-info-surface: #12233A;
+  --countdown-bg: radial-gradient(120% 85% at 100% 0%, rgba(61,111,180,.28), transparent 58%), radial-gradient(100% 100% at 0% 100%, rgba(216,224,232,.05), transparent 60%);
+  --countdown-border: rgba(216,224,232,0.16);
+  --countdown-number-gradient: linear-gradient(135deg, #F2F5F8, #A9BACE);
+  --page-glow: radial-gradient(95% 65% at 32% -5%, rgba(22,48,92,.72), transparent 62%), radial-gradient(70% 60% at 105% 105%, rgba(22,48,92,.34), transparent 60%);
+  --chart-track: #132236; --chart-accent: #D8E0E8;
+  --thumb-corrida: linear-gradient(135deg, #4E85C8, #0B1A31);
+  --thumb-teste: linear-gradient(135deg, #3D6FB4, #060E1A);
+  --elevation-1: 0 1px 2px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,255,255,0.05);
+  --elevation-2: 0 4px 16px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --elevation-rail: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --glow-brand: 0 0 0 1px rgba(216,224,232,0.22), 0 0 22px 2px rgba(216,224,232,0.30);
+}
+
+/* ---- tema BRASA (escuro, default do produto) -------------------------- */
+[data-theme="brasa"] {
+  --font-family-display: "Exo 2", sans-serif;
+  --font-family-ui: "Exo 2", sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --primary-300: #FF8244; --primary-400: #FF6520; --primary-500: #FF450C;
+  --accent-300: #FF8244; --accent-400: #FF6520; --accent-500: #FF450C;
+  --surface-base: #0C0C0C;
+  --surface-raised: #161616;
+  --surface-overlay: #1C1C1C;
+  --surface-high: #292929;
+  --text-primary: #F9F9F9; --text-secondary: #BFBFBF; --text-tertiary: #999999; --text-disabled: #545454;
+  --text-brand: #FF450C;
+  --border-subtle: #242424; --border-default: #383838; --border-strong: #737373;
+  --border-brand: #FF450C; --border-focus: #FF6520;
+  --action-primary: #D63500; --action-primary-hover: #DC3700; --action-primary-fg: #FFFFFF;
+  --action-secondary: #242424; --action-secondary-hover: #383838; --action-secondary-fg: #F9F9F9;
+  --action-brand-tint: rgba(255,69,12,0.10); --action-brand-tint-fg: #FF6520;
+  --feedback-success: #2D9315; --feedback-success-fg: #5CB73B; --feedback-success-surface: #0D1F0A;
+  --feedback-danger: #FF2F2D; --feedback-danger-fg: #FF5E5C; --feedback-danger-surface: #331010;
+  --feedback-warning: #E8B100; --feedback-warning-fg: #E8B100; --feedback-warning-surface: #342A0A;
+  --feedback-info-fg: #F9619A; --feedback-info-surface: #351322;
+  --countdown-bg: radial-gradient(120% 80% at 100% 0%, rgba(255,69,12,.25), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(237,53,133,.18), transparent 60%);
+  --countdown-border: rgba(255, 69, 12, 0.25);
+  --countdown-number-gradient: linear-gradient(135deg, #FF8244, #FF450C);
+  --page-glow: none;
+  --chart-track: #1C1C1C; --chart-accent: #FF450C;
+  --thumb-corrida: linear-gradient(135deg, #FF450C, #8C2100);
+  --thumb-teste: linear-gradient(135deg, #9C7600, #4E3A00);
+  --elevation-1: 0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04);
+  --elevation-2: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06);
+  --elevation-rail: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.08);
+  --glow-brand: 0 0 0 1px rgba(255,69,12,0.30), 0 0 22px 2px rgba(255,69,12,0.42);
+}
+
+/* ---- tema WINE (claro) ------------------------------------------------ */
+[data-theme="wine"] {
+  --font-family-display: "Syne", sans-serif;
+  --font-family-ui: "Figtree", sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --primary-300: #E85662; --primary-400: #C42C3A; --primary-500: #7A1520;
+  --accent-300: #CFEE62; --accent-400: #C8E84A; --accent-500: #B3D424;
+  --surface-base: #FDFAF7;
+  --surface-raised: #FFFFFF;
+  --surface-overlay: #F5F1EC;
+  --surface-high: #EAE4DD;
+  --text-primary: #262220; --text-secondary: #57514B; --text-tertiary: #6E6862; --text-disabled: #A8A199;
+  --text-brand: #7A1520;
+  --border-subtle: #EAE4DD; --border-default: #D8D1C8; --border-strong: #8A837B;
+  --border-brand: #7A1520; --border-focus: #7A1520;
+  --action-primary: #7A1520; --action-primary-hover: #C42C3A; --action-primary-fg: #FFFFFF;
+  --action-secondary: #F5F1EC; --action-secondary-hover: #EAE4DD; --action-secondary-fg: #262220;
+  --action-brand-tint: rgba(122,21,32,0.08); --action-brand-tint-fg: #7A1520;
+  --feedback-success: #15803D; --feedback-success-fg: #166534; --feedback-success-surface: #DCFCE7;
+  --feedback-danger: #CC2222; --feedback-danger-fg: #880808; --feedback-danger-surface: #FFDDDD;
+  --feedback-warning: #B45309; --feedback-warning-fg: #78350F; --feedback-warning-surface: #FEF3C7;
+  --feedback-info-fg: #770F3E; --feedback-info-surface: #FCC9DE;
+  --countdown-bg: radial-gradient(120% 80% at 100% 0%, rgba(122,21,32,.18), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(237,53,133,.12), transparent 60%);
+  --countdown-border: rgba(122, 21, 32, 0.25);
+  --countdown-number-gradient: linear-gradient(135deg, #C42C3A, #7A1520);
+  --page-glow: none;
+  --chart-track: #EAE4DD; --chart-accent: #7A1520;
+  --thumb-corrida: linear-gradient(135deg, #D0434F, #38070E);
+  --thumb-teste: linear-gradient(135deg, #D97706, #78350F);
+  --elevation-1: none;
+  --elevation-2: none;
+  --elevation-rail: 0 10px 30px -6px rgba(38,7,13,0.22), 0 2px 8px -2px rgba(38,7,13,0.12);
+  --glow-brand: 0 0 0 1px rgba(122,21,32,0.22), 0 0 20px 2px rgba(122,21,32,0.28);
+}
+
+html { color-scheme: dark; scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
+[data-theme="wine"] { color-scheme: light; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 9999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+[data-rail-item] { position: relative; }
+[data-rail-tip] { opacity: 0; transform: translateX(-6px); pointer-events: none; transition: opacity 150ms, transform 150ms; }
+[data-rail-item]:hover [data-rail-tip] { opacity: 1; transform: translateX(0); }
+[data-rail-open="1"] [data-rail-tip] { display: none; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--surface-base); }
+body { -webkit-font-smoothing: antialiased; }
+svg { stroke-width: var(--icon-stroke); }
+a { color: var(--text-brand); text-decoration: none; }
+a:hover { color: var(--action-brand-tint-fg); text-decoration: underline; }
+</style>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#180A0E"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#C8E84A"/><rect x="38" y="38" width="10" height="10" rx="2.5" fill="#12160A"/><rect x="52" y="38" width="10" height="10" rx="2.5" fill="#12160A"/><rect x="38" y="52" width="10" height="10" rx="2.5" fill="#12160A"/><rect x="52" y="52" width="10" height="10" rx="2.5" fill="#12160A"/></svg></template>
+</helmet>
+
+<div style="display:flex; min-height:100vh; min-width:1440px; background:var(--surface-base); background-image:var(--page-glow); background-repeat:no-repeat; background-attachment:fixed; background-size:cover; font-family:var(--font-family-ui); color:var(--text-primary); transition:background-color 240ms var(--motion-easing-default)">
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <nav aria-label="Navegação principal" data-rail-open="{{ railAberto }}" style="{{ estiloNav }}">
+      <button type="button" onClick="{{ alternarMenu }}" aria-label="{{ rotuloToggle }}" title="{{ rotuloToggle }}" style="position:absolute; top:34px; right:-16px; z-index:30; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; border-radius:9999px; background:var(--surface-base); color:var(--text-tertiary); cursor:pointer; box-shadow:var(--elevation-rail)" style-hover="background:var(--surface-high); color:var(--text-primary)">
+        <span aria-hidden="true" style="display:flex; align-items:center; justify-content:center; transform:{{ giroToggle }}; transition:transform 650ms cubic-bezier(0.2,0.8,0.2,1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span>
+      </button>
+
+      <div style="position:relative; width:100%; height:42px; display:flex; align-items:center; justify-content:center; margin-bottom:18px; padding:0 14px; box-sizing:content-box">
+        <img src="packages/design-system/showcase/public/leela-icon.svg" alt="Leela" style="{{ estiloMarcaIcone }}">
+        <img src="packages/design-system/showcase/public/leela-logo-brasa.svg" alt="Leela" style="{{ estiloMarcaTexto }}">
+      </div>
+
+      <div style="flex:1; width:100%; display:flex; flex-direction:column; gap:10px; padding:34px 14px 0; overflow-y:auto; overflow-x:hidden">
+        <a href="#" aria-current="page" data-rail-item="" style="{{ estiloItemAtivo }}">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg></span>
+          <span style="{{ estiloRotulo }}">Visão Geral</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:600; white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Visão Geral</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path></svg></span>
+          <span style="{{ estiloRotulo }}">Eventos</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:600; white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Eventos</span>
+          <span style="{{ estiloBadge }}">2</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path></svg></span>
+          <span style="{{ estiloRotulo }}">Clubs</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:600; white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Clubs</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+          <span style="{{ estiloRotulo }}">CRM</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:600; white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">CRM</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"></path><path d="M8 6v8"></path></svg></span>
+          <span style="{{ estiloRotulo }}">Marcas</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:600; white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Marcas</span>
+        </a>
+        <a href="#" data-rail-item="" style="{{ estiloItem }}" style-hover="background:var(--surface-overlay); color:var(--text-primary)">
+          <span aria-hidden="true" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:22px; height:22px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+          <span style="{{ estiloRotulo }}">Configurações</span><span data-rail-tip="" role="tooltip" style="position:absolute; left:calc(100% + 14px); top:50%; margin-top:-17px; height:34px; display:flex; align-items:center; padding:0 14px; border-radius:10px; background:var(--surface-high); color:var(--text-primary); font-size:0.8125rem; font-weight:600; white-space:nowrap; box-shadow:var(--elevation-rail); z-index:20">Configurações</span>
+        </a>
+      </div>
+
+
+      <div style="width:100%; padding:0 14px 4px; display:flex; align-items:center; gap:12px; justify-content:center; border-top:1px solid var(--border-subtle); padding-top:16px">
+        <span aria-hidden="true" style="position:relative; width:44px; height:44px; flex-shrink:0; border-radius:var(--radius-pill); display:flex; align-items:center; justify-content:center; font-size:0.875rem; font-weight:700; background:var(--action-brand-tint); color:var(--action-brand-tint-fg)">VP<span style="position:absolute; right:1px; bottom:1px; width:10px; height:10px; border-radius:var(--radius-pill); background:var(--feedback-success); box-shadow:0 0 8px var(--feedback-success)"></span></span>
+        <span style="{{ estiloRodape }}">
+          <span style="display:block; font-size:0.8125rem; font-weight:700; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ nomeUsuario }}</span>
+          <span style="display:block; font-size:0.6875rem; color:var(--text-tertiary); white-space:nowrap">Ver perfil</span>
+        </span>
+      </div>
+  </nav>
+
+  <!-- ============================= MAIN ============================== -->
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column">
+
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:32px 40px 0">
+      <div style="min-width:0">
+        <h1 style="margin:0; font-family:var(--font-family-display); font-weight:800; font-size:2.5rem; letter-spacing:-0.01em; line-height:1.1; color:var(--text-primary)">Visão Geral</h1>
+        <p style="margin:8px 0 0; font-size:0.9375rem; color:var(--text-secondary)">Olá, <strong style="color:var(--text-brand); font-weight:700">{{ primeiroNome }}</strong>, aqui está o panorama do seu ecossistema.</p>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+        <sc-if value="{{ mostrarAlternador }}" hint-placeholder-val="{{ true }}">
+          <div role="group" aria-label="Tema" style="display:flex; align-items:center; gap:4px; padding:4px; border-radius:var(--radius-pill); border:1px solid var(--border-subtle); background:var(--surface-raised)">
+            <button type="button" onClick="{{ setBrasa }}" style="{{ estiloBrasa }}">Brasa</button>
+            <button type="button" onClick="{{ setWine }}" style="{{ estiloWine }}">Wine</button>
+            <button type="button" onClick="{{ setDarkWine }}" style="{{ estiloDarkWine }}">Dark Wine</button>
+            <button type="button" onClick="{{ setDarkSea }}" style="{{ estiloDarkSea }}">Dark Sea</button>
+          </div>
+        </sc-if>
+        <span style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:var(--radius-pill); border:1px solid var(--border-subtle); background:var(--surface-raised); font-size:0.8125rem; color:var(--text-secondary)">
+          <span aria-hidden="true" style="width:6px; height:6px; border-radius:var(--radius-pill); background:var(--feedback-success); box-shadow:0 0 8px var(--feedback-success)"></span>
+          Quinta-feira, 6 de Agosto <span style="color:var(--text-disabled)">•</span> 16:36
+        </span>
+      </div>
+    </header>
+
+    <div style="display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:20px; align-items:stretch; padding:24px 40px 48px">
+      <div style="grid-column:1; display:flex; flex-direction:column; gap:20px; min-width:0">
+        <section aria-label="Próximo evento" style="display:flex; flex-direction:column; position:relative; overflow:hidden; border-radius:var(--card-radius); background-color:var(--surface-raised); background-image:var(--countdown-bg); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-2)">
+          <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path></svg> Próximo evento</h2>
+          <p style="margin:0 0 8px; font-family:var(--font-family-display); font-weight:800; font-size:1.25rem; line-height:1.2; letter-spacing:-0.015em; color:var(--text-primary); text-wrap:pretty">Corrida de Inverno Floripa 2026</p>
+          <p style="margin:0 0 20px; display:flex; align-items:center; gap:8px; font-size:0.8125rem; color:var(--text-tertiary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path></svg> 21 set <span style="color:var(--text-disabled)">•</span> Parque de Coqueiros, Florianópolis/SC</p>
+          <div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px; padding:18px 0; border-top:1px solid var(--border-subtle); border-bottom:1px solid var(--border-subtle); margin-bottom:20px">
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:800; font-size:1.5rem; line-height:1; color:var(--text-brand)">46</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">dias restantes</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:800; font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">91</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">inscritos</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:800; font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">23%</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">ocupado</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:800; font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">R$ 18.400</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">receita confirmada</span></div>
+          </div>
+          <div style="flex:1"></div>
+          <button type="button" style="width:100%; height:48px; display:flex; align-items:center; justify-content:center; gap:10px; border:none; border-radius:var(--radius-md); background:var(--action-primary); color:var(--action-primary-fg); font-family:var(--font-family-ui); font-size:0.9375rem; font-weight:700; cursor:pointer" style-hover="background:var(--action-primary-hover)">Gerenciar evento <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+        </section>
+
+        <section aria-label="Clubs" style="border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-1); display:flex; flex-direction:column">
+          <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path></svg> Clubs</h2>
+          <div style="display:flex; align-items:center; gap:14px; padding-bottom:18px; border-bottom:1px solid var(--border-subtle); margin-bottom:18px">
+            <span aria-hidden="true" style="width:44px; height:44px; flex-shrink:0; border-radius:9999px; display:flex; align-items:center; justify-content:center; font-size:0.8125rem; font-weight:700; background-image:var(--thumb-corrida); color:#fff">FC</span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.9375rem; font-weight:700; color:var(--text-primary)">Floripa Run Coletivo</span>
+              <span style="display:block; margin-top:3px; font-size:0.8125rem; color:var(--text-tertiary)">14 membros ativos</span>
+            </span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-bottom:20px">
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:800; font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">18</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">membros ativos</span></div>
+            <div><span style="display:block; font-family:var(--font-family-display); font-weight:800; font-size:1.5rem; line-height:1; color:var(--text-primary); white-space:nowrap">342</span><span style="display:block; margin-top:6px; font-size:0.75rem; color:var(--text-tertiary)">check-ins</span></div>
+          </div>
+          <div style="flex:1"></div>
+          <button type="button" style="width:100%; height:44px; display:flex; align-items:center; justify-content:center; gap:10px; border:none; border-radius:var(--radius-md); background:var(--surface-high); color:var(--text-primary); font-family:var(--font-family-ui); font-size:0.875rem; font-weight:600; cursor:pointer">Gerenciar clubs <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+        </section>
+      </div>
+
+      <section aria-label="Agenda de eventos e desafios" style="grid-column:2; display:flex; flex-direction:column; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-1)">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px">
+          <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg); margin:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path></svg> Agenda</h2>
+          <span style="display:flex; align-items:center; gap:16px; font-size:0.75rem; color:var(--text-tertiary)">
+            <span style="display:inline-flex; align-items:center; gap:6px"><span aria-hidden="true" style="width:6px; height:6px; border-radius:9999px; background:var(--text-brand)"></span>Eventos</span>
+            <span style="display:inline-flex; align-items:center; gap:6px"><span aria-hidden="true" style="width:6px; height:6px; border-radius:9999px; background:var(--feedback-warning)"></span>Desafios</span>
+          </span>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px">
+          <button type="button" onClick="{{ mesAnterior }}" aria-label="Mês anterior" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:9999px; background:var(--surface-overlay); color:var(--text-secondary); cursor:pointer" style-hover="background:var(--surface-high); color:var(--text-primary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+          <span style="font-size:0.9375rem; font-weight:700; color:var(--text-primary)">{{ nomeMes }}</span>
+          <button type="button" onClick="{{ mesSeguinte }}" aria-label="Mês seguinte" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:9999px; background:var(--surface-overlay); color:var(--text-secondary); cursor:pointer" style-hover="background:var(--surface-high); color:var(--text-primary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+        </div>
+        <div role="presentation" style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); margin-bottom:6px">
+          <sc-for list="{{ diasSemana }}" as="ds" hint-placeholder-count="7">
+            <span style="height:22px; display:flex; align-items:center; justify-content:center; font-size:0.625rem; font-weight:600; letter-spacing:0.06em; color:var(--text-tertiary)">{{ ds.letra }}</span>
+          </sc-for>
+        </div>
+        <div role="grid" aria-label="{{ nomeMes }}" style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:3px 0; margin-bottom:18px">
+          <sc-for list="{{ celas }}" as="c" hint-placeholder-count="35">
+            <button type="button" onClick="{{ c.aoClicar }}" aria-label="{{ c.rotulo }}" aria-hidden="{{ c.oculto }}" disabled="{{ c.vazio }}" style="{{ c.estilo }}">
+              {{ c.dia }}
+              <span aria-hidden="true" style="{{ c.estiloPontos }}">
+                <span style="{{ c.estiloPontoEvento }}"></span>
+                <span style="{{ c.estiloPontoDesafio }}"></span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <p style="margin:0 0 12px; padding-top:18px; border-top:1px solid var(--border-subtle); font-size:0.875rem; font-weight:700; color:var(--text-primary)">{{ tituloDia }}</p>
+        <ul role="list" style="list-style:none; margin:0; padding:0 4px 0 0; display:flex; flex-direction:column; gap:8px; flex:1; min-height:120px; overflow-y:auto">
+          <sc-for list="{{ itensDia }}" as="it" hint-placeholder-count="3">
+            <li style="display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:var(--radius-md); background:var(--surface-overlay)">
+              <span aria-hidden="true" style="{{ it.estiloTile }}">{{ it.sigla }}</span>
+              <span style="flex:1; min-width:0">
+                <span style="display:block; font-size:0.875rem; font-weight:700; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ it.titulo }}</span>
+                <span style="display:block; margin-top:3px; font-size:0.8125rem; color:var(--text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ it.sub }}</span>
+              </span>
+              <span style="{{ it.estiloTag }}">{{ it.tag }}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="display:flex; justify-content:center; padding-top:16px"><a href="#" style="display:inline-flex; align-items:center; gap:8px; font-size:0.8125rem; font-weight:600; color:var(--text-brand); text-decoration:none">Ver agenda completa <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></div>
+      </section>
+
+      <section aria-label="Últimos 7 dias" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-1)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg> Últimos 7 dias</h2>
+        <div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr))">
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px 0 0; ">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Receita 7 dias</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:800; font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">R$ 23.490</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:600; color:var(--feedback-success)">↑ 12%</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px; border-left:1px solid var(--border-subtle)">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Inscrições 7 dias</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:800; font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">93</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:600; color:var(--feedback-success)">↑ 8%</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px; border-left:1px solid var(--border-subtle)">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Membros ativos</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:800; font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">18</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:600; color:var(--feedback-success)">↑ 6%</span>
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; padding:0 24px; border-left:1px solid var(--border-subtle)">
+            <span aria-hidden="true" style="width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-overlay); color:var(--text-brand)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"></path><path d="M16 2v3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="m9 15 2 2 4-4"></path></svg></span>
+            <span style="min-width:0">
+              <span style="display:block; font-size:0.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-tertiary)">Check-ins 7 dias</span>
+              <span style="display:block; margin-top:6px; font-family:var(--font-family-display); font-weight:800; font-size:1.625rem; line-height:1; color:var(--text-primary); white-space:nowrap">128</span>
+              <span style="display:block; margin-top:6px; font-size:0.8125rem; font-weight:600; color:var(--feedback-success)">↑ 14%</span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Presença por semana" style="grid-column:1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Presença por semana</h2>
+        <p style="margin:0 0 18px; font-family:var(--font-family-display); font-weight:800; font-size:1.75rem; line-height:1; letter-spacing:-0.02em; color:var(--text-primary)">{{ presencaTotal }}<span style="margin-left:8px; font-family:var(--font-family-ui); font-weight:400; font-size:0.8125rem; letter-spacing:0; color:var(--text-tertiary)">check-ins nas últimas 8 semanas</span></p>
+        <svg viewBox="0 0 640 180" preserveAspectRatio="none" role="img" aria-label="Evolução de check-ins" style="width:100%; height:180px; display:block; overflow:visible">
+          <defs>
+            <linearGradient id="v3areaFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--chart-accent)" stop-opacity="0.28"></stop>
+              <stop offset="100%" stop-color="var(--chart-accent)" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+          <sc-for list="{{ linhasGrade }}" as="g" hint-placeholder-count="4">
+            <line x1="0" x2="640" y1="{{ g.y }}" y2="{{ g.y }}" stroke="var(--chart-track)" stroke-width="1"></line>
+          </sc-for>
+          <path d="{{ areaPresenca }}" fill="url(#v3areaFill)"></path>
+          <path d="{{ linhaPresenca }}" fill="none" stroke="var(--chart-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+          <path d="{{ linhaAnterior }}" fill="none" stroke="var(--primary-300)" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round" opacity="0.7" vector-effect="non-scaling-stroke"></path>
+          <sc-for list="{{ pontosPresenca }}" as="p" hint-placeholder-count="8">
+            <circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="var(--surface-base)" stroke="var(--chart-accent)" stroke-width="2" vector-effect="non-scaling-stroke"></circle>
+          </sc-for>
+        </svg>
+        <div style="display:flex; justify-content:space-between; margin-top:10px">
+          <sc-for list="{{ pontosPresenca }}" as="p" hint-placeholder-count="8">
+            <span style="font-size:0.6875rem; color:var(--text-tertiary)">{{ p.rotulo }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex; gap:18px; margin-top:16px">
+          <span style="display:flex; align-items:center; gap:7px; font-size:0.75rem; color:var(--text-secondary)"><i style="width:14px; height:2.5px; border-radius:2px; background:var(--chart-accent)"></i>Este ciclo</span>
+          <span style="display:flex; align-items:center; gap:7px; font-size:0.75rem; color:var(--text-secondary)"><i style="width:14px; height:2px; border-radius:2px; background:var(--primary-300); opacity:0.7"></i>Ciclo anterior</span>
+        </div>
+      </section>
+
+      <section aria-label="Formas de pagamento" style="grid-column:2; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Formas de pagamento</h2>
+        <div style="display:flex; align-items:center; gap:24px">
+          <svg viewBox="0 0 120 120" role="img" aria-label="Distribuição por forma de pagamento" style="width:132px; height:132px; flex-shrink:0; transform:rotate(-90deg)">
+            <circle cx="60" cy="60" r="46" fill="none" stroke="var(--chart-track)" stroke-width="16"></circle>
+            <sc-for list="{{ fatias }}" as="s" hint-placeholder-count="4">
+              <circle cx="60" cy="60" r="46" fill="none" stroke="{{ s.cor }}" stroke-width="16" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}" stroke-linecap="butt"></circle>
+            </sc-for>
+          </svg>
+          <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; flex:1; min-width:0">
+            <sc-for list="{{ fatias }}" as="s" hint-placeholder-count="4">
+              <li style="display:flex; align-items:center; gap:10px">
+                <i style="width:9px; height:9px; border-radius:3px; background:{{ s.cor }}; flex-shrink:0"></i>
+                <span style="flex:1; min-width:0; font-size:0.8125rem; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ s.nome }}</span>
+                <span style="font-family:var(--font-family-display); font-weight:700; font-size:0.875rem; color:var(--text-primary)">{{ s.valor }}</span>
+                <span style="width:42px; text-align:right; font-size:0.75rem; color:var(--text-tertiary)">{{ s.pct }}</span>
+              </li>
+            </sc-for>
+          </ul>
+        </div>
+      </section>
+
+      <section aria-label="Ocupação por evento" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); box-shadow:var(--elevation-2); padding:24px">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)">Ocupação dos últimos 5 eventos</h2>
+        <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:16px">
+          <sc-for list="{{ ocupacao }}" as="o" hint-placeholder-count="5">
+            <li style="display:grid; grid-template-columns:minmax(0,200px) minmax(0,1fr) 88px; align-items:center; gap:16px">
+              <span style="font-size:0.8125rem; font-weight:500; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ o.nome }}</span>
+              <span style="position:relative; display:block; height:10px; border-radius:var(--radius-pill); background:var(--chart-track); overflow:hidden">
+                <i style="{{ o.estiloBarra }}"></i>
+              </span>
+              <span style="text-align:right; font-size:0.75rem; color:var(--text-tertiary)"><b style="font-family:var(--font-family-display); font-weight:700; font-size:0.875rem; color:var(--text-primary)">{{ o.inscritos }}</b>/{{ o.vagas }}</span>
+            </li>
+          </sc-for>
+        </ul>
+      </section>
+
+      <section aria-label="Alertas operacionais" style="grid-column:1 / -1; border-radius:var(--card-radius); background:var(--surface-raised); backdrop-filter:var(--card-blur, blur(14px)); -webkit-backdrop-filter:var(--card-blur, blur(14px)); padding:20px; box-shadow:var(--elevation-1)">
+        <h2 style="margin:0 0 16px; display:flex; align-items:center; gap:8px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--action-brand-tint-fg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Alertas</h2>
+        <ul role="list" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px">
+          <li style="display:flex; align-items:center; gap:14px; padding:14px; border-radius:var(--radius-md); background:var(--surface-overlay)">
+            <span aria-hidden="true" style="width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--feedback-danger-surface); color:var(--feedback-danger-fg)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></span>
+            <span style="flex:1; min-width:0">
+              <span style="display:block; font-size:0.875rem; font-weight:700; color:var(--text-primary)">R$ 1.240 aguardando pagamento</span>
+            </span>
+            <a href="#" style="display:inline-flex; align-items:center; gap:8px; font-size:0.8125rem; font-weight:600; color:var(--text-brand); text-decoration:none">Ver agora <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+          </li>
+          <li style="display:flex; align-items:center; gap:14px; padding:14px; border-radius:var(--radius-md); background:var(--surface-overlay)">
+            <span aria-hidden="true" style="width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--feedback-warning-surface); color:var(--feedback-warning-fg)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+            <span style="flex:1; min-width:0">
+              <span style="display:block; font-size:0.875rem; font-weight:700; color:var(--text-primary)">3 inscrições incompletas</span>
+            </span>
+            <a href="#" style="display:inline-flex; align-items:center; gap:8px; font-size:0.8125rem; font-weight:600; color:var(--text-brand); text-decoration:none">Ver agora <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+          </li>
+        </ul>
+        <div style="display:flex; justify-content:center; padding-top:16px"><a href="#" style="display:inline-flex; align-items:center; gap:8px; font-size:0.8125rem; font-weight:600; color:var(--text-brand); text-decoration:none">Ver todos os alertas <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000},&quot;mostrarAlternador&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;tema&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark-wine&quot;,&quot;dark-sea&quot;,&quot;brasa&quot;,&quot;wine&quot;],&quot;default&quot;:&quot;dark-wine&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;glass&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;fonteTitulosDarkWine&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Baloo Bhai 2&quot;,&quot;Fugaz One&quot;,&quot;Space Mono&quot;,&quot;Chakra Petch&quot;,&quot;Geist&quot;,&quot;Syne&quot;,&quot;Rubik&quot;,&quot;Varela Round&quot;,&quot;Lato&quot;,&quot;Nunito&quot;,&quot;Barlow&quot;,&quot;Ubuntu&quot;,&quot;Neue Montreal (Switzer)&quot;,&quot;Aeonik Pro (General Sans)&quot;],&quot;default&quot;:&quot;Baloo Bhai 2&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;fonteDarkWine&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Geist&quot;,&quot;Work Sans&quot;,&quot;Plus Jakarta Sans&quot;,&quot;Public Sans&quot;,&quot;Lato&quot;,&quot;Rubik&quot;,&quot;Nunito&quot;,&quot;Varela Round&quot;,&quot;Barlow&quot;,&quot;Ubuntu&quot;,&quot;Baloo Bhai 2&quot;,&quot;Neue Montreal (Switzer)&quot;,&quot;Aeonik Pro (General Sans)&quot;],&quot;default&quot;:&quot;Geist&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tema&quot;}}">
+class Component extends DCLogic {
+  state = { tema: null, menuAberto: false, mes: 7, diaSel: '2026-08-06' };
+
+  static MESES = [
+    { ano: 2026, mes: 7, nome: 'Agosto 2026', dias: 31, offset: 6 },
+    { ano: 2026, mes: 8, nome: 'Setembro 2026', dias: 30, offset: 2 },
+    { ano: 2026, mes: 9, nome: 'Outubro 2026', dias: 31, offset: 4 }
+  ];
+
+  static EVENTOS = [
+    { nome: 'Corrida de Inverno Floripa 2026', sub: 'Parque de Coqueiros, Florianópolis/SC', dia: '2026-09-21', tag: 'Publicado' }
+  ];
+
+  static DESAFIOS = [
+    { nome: 'Desafio 100K', sub: 'Floripa Run Coletivo', sigla: 'FC', ini: '2026-08-01', fim: '2026-08-31' },
+    { nome: 'Semana do Ritmo', sub: 'Ritmo Forte Assessoria', sigla: 'RA', ini: '2026-08-10', fim: '2026-08-16' },
+    { nome: 'Base Forte', sub: 'Leela Runners', sigla: 'LE', ini: '2026-08-20', fim: '2026-09-05' }
+  ];
+
+  iso(ano, mes, dia) {
+    return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+  }
+
+  doDia(iso) {
+    const C = Component;
+    const eventos = C.EVENTOS.filter((e) => e.dia === iso);
+    const desafios = C.DESAFIOS.filter((d) => iso >= d.ini && iso <= d.fim);
+    return { eventos, desafios };
+  }
+
+  itemBase(aberto) {
+    return 'display:flex; align-items:center; gap:14px; height:46px; padding:0 ' + (aberto ? '13px' : '12px') +
+      '; border-radius:14px; text-decoration:none; font-size:0.875rem; font-weight:500; white-space:nowrap; overflow:hidden;' +
+      ' justify-content:' + (aberto ? 'flex-start' : 'center') + ';' +
+      ' transition:background-color 150ms, color 150ms, box-shadow 240ms;';
+  }
+
+  componentDidMount() {
+    const inicial = this.props.tema || localStorage.getItem('leela-tema') || 'dark-wine';
+    this.aplicar(inicial);
+  }
+
+  componentDidUpdate(prev) {
+    if (prev.tema !== this.props.tema && this.props.tema) this.aplicar(this.props.tema);
+  }
+
+  aplicar(tema) {
+    document.documentElement.setAttribute('data-theme', tema);
+    try { localStorage.setItem('leela-tema', tema); } catch (e) {}
+    this.setState({ tema });
+  }
+
+  pill(tema) {
+    const ativo = this.state.tema === tema;
+    return [
+      'padding:5px 12px', 'border:none', 'cursor:pointer',
+      'border-radius:9999px', 'font-family:var(--font-family-ui)',
+      'font-size:0.75rem', 'font-weight:' + (ativo ? '700' : '500'),
+      'background:' + (ativo ? 'var(--action-brand-tint)' : 'transparent'),
+      'color:' + (ativo ? 'var(--action-brand-tint-fg)' : 'var(--text-tertiary)'),
+      'transition:background-color 150ms, color 150ms'
+    ].join(';');
+  }
+
+  agenda() {
+    const C = Component;
+    const idx = C.MESES.findIndex((m) => m.mes === this.state.mes);
+    const m = C.MESES[Math.max(0, idx)];
+    const hoje = '2026-08-06';
+    const sel = this.state.diaSel;
+
+    const celas = [];
+    for (let b = 0; b < m.offset; b++) {
+      celas.push({ dia: '', rotulo: undefined, oculto: 'true', vazio: true, aoClicar: undefined, estilo: 'height:34px; border:none; background:transparent; pointer-events:none;', estiloPontos: 'display:none;', estiloPontoEvento: 'display:none;', estiloPontoDesafio: 'display:none;' });
+    }
+    for (let d = 1; d <= m.dias; d++) {
+      const iso = this.iso(m.ano, m.mes, d);
+      const { eventos, desafios } = this.doDia(iso);
+      const eHoje = iso === hoje;
+      const eSel = iso === sel;
+      let cor = 'color:var(--text-secondary); background:transparent;';
+      if (eSel) cor = 'color:var(--action-primary-fg); background:var(--action-primary); font-weight:700;';
+      else if (eHoje) cor = 'color:var(--text-brand); background:var(--action-brand-tint); font-weight:700;';
+      celas.push({
+        dia: String(d),
+        rotulo: d + ' de ' + m.nome,
+        oculto: undefined,
+        vazio: false,
+        aoClicar: () => this.setState({ diaSel: iso }),
+        estilo: 'position:relative; height:34px; display:flex; align-items:center; justify-content:center;' +
+          ' border:none; border-radius:10px; cursor:pointer; font-family:var(--font-family-ui); font-size:0.8125rem;' +
+          ' transition:background-color 150ms, color 150ms; ' + cor,
+        estiloPontos: (eventos.length || desafios.length)
+          ? 'position:absolute; bottom:4px; left:50%; transform:translateX(-50%); display:flex; gap:3px;'
+          : 'display:none;',
+        estiloPontoEvento: eventos.length
+          ? 'width:4px; height:4px; border-radius:9999px; background:' + (eSel ? 'var(--action-primary-fg)' : 'var(--text-brand)') + ';'
+          : 'display:none;',
+        estiloPontoDesafio: desafios.length
+          ? 'width:4px; height:4px; border-radius:9999px; background:' + (eSel ? 'var(--action-primary-fg)' : 'var(--feedback-warning)') + ';'
+          : 'display:none;'
+      });
+    }
+
+    const tile = (fundo, cor) => 'width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center;' +
+      ' border-radius:9999px; font-size:0.75rem; font-weight:700; background-image:' + fundo + '; color:' + cor + ';';
+    const tag = (bg, fg) => 'flex-shrink:0; padding:5px 10px; border-radius:var(--radius-sm); background:' + bg +
+      '; font-size:0.75rem; font-weight:600; color:' + fg + '; white-space:nowrap;';
+
+    const { eventos, desafios } = this.doDia(sel);
+    const itensDia = [
+      ...eventos.map((e) => ({
+        sigla: 'EV', titulo: e.nome, sub: e.sub, tag: 'Evento',
+        estiloTile: tile('var(--thumb-corrida)', '#fff'),
+        estiloTag: tag('var(--action-brand-tint)', 'var(--action-brand-tint-fg)')
+      })),
+      ...desafios.map((d) => ({
+        sigla: d.sigla, titulo: d.nome, sub: d.sub, tag: 'Desafio',
+        estiloTile: tile('var(--thumb-teste)', '#fff'),
+        estiloTag: tag('var(--feedback-warning-surface)', 'var(--feedback-warning-fg)')
+      }))
+    ];
+    if (itensDia.length === 0) {
+      itensDia.push({
+        sigla: '—', titulo: 'Nada agendado', sub: 'Nenhum evento ou desafio neste dia', tag: '',
+        estiloTile: 'width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface-high); color:var(--text-tertiary); font-size:0.75rem; font-weight:700;',
+        estiloTag: 'display:none;'
+      });
+    }
+
+    const dia = Number(sel.slice(8));
+    const nomeMesSel = C.MESES.find((x) => x.mes === Number(sel.slice(5, 7)) - 1);
+    return {
+      nomeMes: m.nome,
+      diasSemana: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((l, i) => ({ letra: l, i })),
+      celas,
+      itensDia,
+      tituloDia: dia + ' de ' + (nomeMesSel ? nomeMesSel.nome : m.nome),
+      mesAnterior: () => this.setState((s) => ({ mes: Math.max(C.MESES[0].mes, s.mes - 1) })),
+      mesSeguinte: () => this.setState((s) => ({ mes: Math.min(C.MESES[C.MESES.length - 1].mes, s.mes + 1) }))
+    };
+  }
+
+  aplicaGlass() {
+    const r = document.documentElement.style;
+    if (this.props.glass === false) {
+      r.removeProperty('--card-blur'); r.removeProperty('--surface-raised');
+      r.removeProperty('--page-glow'); r.removeProperty('--elevation-2'); r.removeProperty('--surface-overlay');
+      return;
+    }
+    const sea = this.state.tema === 'dark-sea';
+    r.setProperty('--card-blur', 'blur(24px) saturate(1.45)');
+    r.setProperty('--surface-raised', sea ? 'rgba(18, 34, 58, 0.34)' : 'rgba(46, 18, 26, 0.34)');
+    r.setProperty('--surface-overlay', 'rgba(255, 255, 255, 0.045)');
+    r.setProperty('--page-glow', sea
+      ? 'radial-gradient(75% 55% at 22% -8%, rgba(28,62,118,.78), transparent 62%), radial-gradient(55% 45% at 96% 8%, rgba(216,224,232,.07), transparent 60%), radial-gradient(65% 55% at 108% 104%, rgba(22,48,92,.50), transparent 62%)'
+      : 'radial-gradient(75% 55% at 22% -8%, rgba(146,26,40,.70), transparent 62%), radial-gradient(55% 45% at 96% 8%, rgba(200,232,74,.07), transparent 60%), radial-gradient(65% 55% at 108% 104%, rgba(122,21,32,.42), transparent 62%)');
+    r.setProperty('--elevation-2', '0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.075), inset 0 0 0 0.5px rgba(255,255,255,0.045)');
+  }
+
+  aplicaFonte() {
+    const mapa = {
+      'Neue Montreal (Switzer)': 'Switzer',
+      'Aeonik Pro (General Sans)': 'General Sans'
+    };
+    const nome = (v, alt) => '"' + (mapa[v] || v || alt) + '"';
+    const texto = this.props.fonteDarkWine || 'Geist';
+    const titulo = this.props.fonteTitulosDarkWine || texto;
+    document.documentElement.style.setProperty('--dw-font-text', nome(texto, 'Geist'));
+    document.documentElement.style.setProperty('--dw-font-display', nome(titulo, 'Geist'));
+  }
+
+  dadosGraficos() {
+    const semanas = [
+      ['S1', 148, 132], ['S2', 162, 140], ['S3', 155, 149], ['S4', 181, 138],
+      ['S5', 174, 152], ['S6', 196, 161], ['S7', 212, 158], ['S8', 205, 170]
+    ];
+    const W = 640, H = 180, max = 240;
+    const px = i => (i * W) / (semanas.length - 1);
+    const py = v => H - (v / max) * H;
+    const pontos = semanas.map((s, i) => ({ x: px(i), y: py(s[1]), rotulo: s[0], valor: s[1] }));
+    const linha = pontos.map((p, i) => (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+    const anterior = semanas.map((s, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ' ' + py(s[2]).toFixed(1)).join(' ');
+
+    const clubs = [
+      ['Pix', 148, 'var(--chart-accent)'],
+      ['Crédito 1x', 96, 'var(--primary-300)'],
+      ['Crédito 2 a 6x', 61, 'var(--primary-400)'],
+      ['Crédito 7 a 12x', 24, 'var(--border-strong)']
+    ];
+    const totalClubs = clubs.reduce((a, c) => a + c[1], 0);
+    const circ = 2 * Math.PI * 46;
+    let acc = 0;
+    const fatias = clubs.map(c => {
+      const frac = c[1] / totalClubs;
+      const dash = (frac * circ - 1.5).toFixed(2) + ' ' + circ.toFixed(2);
+      const offset = (-acc * circ).toFixed(2);
+      acc += frac;
+      return { nome: c[0], valor: c[1], cor: c[2], dash, offset, pct: Math.round(frac * 100) + '%' };
+    });
+
+    const eventos = [
+      ['Corrida noturna — Ibirapuera', 42, 50],
+      ['Teste de performance', 28, 30],
+      ['Treino de força — unidade Sul', 19, 35],
+      ['Mobilidade & recuperação', 12, 25],
+      ['Clínica de estreantes', 8, 40]
+    ];
+    const ocupacao = eventos.map(e => {
+      const pct = Math.round((e[1] / e[2]) * 100);
+      const cor = pct >= 85 ? 'var(--feedback-warning)' : 'var(--chart-accent)';
+      return {
+        nome: e[0], inscritos: e[1], vagas: e[2],
+        estiloBarra: 'position:absolute; inset:0 auto 0 0; width:' + pct + '%; border-radius:var(--radius-pill); background:' + cor
+      };
+    });
+
+    return {
+      pontosPresenca: pontos,
+      linhaPresenca: linha,
+      linhaAnterior: anterior,
+      areaPresenca: linha + ' L' + W + ' ' + H + ' L0 ' + H + ' Z',
+      linhasGrade: [0, 1, 2, 3].map(i => ({ y: (i * H) / 3 })),
+      presencaTotal: semanas.reduce((a, s) => a + s[1], 0).toLocaleString('pt-BR'),
+      fatias, ocupacao
+    };
+  }
+
+  renderVals() {
+    this.aplicaFonte();
+    this.aplicaGlass();
+    const nomeUsuario = this.props.nomeUsuario ?? 'Vitor Pereira';
+    const aberto = this.state.menuAberto;
+    const base = this.itemBase(aberto);
+    return {
+      ...this.dadosGraficos(),
+      nomeUsuario,
+      alternarMenu: () => this.setState((s) => ({ menuAberto: !s.menuAberto })),
+      ...this.agenda(),
+      rotuloToggle: aberto ? 'Recolher menu' : 'Abrir menu',
+      giroToggle: aberto ? 'rotate(180deg)' : 'rotate(0deg)',
+      estiloNav: 'position:sticky; top:20px; align-self:flex-start; flex-shrink:0;' +
+        ' z-index:5;' +
+        ' width:' + (aberto ? '248px' : '84px') + '; height:calc(100vh - 40px); margin:20px 0 20px 20px;' +
+        ' display:flex; flex-direction:column; align-items:center; padding:18px 0 14px;' +
+        ' border-radius:26px; background:var(--surface-raised); box-shadow:var(--elevation-rail);' +
+        ' transition:width 650ms cubic-bezier(0.2,0.8,0.2,1);',
+      estiloItem: base + ' width:100%; color:var(--text-tertiary);',
+      estiloItemAtivo: base + ' width:100%; background:var(--action-primary); color:var(--action-primary-fg); font-weight:700;' +
+        ' box-shadow:var(--glow-brand);',
+      railAberto: aberto ? '1' : '0',
+      estiloRotulo: aberto
+        ? 'flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; text-align:left;'
+        : 'display:none;',
+      estiloBadge: 'display:' + (aberto ? 'inline-flex' : 'none') +
+        '; align-items:center; padding:2px 7px; border-radius:var(--radius-xs); font-size:0.625rem; font-weight:700;' +
+        ' background:var(--surface-high); color:var(--text-secondary);',
+      estiloRodape: 'display:' + (aberto ? 'flex' : 'none') + '; flex-direction:column; flex:1; min-width:0;',
+      alinhaTopo: aberto ? 'space-between' : 'center',
+      estiloMarcaIcone: 'position:absolute; top:0; left:50%; width:42px; height:42px; border-radius:14px;' +
+        ' transform:translateX(-50%) scale(' + (aberto ? '1.35' : '1') + ');' +
+        ' opacity:' + (aberto ? '0' : '1') + '; pointer-events:none;' +
+        ' transition:opacity 650ms cubic-bezier(0.2,0.8,0.2,1), transform 650ms cubic-bezier(0.2,0.8,0.2,1);',
+      estiloMarcaTexto: 'position:absolute; top:4px; left:50%; height:34px; width:auto;' +
+        ' transform:translateX(-50%) scale(' + (aberto ? '1' : '0.62') + ');' +
+        ' transform-origin:center; opacity:' + (aberto ? '1' : '0') + '; pointer-events:none;' +
+        ' transition:opacity 650ms cubic-bezier(0.2,0.8,0.2,1), transform 650ms cubic-bezier(0.2,0.8,0.2,1);',
+      estiloToggle: 'display:flex; align-items:center; justify-content:center;' +
+        ' width:38px; height:38px; flex-shrink:0;' +
+        ' border:none; border-radius:12px; background:transparent; color:var(--text-tertiary); cursor:pointer;',
+      primeiroNome: nomeUsuario.split(' ')[0].toUpperCase(),
+      mostrarAlternador: this.props.mostrarAlternador ?? true,
+      atividades: [
+        { iniciais: 'AT', texto: 'Alice Teixeira se inscreveu em Corrida de Inverno Floripa 2026', quando: 'há 2 horas', cor: 'var(--feedback-success)' },
+        { iniciais: 'BT', texto: 'Benício Teixeira está com pagamento pendente', quando: 'há 5 horas', cor: 'var(--feedback-warning)' },
+        { iniciais: 'AS', texto: 'Alice Sales se inscreveu em Corrida de Inverno Floripa 2026', quando: 'há 1 dia', cor: 'var(--feedback-success)' }
+      ],
+      setBrasa: () => this.aplicar('brasa'),
+      setWine: () => this.aplicar('wine'),
+      setDarkWine: () => this.aplicar('dark-wine'),
+      setDarkSea: () => this.aplicar('dark-sea'),
+      estiloBrasa: this.pill('brasa'),
+      estiloWine: this.pill('wine'),
+      estiloDarkWine: this.pill('dark-wine'),
+      estiloDarkSea: this.pill('dark-sea')
+    };
+  }
+}
+</script>
+</body>
+</html>

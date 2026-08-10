@@ -1,0 +1,30 @@
+{
+  "$description": "Camada GLASS — tokens de componente, por tema. Cada tema define seu par (opaco / glass). O app troca entre eles com [data-glass=\"on\"]; nenhum componente lê valor cru. Regra de ouro: a superfície é translúcida, o texto NUNCA é — todo par surface/text mantém 4.5:1 medido sobre o fundo composto.",
+  "glass": {
+    "blur": {
+      "brasa": "blur(24px) saturate(1.45)",
+      "dark-wine": "blur(24px) saturate(1.45)",
+      "wine": "blur(20px) saturate(1.3)"
+    },
+    "surface-raised": {
+      "brasa": "rgba(30, 11, 16, 0.42)",
+      "dark-wine": "rgba(46, 18, 26, 0.34)",
+      "wine": "rgba(255, 255, 255, 0.62)"
+    },
+    "surface-overlay": {
+      "brasa": "rgba(255, 255, 255, 0.045)",
+      "dark-wine": "rgba(255, 255, 255, 0.045)",
+      "wine": "rgba(0, 0, 0, 0.04)"
+    },
+    "elevation": {
+      "brasa": "0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.075), inset 0 0 0 0.5px rgba(255,255,255,0.045)",
+      "dark-wine": "0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.075), inset 0 0 0 0.5px rgba(255,255,255,0.045)",
+      "wine": "0 8px 28px rgba(72,20,28,0.14), inset 0 1px 0 rgba(255,255,255,0.7), inset 0 0 0 0.5px rgba(72,20,28,0.06)"
+    },
+    "page-glow": {
+      "brasa": "radial-gradient(75% 55% at 22% -8%, rgba(92,16,26,.72), transparent 62%), radial-gradient(55% 45% at 96% 8%, rgba(255,69,12,.06), transparent 60%), radial-gradient(65% 55% at 108% 104%, rgba(70,12,20,.48), transparent 62%)",
+      "dark-wine": "radial-gradient(75% 55% at 22% -8%, rgba(146,26,40,.70), transparent 62%), radial-gradient(55% 45% at 96% 8%, rgba(200,232,74,.07), transparent 60%), radial-gradient(65% 55% at 108% 104%, rgba(122,21,32,.42), transparent 62%)",
+      "wine": "radial-gradient(75% 55% at 22% -8%, rgba(232,86,98,.16), transparent 62%), radial-gradient(65% 55% at 108% 104%, rgba(200,232,74,.12), transparent 62%)"
+    }
+  }
+}
