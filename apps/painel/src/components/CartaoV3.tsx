@@ -182,13 +182,14 @@ export function LinkV3({
 }
 
 // ---------------------------------------------------------------------------
-// CtaV3 — o botão de largura cheia do protótipo (primário 48px / neutro 44px).
+// CtaV3 — o botão de largura cheia do protótipo.
 //
 // Desde HIFI-REC-FIX (cânone L-021) ele CONSOME o Button canônico do DS: a
 // forma do protótipo virou `size="cta"/"cta-sm"` + `variant="neutral"` no
 // próprio Button (packages/design-system, com teste). Aqui sobra só o
-// mapeamento do vocabulário do protótipo (primario/neutro) e a seta — o par
-// 48/44 segue vindo dos tokens --v3-cta-h/-sm, pinados no DS.
+// mapeamento do vocabulário do protótipo (primario/neutro) e a seta. A altura
+// é a CANÔNICA do Button (--btn-height-md): o 48/44 do protótipo foi
+// revertido por decisão do dono (D-1008-R7) — pin em Button.test.tsx.
 // ---------------------------------------------------------------------------
 
 export function CtaV3({

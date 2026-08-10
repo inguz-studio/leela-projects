@@ -20,7 +20,7 @@ Não use para navegação entre seções (use SubNav ou Sidebar) nem para filtro
   · neutral (HIFI-REC-FIX · L-021): bloco neutro do protótipo v3 — surface-high + texto primário, hover em action-secondary-hover. É o par do CTA "neutro" dos cartões do dashboard.
 - size: 'sm' | 'md' | 'lg' | 'icon' | 'cta' | 'cta-sm'   (default: 'md')
   · icon: quadrado 36×36 p-0 para botão só-ícone (QA T3).
-  · cta / cta-sm (HIFI-REC-FIX · L-021): forma CTA de largura cheia do protótipo v3 — 48px/44px por token --v3-cta-h/-sm, raio md, gap 2.5, sem px (conteúdo centralizado). cta pareia com primary; cta-sm com neutral.
+  · cta / cta-sm (HIFI-REC-FIX · L-021; altura D-1008-R7): forma CTA de largura cheia do protótipo v3 — ALTURA CANÔNICA do Button (--btn-height-md; o 48/44 do protótipo foi revertido por decisão do dono), raio md, gap 2.5, sem px (conteúdo centralizado). cta pareia com primary; cta-sm com neutral.
 - asChild: boolean   (default: false) — renderiza Radix Slot, repassa props ao filho imediato
 - type: 'button' | 'submit' | 'reset'   (default: 'button')
 - disabled: boolean   (default: undefined) — também define aria-disabled
@@ -38,7 +38,7 @@ Não use para navegação entre seções (use SubNav ou Sidebar) nem para filtro
 - --action-ghost-fg / --action-ghost-hover
 - --action-destructive / --action-destructive-fg / --action-destructive-hover / --action-destructive-pressed
 - --surface-high / --text-primary (variant neutral)
-- --v3-cta-h / --v3-cta-h-sm / --radius-md / --spacing-2-5 / --font-size-base-plus / --font-size-base / --font-weight-bold (sizes cta/cta-sm)
+- --btn-height-md / --radius-md / --spacing-2-5 / --font-size-base-plus / --font-size-base / --font-weight-bold (sizes cta/cta-sm; altura canônica por D-1008-R7)
 - --motion-duration-fast / --motion-easing-default
 Aliases shadcn->brasa usados: ring-ring (= border-focus), ring-offset-background (= surface-base).
 

@@ -92,20 +92,24 @@ const buttonVariants = cva(
         icon: 'h-[var(--btn-height-md)] w-[var(--btn-height-md)] p-0 text-[length:var(--btn-font-size-md)]',
 
         // Forma CTA do protótipo "Visao Geral v3" (L-021 · HIFI-REC-FIX): o
-        // botão de largura cheia dos cartões do dashboard — 48px primário /
-        // 44px neutro por token (--v3-cta-h/-sm, pinados contra o .dc.html em
-        // rail-v3-tokens.test.ts), raio md, gap 2.5 e tipografia própria.
-        // SEM px de propósito: o conteúdo centraliza na largura cheia, como o
-        // protótipo desenha. `cta` pareia com o CTA primário (base-plus bold);
-        // `cta-sm` com o neutro (base; peso fica no --btn-font-weight = 600,
-        // o semibold do protótipo).
+        // botão de largura cheia dos cartões do dashboard — raio md, gap 2.5
+        // e tipografia própria. SEM px de propósito: o conteúdo centraliza na
+        // largura cheia, como o protótipo desenha. `cta` pareia com o CTA
+        // primário (base-plus bold); `cta-sm` com o neutro (base; peso fica
+        // no --btn-font-weight = 600, o semibold do protótipo).
+        //
+        // ALTURA CANÔNICA (D-1008-R7): o 48/44 do protótipo (pin l.281,
+        // tokens --v3-cta-h/-sm) foi REVERTIDO por decisão do dono — "altura
+        // de botão é a do padrão canônico do Button". A medida do protótipo
+        // perde para o padrão do DS aqui; os dois sizes usam --btn-height-md
+        // e os tokens v3.cta-h/-sm morreram na fonte (component.json).
         cta: [
-          'h-[var(--v3-cta-h)] w-full rounded-[var(--radius-md)]',
+          'h-[var(--btn-height-md)] w-full rounded-[var(--radius-md)]',
           'gap-[var(--spacing-2-5)] text-[length:var(--font-size-base-plus)]',
           'font-[var(--font-weight-bold)]',
         ].join(' '),
         'cta-sm': [
-          'h-[var(--v3-cta-h-sm)] w-full rounded-[var(--radius-md)]',
+          'h-[var(--btn-height-md)] w-full rounded-[var(--radius-md)]',
           'gap-[var(--spacing-2-5)] text-[length:var(--font-size-base)]',
         ].join(' '),
       },

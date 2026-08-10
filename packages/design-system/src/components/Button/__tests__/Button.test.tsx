@@ -39,14 +39,16 @@ describe('Button', () => {
 
   // ── Forma CTA do protótipo v3 (L-021 · HIFI-REC-FIX) ────────────────────
   // O CtaV3 do painel consome ESTA forma em vez de re-implementar <button>
-  // cru. As alturas 48/44 são contrato do protótipo — vêm dos tokens
-  // --v3-cta-h/-sm, pinados contra o .dc.html em rail-v3-tokens.test.ts;
-  // aqui pina-se que a forma vive no Button canônico, por token, sem px cru.
-  it('size cta: largura cheia, 48px por token, raio md e tipografia do protótipo', () => {
+  // cru. ALTURA CANÔNICA (D-1008-R7): as alturas 48/44 do protótipo (pin
+  // l.281, tokens --v3-cta-h/-sm) foram REVERTIDAS por decisão do dono —
+  // "altura de botão é a do padrão canônico do Button". Os dois sizes pinam
+  // --btn-height-md; o resto da forma (largura cheia, raio, gap, tipografia)
+  // segue o protótipo.
+  it('size cta: largura cheia, altura canônica do Button (D-1008-R7), raio md e tipografia do protótipo', () => {
     render(<Button size="cta">Gerenciar evento</Button>);
     const btn = screen.getByRole('button', { name: 'Gerenciar evento' });
     expect(btn).toHaveClass(
-      'h-[var(--v3-cta-h)]',
+      'h-[var(--btn-height-md)]',
       'w-full',
       'rounded-[var(--radius-md)]',
       'gap-[var(--spacing-2-5)]',
@@ -55,11 +57,11 @@ describe('Button', () => {
     );
   });
 
-  it('size cta-sm: 44px por token, mesma forma de largura cheia', () => {
+  it('size cta-sm: altura canônica do Button (D-1008-R7), mesma forma de largura cheia', () => {
     render(<Button size="cta-sm">Gerenciar clubs</Button>);
     const btn = screen.getByRole('button', { name: 'Gerenciar clubs' });
     expect(btn).toHaveClass(
-      'h-[var(--v3-cta-h-sm)]',
+      'h-[var(--btn-height-md)]',
       'w-full',
       'rounded-[var(--radius-md)]',
       'gap-[var(--spacing-2-5)]',

@@ -132,8 +132,10 @@ describe('grupo v3 — chrome das seções do protótipo', () => {
     '--v3-alert-icon-svg': '18px',
     '--v3-cal-nav': '30px',
     '--v3-tag-py': '5px',
-    '--v3-cta-h': '48px',
-    '--v3-cta-h-sm': '44px',
+    // --v3-cta-h/-sm (48/44, pin l.281 do protótipo) NÃO existem mais:
+    // D-1008-R7 inverteu o pin — altura de CTA é a canônica do Button
+    // (--btn-height-md), e os tokens morreram na fonte (component.json).
+    // O pin da decisão vive em Button.test.tsx (sizes cta/cta-sm).
     '--v3-label-spacing': '0.06em',
     '--v3-band-size': '1.0625rem',
   };
