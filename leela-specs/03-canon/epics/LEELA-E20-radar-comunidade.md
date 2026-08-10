@@ -96,7 +96,8 @@ Nada mora sob `clubes/`: o catch-all de subcoleção de clube está fechado por 
 
 **Critérios de aceite (Given/When/Then):**
 - **Dado** um chip dedicado pareado como instância do motor, **quando** ele entra na comunidade de teste, **então** nenhuma mensagem é publicada no grupo e o perfil do contato aparece como "Radar · [nome da experiência]" com a descrição de que ele só conta e nunca envia.
-- **Dado** a configuração da instância, **quando** alguém procura por capacidade de envio, **então** `respond` está ausente de todo lugar e o modo padrão é observação.
+- **Dado** a configuração da instância, **quando** a conferência da RN-520 roda, **então** `superadmin.enabled` é falso com a tabela `superadmins` vazia, `followups`, `funnels` e o gancho de voz estão desligados, o grupo observado está em `analyze` e nenhum JID está em `respond`.
+- **Dado** o fim dos 14 dias, **quando** conto os jobs de envio da instância, **então** o resultado é zero. Esta é a prova que vale: ela diz o que aconteceu, e não o que estava configurado.
 - **Dado** 14 dias corridos de operação, **quando** o período fecha, **então** o número está vivo, o listener esteve conectado em pelo menos 95% do tempo e o dono confirma que os números contam algo que ele não sabia.
 - **Dado** o número banido dentro dos 14 dias, **quando** isso acontece, **então** o épico volta para a mesa e nenhuma tarefa da S2002 é despachada.
 
@@ -117,15 +118,19 @@ Deixar uma instância do motor rodando na máquina do dono, pareada com o chip d
 
 **Passos de implementação**
 1. Parear o chip como instância dedicada, com identificador próprio.
-2. Modo padrão de observação; a comunidade de teste entra na allowlist em modo de análise.
-3. Conferir por varredura que `respond` não aparece em nenhum ponto da configuração.
-4. Nomear o perfil do contato como "Radar · [nome da experiência]" com a descrição de transparência passiva.
+2. Modo padrão de observação; a comunidade de teste entra na allowlist em modo de análise, porque o cálculo do radar exige `analyze` e não roda em `observe`.
+3. Rodar a conferência da RN-520 sobre a configuração da instância, item a item, e guardar a saída.
+4. Consertar o `config.yaml` do fork onde o comentário e o valor discordam: o bloco de superadmin diz "MASTER SWITCH: nasce OFF" e entrega `enabled: true`. Corrigir o valor, e o comentário junto se ele continuar impreciso.
+5. Desligar `auto_update` pelos 14 dias e anotar a versão do Baileys que ficou congelada.
+6. Nomear o perfil do contato como "Radar · [nome da experiência]" com a descrição de transparência passiva.
 
 **Regras de negócio a respeitar**
-- RN-520, RN-525, RN-529.
+- RN-520, RN-525, RN-529, RN-530.
 
 **Critérios de aceite (testáveis)**
-- **Dado** a configuração pronta, **quando** rodo a varredura por capacidade de envio, **então** o resultado é zero ocorrência.
+- **Dado** a configuração pronta, **quando** rodo a conferência da RN-520, **então** os cinco itens dela passam e a saída fica anexada ao laudo.
+- **Dado** o `config.yaml` da instância, **quando** leio o bloco de superadmin, **então** comentário e valor dizem a mesma coisa.
+- **Dado** o início da medição, **quando** olho a configuração de atualização, **então** `auto_update.enabled` é falso e a versão do Baileys está registrada.
 
 **Fora de escopo**
 - Qualquer escrita na nuvem da Leela.
@@ -139,11 +144,15 @@ Medir a sobrevivência do número e a utilidade do dado antes de autorizar const
 **Passos de implementação**
 1. Rodar o cálculo do radar sobre o espelho local e ler o resultado só no painel local do motor.
 2. Registrar diariamente o tempo conectado do listener.
-3. Fechar o laudo com o veredito do dono sobre a utilidade dos números.
+3. Anotar toda desconexão com o código de status que o motor já grava em `last_disconnect`, para separar queda de rede de banimento.
+4. Fechar o laudo com o veredito do dono sobre a utilidade dos números.
 
 **Critérios de aceite (testáveis)**
 - **Dado** o fim dos 14 dias, **quando** somo o tempo conectado, **então** ele é de pelo menos 95% e o laudo registra o número exato.
+- **Dado** o laudo, **quando** ele é lido, **então** traz a versão congelada do Baileys, a contagem de jobs de envio (que tem de ser zero) e a lista de desconexões com código de status.
 - **Dado** o laudo aprovado, **quando** a S2002 for despachada, **então** ela cita o laudo como pré-requisito pago.
+
+**Por que a atualização automática fica congelada.** O `auto_update` do fork vem ligado, no canal `latest`, aplicando patch, rc e minor sozinho às 04h, com um circuito de rollback que dispara depois de três falhas de conexão em trinta minutos. Regressão de update e banimento produzem o mesmo sintoma — conexão que cai e não volta —, e este laudo é o portão que decide se o produto continua existindo. Medir sobrevivência com o alvo se atualizando sozinho contamina o resultado.
 
 **Fora de escopo**
 - Publicar qualquer coisa na nuvem.
@@ -165,7 +174,7 @@ Medir a sobrevivência do número e a utilidade do dado antes de autorizar const
 - **Dado** um cliente autenticado como `platform_admin`, **quando** ele tenta escrever em `dias` ou `janelas`, **então** a rule nega.
 - **Dado** o organizador A logado, **quando** ele tenta ler o ramo do tenant B, **então** a rule nega.
 
-**Tasks:** LEELA-S2002-T1 a LEELA-S2002-T6.
+**Tasks:** LEELA-S2002-T1 a LEELA-S2002-T7. A T3 foi quebrada em duas nesta rodada: métricas por dia no motor (T3) e publicador (T7). A estimativa anterior estava ancorada numa lacuna declarada — "o campo `remetentes` não existe hoje, é trabalho novo, pequeno" — e a lista real do que falta no motor tem sete itens.
 
 #### LEELA-S2002-T1 · Núcleo puro de validação e projeção do payload
 - **Tipo:** data-model · **Depende de:** S2001-T2 · **Bloqueia:** T2, T3 · **Estimativa:** M
@@ -189,9 +198,14 @@ Escrever em `packages/core/src/radar/` o schema fechado, os invariantes de borda
 **Critérios de aceite (testáveis)**
 - **Dado** um payload com `soma(porHora)` diferente de `mensagens`, **quando** valido, **então** recebo recusa por invariante quebrada.
 - **Dado** um payload com campo extra, **quando** valido, **então** recebo recusa por schema inválido.
+- **Dado** um payload com `nome` igual a `"+55 11 98888-7777"` ou a `"5511988887777"`, **quando** valido, **então** recebo recusa; com `"Maria"`, passa.
+- **Dado** um payload sem `nome` e sem `cobertura`, **quando** valido, **então** ele passa, porque os dois são opcionais.
 
 **Testes a escrever**
 - unit: um caso por invariante, mais o caminho feliz de dias e de janelas.
+- **contrato do grão do dia**, que é o teste que separa o caminho certo do plausível: fixture com três dias de 10, 20 e 30 mensagens publicado num lote só, e asserção de que `dias/D1.mensagens` é 10, `D2` é 20, `D3` é 30 e nenhum documento carrega 60.
+- **contrato do fuso**: fixture com 10 mensagens às 22h de Brasília em 2026-08-09 e nada em qualquer outro horário. O documento gravado é `dias/2026-08-09`, com `mensagens` igual a 10 e `porHora[22]` igual a 10. Hoje esse fixture produziria dois documentos errados e um 422.
+- **projeção com fuso diferente de zero**, a única condição em que `peak_hours` e `peak_hours_local` divergem e pegar o campo errado fica visível.
 
 #### LEELA-S2002-T2 · Function `radarIngestao` com IAM, livro-razão e escrita transacional
 - **Tipo:** api/function · **Depende de:** T1 · **Bloqueia:** T4, T5 · **Estimativa:** M
@@ -213,23 +227,53 @@ Criar a função HTTP que recebe o lote, confere tenant e sequência, grava o li
 **Testes a escrever**
 - integração no emulador de preview (Firestore em `127.0.0.1:8180`, functions em 5201): replay, sequência fora de ordem, tenant divergente, lote acima de 100 itens.
 
-#### LEELA-S2002-T3 · Publicador no motor: hash, fila local e sequência monótona
-- **Tipo:** integration · **Depende de:** T1 · **Estimativa:** M
+#### LEELA-S2002-T3 · Métricas por dia no motor, no fuso do organizador
+- **Tipo:** integration · **Depende de:** T1 · **Bloqueia:** T7 · **Estimativa:** L
+
+**Objetivo**
+Fazer o motor calcular por dia o que hoje ele só calcula por período, no fuso local, e criar a fonte da cobertura. Sem esta tarefa não existe lote de dias para publicar.
+
+**Contexto & referências**
+- Contrato: [[ponte-radar-whatsapp]] §"O dia é um recorte" e §"`cobertura` não tem fonte hoje".
+- A tabela de correspondência do estudo (linha 334) mapeia totais de período e **não** serve para o item de dia. Ela vale para o item de janela.
+
+**Arquivos (criar/editar)**
+- Fora do monorepo, no fork: cálculo por dia, migration da tabela `connection_log`, ganchos nos dois ramos de `connection.update` e testes.
+
+**Passos de implementação**
+1. Recorte por dia no fuso local, em vez do `date(timestamp, 'unixepoch')` em UTC que existe hoje.
+2. Mídias, links, entradas, saídas e participantes ativos por dia, que hoje só existem como total do período.
+3. `diasAtivos` por participante na janela (RN-535).
+4. `remetentes` por palavra.
+5. Tabela `connection_log(instance_id, at, event)` alimentada nos dois ramos de conexão, mais a consulta que integra o tempo conectado por dia e produz `cobertura`.
+
+**Regras de negócio a respeitar**
+- RN-535 — o segundo eixo do engajamento nasce aqui.
+
+**Critérios de aceite (testáveis)**
+- **Dado** três dias com 10, 20 e 30 mensagens, **quando** peço o lote de dias, **então** cada dia traz o próprio número e nenhum traz 60.
+- **Dado** 10 mensagens às 22h de Brasília, **quando** peço o dia, **então** elas contam no dia local e `porHora[22]` é 10.
+- **Dado** uma conexão derrubada por 3h num dia sintético de 24h, **quando** calculo a cobertura, **então** ela fica entre 0,86 e 0,88.
+
+#### LEELA-S2002-T7 · Publicador no motor: hash, fila local e sequência monótona
+- **Tipo:** integration · **Depende de:** T1, T3 · **Estimativa:** M
 
 **Objetivo**
 Somar ao motor o publicador que mapeia o cálculo do radar para o payload, aplica o piso de frequência das palavras, mantém a fila e a sequência, e descarta na origem tudo que não pode subir.
 
 **Arquivos (criar/editar)**
-- Fora do monorepo, no fork: publicador, CLI, teste e o campo de remetentes por palavra que hoje não existe no cálculo.
+- Fora do monorepo, no fork: publicador, CLI e teste.
 
 **Regras de negócio a respeitar**
 - RN-523 — telefone, identificador e texto são descartados na origem, não filtrados no servidor.
-- RN-521 — o nome de exibição sobe; o identificador que o gerou não.
+- RN-521 e RN-532 — o nome sobe a partir de `notify_name`; o identificador que o gerou não sobe, e `display_name` não é usado.
 
 **Critérios de aceite (testáveis)**
-- **Dado** um cálculo de janela, **quando** publico, **então** o payload não contém nenhum campo de telefone ou identificador, provado por asserção sobre o JSON serializado.
+- **Dado** um cálculo de janela, **quando** publico, **então** o payload não contém campo **nem valor** com forma de telefone, provado por asserção sobre o JSON serializado com os três casos da ponte.
+- **Dado** um participante sem contato conhecido, **quando** publico, **então** o `nome` sai ausente e o lote continua válido.
+- **Dado** o objeto do motor com `peak_hours` e `peak_hours_local`, **quando** projeto `porHora`, **então** o valor vem do campo com fuso aplicado, provado por fixture com fuso diferente de zero.
 
-#### LEELA-S2002-T4 · Rules das seis coleções, com escrita fechada para todo cliente
+#### LEELA-S2002-T4 · Rules das sete coleções, com escrita fechada para todo cliente
 - **Tipo:** integration · **Depende de:** T2 · **Estimativa:** S
 
 **Arquivos (criar/editar)**
@@ -240,6 +284,7 @@ Somar ao motor o publicador que mapeia o cálculo do radar para o payload, aplic
 
 **Critérios de aceite (testáveis)**
 - **Dado** um administrador de plataforma, **quando** ele tenta escrever em qualquer coleção do radar, **então** a rule nega. Matches compõem por OR, então `allow write: if isPlatformAdmin()` reabriria escrita de cliente e está proibido.
+- **Dado** o organizador dono do tenant, **quando** ele tenta escrever em `radarVinculos` direto do cliente, **então** a rule nega: a correção de nome e o vínculo passam pela Function da S2008, mesmo sendo gesto dele.
 
 **Testes a escrever**
 - rules no emulador isolado: leitura cruzada entre tenants, escrita por cada papel.
@@ -271,41 +316,51 @@ Renderizar sem capricho visual os números de um organizador, lendo direto do Fi
 
 ### LEELA-S2003 · O radar vira tela de verdade no Painel Profissional (F1)
 
-**Como** organizadora, **quero** a tela do radar com os estados honestos e a pirâmide de engajamento pelo nome, **para** identificar quem sustenta a minha comunidade.
+**Como** organizadora, **quero** a tela do radar com os estados honestos e a lista de quem mais falou, pelo nome, **para** reconhecer quem carrega a minha comunidade.
 
-- **MoSCoW:** Should · **Estimativa:** L · **Superfície:** Painel · **RNs:** RN-521, RN-524, RN-525, RN-526
-- **Status:** 🚫 **BLOQUEADA pela quarta frente do LGPD-1** — expor nome real de participante ao organizador, sem aviso publicado no grupo, precisa de base legal e do termo do organizador definidos por advogado antes de qualquer linha desta história.
+- **MoSCoW:** Should · **Estimativa:** L · **Superfície:** Painel · **RNs:** RN-521, RN-524, RN-525, RN-526, RN-531, RN-532, RN-535
+- **Status:** ✅ **destravada em 09/08 pela decisão 12 do dono.** O LGPD-1 deixou de ser gate: o dono assumiu o risco jurídico agora, com condição de reabertura registrada na rodada. O termo do organizador continua existindo como camada de transparência da RN-525, e não como portão do advogado.
 
 **Critérios de aceite (Given/When/Then):**
-- **Dado** o parecer jurídico entregue e o termo aceito pelo organizador, **quando** a história é despachada, **então** o aceite do termo é pré-condição de ligar o radar daquele tenant.
+- **Dado** um tenant sem termo aceito, **quando** alguém tenta ligar o radar dele, **então** a ativação é recusada. O termo é do produto, e deixa de depender de parecer.
 - **Dado** uma instância sem pareamento, **quando** abro a tela, **então** vejo a instrução de pareamento e nenhum botão que envie coisa alguma.
 - **Dado** `ultimoContatoEm` acima de 26 horas, **quando** abro, **então** uma faixa de aviso mostra a data do último dia coberto.
-- **Dado** um dia com cobertura abaixo de 0,9, **quando** o gráfico renderiza, **então** aquele ponto é marcado como parcial.
-- **Dado** o ranking de participantes, **quando** ele renderiza, **então** cada linha mostra o nome de exibição do participante e nenhuma linha oferece caminho para mensagem, ligação ou comunicado.
+- **Dado** um dia com `cobertura` presente e abaixo de 0,9, **quando** o gráfico renderiza, **então** aquele ponto é marcado como parcial.
+- **Dado** um dia sem `cobertura`, **quando** o gráfico renderiza, **então** o ponto aparece como cobertura desconhecida, e nunca como dia cheio.
+- **Dado** o ranking, **quando** ele renderiza, **então** cada linha mostra o nome do participante, o total de mensagens e os dias ativos, o título diz "quem mais falou no período" e nenhuma linha oferece caminho para mensagem, ligação ou comunicado.
+- **Dado** um participante sem nome, **quando** a linha renderiza, **então** ela aparece com rótulo próprio e a ação de nomear ao lado, em vez de linha em branco.
 - **Dado** um documento de dia com mais de 400 dias, **quando** o expurgo roda de madrugada, **então** ele é apagado e o grupo recebe carimbo de expurgo.
 
 **Tasks:** LEELA-S2003-T1 a LEELA-S2003-T4.
 
 #### LEELA-S2003-T1 · Termo do organizador como pré-condição de ligar o radar
-- **Tipo:** api/function · **Depende de:** parecer jurídico (LGPD-1) · **Estimativa:** S
+- **Tipo:** api/function · **Depende de:** S2002-T2 · **Estimativa:** S
 
 **Objetivo**
 Registrar o aceite com versão, finalidade, impressão digital do texto e hora de servidor, e recusar ativação de instância sem esse registro.
 
 **Regras de negócio a respeitar**
 - RN-521 — o nome real só é exibido onde há aceite registrado do organizador.
+- RN-531 — o termo declara a finalidade e a categoria de dado, e é onde a decisão do dono aparece para quem assina.
 
 **Critérios de aceite (testáveis)**
 - **Dado** um tenant sem aceite registrado, **quando** alguém tenta ativar a instância, **então** a ativação é recusada com motivo próprio.
+- **Dado** o parecer do advogado quando ele chegar, **quando** ele mudar a finalidade ou a base legal, **então** o termo ganha versão nova e o aceite anterior não vale para a versão nova.
 
-#### LEELA-S2003-T2 · Tela completa com os sete estados
+#### LEELA-S2003-T2 · Tela completa com os oito estados
 - **Tipo:** screen · **Depende de:** S2002-T6, S2003-T1 · **Estimativa:** L
 
 **Contexto & referências**
 - Ordem de gate da casa: crítica de design com veto do UX antes do gate de fidelidade; JTBD declarado no brief.
+- Os quatro blocos de conteúdo têm história e critério próprios: S2005 (o tempo), S2006 (as palavras), S2007 (a frota) e o ranking, que é desta história. Esta tarefa monta a casca, os oito estados e o ranking; os blocos entram por elas.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/clubes/ClubesRoutes.tsx` e o arquivo da sub-navegação do contexto de clube, que ganha o item do radar **condicionado ao tenant ter radar ligado** — a RN-526 proíbe o radar aparecer para quem não foi convidado, e um sétimo item fixo na SubNav vazaria a existência dele para todo mundo.
 
 **Fora de escopo**
 - Conexão com a área de comunicação, em qualquer forma (RN-520).
+
+**Divergência de grafia, registrada.** O [[LEELA-E05-clubs]] grafa a área como `/clubs/[slug]` e declara a sub-navegação fechada em seis abas; este épico usa `/clubes/:slug`, que é a grafia do painel em produção (`apps/painel/src/routes/clubes/`). O radar segue a grafia do painel. Reconciliar a grafia do E05 com o código é trabalho do E05, e fica anotado no card do board: dois documentos canônicos discordando sobre a rota da mesma área já custou caro na casa quando o catálogo de menu divergiu, e aquilo foi resolvido na fonte, não por filtro no consumidor.
 
 #### LEELA-S2003-T3 · Cron `expurgarRadar` em três camadas, reusando o incidente de expurgo
 - **Tipo:** api/function · **Depende de:** S2002-T2 · **Estimativa:** M
@@ -315,13 +370,17 @@ Apagar dia vencido às 03h25 no fuso de São Paulo, com núcleo puro de relógio
 
 **Regras de negócio a respeitar**
 - RN-524 — 400 dias corridos nos documentos diários.
+- RN-534 — o expurgo não olha o estado do clube: clube fora do ar mantém o radar.
+- RN-536 — janela e frota sem republicação há mais de 120 dias são apagadas.
 - O campo de alerta continua sendo o do expurgo de LGPD, para não nascer uma segunda política de alerta. O que muda é o tipo e o nome do evento de log.
 
 **Critérios de aceite (testáveis)**
 - **Dado** um grupo já carimbado, **quando** o expurgo roda, **então** ele ainda sonda um documento, porque dia novo pode ter chegado depois do último carimbo.
+- **Dado** um clube com soft-delete e radar ligado, **quando** o expurgo roda, **então** os documentos do radar continuam lá e continuam alcançáveis pela lista de radares do tenant.
+- **Dado** uma janela sem republicação há 121 dias, **quando** o expurgo roda, **então** ela é apagada.
 
 #### LEELA-S2003-T4 · Poda do texto local depois que o agregado sobe
-- **Tipo:** integration · **Depende de:** S2002-T3 · **Estimativa:** S
+- **Tipo:** integration · **Depende de:** S2002-T7 · **Estimativa:** S
 
 **Regras de negócio a respeitar**
 - RN-524 — 90 dias de texto no espelho local, apagado só depois de o agregado daquele dia estar publicado e confirmado.
@@ -331,12 +390,107 @@ Apagar dia vencido às 03h25 no fuso de São Paulo, com núcleo puro de relógio
 
 ---
 
+#### LEELA-S2003-T5 · Função de exclusão de participante pelo lado da nuvem
+- **Tipo:** api/function · **Depende de:** S2002-T2 · **Estimativa:** S
+
+**Objetivo**
+Dar ao organizador e à operação um caminho de esquecimento que não dependa da máquina do organizador estar viva.
+
+**Regras de negócio a respeitar**
+- RN-536 — o caminho da nuvem e o caminho local são independentes.
+
+**Critérios de aceite (testáveis)**
+- **Dado** uma janela publicada com três participantes, **quando** a instância é desligada e a exclusão de um deles é chamada, **então** o documento já não contém aquele `hash` nem aquele `nome`, e o mesmo vale para a frota e para `radarVinculos`.
+- **Dado** um pedido de exclusão, **quando** ele é atendido, **então** fica carimbado com quem pediu e quando.
+
+---
+
+### LEELA-S2005 · O pulso da comunidade no tempo (F1)
+
+**Como** organizadora, **quero** ver o volume de conversa por dia, os horários em que a comunidade fala e o entra e sai de gente, **para** entender a base que eu tenho em vez de sentir que entendo.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel · **RNs:** RN-524, RN-527, RN-535
+- **Depende de:** S2002-T3 (as métricas por dia), S2003-T2 (a casca da tela)
+- **Lê apenas dado já contratado:** `dias.{mensagens, porHora, entradas, saidas, membrosFim, participantesAtivos, cobertura}`. Nenhuma coleta nova.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** 30 dias com dado, **quando** abro a tela, **então** vejo o volume de mensagens por dia, com os dias parciais marcados e os dias de cobertura desconhecida marcados de outro jeito.
+- **Dado** o mesmo período, **quando** olho o mapa de horários, **então** vejo hora do dia por dia da semana, no fuso do organizador, e a faixa de pico é legível sem eu contar nada.
+- **Dado** o mesmo período, **quando** olho o bloco de gente, **então** vejo entradas, saídas, o saldo e o tamanho do grupo ao longo do tempo.
+- **Dado** um período sem nenhuma mensagem, **quando** abro, **então** cada bloco mostra o próprio vazio e diz desde quando não há dado, em vez de gráfico em branco.
+
+**Tasks:** S2005-T1 (blocos de tempo e horário), S2005-T2 (bloco de entra e sai), cada um com o estado vazio próprio.
+
+**O limite honesto.** Este bloco mostra o que aconteceu, não por quê. Uma queda de volume pode ser comunidade esfriando ou listener desconectado, e é por isso que a cobertura aparece junto do gráfico, e não numa tela de diagnóstico à parte.
+
+---
+
+### LEELA-S2006 · O que a comunidade fala (F1)
+
+**Como** organizadora, **quero** ver as palavras mais faladas e por quanta gente diferente, **para** escolher o assunto da próxima experiência com evidência em vez de palpite.
+
+- **MoSCoW:** Should · **Estimativa:** S · **Superfície:** Painel · **RNs:** RN-523, RN-527
+- **Depende de:** S2002-T3 (`remetentes` por palavra), S2003-T2
+- **Lê apenas dado já contratado:** `janelas.palavras[{palavra, n, remetentes}]`. Nenhuma coleta nova.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** uma janela com dado, **quando** abro o bloco, **então** vejo as 15 palavras mais faladas, cada uma com quantas vezes apareceu e por quantas pessoas distintas.
+- **Dado** duas palavras com a mesma contagem, **quando** a lista ordena, **então** a de mais remetentes vem antes, porque assunto espalhado vale mais do que assunto de uma pessoa só.
+- **Dado** um período abaixo do piso de frequência, **quando** abro, **então** o bloco diz que não houve palavra recorrente, em vez de mostrar ruído.
+
+**O limite honesto, e ele fica escrito na própria tela.** Frequência de palavra é **assunto**, não demanda. Uma lista com "treino", "prova" e "camiseta" não separa elogio de reclamação, e o organizador que ler isso como pedido da comunidade vai errar. O `remetentes` ajuda a distinguir assunto espalhado de assunto de um, e é o melhor que este desenho entrega.
+
+A alternativa mais forte existe e foi recusada por escrito: o fork tem uma capability de resumo de grupo que serviria melhor o job, e ela está na seção "Fora de escopo" do épico, com o motivo — resumo é derivado do texto, e o texto morre na origem por RN-523. Reabre por decisão do dono.
+
+---
+
+### LEELA-S2007 · Comparar as minhas comunidades (F1)
+
+**Como** organizadora com mais de um grupo, **quero** comparar as minhas comunidades lado a lado, **para** perceber qual está esfriando antes de ela morrer.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel · **RNs:** RN-522, RN-527, RN-535
+- **Depende de:** S2002-T4 (rules da frota), S2003-T2
+- **Lê apenas dado já contratado:** `radarFrota/{7d|30d|90d}`, mais `dias.entradas` e `dias.saidas` por grupo. Nenhuma coleta nova.
+
+**Por que esta história existe.** A frota já estava no modelo de dados, no payload, nas rules e no motor, e não tinha história, critério de aceite nem tela: era código nascendo sem dono, e pagava custo em quatro camadas para ninguém ler. Ela também é o único elo que o job de gerir a comunidade tinha.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um organizador com três grupos, **quando** abro a comparação, **então** vejo os três com volume, gente ativa e saldo de entradas e saídas na mesma janela.
+- **Dado** um grupo cujo volume caiu contra a janela anterior, **quando** a comparação renderiza, **então** a queda é visível sem eu abrir grupo por grupo.
+- **Dado** um grupo com saldo de saídas negativo em duas janelas seguidas, **quando** abro, **então** ele aparece destacado, porque debandada é o sinal que chega tarde demais quando ninguém olha.
+- **Dado** um organizador com um grupo só, **quando** abro, **então** o bloco não aparece, em vez de aparecer vazio.
+
+---
+
+### LEELA-S2008 · Conciliar participante e cliente, pela mão do admin (F1)
+
+**Como** organizadora, **quero** dizer que aquele participante do ranking é aquele membro do meu cadastro, **para** parar de casar duas listas de cabeça.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel · **RNs:** RN-531, RN-532, RN-533
+- **Depende de:** S2003-T2
+
+**Por que esta história existe.** A razão declarada do dono para pedir nome real foi identificar "usuários, clientes e membros mais engajados". A parte de clientes não fechava: o radar não coleta CPF, e-mail nem `atletaId`, que são as chaves do CRM, e não vai coletar. Sem conciliação, o épico entregava duas listas e devolvia ao organizador o trabalho manual que ele pagou para não fazer.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um participante do ranking, **quando** abro a ação de conciliar, **então** o painel sugere membros do cadastro daquele clube por semelhança de nome, e eu confirmo ou recuso.
+- **Dado** um vínculo confirmado, **quando** o ranking renderiza depois, **então** aquela linha mostra o nome do cadastro, e não mais o do WhatsApp.
+- **Dado** um participante com nome ausente ou irreconhecível, **quando** uso a edição manual, **então** o nome que eu digito vence a próxima publicação do motor.
+- **Dado** um vínculo desfeito, **quando** o ranking renderiza, **então** a linha volta ao nome que vem do WhatsApp.
+- **Dado** qualquer caminho do CRM, **quando** ele executa, **então** ele não lê documento do radar; e nenhum caminho do radar lê a base do CRM. O gate `FronteiraPII.test.ts` ganha esse caso nos dois sentidos.
+
+**Fora de escopo**
+- Sugestão automática aceita sozinha: o vínculo é sempre ato confirmado por gente.
+- Qualquer escrita no CRM. O vínculo mora do lado do radar e não cria perfil de ninguém.
+- Conciliação por telefone, que resolveria em um passo e está proibida pela RN-523.
+
+---
+
 ### LEELA-S2004 · Multi-locação e autoatendimento (F2)
 
 **Como** operação da Leela, **quero** rodar dez radares sem uma máquina por organizador, **para** que o produto saia do piloto convidado.
 
-- **MoSCoW:** Could · **Estimativa:** XL · **Superfície:** Painel · **RNs:** RN-522, RN-526, RN-529
-- **Depende de:** F1 estável; veto do sócio sobre custo recorrente de hospedagem.
+- **MoSCoW:** Could · **Estimativa:** XL · **Superfície:** Painel · **RNs:** RN-522, RN-526, RN-529, RN-530
+- **Depende de:** F1 estável; veto do sócio sobre custo recorrente de hospedagem; **reavaliação declarada da RN-530**, porque host operado pela Leela põe o texto integral das conversas de todas as comunidades e o sal de cada organizador dentro da nossa infraestrutura, invertendo a promessa central do épico. Essa reavaliação reabre a frente jurídica, e é pré-condição, não consequência.
 
 **Critérios de aceite (Given/When/Then):**
 - **Dado** dez organizadores ativos, **quando** um teste dirigido tenta cruzar dados entre eles, **então** nenhum vazamento acontece em nenhuma camada.
@@ -349,7 +503,11 @@ Apagar dia vencido às 03h25 no fuso de São Paulo, com núcleo puro de relógio
 
 ## Ordem sugerida
 
-`S2001 (sobrevivência) → S2002 (ponte no emulador) → [portão jurídico do LGPD-1] → S2003 (tela e expurgo) → S2004 (multi-locação)`. A S2001 é portão de produto e a única que pode começar hoje. A S2002 é despachável assim que a S2001 fechar verde, porque ela não expõe nome a ninguém além do dono. A S2003 espera o advogado.
+`S2001 (sobrevivência) → S2002 (ponte no emulador) → S2003 (tela, ranking e expurgo) → S2005, S2006, S2007 e S2008 (o conteúdo da tela, em paralelo) → S2004 (multi-locação)`.
+
+A S2001 é portão de produto e a única que pode começar hoje. A S2002 é despachável assim que a S2001 fechar verde. A S2003 **deixou de esperar o advogado** em 09/08 (decisão 12) e agora depende só da S2002; dentro dela, a S2002-T3 é a tarefa que destrava tudo, porque sem métricas por dia não existe lote de dias para publicar. As quatro histórias de conteúdo dependem da casca da S2003-T2 e podem correr em paralelo entre si.
+
+Os identificadores não seguem a ordem de leitura: a S2004 é do F2 e fecha o arquivo, enquanto S2005 a S2008 nasceram na rodada de reparo de 09/08 e são do F1.
 
 ---
 
