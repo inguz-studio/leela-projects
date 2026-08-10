@@ -624,6 +624,8 @@ Três coisas, nesta ordem de precedência:
 
 `nome` ausente é estado previsto, não erro: no motor ele é `string | null`, porque sai de um `LEFT JOIN`. O lote não é recusado por causa disso, e a tela mostra a linha com rótulo próprio de participante sem nome, com a ação de nomear ao lado. Nome com forma de telefone é recusado na borda (contrato da ponte), porque `nome` é a única string livre que atravessa e o schema fechado confere chave, não valor.
 
+**A mesma invariante vale para `nomeManual`, e pelo mesmo motivo.** A Function que grava a correção recusa `nomeManual` que, removidos espaços e pontuação, tenha 8 ou mais dígitos, ou comece com `+`, com o mesmo `NOME_COM_FORMA_DE_TELEFONE` da borda. A prova é pelo valor, não pelo campo: o campo se chamar `nomeManual` e nascer na nuvem não muda nada, porque o organizador tem o telefone de todo o grupo à mão no próprio WhatsApp e digitar o número é o caminho curto, não o improvável. Os três casos do teste são os da borda: `"+55 11 98888-7777"` e `"5511988887777"` recusados, `"Maria"` aceito. É o mesmo código do core (`packages/core/src/radar/invariantes.ts`, que a S2002-T1 cria), apontado para a outra porta.
+
 ### RN-533 · o vínculo entre participante e cliente é ato do admin, e nada sobe do motor para fazê-lo (nova · 2026-08-09)
 
 O organizador contratou o radar para saber quem sustenta a comunidade **e** quais dessas pessoas são clientes dele. A segunda metade não fecha sozinha: a chave de identidade do CRM é CPF, com queda para e-mail e `atletaId`, e o radar não coleta nenhuma das três — telefone e identificador de WhatsApp são proibidos pela RN-523, o hash tem sal local e nome de exibição não é chave.

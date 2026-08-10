@@ -15,7 +15,9 @@ O épico dono é [[LEELA-E20-radar-comunidade]], e as regras citadas aqui vivem 
 
 ## O princípio que organiza tudo
 
-O banco local na máquina que roda o motor é a fonte da verdade. O Firestore é projeção derivada, somente leitura do ponto de vista do produto, e reconstruível a partir do local. Nada flui de volta. Qualquer defeito de publicação vira problema recuperável: recalcula e republica.
+O banco local na máquina que roda o motor é a fonte da verdade. O Firestore é projeção derivada, somente leitura do ponto de vista do produto, e reconstruível a partir do local **com uma exceção declarada: `radarVinculos`**. Nada flui de volta. Qualquer defeito de publicação vira problema recuperável: recalcula e republica.
+
+A exceção existe porque `radarVinculos` nasce na nuvem, de um ato do admin (RN-533), e não do motor. O `nomeManual` que ele digitou e o vínculo que ele confirmou não existem no SQLite local, no motor nem no CRM: recalcular e republicar não os traz de volta, apaga. Por isso `radarVinculos` fica fora de qualquer rotina de recálculo e republicação, e entra no backup e no expurgo como dado primário, e não como projeção descartável.
 
 ## Grão do dado: dia aditivo, janela recalculada
 
