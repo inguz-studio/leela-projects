@@ -11,6 +11,7 @@ import { MarcasRoutes } from './routes/marcas/MarcasRoutes';
 import { rotasLegadas } from './routes/_system/RotasLegadas';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
+import { SuperficieDoPainel } from './shell/SuperficieDoPainel';
 import { RequireSessao } from './routes/_system/RequireSessao';
 import { ContaTravadaGate } from './routes/onboarding/ContaTravadaGate';
 import { ContaRoutes } from './routes/conta/perfil/ContaRoutes';
@@ -29,6 +30,12 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        {/* Fiação da superfície (REDESIGN-DS · decisão do dono de 09/08):
+            organizador = brasa com vidro LIGADO, administração da plataforma =
+            vidro DESLIGADO sobre preto opaco. Mora aqui, e não no RootShell,
+            porque o shell não cobre as jornadas de conta (AuthLayout) — e o
+            <html> é um só. Renderiza nada; ver shell/SuperficieDoPainel. */}
+        <SuperficieDoPainel />
         <Routes>
           {/* S020 · jornadas de conta SEM shell (tela cheia, dark brasa,
               centrada). Layout route pathless — as páginas entram no Outlet do

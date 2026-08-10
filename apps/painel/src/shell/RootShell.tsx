@@ -129,7 +129,28 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
           `<main>` do AppShell já é `relative` e barra a fuga; aqui a `relative`
           resolve o outro lado, que é a semântica: o absoluto pertence ao
           conteúdo que rola, não à moldura parada. */}
-      <div className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY}`}>{children}</div>
+      {/* GLOW DA PÁGINA (REDESIGN-DS §2, regra não-negociável nº 1): o brilho
+          de fundo é FIXO NO VIEWPORT. Se ele rolasse com o conteúdo, o
+          desfoque do vidro perderia o referencial e o efeito morreria — o card
+          translúcido revelaria sempre a mesma cor chapada.
+
+          Mora aqui, no contêiner que rola, e não no <body>: o AppShell pinta
+          `--surface-base` OPACO na raiz da moldura, então um glow no documento
+          ficaria escondido atrás dela. `background-attachment: fixed` faz a
+          área de posicionamento ser o viewport (é o que os raios em
+          porcentagem do token esperam) enquanto a pintura fica contida nesta
+          caixa — e como a Sidebar é opaca, não pintar o glow sob o rail é
+          visualmente idêntico a pintar.
+
+          `--page-glow` é `none` fora do modo vidro: na administração da
+          plataforma esta mesma linha não desenha nada, e o fundo preto do
+          `--surface-base` é o que o dono pediu. Nenhum valor cru aqui — só o
+          token que a lane TOKENS publicou. */}
+      <div
+        className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY} [background-image:var(--page-glow)] [background-attachment:fixed]`}
+      >
+        {children}
+      </div>
     </AppShell>
   );
 }

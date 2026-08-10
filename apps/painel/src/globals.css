@@ -1,5 +1,11 @@
 /* ── Leela Design System fonts ──────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600&display=swap');
+/* Rubik 400/500/600/700 entra pelo MESMO mecanismo do Exo 2 (REDESIGN-DS §3):
+   o brasa passa a ser pareado — Exo 2 nos títulos (a voz da marca), Rubik no
+   texto corrido (altura-x maior, cinza óptico mais estável em corpo pequeno).
+   A lane TOKENS já apontou `--font-family-ui` para Rubik; sem esta carga o
+   painel cairia no `sans-serif` do sistema. Os quatro cortes são os que os
+   tokens `--peso-*` do brasa realmente usam (400/500/600/700). */
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;0,700;1,700&family=Rubik:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
 /* ── DS theme tokens (all themes for runtime switching) ─────────────────── */
 /* Imported via ThemeProvider in main.tsx via @leela/design-system/themes/index.css */
@@ -15,6 +21,18 @@
     color: var(--text-primary, #F9F9F9);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* A outra metade do pareamento do brasa (REDESIGN-DS §3). O <html> acima
+     entrega o TEXTO CORRIDO em `--font-family-ui` (Rubik desde a lane TOKENS);
+     sem esta regra o painel inteiro viraria Rubik e o Exo 2 — a voz da marca —
+     sumiria da tela, porque nenhum componente consome `--font-family-display`
+     hoje. Título é elemento semântico, então a régua é o elemento: vale para os
+     títulos que o design system renderiza (PageHeader h1, CardTitle h3) sem
+     exigir prop nova em componente nenhum, e qualquer utilitário de fonte numa
+     tela específica continua vencendo (isto é `base`, não `utilities`). */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-display, var(--font-family-ui));
   }
 
   * {
