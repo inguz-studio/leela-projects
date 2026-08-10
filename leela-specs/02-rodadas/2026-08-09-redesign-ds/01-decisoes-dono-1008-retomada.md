@@ -40,3 +40,67 @@ alternador sai do corpo do rail; rótulos **"Acessar painel master"/"Acessar pai
 profissional"** (consistente com RN-468 "Painel Profissional"). **Default do maestro,
 vetável:** Configurações continua TAMBÉM como item do rail (ícone existe no protótipo v3
 ratificado).
+
+---
+
+> **Leva 3 — validação do dono no :4601 (10/08, retomada pós-travamento).** Registradas no
+> mesmo ato. Viram a lane AJUSTES-DONO (roda após a DELTA-UX-RESUME aterrissar — mesma
+> árvore, nunca em paralelo).
+
+## D-1008-R7 · CTA "Gerenciar evento" fora do padrão de altura do DS
+Na íntegra: "no localhost ja peguei de cara o botao que voce agora deixou fora do padrão de
+altura, porra toda hora quebrando o design system!!! 'Gerenciar Evento'."
+→ **Regressão do FIX F3** (sizes `cta` 48px / `cta-sm` 44px vindos do protótipo v3). A régua
+do dono: altura de botão é a do padrão canônico do Button — a medida do protótipo PERDE para
+o padrão do DS aqui (decisão explícita; inverte o pin l.281 do protótipo). Investigar
+root-cause primeiro (é o 48px deliberado, ou var `--v3-cta-h` não resolvendo?); o destino é
+o CTA na altura canônica.
+
+## D-1008-R8 · Frases de apoio desnecessárias — cortar (principalmente Clubs)
+Na íntegra: "Vejo que existem muitas frases de apoio que nao precisam existir,
+princiaplemnte em clubs."
+→ Inventariar microcopy de apoio nas superfícies do redesign (prioridade Clubs), cortar as
+redundantes (carga cognitiva, L-021), **lista do que foi cortado no handoff — vetável**.
+
+## D-1008-R9 · Afiliações/Assessorias/Engajamento viram menu secundário
+Na íntegra: "Já os botões de afiliações influenciadores, assessorias parceiras e
+engajamento, podem ser manejadas. Análise geral dosclubes em engajamento, por exemplo, ter
+um menu secundário ao invés de botões."
+→ Os três acessos (afiliações influenciadores · assessorias parceiras · engajamento) saem
+de botões soltos e viram **menu secundário** (componente canônico do DS — Tabs/nav
+secundária), na área de clubs/engajamento.
+
+## D-1008-R10 · Voltar do painel de um club para a aba geral
+Na íntegra: "e a opção de voltar, já que os clubs eu posso acessar um painel, mas depois nao
+consigo retornar a aba geral dos clubs."
+→ Dentro do painel de um club específico, affordance de retorno à listagem geral de clubs
+(voltar/breadcrumb — padrão canônico, com rota SPA de verdade, âncora navegável).
+
+## D-1008-R11 · Kits em eventos: contêineres não renderizam (informação flutuante)
+Na íntegra: "Ao registrar kits também em eventos, nao consigo visualizar os bento cards, ou
+conteineres de informação, estao todas as informações flutuantes."
+→ Defeito de superfície: os cartões/contêineres da tela de registro de kits perderam o
+fundo/borda no tema novo — a informação fica solta. **Root-cause primeiro** (mesma família
+do D-1008-R4/popover? var de superfície não resolvendo fora da VG?), conserto no
+token/componente canônico, nunca por tela.
+
+## D-1008-R12 · Tabela de lotes: 3 colunas — Vendidos, Disponíveis, Total
+Na íntegra: "A tabela de lotes em vagas venvidas -disponiveis e total está meio quebrada,
+esquisita como coluna unica, simplifique para vendidos, disponiveis e total."
+→ A tabela renderiza os números amontoados como coluna única; simplificar para **três
+colunas: Vendidos · Disponíveis · Total**.
+
+## D-1008-R13 · Modalidades ANTES de lotes (fluxo + visibilidade)
+Na íntegra: "Nao consigo ver a configuração de modalidades em lotes. Está consufo, pois eu
+precisaria primeiramente configurar as modalidades e depois os lotes."
+→ Dois problemas: (a) a configuração de modalidades não está visível/alcançável a partir de
+lotes; (b) a ordem do fluxo está invertida — **modalidades se configuram primeiro, lotes
+depois**. Ler as specs existentes de modalidades/kit antes de mexer (JTBD primeiro); se a
+correção for reestrutura pesada de IA, a lane devolve proposta em vez de código
+(escalate_if).
+
+## D-1008-R14 · Animação de seleção deslizante no menu
+Na íntegra: "ao trocar também o menu, quero uma animação do select, como se ele estivesse
+deslizando na barra. para dar maior dinamismo ao sistema."
+→ Indicador de item ativo **desliza** entre as posições ao trocar a seleção (rail e menu
+secundário novo do R9) — tokens de motion do DS, respeitando `motion-reduce`.
