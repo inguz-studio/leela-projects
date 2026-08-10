@@ -41,11 +41,28 @@ Commits da lane (todos em `main`, todos pushed):
 | `69203486` | feat(painel): Visao Geral v3 — o resumo dos clubs e a ocupacao dos eventos |
 | `2c5f3066` | feat(painel): tela de Engajamento — a comunidade medida so pelo que existe |
 | `fcc4ce33` | test(painel): a fiacao tipografica do brasa vira gate |
+| `df7d3482` | docs(board): sela a lane TELA — card no board, veredito no handoff |
 
-Push em 3 lotes, todos confirmados no remoto (`origin/main`). A árvore tinha
+Push em lotes, todos confirmados no remoto (`origin/main`). A árvore tinha
 outras lanes em voo (ADMIN-VISAO em `packages/api-client` e `functions`,
 RADAR-REPARO em specs): `git status --short` conferido antes de cada `add`,
 `commit --only` com pathspec explícito, nenhum arquivo de outra lane varrido.
+
+### Incidente de árvore compartilhada (sem perda, registrado)
+
+As edições de board desta lane (`V1-KANBAN.md` + `BOARD-EPICOS.md`) foram
+**varridas para dentro do commit `f2a3de88` da lane ADMIN-VISAO-ONDA1**, que
+rodou `git add` nesses dois arquivos enquanto minhas mudanças estavam na árvore.
+É o mesmo acidente que a lane TOKENS registrou, na direção contrária (lá eu
+levei arquivo de outro; aqui outro levou o meu).
+
+**Conferido no `HEAD`: o conteúdo está íntegro** — o card da lane TELA está no
+`V1-KANBAN` e a nota está na linha do E01 no `BOARD-EPICOS`. Nada a refazer, e
+nada a reverter: reescrever o commit alheio custaria mais que o registro. Fica
+o aprendizado: `commit --only` protege o MEU commit de levar o dos outros, e não
+protege as minhas linhas de irem no commit de quem `add`ou antes. Em arquivo
+compartilhado e disputado como o kanban, o caminho seguro é editar e commitar no
+mesmo gesto, sem janela.
 
 ## O achado que mudou o enquadramento (leitura dos protótipos)
 
