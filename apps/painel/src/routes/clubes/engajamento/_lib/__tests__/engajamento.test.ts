@@ -231,11 +231,18 @@ describe('ranquearDesafios · quem move a comunidade', () => {
     expect(r.map((d) => d.nome)).toEqual(['Abelha', 'Zebra']);
   });
 
-  it('corta no teto do ranking', () => {
+  it('devolve a lista inteira: o corte é recorte de card, não de derivação (item 9)', () => {
     const muitos = Array.from({ length: 12 }, (_, i) =>
       doClube(mkDesafio({ nome: `D${i}`, qtdParticipantes: i + 1 }))
     );
-    expect(ranquearDesafios(muitos)).toHaveLength(RANKING_MAX_DESAFIOS);
+    expect(ranquearDesafios(muitos)).toHaveLength(12);
+  });
+
+  it('ainda aceita um teto explícito para quem precisar dele', () => {
+    const muitos = Array.from({ length: 12 }, (_, i) =>
+      doClube(mkDesafio({ nome: `D${i}`, qtdParticipantes: i + 1 }))
+    );
+    expect(ranquearDesafios(muitos, RANKING_MAX_DESAFIOS)).toHaveLength(RANKING_MAX_DESAFIOS);
   });
 
   it('leva o club de origem junto (o fan-out perde o pai)', () => {

@@ -253,7 +253,14 @@ export function resumirPonteComEventos(
   ];
 }
 
-/** Quantos desafios o ranking mostra. */
+/**
+ * Tamanho do recorte "Top" do ranking — é decisão de TELA (quantas barras cabem
+ * antes da lista virar rolagem), não de dado. Fica exportado aqui porque o
+ * vocabulário do bloco vive neste arquivo, mas quem corta é a View: desde o
+ * REFACTOR item 9 o card tem recorte próprio ("Top 5" × "Todos"), e um corte
+ * feito na derivação impediria o recorte de existir — a tela receberia cinco e
+ * nunca saberia que há mais.
+ */
 export const RANKING_MAX_DESAFIOS = 5;
 
 /**
@@ -261,11 +268,14 @@ export const RANKING_MAX_DESAFIOS = 5;
  * um desafio encerrado ao lado de um em andamento compara coisas que não são
  * comparáveis (um teve o ciclo inteiro, o outro está no meio dele).
  * Empate desempata por nome, para a ordem não oscilar entre renders.
+ *
+ * Devolve a lista INTEIRA por padrão (REFACTOR item 9). O `max` continua na
+ * assinatura para quem precisar de um teto duro.
  * @pure
  */
 export function ranquearDesafios(
   desafios: readonly DesafioComClube[],
-  max: number = RANKING_MAX_DESAFIOS
+  max: number = Number.POSITIVE_INFINITY
 ): DesafioEngajado[] {
   return desafios
     .filter((d) => estaAtivo(d.desafio) && d.desafio.qtdParticipantes > 0)

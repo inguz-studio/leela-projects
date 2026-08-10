@@ -23,7 +23,7 @@
 // número inventado.
 // =============================================================================
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   BarChart,
   Button,
@@ -38,11 +38,12 @@ import {
 import { Activity, GitBranch, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
 import { formatDecimal1, formatInt } from '../_lib/format';
-import type {
-  ContagemRotulada,
-  DesafioEngajado,
-  ResumoDaComunidade,
-  ResumoDosPilares,
+import {
+  RANKING_MAX_DESAFIOS,
+  type ContagemRotulada,
+  type DesafioEngajado,
+  type ResumoDaComunidade,
+  type ResumoDosPilares,
 } from './_lib/engajamento';
 import { TODOS_OS_CLUBS } from './_data/engajamento';
 
@@ -127,6 +128,81 @@ function barrasDeContagem(itens: readonly ContagemRotulada[]): BarChartDatum[] {
 }
 
 // ---------------------------------------------------------------------------
+// Ranking de desafios — o card com recorte PRÓPRIO (REFACTOR item 9)
+// ---------------------------------------------------------------------------
+
+/** Recorte do ranking. Vocabulário do card, não da tela. */
+type RecorteDoRanking = 'top' | 'todos';
+
+/**
+ * Desafios que mais movem a comunidade, com o recorte MORANDO DENTRO DO CARD.
+ *
+ * O item 9 do REFACTOR tem uma causa concreta: quando dois cards dividem um
+ * filtro, clicar num reflui o outro, e o organizador não pediu isso. A defesa
+ * estrutural é a que está aqui — o `useState` do recorte é local, então não
+ * existe lugar de onde compartilhá-lo. O filtro de club do `PageHeader` segue
+ * global de propósito: ele decide QUAIS clubs são LIDOS (escopo de query, uma
+ * leitura por club), não como um card corta o que já chegou.
+ *
+ * O recorte também conserta um silêncio: até aqui a derivação cortava no quinto
+ * e a tela não dizia que havia um sexto. Agora o corte é visível e reversível —
+ * e o controle só aparece quando há o que revelar.
+ */
+function RankingDeDesafios({
+  desafios,
+  loading,
+}: {
+  desafios: DesafioEngajado[] | null;
+  loading: boolean;
+}): JSX.Element {
+  const [recorte, setRecorte] = useState<RecorteDoRanking>('top');
+  const lista = desafios ?? [];
+  const excedeTop = lista.length > RANKING_MAX_DESAFIOS;
+  const visiveis = excedeTop && recorte === 'top' ? lista.slice(0, RANKING_MAX_DESAFIOS) : lista;
+
+  return (
+    <>
+      <SecaoHead
+        titulo="Desafios que mais movem a comunidade"
+        descricao="Participantes por desafio em andamento, do maior para o menor."
+        controle={
+          excedeTop ? (
+            <Select
+              aria-label="Recorte do ranking de desafios"
+              options={[
+                { value: 'top', label: `Top ${RANKING_MAX_DESAFIOS}` },
+                { value: 'todos', label: `Todos (${lista.length})` },
+              ]}
+              value={recorte}
+              onChange={(e) => setRecorte(e.target.value as RecorteDoRanking)}
+            />
+          ) : undefined
+        }
+      />
+      {loading || desafios === null ? (
+        <Skeleton variant="rect" className="h-40" />
+      ) : lista.length === 0 ? (
+        <Painel>
+          <EmptyState
+            title="Nenhum desafio em andamento"
+            description="Um desafio ativo é o que dá à comunidade uma razão para aparecer entre um evento e outro."
+          />
+        </Painel>
+      ) : (
+        <Painel>
+          <BarChart
+            data={visiveis.map((d) => ({ label: d.nome, value: d.participantes }))}
+            aria-label="Participantes por desafio em andamento"
+            height={alturaDeBarras(visiveis.length)}
+            formatValue={formatInt}
+          />
+        </Painel>
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Tela
 // ---------------------------------------------------------------------------
 
@@ -153,7 +229,6 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
   ];
 
   const semPilares = pilares !== null && pilares.desafiosComPilar === 0;
-  const semDesafios = desafios !== null && desafios.length === 0;
 
   return (
     <>
@@ -307,29 +382,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </section>
 
             <section aria-label="Desafios que mais movem a comunidade" className="flex flex-col">
-              <SecaoHead
-                titulo="Desafios que mais movem a comunidade"
-                descricao="Participantes por desafio em andamento, do maior para o menor."
-              />
-              {loading || desafios === null ? (
-                <Skeleton variant="rect" className="h-40" />
-              ) : semDesafios ? (
-                <Painel>
-                  <EmptyState
-                    title="Nenhum desafio em andamento"
-                    description="Um desafio ativo é o que dá à comunidade uma razão para aparecer entre um evento e outro."
-                  />
-                </Painel>
-              ) : (
-                <Painel>
-                  <BarChart
-                    data={desafios.map((d) => ({ label: d.nome, value: d.participantes }))}
-                    aria-label="Participantes por desafio em andamento"
-                    height={alturaDeBarras(desafios.length)}
-                    formatValue={formatInt}
-                  />
-                </Painel>
-              )}
+              <RankingDeDesafios desafios={desafios} loading={loading} />
             </section>
 
             <section aria-label="Frequência e presença" className="flex flex-col">

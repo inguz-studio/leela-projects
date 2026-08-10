@@ -194,6 +194,43 @@ describe('EngajamentoView · estados da tela', () => {
   });
 });
 
+describe('EngajamentoView · recorte por card (REFACTOR item 9)', () => {
+  const muitos = Array.from({ length: 8 }, (_, i) => ({
+    id: `d${i}`,
+    clubeId: 'floripa-run',
+    nome: `Desafio ${String.fromCharCode(65 + i)}`,
+    participantes: 100 - i,
+    progressoPct: 50,
+  }));
+
+  it('com mais de cinco desafios, o card ganha o PRÓPRIO recorte e mostra o Top 5', () => {
+    render(<EngajamentoView {...props({ desafios: muitos })} />);
+    const recorte = screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' });
+    expect(recorte).toHaveValue('top');
+    expect(screen.getByRole('rowheader', { name: 'Desafio E' })).toBeInTheDocument();
+    expect(screen.queryByRole('rowheader', { name: 'Desafio F' })).not.toBeInTheDocument();
+  });
+
+  it('trocar para "Todos" revela o que o corte escondia — sem tocar no filtro de club', async () => {
+    const onSelecionarClube = vi.fn();
+    render(<EngajamentoView {...props({ desafios: muitos, onSelecionarClube })} />);
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' }),
+      'todos'
+    );
+    expect(screen.getByRole('rowheader', { name: 'Desafio H' })).toBeInTheDocument();
+    expect(onSelecionarClube).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox', { name: 'Club analisado' })).toHaveValue(TODOS_OS_CLUBS);
+  });
+
+  it('com cinco ou menos, o controle não existe — recorte que não recorta é ruído', () => {
+    render(<EngajamentoView {...props({ desafios: muitos.slice(0, 5) })} />);
+    expect(
+      screen.queryByRole('combobox', { name: 'Recorte do ranking de desafios' })
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe('EngajamentoView · recorte por club', () => {
   it('o filtro lista "Todos os clubs" primeiro e depois cada club', () => {
     render(<EngajamentoView {...props()} />);

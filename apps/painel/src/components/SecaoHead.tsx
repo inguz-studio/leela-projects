@@ -14,6 +14,7 @@
 // muda de lugar conforme a tela não é cabeçalho de bloco, é enfeite.
 // =============================================================================
 
+import type { ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@leela/design-system';
 
@@ -21,6 +22,14 @@ export interface SecaoHeadProps {
   titulo: string;
   /** Uma linha de contexto sob o título (o "subtítulo" dos blocos da v3). */
   descricao?: string;
+  /**
+   * Controle de RECORTE DO PRÓPRIO CARD, à esquerda do link de ação
+   * (REFACTOR item 9). Fica aqui, e não numa barra de filtros da tela, porque
+   * um filtro compartilhado entre dois cards muda os dois com um clique só —
+   * o vizinho reflui sem ninguém ter pedido. Quem desenha o cabeçalho não sabe
+   * qual é o recorte; quem tem o estado é o card.
+   */
+  controle?: ReactNode;
   /** Rótulo do link à direita — sem ele, não há link. */
   acaoRotulo?: string;
   onAcao?: (() => void) | undefined;
@@ -29,6 +38,7 @@ export interface SecaoHeadProps {
 export function SecaoHead({
   titulo,
   descricao,
+  controle,
   acaoRotulo,
   onAcao,
 }: SecaoHeadProps): JSX.Element {
@@ -51,6 +61,7 @@ export function SecaoHead({
           </p>
         ) : null}
       </div>
+      {controle ? <div className="shrink-0 self-center">{controle}</div> : null}
       {acaoRotulo && onAcao ? (
         <button
           type="button"
