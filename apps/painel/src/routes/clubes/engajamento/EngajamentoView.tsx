@@ -43,6 +43,7 @@ import {
 } from '@leela/design-system';
 import { Activity, CalendarClock, GitBranch, ListOrdered, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
+import { Cascata } from '../../../components/CartaoV3';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
   RANKING_MAX_DESAFIOS,
@@ -92,7 +93,14 @@ function Painel({
   return (
     <div
       className={cn(
-        'rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-5)]',
+        // Cartão vidro do protótipo (HIFI-REC): blur + elevação + hover-lift
+        // de 2px (§5 — 250ms ≈ duration-normal; motion-reduce desliga).
+        'rounded-[var(--card-radius)] bg-[var(--surface-raised)]',
+        '[backdrop-filter:var(--card-blur)] shadow-elev-2',
+        'p-[var(--v3-card-p-lg)]',
+        'hover:translate-y-[calc(-1*var(--spacing-0-5))] hover:shadow-elev-3',
+        'transition-[transform,box-shadow] duration-[var(--motion-duration-normal)] ease-[var(--motion-easing-default)]',
+        'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
         className,
       )}
     >
@@ -101,6 +109,11 @@ function Painel({
   );
 }
 
+/**
+ * Faixa de seção do protótipo do estudo: título display 1.0625rem + legenda
+ * inline + hairline que preenche o resto da linha (era um bloco com borda
+ * superior — a faixa é mais leve e é o desenho do dono).
+ */
 function SecaoTitulo({
   titulo,
   legenda,
@@ -109,19 +122,20 @@ function SecaoTitulo({
   legenda: string;
 }): JSX.Element {
   return (
-    <div className="border-t border-t-[var(--border-subtle)] pt-[var(--spacing-5)]">
+    <div className="flex items-baseline gap-[var(--spacing-3-5)] mt-[var(--spacing-3-5)] -mb-[var(--spacing-1)]">
       <h2
         className={cn(
-          'font-display italic',
-          'text-[length:var(--section-title-size)] font-[var(--peso-display)]',
+          'font-display whitespace-nowrap',
+          'text-[length:var(--v3-band-size)] font-[var(--peso-display)]',
           'tracking-[var(--section-title-spacing)] text-[var(--text-primary)]',
         )}
       >
         {titulo}
       </h2>
-      <p className="mt-[var(--spacing-1)] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+      <p className="min-w-0 text-[length:var(--font-size-sm-plus)] text-[var(--text-tertiary)] text-pretty">
         {legenda}
       </p>
+      <span aria-hidden className="flex-1 h-px bg-[var(--border-subtle)] self-center" />
     </div>
   );
 }
@@ -363,30 +377,33 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <div
                 role="status"
                 aria-label="Carregando números da comunidade"
-                className="grid grid-cols-2 gap-[var(--spacing-4)] lg:grid-cols-4"
+                className="grid grid-cols-1 gap-[var(--spacing-4)] xs:grid-cols-2 lg:grid-cols-4"
               >
                 {Array.from({ length: 4 }).map((_, i) => (
                   <Skeleton key={i} variant="rect" className="h-24" />
                 ))}
               </div>
             ) : (
-              <section
-                aria-label="Números da comunidade"
-                className="grid grid-cols-2 gap-[var(--spacing-4)] lg:grid-cols-4"
-              >
-                <KpiCard label="Clubs" value={formatInt(resumo.clubes)} />
-                <KpiCard label="Membros ativos" value={formatInt(resumo.membrosAtivos)} />
-                <KpiCard label="Desafios ativos" value={formatInt(resumo.desafiosAtivos)} />
-                <KpiCard
-                  label="Participações"
-                  value={formatInt(resumo.participacoes)}
-                  hint="nos desafios em andamento"
-                />
-              </section>
+              <Cascata i={0}>
+                <section
+                  aria-label="Números da comunidade"
+                  className="grid grid-cols-1 gap-[var(--spacing-4)] xs:grid-cols-2 lg:grid-cols-4"
+                >
+                  <KpiCard label="Clubs" value={formatInt(resumo.clubes)} />
+                  <KpiCard label="Membros ativos" value={formatInt(resumo.membrosAtivos)} />
+                  <KpiCard label="Desafios ativos" value={formatInt(resumo.desafiosAtivos)} />
+                  <KpiCard
+                    label="Participações"
+                    value={formatInt(resumo.participacoes)}
+                    hint="nos desafios em andamento"
+                  />
+                </section>
+              </Cascata>
             )}
 
             <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2">
-              <section aria-label="Equilíbrio dos pilares" className="flex flex-col">
+              <Cascata i={1} className="flex">
+              <section aria-label="Equilíbrio dos pilares" className="flex flex-col flex-1">
                 <SecaoHead
                   titulo="Equilíbrio dos pilares"
                   ajuda="Média de pontos por participante em cada pilar sobre o mínimo exigido, ponderada pelo tamanho dos desafios que operam equilíbrio. Não existe distribuição-alvo entre os três: o bloco mostra onde a comunidade está pesando, não onde ela deveria pesar."
@@ -420,7 +437,10 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 )}
               </section>
 
-              <section aria-label="Situação dos membros" className="flex flex-col">
+              </Cascata>
+
+              <Cascata i={2} className="flex">
+              <section aria-label="Situação dos membros" className="flex flex-col flex-1">
                 <SecaoHead
                   titulo="Situação dos membros"
                   ajuda="Quem entrou nos últimos 7 dias, quem segue ativo e quem está há 30 dias ou mais sem nenhum registro de atividade."
@@ -440,8 +460,10 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                   </Painel>
                 )}
               </section>
+              </Cascata>
             </div>
 
+            <Cascata i={3}>
             <section aria-label="Como a comunidade entra" className="flex flex-col">
               <SecaoHead
                 titulo="Como a comunidade entra"
@@ -469,7 +491,9 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 </Painel>
               )}
             </section>
+            </Cascata>
 
+            <Cascata i={4}>
             <section aria-label="Desafios que mais movem a comunidade" className="flex flex-col">
               <RankingDeDesafios
                 desafios={desafios}
@@ -477,11 +501,13 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 clubeSelecionado={clubeSelecionado}
               />
             </section>
+            </Cascata>
 
             {/* Frequência e presença — as métricas ficam NOMEADAS uma a uma
                 (REFACTOR itens 7, 11 e 13). Uma caixa só, genérica, escondia
                 quantas análises estão previstas e qual delas destrava com qual
                 fonte. Todas dependem do mesmo registro que não existe. */}
+            <Cascata i={5}>
             <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-3">
               <CardEmBreve
                 titulo="Mapa de Check-ins"
@@ -499,6 +525,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 causa="A contagem por ação — quilômetros, sessões, páginas, noites — vive no registro de cada atleta, e as Rules não abrem esse caminho para o organizador. O agregado do desafio guarda o total por pilar, nunca a ação que o formou."
               />
             </div>
+            </Cascata>
 
             {/* ── Seção 2 · a ponte ──────────────────────────────────────── */}
             <SecaoTitulo
@@ -506,6 +533,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               legenda="A ponte: quanto da comunidade vira participação em evento."
             />
 
+            <Cascata i={6}>
             <section aria-label="Desafios ligados a um evento" className="flex flex-col">
               <SecaoHead
                 titulo="Desafios ligados a um evento"
@@ -533,7 +561,9 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 </Painel>
               )}
             </section>
+            </Cascata>
 
+            <Cascata i={7}>
             <section aria-label="Conversão da base" className="flex flex-col">
               <SecaoHead titulo="Conversão da base" />
               <Painel>
@@ -544,6 +574,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 />
               </Painel>
             </section>
+            </Cascata>
           </>
         )}
       </div>

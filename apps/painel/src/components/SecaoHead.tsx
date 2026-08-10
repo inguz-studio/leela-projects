@@ -67,12 +67,15 @@ export function SecaoHead({
     <div className="flex items-baseline justify-between gap-[var(--spacing-3)] mb-[var(--layout-section-head-mb)]">
       <div className="min-w-0">
         <div className="flex items-center gap-[var(--spacing-1)]">
+          {/* HIFI-REC: o cabeçalho de CARD do protótipo é o eyebrow uppercase
+              na tinta da marca (0.6875rem/700, tracking 0.08em) — o display
+              itálico grande era do mockup anterior. A faixa de SEÇÃO (banda
+              com hairline) é outra anatomia e vive na própria tela. */}
           <h2
             className={cn(
-              'font-display italic',
-              'text-[length:var(--section-title-size)] font-[var(--font-weight-bold)]',
-              'tracking-[var(--section-title-spacing)]',
-              'text-[var(--text-primary)]',
+              'text-[length:var(--font-size-xs-plus)] font-[var(--font-weight-bold)]',
+              'uppercase tracking-[var(--countdown-eyebrow-spacing)]',
+              'text-[var(--action-brand-tint-fg)]',
             )}
           >
             {titulo}

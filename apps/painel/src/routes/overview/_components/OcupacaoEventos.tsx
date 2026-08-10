@@ -26,7 +26,7 @@ import { CalendarRange } from 'lucide-react';
 import type { OcupacaoDosEventos } from '../_lib/ocupacao';
 import { formatInt } from '../_lib/format';
 import { PanelError } from './PanelError';
-import { CartaoV3, EyebrowV3 } from './CartaoV3';
+import { CartaoV3, EyebrowV3 } from '../../../components/CartaoV3';
 
 export interface OcupacaoEventosProps {
   ocupacao: OcupacaoDosEventos | null;

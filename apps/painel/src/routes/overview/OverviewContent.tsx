@@ -26,9 +26,9 @@
 // desligado sob prefers-reduced-motion.
 // =============================================================================
 
-import type { CSSProperties, ReactNode } from 'react';
 import { Button, Skeleton, cn } from '@leela/design-system';
 import { CreditCard, TrendingUp } from 'lucide-react';
+import { Cascata } from '../../components/CartaoV3';
 import type { OverviewAlert, OverviewKPIs, Role } from '@leela/core';
 import { KpiRow } from './_components/KpiRow';
 import { Countdown } from './_components/Countdown';
@@ -72,30 +72,6 @@ const MSG_ERRO: Record<OverviewErrorKind, string> = {
   unauthenticated: 'Sua sessão expirou. Entre novamente para ver o resumo.',
   unknown: 'Não foi possível carregar seu resumo. Tente novamente.',
 };
-
-/**
- * Cascata de entrada (§5): cada seção da grade entra com o passo dela.
- * O índice vem da posição REAL na grade — unitless numa custom property,
- * nunca uma duração literal no componente.
- */
-function Cascata({
-  i,
-  children,
-  className,
-}: {
-  i: number;
-  children: ReactNode;
-  className?: string;
-}): JSX.Element {
-  return (
-    <div
-      className={cn('animate-revela-secao motion-reduce:animate-none min-w-0', className)}
-      style={{ animationDelay: `calc(${i} * var(--motion-stagger))` } as CSSProperties}
-    >
-      {children}
-    </div>
-  );
-}
 
 export function OverviewContent(props: OverviewContentProps): JSX.Element {
   const {

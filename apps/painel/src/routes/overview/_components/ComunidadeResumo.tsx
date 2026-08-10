@@ -19,7 +19,7 @@ import { Heart } from 'lucide-react';
 import type { OverviewKPIs } from '@leela/core';
 import { formatInt } from '../_lib/format';
 import { PanelError } from './PanelError';
-import { CartaoV3, CtaV3, EyebrowV3, StatV3 } from './CartaoV3';
+import { CartaoV3, CtaV3, EyebrowV3, StatV3 } from '../../../components/CartaoV3';
 
 export interface ComunidadeResumoProps {
   kpis: OverviewKPIs | null;

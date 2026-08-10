@@ -20,7 +20,7 @@ import { Calendar } from 'lucide-react';
 import type { CountdownView } from '../_lib/countdown';
 import { formatInt } from '../_lib/format';
 import { PanelError } from './PanelError';
-import { CartaoV3, CtaV3, EyebrowV3, StatV3 } from './CartaoV3';
+import { CartaoV3, CtaV3, EyebrowV3, StatV3 } from '../../../components/CartaoV3';
 
 export interface CountdownProps {
   countdown: CountdownView | null;

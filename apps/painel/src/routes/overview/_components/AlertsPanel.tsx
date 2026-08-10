@@ -19,7 +19,7 @@ import { Skeleton, cn } from '@leela/design-system';
 import { AlertTriangle, Bell, Check, Info, type LucideIcon } from 'lucide-react';
 import type { OverviewAlert, SeveridadeAlerta } from '@leela/core';
 import { PanelError } from './PanelError';
-import { CartaoV3, EyebrowV3, LinkV3 } from './CartaoV3';
+import { CartaoV3, EyebrowV3, LinkV3 } from '../../../components/CartaoV3';
 
 export interface AlertsPanelProps {
   alerts: OverviewAlert[] | null;
