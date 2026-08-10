@@ -16,6 +16,7 @@ function props(over: Partial<OverviewContentProps> = {}): OverviewContentProps {
     inscricoesLoading: false,
     countdown: null,
     countdownLoading: false,
+    ocupacao: { linhas: [], semCapacidade: 0 },
     onNavigate: vi.fn(),
     onNovoEvento: vi.fn(),
     ...over,

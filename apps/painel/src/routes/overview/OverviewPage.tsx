@@ -19,6 +19,7 @@ import { useEventosProdutor, useInscricoesRecentes, useOverview } from './_data/
 import { derivarEventosAtivos } from './_lib/activeEvents';
 import { derivarInscricoesRecentes } from './_lib/recentRegistrations';
 import { derivarCountdown } from './_lib/countdown';
+import { derivarOcupacao } from './_lib/ocupacao';
 
 function comCapacidade(evento: Evento): {
   nome: string;
@@ -68,6 +69,13 @@ export function OverviewPage(): JSX.Element {
     [eventosState.data, eventosInput]
   );
 
+  // Ocupação (v3): mesma lista de eventos, nenhuma query nova. `null` enquanto
+  // a fonte-mãe não resolveu — o bloco reflete o loading dos eventos.
+  const ocupacao = useMemo(
+    () => (eventosState.data ? derivarOcupacao(eventosInput) : null),
+    [eventosState.data, eventosInput]
+  );
+
   const inscricoes = useMemo(
     () => (inscricoesState.data ? derivarInscricoesRecentes(inscricoesState.data, 5) : null),
     [inscricoesState.data]
@@ -93,6 +101,7 @@ export function OverviewPage(): JSX.Element {
         onRetryInscricoes={eventosState.error ? eventosState.refetch : inscricoesState.refetch}
         countdown={countdown}
         countdownLoading={eventosState.loading}
+        ocupacao={ocupacao}
         papel={session.role}
         onNavigate={(href) => navigate(href)}
         onNovoEvento={() => navigate('/eventos/novo')}

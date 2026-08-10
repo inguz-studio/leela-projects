@@ -13,6 +13,9 @@ import { RecentRegistrations } from './_components/RecentRegistrations';
 import { Countdown } from './_components/Countdown';
 import { AlertsPanel } from './_components/AlertsPanel';
 import { StaffScopeNote } from './_components/StaffScopeNote';
+import { ComunidadeResumo } from './_components/ComunidadeResumo';
+import { OcupacaoEventos } from './_components/OcupacaoEventos';
+import type { OcupacaoDosEventos } from './_lib/ocupacao';
 import type { EventoAtivoView } from './_lib/activeEvents';
 import type { InscricaoRecenteView } from './_lib/recentRegistrations';
 import type { CountdownView } from './_lib/countdown';
@@ -36,6 +39,8 @@ export interface OverviewContentProps {
   onRetryInscricoes?: (() => void) | undefined;
   countdown: CountdownView | null;
   countdownLoading: boolean;
+  /** Ocupação dos últimos eventos (v3) — derivada da MESMA lista de eventos. */
+  ocupacao: OcupacaoDosEventos | null;
   /** Papel do usuário — staff vê nota de escopo em vez de zeros mudos (#16). */
   papel?: Role | null;
   onNavigate: (href: string) => void;
@@ -79,6 +84,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
     onRetryInscricoes,
     countdown,
     countdownLoading,
+    ocupacao,
     papel,
     onNavigate,
     onNovoEvento,
@@ -121,6 +127,17 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           onVerTodos={() => onNavigate('/eventos')}
         />
 
+        {/* v3: a leitura analítica dos MESMOS eventos listados acima — quanto
+            das vagas foi preenchido. Fica depois da lista porque responde à
+            pergunta seguinte ("como foram?"), não à primeira ("quais são?"). */}
+        <OcupacaoEventos
+          ocupacao={ocupacao}
+          loading={eventosLoading}
+          error={eventosError ?? false}
+          onRetry={onRetryEventos}
+          onVerEventos={() => onNavigate('/eventos')}
+        />
+
         <RecentRegistrations
           inscricoes={inscricoes}
           loading={inscricoesLoading}
@@ -138,6 +155,19 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           error={eventosError ?? false}
           onRetry={onRetryEventos}
           onNavigate={onNavigate}
+        />
+        {/* v3: o par "Próximo evento + Clubs" do protótipo. Fecha o buraco
+            entre a story do E02 ("consolida eventos E CLUBES numa única
+            leitura") e a tela, que consolidava só eventos — os dois agregados
+            de comunidade já vinham no retorno de `getOverview` sem serem
+            desenhados em lugar nenhum. */}
+        <ComunidadeResumo
+          kpis={kpis}
+          loading={kpisLoading}
+          error={kpisError !== null}
+          onRetry={kpisError === 'unknown' ? onRetryOverview : undefined}
+          onGerenciarClubs={() => onNavigate('/clubes')}
+          onNovoClube={() => onNavigate('/clubes/novo')}
         />
         <AlertsPanel
           alerts={alerts}
