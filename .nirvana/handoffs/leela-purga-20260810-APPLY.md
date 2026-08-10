@@ -71,8 +71,9 @@ PREFLIGHT COMPLETO: portão de entrada ✔ aceite ✔ frescor 0 delta ✔ — ne
 - `eventos/teste-taxa-repassada`: `2026-08-06T14:22:40.778799Z` = congelado ✔ (trilha MOXZ/D4 preservada dentro dele)
 - Auth `inguzbuilders@gmail.com` VIVA (uid `FTqslV98itZUNGwL5ss6201d23Z2`) ✔ · marina/felipe ausentes ✔ · total 19 ✔
 
-### 6 · painel canônico — VITRINE-2 e COMPROMETIDO-1 fechados + nota S318-T6 sem objeto
-- Ver seção final; commit `--only` dos paths desta lane + push.
+### 6 · painel canônico — FEITO ✔ commit `57f0c713` em `main`, pushed
+- `leela-specs/01-produto/DECISOES-ABERTAS.md`: COMPROMETIDO-1 fechado pela purga (3 repasses-demo no plano + `comprometido=0` provado); VITRINE-2 fechado sem objeto (os 2 eventos devolvem 404 em produção, conferido por leitura); nota S318-T6 sem objeto (zero `itensKit` nos 2 eventos reais, conferido por leitura) no cabeçalho + linha `+10/08` dentro do SEMKIT-1. Conta 30 → 28 (25 decisões + 3 ações, recontadas por script contra as seções).
+- Commit `--only` dos 2 paths desta lane (painel + este handoff); o arquivo do painel carregava também a troca ARENA-2→ARENA-4 da lane de spec paralela (árvore compartilhada), declarada no corpo do commit. Push em `main` (`ee776b6f..57f0c713`).
 
 ## Incidente de sessão registrado (não afetou a execução)
 
