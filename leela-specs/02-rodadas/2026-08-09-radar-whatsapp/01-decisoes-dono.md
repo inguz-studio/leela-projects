@@ -3,7 +3,7 @@
 Contexto: o estudo de arquitetura do radar de comunidades WhatsApp (fork
 `agentic-whatsapp` v1.4.0 → Leela) foi entregue em 09/08 pelo trace `c5a4a8bd`
 (Orkestra, `outputs/c5a4a8bd-e9e4-4759-869c-a70f874c9c52/businesses/software-forge/outputs/arquitetura-radar-leela.md`)
-com 8 vetáveis. O dono respondeu no mesmo dia. Verbatim:
+com 8 vetáveis. O dono respondeu no mesmo dia. Palavras dele, sem retoque:
 
 > "Pode definir as melhores práticas, nivel de identidade sem pseudonimo, quero
 > o nome real pois isso e importante para o job to be done do organizador, para
@@ -42,3 +42,38 @@ O dono também perguntou o risco da topologia "um número da Leela em todos os
 grupos" — respondido a partir da seção 1(a) do estudo (raio de explosão total,
 perfil de detecção piorado pela mudez, multi-locação frágil). A topologia em
 vigor segue a (c): um número por organizador, pago pelo organizador.
+
+---
+
+## Segunda rodada de 09/08 — decisões depois da review antagonista
+
+A review antagonista da spec (trace `3ed45e7f`, 25 achados) devolveu "não está pronta para
+virar código" e apontou, entre os críticos, que o radar monta perfil nominal de quem nunca
+comprou — o que o [[LEELA-E19-crm]] classifica como incidente de LGPD — e que o
+[[LEELA-E17-perfil-social]] já decidiu que exibir participação de terceiro pelo nome é opt-in
+com padrão negativo. O dono respondeu no mesmo dia. Palavras dele, sem retoque:
+
+> "nao tem problema mapear quem nao comprou ainda. o admin pode ter opção de colocar o nome
+> manualmente, e podemos puxar o nome epelo o que é salvo no whatsapp até a pessoa comprar.
+> foda-se o risco juridico agora."
+
+| # | Decisão | Resolução |
+|---|---|---|
+| 9 | Mapear quem nunca comprou | **Liberado.** O radar pode montar perfil nominal de participante que nunca comprou nada do organizador. Isso cria uma categoria de dado que não existia no produto — agregado nominal de não-cliente —, distinta do agregado sem identidade do [[LEELA-E11-analytics]] e da identidade transacional do [[LEELA-E19-crm]]. Fica registrada na **RN-531**, com a fronteira contra o CRM escrita lá. Resolve o REV-005 e o REV-006 por decisão de negócio, não por argumento técnico. |
+| 10 | Fonte do nome até a pessoa virar cliente | **O que o WhatsApp entrega** — o `notify_name`, que é o nome que o próprio participante mostra na comunidade. Quando ele vira cliente da Leela, o cadastro passa a mandar e o nome do WhatsApp vira histórico. Fica na **RN-532**. Resolve a direção do REV-018. |
+| 11 | Edição manual do nome pelo admin | **Existe.** O admin corrige o nome de um participante direto na superfície do radar, e o valor dele vence o que vier do WhatsApp em qualquer publicação seguinte. Cobre o nome ausente (REV-017) e dá saída para nome-lixo ou telefone no lugar do nome (REV-007). Fica na **RN-532**. |
+| 12 | Risco jurídico do radar | **Assumido pelo dono agora.** O LGPD-1 deixa de travar a S2003 e o F1 inteiro. A quarta frente do LGPD-1 (base legal + termo, com advogado) continua existindo e correndo em paralelo, sem gate sobre o radar. |
+
+**Condição de reabertura das quatro (a mesma para todas):** parecer do advogado quando sair;
+incidente envolvendo dado de participante; ou a chegada do F2 multi-locação, que põe dado de
+terceiro em escala e em máquina que pode não ser a do organizador (RN-530).
+
+**Recomendação declinada, registrada.** O revisor recomendou desenhar agora a versão do radar
+**sem** nome real, com o argumento de que ela pode ser a única possível depois do parecer e de
+que hoje toda a atração do produto mora na parte com risco jurídico. O dono declinou por agora.
+Fica registrado com a mesma condição de reabertura acima: se o parecer limitar o nome, esse
+desenho volta à mesa antes de a tela ser refeita.
+
+**O que estas quatro decisões não cobrem.** Elas resolvem população, fonte do nome, correção do
+nome e apetite de risco. Não decidem hospedagem no F2 (segue com o sócio, RN-530), nem prazo de
+retenção diferente dos 400 dias (segue com o advogado, RN-524).
