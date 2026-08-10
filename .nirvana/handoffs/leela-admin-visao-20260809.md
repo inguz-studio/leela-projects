@@ -20,6 +20,12 @@ vetáveis no painel canônico do dono.
 | 03 | `leela-specs/02-rodadas/2026-08-09-admin-visao/03-spec.md` | `26924733` |
 | 04 | `leela-specs/02-rodadas/2026-08-09-admin-visao/04-fila-build.md` | `1a4307d2` |
 | — | E16 + `V1-KANBAN` + `BOARD-EPICOS` + `DECISOES-ABERTAS` | `3672ff86` |
+| — | handoff selado | `32847de0` |
+| — | renumeração das RNs após colisão com o E20 (ver P-AV-1) | `7ff5ed50` |
+
+**Escopo provado.** Os sete commits tocaram **nove arquivos, todos `.md`**, em `leela-specs/` e
+`.nirvana/handoffs/`. Varredura por extensão de código (`.ts`, `.tsx`, `.js`, `.json`, `.rules`) nos
+sete: **zero**. `firestore.rules` intocado.
 
 **Números:** 4 histórias novas (S1612 a S1615), 6 RNs novas (RN-537 a RN-542), 23 tarefas em 5 ondas,
 5 vetáveis (ADMINVISAO-1 a 5). O painel do dono foi de 25 para **30** itens abertos — contagem
