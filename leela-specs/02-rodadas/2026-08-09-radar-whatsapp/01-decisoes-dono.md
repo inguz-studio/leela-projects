@@ -33,8 +33,10 @@ com 8 vetáveis. O dono respondeu no mesmo dia. Palavras dele, sem retoque:
 
 ## Seguem abertas (não são deste painel resolver aqui)
 
-- **Base legal + termo do organizador** — advogado antes de F1. Entrou como frente nova do **LGPD-1** no painel (dado pessoal: nome real de participante exposto + medição sem aviso no grupo).
-- **Hospedagem e custo F2** — tabela na seção 2 do estudo; vai ao sócio (CTO humano), não a este painel.
+Estas duas são as vetáveis **2** e **5** do estudo, e é por isso que elas não aparecem nas tabelas acima: não foram decididas, foram encaminhadas a quem decide. Com elas, as oito vetáveis do estudo estão todas registradas neste arquivo — seis decididas (1, 3, 4, 6, 7 e 8, mais a M2, que o estudo não numerou) e duas em aberto com destinatário nomeado.
+
+- **Vetável 2 · base legal e termo do organizador** — advogado antes de F1. Entrou como frente nova do **LGPD-1** no painel (dado pessoal: nome real de participante exposto + medição sem aviso no grupo). A decisão 12, de 09/08, tirou o gate sobre o radar e **não** fechou a pergunta: ela segue aberta, e o parecer, quando sair, é condição de reabertura das quatro decisões da segunda rodada, da RN-524 e da RN-534.
+- **Vetável 5 · hospedagem e custo do F2** — tabela na seção 2 do estudo; vai ao sócio (CTO humano), não a este painel. A RN-530 fixa que trocar a hospedagem reabre a frente jurídica, então esta não é só decisão de dinheiro.
 
 ## Nota de rodada
 
