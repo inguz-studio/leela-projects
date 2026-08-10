@@ -206,6 +206,15 @@ describe('EngajamentoView · o que não tem fonte', () => {
     expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 
+  it('o top de ações por pilar não vira aba nem overlay sem contagem por ação', () => {
+    render(<EngajamentoView {...props()} />);
+    const secao = screen.getByRole('region', { name: 'Ações mais registradas por pilar' });
+    expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+    expect(within(secao).getByText(/as Rules não abrem esse caminho/i)).toBeInTheDocument();
+    expect(within(secao).queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Ver top 10/i })).not.toBeInTheDocument();
+  });
+
   it('conversão da base explica as DUAS coisas que faltam, sem taxa nenhuma', () => {
     render(<EngajamentoView {...props()} />);
     const secao = screen.getByRole('region', { name: 'Conversão da base' });

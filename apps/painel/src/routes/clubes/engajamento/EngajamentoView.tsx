@@ -35,7 +35,7 @@ import {
   cn,
   type BarChartDatum,
 } from '@leela/design-system';
-import { Activity, CalendarClock, GitBranch, Users } from 'lucide-react';
+import { Activity, CalendarClock, GitBranch, ListOrdered, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
@@ -486,6 +486,11 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 titulo="Volume de Check-ins"
                 icon={<Activity aria-hidden />}
                 causa="Mesma origem do mapa. O progresso dos desafios existe, mas é um acumulado por participante: ele diz o quanto a comunidade andou, nunca em que faixa de hora ou em que semana ela apareceu."
+              />
+              <CardEmBreve
+                titulo="Ações mais registradas por pilar"
+                icon={<ListOrdered aria-hidden />}
+                causa="A contagem por ação — quilômetros, sessões, páginas, noites — vive no registro de cada atleta, e as Rules não abrem esse caminho para o organizador. O agregado do desafio guarda o total por pilar, nunca a ação que o formou."
               />
             </div>
 
