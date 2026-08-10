@@ -75,8 +75,8 @@ dado não existe. Quando a S1610 subir, a coluna se preenche sem tela nova.
 
 | # | Tarefa | História | Por que está na onda 1 |
 |---|---|---|---|
-| 1.1 | Agendamento do `recomputePlatformRollups` + `atualizadoEm` no contrato de leitura (RN-531) | `S1613-T3` | O número que o dono vai ler nas ondas seguintes é o do último clique. Sem isto, a tela nova nasce mentindo com precisão |
-| 1.2 | Callable `listarClientesDoTenant` (Admin SDK, autorizado por `isPlatformAdmin` do core, com registro de acesso **e** de negativa) — RN-532 | `S1612-T5` | É a única leitura desta spec que não tem caminho pelo cliente. Sem ela, a aba Clientes não existe |
+| 1.1 | Agendamento do `recomputePlatformRollups` + `atualizadoEm` no contrato de leitura (RN-538) | `S1613-T3` | O número que o dono vai ler nas ondas seguintes é o do último clique. Sem isto, a tela nova nasce mentindo com precisão |
+| 1.2 | Callable `listarClientesDoTenant` (Admin SDK, autorizado por `isPlatformAdmin` do core, com registro de acesso **e** de negativa) — RN-539 | `S1612-T5` | É a única leitura desta spec que não tem caminho pelo cliente. Sem ela, a aba Clientes não existe |
 | 1.3 | Leitura por tenant de eventos e clubs no `api-client`, paginada | `S1612-T2` | Base das abas; sem tela, sem risco visual |
 | 1.4 | Leitura por tenant de `pedidos` + `pagamentos`, paginada | `S1613-T1` | Idem, com a economia lida do carimbo |
 | 1.5 | Leitura global paginada de `eventos` e `clubes`, com contagem honesta | `S1614-T1` | Idem, para a onda 4 |
@@ -101,7 +101,7 @@ apresentado como total); o callable nega quem não é administrador e registra a
 | 2.2 | Aba Vendas, com economia lida do carimbo e **mode-aware** (RN-182) ⚔ | `S1613-T2` | Território de dinheiro |
 | 2.3 | Aba Financeiro: faturamento (rollup + idade + recompute manual) ⚔ | `S1613-T4` | Depende de 1.1 e da resposta do V-1 |
 | 2.4 | Aba Financeiro: repasses e saldo do tenant, reusando os callables e o `RegistrarPagamentoModal` | `S1613-T5` | Reaproveitamento quase total |
-| 2.5 | Plano aplicado + detecção de divergência entre termo vigente e estampa (RN-534) | `S1613-T6` | Zero campo novo |
+| 2.5 | Plano aplicado + detecção de divergência entre termo vigente e estampa (RN-541) | `S1613-T6` | Zero campo novo |
 
 ⚔ = rota opus com review antagonista, pela regra da casa para dinheiro.
 
@@ -121,7 +121,7 @@ régua (L-011 — gate de código não prova marca).
 | 3.1 | Aba Eventos do tenant | `S1612-T3` |
 | 3.2 | Aba Clubs do tenant | `S1612-T4` |
 | 3.3 | Aba Clientes consumindo o callable de 1.2, sem campo além do que `crmClientes` guarda | `S1612-T6` |
-| 3.4 | Responsável: tipagem de `telefone`/`organizacao` no `Profissional` **ou** campo novo `Tenant.responsavel` — conforme o V-3 | `S1612` / RN-535 |
+| 3.4 | Responsável: tipagem de `telefone`/`organizacao` no `Profissional` **ou** campo novo `Tenant.responsavel` — conforme o V-3 | `S1612` / RN-542 |
 
 **Por que depois da onda 2.** A ordem parece invertida — produção antes de economia seria a leitura
 natural. Não é: a onda 2 constrói a SubNav, e a onda 3 é a que espera dois vetos. Colocar a 3
@@ -161,7 +161,7 @@ tentativa de `collectionGroup` no código (a Rule não existe e o erro pareceria
 
 | # | Tarefa | História |
 |---|---|---|
-| 5.1 | Leitura do diretório (`profissionais` + `atletas`), paginada, campos mínimos — RN-533 | `S1615-T1` |
+| 5.1 | Leitura do diretório (`profissionais` + `atletas`), paginada, campos mínimos — RN-540 | `S1615-T1` |
 | 5.2 | Tela `/plataforma/contas`, dois modos, Fila como padrão | `S1615-T2` |
 | 5.3 | Liberação direta como Function guardada, com registro de acesso e de negativa | `S1615-T3` |
 | 5.4 | Delta na RN-510 conforme a resposta do V-5 | `S1615-T4` |

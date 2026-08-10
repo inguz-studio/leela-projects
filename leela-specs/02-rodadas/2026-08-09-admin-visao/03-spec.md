@@ -11,11 +11,21 @@ data: 2026-08-09
 > [[02-inventario-gap-map]]. Quatro histórias novas, seis regras novas, e uma seção única de
 > vetáveis no fim para o dono decidir de uma vez.
 >
-> **Prova de não colisão.** Faixa de RN: a mais alta em uso no 5xx é a **529** (E20, radar de
-> comunidade). Varredura por `RN-530` a `RN-545` em `leela-specs`, `apps`, `packages`, `functions` e
-> `firestore.rules`: **zero ocorrências**. Esta lane consome **RN-530 a RN-535**. Numeração de
-> histórias: a mais alta em uso no E16 é a **S1611** (tornar-se profissional, no kanban). Esta lane
-> consome **S1612 a S1615**.
+> **Prova de não colisão, e a colisão que houve.** A primeira varredura desta lane achou a faixa
+> livre a partir de **RN-530**, com o 5xx terminando em 529. Durante a aterrissagem, a lane
+> **RADAR-REPARO-0809** publicou o E20 consumindo **RN-520 a RN-536** — ou seja, a faixa que esta
+> spec tinha reservado deixou de estar livre entre a varredura e o commit. As seis regras foram
+> **renumeradas de RN-530..535 para RN-537..542** antes do fecho, e a varredura foi refeita: por
+> `RN-537` a `RN-560` em `leela-specs`, `apps`, `packages`, `functions` e `firestore.rules`, fora
+> desta rodada, **zero ocorrências**. Esta lane consome **RN-537 a RN-542**.
+>
+> Fica a lição de mecanismo, porque ela vale para toda lane de spec: **varredura de faixa vale no
+> instante em que roda**, e com lanes vizinhas em voo o intervalo entre reservar e commitar é onde a
+> colisão nasce. A conferência tem de ser refeita imediatamente antes da aterrissagem, não só no
+> começo.
+>
+> Numeração de histórias: a mais alta em uso no E16 é a **S1611** (tornar-se profissional, no
+> kanban). Esta lane consome **S1612 a S1615**.
 
 ## Parte 1 · O desenho, antes das histórias
 
@@ -62,9 +72,9 @@ gateway não existir, a coluna fica **vazia com rótulo**, nunca zero.
 
 ## Parte 2 · Regras de negócio novas
 
-Todas donas em [[LEELA-E16-plataforma-superadmin]], faixa RN-530 a RN-535.
+Todas donas em [[LEELA-E16-plataforma-superadmin]], faixa RN-537 a RN-542.
 
-### RN-530 · A visão master lê o carimbo, nunca recalcula dinheiro
+### RN-537 · A visão master lê o carimbo, nunca recalcula dinheiro
 
 Toda cifra exibida no painel master deriva do que já está gravado: `conciliacao.taxaValor` e
 `conciliacao.repasseOrganizador` por venda (congelados na confirmação — RN-179), `gmvAcumulado` por
@@ -84,7 +94,7 @@ RN-455, que já decidiu isso para a coluna de margem.
 
 **Épico dono:** E16 · **consome:** E09 (RN-179, RN-182, RN-183), E04 (RN-178).
 
-### RN-531 · Agregado macro tem idade declarada, e uma atualização confiável
+### RN-538 · Agregado macro tem idade declarada, e uma atualização confiável
 
 `platform/rollups` é o único agregado cross-tenant do sistema, e hoje ele tem um único escritor:
 `recomputePlatformRollups`, um `https.onCall` **sem nenhum agendamento**. A tela `/plataforma/macro`
@@ -103,7 +113,7 @@ sobre a varredura de `tenants`), então o agendamento não introduz risco de dup
 
 **Épico dono:** E16 · **estende:** RN-409.
 
-### RN-532 · Perfil de cliente cruza a fronteira por servidor, nunca por Rule
+### RN-539 · Perfil de cliente cruza a fronteira por servidor, nunca por Rule
 
 `tenants/{tid}/crmClientes/{clienteKey}` é a única coleção tenant-scoped do sistema cujo `allow read`
 **omite `isPlatformAdmin()` de propósito** (`firestore.rules:382`), e a própria Rule escreve a razão
@@ -120,7 +130,7 @@ e-mail, sem telefone, sem endereço. A minimização da RN-172 vale igual do lad
 
 **Épico dono:** E16 · **preserva:** RN-172, RN-400.
 
-### RN-533 · O diretório de contas é do administrador, é mínimo e não sai da tela
+### RN-540 · O diretório de contas é do administrador, é mínimo e não sai da tela
 
 A visão global de pessoas no painel master obedece a quatro restrições, e nenhuma delas é
 negociável por conveniência de tela:
@@ -141,7 +151,7 @@ trabalho de olhar e agir sobre uma conta; extração de base é outra conversa, 
 
 **Épico dono:** E16 · **consome:** RN-449 (conta separada), RN-400/401 · **frente jurídica:** LGPD-1.
 
-### RN-534 · Plano aplicado é estampa, e a tela declara a divergência
+### RN-541 · Plano aplicado é estampa, e a tela declara a divergência
 
 Aplicar um plano de cobrança **copia** os números do plano para `commercialTerms/current` e grava
 `planoAplicadoId` + `planoAplicadoEm`. Não existe vínculo vivo — o próprio `AplicarPlanoModal` já diz
@@ -157,7 +167,7 @@ impede é o dono ler "plano Padrão" e cobrar com número diferente do Padrão.
 
 **Épico dono:** E16 · **consome:** RN-404, RN-178.
 
-### RN-535 · Responsável do tenant · **condicionada ao veto do dono (V-3)**
+### RN-542 · Responsável do tenant · **condicionada ao veto do dono (V-3)**
 
 Existe hoje um único elo de pessoa no tenant: `ownerUid`, que aponta para `profissionais/{ownerUid}`
 (`nome`, `email`, e — gravados sem tipagem — `telefone` e `organizacao`). Isso responde "quem é o
@@ -184,7 +194,7 @@ plataforma, eu quero ver os eventos, os clubs e os clientes dela na mesma ficha,
 está saudável sem pedir relatório para ninguém nem abrir o Console.
 
 - **MoSCoW:** Must · **Estimativa:** L · **Superfície:** Painel master · **Épico:** E16
-- **RNs:** RN-530, RN-532, RN-400, RN-401, §2.5, §2.12, §2.16
+- **RNs:** RN-537, RN-539, RN-400, RN-401, §2.5, §2.12, §2.16
 - **Depende de:** REDESIGN-DS (contrato visual do admin — ver [[04-fila-build]])
 
 **Critérios de aceite (Given/When/Then)**
@@ -200,7 +210,7 @@ está saudável sem pedir relatório para ninguém nem abrir o Console.
 - **Dado** que `modeloEntrada` só admite `gratuito` e `pago_em_breve`, **quando** renderizo a coluna,
   **então** nenhuma linha sugere receita de clube (não existe mensalidade de clube no modelo).
 - **Dado** a aba Clientes, **quando** abro, **então** os dados vêm de **callable com Admin SDK**
-  (RN-532) e mostram nome, eventos, inscrições, valor gasto e LTV — **sem** CPF, e-mail, telefone ou
+  (RN-539) e mostram nome, eventos, inscrições, valor gasto e LTV — **sem** CPF, e-mail, telefone ou
   endereço.
 - **Dado** que sou `tenant_owner` e não `platform_admin`, **quando** acesso qualquer aba,
   **então** vejo o 403 do `PlatformGuard`, não a ficha.
@@ -215,7 +225,7 @@ está saudável sem pedir relatório para ninguém nem abrir o Console.
 | `S1612-T2` | Leitura por tenant de eventos e clubs no `api-client` (query por `tenantId`, paginada) | api-client |
 | `S1612-T3` | Aba Eventos (tabela densa, filtros de status, contador, EmptyState) | screen |
 | `S1612-T4` | Aba Clubs (mesma casca, colunas próprias) | screen |
-| `S1612-T5` | Callable `listarClientesDoTenant` (Admin SDK, autorizado por `isPlatformAdmin` do core, com registro de acesso e de negativa) — RN-532 | api/function |
+| `S1612-T5` | Callable `listarClientesDoTenant` (Admin SDK, autorizado por `isPlatformAdmin` do core, com registro de acesso e de negativa) — RN-539 | api/function |
 | `S1612-T6` | Aba Clientes consumindo o callable; nenhum campo além do que `crmClientes` guarda | screen |
 | `S1612-T7` | Teste de Rules: `platform_admin` **continua negado** em `crmClientes` pelo client SDK (o canário que hoje não existe) | integration |
 
@@ -231,21 +241,21 @@ ela tem a receber, eu quero os três números na mesma tela com a régua declara
 repasse sem montar planilha e sem desconfiar do número.
 
 - **MoSCoW:** Must · **Estimativa:** L · **Superfície:** Painel master · **Épico:** E16
-- **RNs:** RN-530, RN-531, RN-534, RN-182, RN-179, RN-455, RN-356
+- **RNs:** RN-537, RN-538, RN-541, RN-182, RN-179, RN-455, RN-356
 - **Depende de:** S1612-T1 (SubNav), REDESIGN-DS
 
 **Critérios de aceite (Given/When/Then)**
 
 - **Dado** a aba Vendas, **quando** abro, **então** vejo tabela densa com código do pedido, data,
   responsável, forma, parcelas, valor final, taxa da plataforma e líquido do produtor — **todos lidos
-  de `conciliacao`**, nenhum recalculado no cliente (RN-530).
+  de `conciliacao`**, nenhum recalculado no cliente (RN-537).
 - **Dado** uma venda de evento em modo `repassada`, **quando** renderizo a coluna de líquido,
   **então** exibo o **face cheio** e não `face − taxa` (RN-182 mode-aware).
 - **Dado** um pagamento sem `conciliacao` (pendente, falhado), **quando** renderizo, **então** as
   colunas de economia ficam vazias com rótulo, nunca zero.
 - **Dado** a aba Financeiro, **quando** abro, **então** vejo o GMV e a receita Leela do tenant vindos
   de `platform/rollups`, com o `atualizadoEm` ao lado e o sinal de obsolescência quando o retrato
-  passou do limiar (RN-531).
+  passou do limiar (RN-538).
 - **Dado** que o rollup está obsoleto, **quando** olho a tela, **então** consigo disparar o recompute
   dali mesmo e o número atualiza.
 - **Dado** a aba Financeiro, **quando** abro, **então** vejo o `SaldoRepasse` do tenant — vendido
@@ -254,10 +264,10 @@ repasse sem montar planilha e sem desconfiar do número.
 - **Dado** um repasse em estado `pago`, **quando** renderizo, **então** a tela diz que "pago" é
   registro manual, sem transferência bancária pelo sistema (RN-356).
 - **Dado** que o custo do gateway não está configurado, **quando** olho qualquer coluna de margem,
-  **então** ela mostra "custo não configurado" e **não** um número (RN-455, RN-530).
+  **então** ela mostra "custo não configurado" e **não** um número (RN-455, RN-537).
 - **Dado** o Resumo da ficha, **quando** abro, **então** vejo o plano de cobrança aplicado com a
   versão do termo; **e quando** o termo divergiu da estampa do plano, **então** a tela declara a
-  divergência (RN-534).
+  divergência (RN-541).
 
 **Tarefas**
 
@@ -265,10 +275,10 @@ repasse sem montar planilha e sem desconfiar do número.
 |---|---|---|
 | `S1613-T1` | Leitura por tenant de `pedidos` + `pagamentos` no `api-client` (paginada, por `tenantId`) | api-client |
 | `S1613-T2` | Aba Vendas — colunas de economia lidas do carimbo, mode-aware, vazio com rótulo ⚔ | screen |
-| `S1613-T3` | Agendamento do `recomputePlatformRollups` + `atualizadoEm` como parte do contrato de leitura — RN-531 | api/function |
+| `S1613-T3` | Agendamento do `recomputePlatformRollups` + `atualizadoEm` como parte do contrato de leitura — RN-538 | api/function |
 | `S1613-T4` | Aba Financeiro: bloco de faturamento (rollup + idade + recompute manual) ⚔ | screen |
 | `S1613-T5` | Aba Financeiro: bloco de repasses e saldo do tenant, reusando `RegistrarPagamentoModal` e os callables existentes | screen |
-| `S1613-T6` | Plano aplicado + detecção de divergência entre termo vigente e estampa — RN-534 | screen |
+| `S1613-T6` | Plano aplicado + detecção de divergência entre termo vigente e estampa — RN-541 | screen |
 
 ⚔ = território de dinheiro: rota opus com review antagonista.
 
@@ -333,7 +343,7 @@ ferramenta de engenharia.
 
 - **MoSCoW:** Must (a metade da fila) / Should (o diretório completo) · **Estimativa:** M ·
   **Superfície:** Painel master · **Épico:** E16
-- **RNs:** RN-533, RN-449, RN-400, RN-401, RN-510 (tensão declarada), RN-414
+- **RNs:** RN-540, RN-449, RN-400, RN-401, RN-510 (tensão declarada), RN-414
 - **Depende de:** **veto do dono nos itens V-4 e V-5** · REDESIGN-DS
 - **Origem dupla:** esta ordem ("preciso ter a visão de todos os usuários") **e** a decisão
   ADMIN-USUARIOS-1 de 09/08 ("esse cadastro deve aparecer no painel master")
@@ -358,9 +368,9 @@ A saída é **uma rota com dois modos**, e o modo padrão é o mais fechado:
 - **Dado** o modo Fila, **quando** olho uma linha, **então** vejo nome, e-mail, organização, telefone
   e quando se cadastrou — a PII que o trabalho de liberar exige, e nada além.
 - **Dado** o modo Diretório, **quando** ativo, **então** vejo as contas de `atletas` e de
-  `profissionais` com o papel de cada uma, e **nenhuma linha mostra CPF** (RN-533).
+  `profissionais` com o papel de cada uma, e **nenhuma linha mostra CPF** (RN-540).
 - **Dado** qualquer modo, **quando** procuro por export, CSV ou download, **então** não existe
-  (RN-533).
+  (RN-540).
 - **Dado** que não sou `platform_admin`, **quando** acesso, **então** 403.
 - **Dado** que libero uma conta diretamente, **quando** confirmo, **então** a operação passa por
   Function, o acesso é registrado, e a pessoa sai da vitrine sem ter digitado código.
@@ -372,7 +382,7 @@ A saída é **uma rota com dois modos**, e o modo padrão é o mais fechado:
 
 | Task | O que é | Tipo |
 |---|---|---|
-| `S1615-T1` | Leitura do diretório: `profissionais` + `atletas`, paginada, campos mínimos — RN-533 | api-client |
+| `S1615-T1` | Leitura do diretório: `profissionais` + `atletas`, paginada, campos mínimos — RN-540 | api-client |
 | `S1615-T2` | Tela `/plataforma/contas` com os dois modos, Fila como padrão | screen |
 | `S1615-T3` | Liberação direta como Function guardada, com registro de acesso e de negativa | api/function |
 | `S1615-T4` | Delta na RN-510 conforme a resposta do V-5 (o gatilho do aviso e a saída sem resgate) | spec + screen |
@@ -429,7 +439,7 @@ zero ocorrências no código.
   (**default proposto**, porque não esconde nem inventa) · exibir **só GMV**, e deixar receita e
   margem para depois da S1610 · esperar a S1610 inteira antes de qualquer número de faturamento na
   ficha, o que atrasa os dez outros itens por causa de um.
-- **Onde aterrissa:** RN-530; `S1613-T4`.
+- **Onde aterrissa:** RN-537; `S1613-T4`.
 
 ### V-2 · PII · a visão de clientes mostra contato, ou só comportamento
 
@@ -455,7 +465,7 @@ O contato existe em outro lugar: `pedidos.responsavel` tem e-mail e telefone, e
   a menor superfície de PII possível, e não fecha porta nenhuma) · comportamento **e** contato, com
   o contato entrando como frente do LGPD-1 antes de subir · comportamento agora, contato como item
   separado quando você tiver um caso de uso concreto.
-- **Onde aterrissa:** RN-532; `S1612-T5`, `S1612-T6`. Frente jurídica: **LGPD-1**.
+- **Onde aterrissa:** RN-539; `S1612-T5`, `S1612-T6`. Frente jurídica: **LGPD-1**.
 
 ### V-3 · Modelo · "responsável" é o dono da conta, ou é outra pessoa
 
@@ -472,7 +482,7 @@ organização **já estão gravados** no doc do profissional, sem estarem no tip
   exibir (**default proposto**, porque é o que o dado já diz e custa uma tela) · é um **contato
   próprio**, e nasce `Tenant.responsavel?: { nome, email, telefone? }`, opcional, ausência
   significando "é o owner", escrita só do `platform_admin` — campo novo, mas mínimo.
-- **Onde aterrissa:** RN-535 (só nasce na opção B); `S1612` ou tarefa própria conforme a resposta.
+- **Onde aterrissa:** RN-542 (só nasce na opção B); `S1612` ou tarefa própria conforme a resposta.
 
 ### V-4 · PII · o diretório de contas mostra CPF
 
@@ -493,7 +503,7 @@ conservadora do arquivo inteiro.
   callable auditado, com registro de cada consulta, no molde de `getBankDetailsForPayout` · abrir a
   Rule para `platform_admin` — a opção mais barata de construir e a mais cara de defender, porque
   transforma a coleção de CPF do sistema inteiro em leitura de painel.
-- **Onde aterrissa:** RN-533; `S1615-T1`, `S1615-T5`. Frente jurídica: **LGPD-1**.
+- **Onde aterrissa:** RN-540; `S1615-T1`, `S1615-T5`. Frente jurídica: **LGPD-1**.
 
 ### V-5 · Mecanismo · o que "tenta fazer alguma ação" quer dizer, e como a liberação direta termina
 

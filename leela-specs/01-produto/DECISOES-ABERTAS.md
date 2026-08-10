@@ -267,7 +267,7 @@ Você pediu "análise de faturamento gerado" por tenant. A palavra `faturamento`
 - **Job story:** quando eu olho uma produtora para decidir preço, eu quero saber exatamente qual dinheiro cada número representa, para não negociar taxa olhando para a cifra errada.
 - **O que fica com você:** qual dos três a ficha chama de "faturamento gerado", e se a tela mostra os três com nomes distintos.
 - **Opções:** exibir **os três, nomeados** — GMV do produtor, receita da plataforma (bruta) e líquido do produtor —, com a coluna de margem vazia e rotulada "custo não configurado" até a S1610 subir (**default proposto**, porque não esconde nem inventa) · exibir **só GMV** e deixar receita e margem para depois da S1610 · esperar a S1610 inteira antes de qualquer número de faturamento na ficha, o que atrasa os dez outros itens por causa de um.
-- **Onde aterrissa:** RN-530 em [[LEELA-E16-plataforma-superadmin]]; tarefa `S1613-T4`. Detalhe em `02-rodadas/2026-08-09-admin-visao/03-spec.md §V-1`.
+- **Onde aterrissa:** RN-537 em [[LEELA-E16-plataforma-superadmin]]; tarefa `S1613-T4`. Detalhe em `02-rodadas/2026-08-09-admin-visao/03-spec.md §V-1`.
 
 ### ADMINVISAO-2 · a aba de clientes mostra comportamento, ou mostra contato
 
@@ -278,7 +278,7 @@ O CRM guarda, de propósito, muito pouco de cada cliente: nome, gênero, nascime
 - **O que fica com você:** se a aba Clientes é comportamento ou é contato.
 - **Por que agora:** as duas custam a mesma tela e fronteiras completamente diferentes. Comportamento usa um callable sobre o CRM e não abre nada. Contato exige ler pedidos e inscritos cross-tenant e concentra PII de participante no painel master, o que é frente do **LGPD-1**.
 - **Opções:** **só comportamento** (**default proposto** — atende "clientes" com a menor superfície de PII possível e não fecha porta nenhuma) · comportamento **e** contato, com o contato entrando como frente do LGPD-1 antes de subir · comportamento agora, contato como item separado quando houver caso de uso concreto.
-- **Onde aterrissa:** RN-532; tarefas `S1612-T5` e `S1612-T6`. Detalhe em `03-spec.md §V-2`.
+- **Onde aterrissa:** RN-539; tarefas `S1612-T5` e `S1612-T6`. Detalhe em `03-spec.md §V-2`.
 
 ### ADMINVISAO-3 · "responsável" é o dono da conta, ou é outra pessoa
 
@@ -288,7 +288,7 @@ Hoje o tenant tem `ownerUid` e nada mais de pessoa, e a ficha já mostra o nome 
 - **Job story:** quando eu preciso resolver algo de uma produtora, eu quero saber com quem falar, para não descobrir depois de duas mensagens que a pessoa da conta não é a pessoa do assunto.
 - **O que fica com você:** se "responsável" é o owner ou é um contato próprio.
 - **Opções:** **é o owner** — nada de campo novo, o trabalho é tipar telefone e organização e exibir (**default proposto**, porque é o que o dado já diz e custa uma tela) · é um **contato próprio**, e nasce `Tenant.responsavel?: { nome, email, telefone? }`, opcional, ausência significando "é o owner", escrita só do administrador da plataforma — campo novo, mas mínimo.
-- **Onde aterrissa:** RN-535 (só nasce na segunda opção); tarefa em `S1612`. Detalhe em `03-spec.md §V-3`.
+- **Onde aterrissa:** RN-542 (só nasce na segunda opção); tarefa em `S1612`. Detalhe em `03-spec.md §V-3`.
 
 ### ADMINVISAO-4 · o diretório de contas mostra CPF
 
@@ -299,7 +299,7 @@ A coleção `pessoas` guarda CPF em claro e é cross-tenant. As Security Rules a
 - **O que fica com você:** manter `pessoas` fechada, ou abrir uma leitura de CPF para o painel master.
 - **Por que agora:** abrir depois é a mesma decisão com uma tela já construída em cima, e a fronteira fica mais difícil de defender quando alguém já se acostumou a ver o número.
 - **Opções:** **manter fechada** — o diretório usa nome, e-mail, telefone e organização (**default proposto**, e é o que a base de código já decidiu por escrito) · abrir leitura de CPF **só** por callable auditado, com registro de cada consulta, no molde do `getBankDetailsForPayout` · abrir a Rule para o administrador — a mais barata de construir e a mais cara de defender, porque transforma a coleção de CPF do sistema inteiro em leitura de painel.
-- **Onde aterrissa:** RN-533; tarefas `S1615-T1` e `S1615-T5`. Frente jurídica: **LGPD-1**. Detalhe em `03-spec.md §V-4`.
+- **Onde aterrissa:** RN-540; tarefas `S1615-T1` e `S1615-T5`. Frente jurídica: **LGPD-1**. Detalhe em `03-spec.md §V-4`.
 
 ### ADMINVISAO-5 · o que "tenta fazer alguma ação" quer dizer, e como a liberação direta termina
 

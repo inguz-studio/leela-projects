@@ -1833,14 +1833,14 @@ Quatro achados mudam o tamanho da fila, e os quatro estão medidos:
 
 1. **`recomputePlatformRollups` não tem cron.** É `https.onCall` puro; nenhum `pubsub.schedule`
    aponta para ela. A tela `/plataforma/macro` mostra o retrato do último clique, sem dizer que é
-   isso. Vira RN-531.
+   isso. Vira RN-538.
 2. **Custo e margem não existem em código.** `custoGateway`, `custoReal`, `receitaPlataforma` e
    qualquer cálculo de margem têm **zero ocorrências** em `packages/core`, `packages/api-client` e
    `functions/src` — existem só em markdown de spec. `economiaParcelamento.ts` (S1610-T6) não existe,
    e o `netValue` do Asaas é descartado de propósito
    (`functions/src/payments/asaasProvider.ts:1506`, com teste travando).
 3. **`crmClientes` é a única coleção tenant-scoped cujo `allow read` omite `isPlatformAdmin()` de
-   propósito** (`:382`), com a razão escrita na própria Rule: back-office usa Admin SDK. Vira RN-532.
+   propósito** (`:382`), com a razão escrita na própria Rule: back-office usa Admin SDK. Vira RN-539.
 4. **Não existe nenhuma regra de `collectionGroup` no arquivo.** Toda CG vinda do client SDK é
    negada, inclusive para administrador — enquanto `firestore.indexes.json` **já tem** índices
    `COLLECTION_GROUP` servindo consumidores server-side. Índice existe, Rule não; o erro pareceria
@@ -1850,35 +1850,35 @@ E dois itens em que "temos no banco" **não se sustenta**: não existe campo de 
 do tenant (só `ownerUid`), e não existe **plano vivo** por tenant — `aplicarPlano` **estampa** os
 números no termo e grava `planoAplicadoId`, sem vínculo.
 
-### Regras de negócio novas (faixa RN-530 a RN-535)
+### Regras de negócio novas (faixa RN-537 a RN-542)
 
-- **RN-530 · A visão master lê o carimbo, nunca recalcula dinheiro.** Toda cifra do painel master
+- **RN-537 · A visão master lê o carimbo, nunca recalcula dinheiro.** Toda cifra do painel master
   deriva do gravado: `conciliacao.taxaValor` e `conciliacao.repasseOrganizador` por venda (congelados
   na confirmação, RN-179), `gmvAcumulado` e os agregados de `platform/rollups`. O cliente não
   recompõe taxa nem líquido a partir de percentual e não soma venda a venda para produzir total. A
   **RN-182 é mode-aware**: `incorporada` ⇒ `face − taxa(meio)`; `repassada` ⇒ **face cheio**. Aplicar
   `face − taxa` a todo mundo erraria o número de todo evento repassado. Fonte ausente ⇒ campo
   **vazio com rótulo**, nunca zero e nunca estimativa silenciosa (espelha RN-455).
-- **RN-531 · Agregado macro tem idade declarada, e uma atualização confiável.** Toda superfície que
+- **RN-538 · Agregado macro tem idade declarada, e uma atualização confiável.** Toda superfície que
   exiba valor de `platform/rollups` mostra o `atualizadoEm` e sinaliza obsolescência. O recompute
   ganha execução agendada, preservada a invocação manual — é recompute integral e idempotente
   (`set()` sobre a varredura de `tenants`), então agendar não introduz dupla contagem. Estende
   RN-409.
-- **RN-532 · Perfil de cliente cruza a fronteira por servidor, nunca por Rule.** A visão de clientes
+- **RN-539 · Perfil de cliente cruza a fronteira por servidor, nunca por Rule.** A visão de clientes
   do painel master é servida por **callable com Admin SDK**, autorizado por `isPlatformAdmin` do
   core; `firestore.rules:382` permanece como está e nenhuma leitura de `crmClientes` pelo client SDK
   é acrescentada. O callable devolve só o que o CRM já minimiza (RN-172): sem CPF, e-mail, telefone
   ou endereço.
-- **RN-533 · O diretório de contas é do administrador, é mínimo e não sai da tela.** Escopo
+- **RN-540 · O diretório de contas é do administrador, é mínimo e não sai da tela.** Escopo
   estritamente `platform_admin` (conta separada, RN-449). Alcance sobre `atletas` e `profissionais`;
   **`pessoas` permanece fechada** (`:2688`) e CPF não aparece no painel master sem decisão própria.
   **Sem export, CSV ou download.** Toda leitura que atravesse a fronteira por servidor registra
   acesso, e a **negativa também**, no molde de `getBankDetailsForPayout`. Frente jurídica: LGPD-1.
-- **RN-534 · Plano aplicado é estampa, e a tela declara a divergência.** A ficha mostra
+- **RN-541 · Plano aplicado é estampa, e a tela declara a divergência.** A ficha mostra
   `planoAplicadoId` junto da versão do termo; quando os números vigentes divergem do plano estampado,
   a tela **diz que divergiu** em vez de exibir o nome do plano como verdade. Sinal de leitura, não
   bloqueio — a edição manual do termo é legítima.
-- **RN-535 · Responsável do tenant · condicionada ao veto do dono (V-3).** Se "responsável" for o
+- **RN-542 · Responsável do tenant · condicionada ao veto do dono (V-3).** Se "responsável" for o
   owner, a RN não nasce e o trabalho é tipar `telefone`/`organizacao` (hoje gravados por
   `packages/api-client/src/platform/profissionais.ts:113` **sem estarem na interface `Profissional`**)
   e exibir. Se for contato próprio, nasce `Tenant.responsavel?: { nome, email, telefone? }` —

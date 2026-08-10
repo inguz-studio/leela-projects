@@ -21,7 +21,7 @@ vetáveis no painel canônico do dono.
 | 04 | `leela-specs/02-rodadas/2026-08-09-admin-visao/04-fila-build.md` | `1a4307d2` |
 | — | E16 + `V1-KANBAN` + `BOARD-EPICOS` + `DECISOES-ABERTAS` | `3672ff86` |
 
-**Números:** 4 histórias novas (S1612 a S1615), 6 RNs novas (RN-530 a RN-535), 23 tarefas em 5 ondas,
+**Números:** 4 histórias novas (S1612 a S1615), 6 RNs novas (RN-537 a RN-542), 23 tarefas em 5 ondas,
 5 vetáveis (ADMINVISAO-1 a 5). O painel do dono foi de 25 para **30** itens abertos — contagem
 conferida à mão contra as duas seções (26 + 4).
 
@@ -38,12 +38,12 @@ hoje. **Nenhuma Security Rule precisa ser aberta por esta spec.**
 **Quatro achados de código que dimensionam a fila:**
 
 1. `recomputePlatformRollups` **não tem cron** — é `https.onCall` puro. `/plataforma/macro` mostra o
-   retrato do último clique sem dizer que é isso. Virou RN-531.
+   retrato do último clique sem dizer que é isso. Virou RN-538.
 2. `custoGateway`, `custoReal`, `receitaPlataforma` e qualquer cálculo de margem têm **zero
    ocorrências** em `packages/core`, `packages/api-client` e `functions/src` — existem só em spec. O
    `netValue` do Asaas é descartado de propósito (`asaasProvider.ts:1506`, com teste travando).
 3. `crmClientes` (`firestore.rules:382`) é a única coleção tenant-scoped que **omite
-   `isPlatformAdmin()` de propósito**, com a razão escrita na própria Rule. Virou RN-532: callable
+   `isPlatformAdmin()` de propósito**, com a razão escrita na própria Rule. Virou RN-539: callable
    com Admin SDK, Rule intocada.
 4. **Não existe nenhuma regra de `collectionGroup`** no arquivo, enquanto `firestore.indexes.json` já
    tem índices de CG servindo consumidores server-side. CG do cliente é negada até para admin, e o
@@ -59,7 +59,7 @@ app-router**. É Vite + React Router v6, rotas em `apps/painel/src/routes/plataf
 
 ## Regras duras honradas
 
-- **Dinheiro reconcilia com o cânone.** RN-530 fixa que a visão master lê o carimbo
+- **Dinheiro reconcilia com o cânone.** RN-537 fixa que a visão master lê o carimbo
   (`conciliacao.taxaValor`, `conciliacao.repasseOrganizador`, congelados pela RN-179) e nunca
   recalcula. A **RN-182 é mode-aware** e a spec diz isso em voz alta: no modo `repassada` o líquido do
   produtor é o **face cheio**, e aplicar `face − taxa` a todo mundo erraria todo evento repassado.
@@ -68,7 +68,7 @@ app-router**. É Vite + React Router v6, rotas em `apps/painel/src/routes/plataf
 - **Juros não foi automatizado.** A correção do dono de 09/08 já é o comportamento vigente: o
   `jurosAoMes` é campo de dado no termo, e nenhum cron ou heurística o move. Nada nesta spec muda
   isso.
-- **PII com escopo estrito.** RN-533: só `platform_admin` (conta separada, RN-449), **sem export nem
+- **PII com escopo estrito.** RN-540: só `platform_admin` (conta separada, RN-449), **sem export nem
   CSV**, `pessoas` (CPF em claro) segue fechada, registro de acesso e da negativa. As duas decisões
   de PII (V-2 contato de cliente, V-4 CPF no diretório) subiram ao dono com default conservador
   proposto.
@@ -78,9 +78,14 @@ app-router**. É Vite + React Router v6, rotas em `apps/painel/src/routes/plataf
 
 ## Premissas assumidas (registradas)
 
-- **P-AV-1.** Faixa de RN: a mais alta em uso no 5xx era a **529** (E20). Varredura por `RN-530` a
-  `RN-545` em `leela-specs`, `apps`, `packages`, `functions` e `firestore.rules`: zero ocorrências.
-  Consumidas **RN-530 a RN-535**.
+- **P-AV-1 · colisão de faixa de RN, detectada e resolvida antes do fecho.** A varredura de abertura
+  achou o 5xx terminando em **529** e esta lane reservou **RN-530 a RN-535**. Durante a aterrissagem,
+  a lane vizinha **RADAR-REPARO-0809** publicou o E20 consumindo **RN-520 a RN-536** (commit
+  `d5d4221b`), atropelando a reserva. As seis regras foram **renumeradas para RN-537 a RN-542** em
+  todos os sete arquivos, e a varredura foi refeita: por `RN-537` a `RN-560`, fora desta rodada,
+  **zero ocorrências**. Lição de mecanismo, e ela vale para toda lane de spec: varredura de faixa
+  vale no instante em que roda — com lanes vizinhas em voo, o intervalo entre reservar e commitar é
+  onde a colisão nasce, e a conferência precisa ser refeita imediatamente antes da aterrissagem.
 - **P-AV-2.** Numeração de histórias: `S1610` e `S1611` já em uso (kanban). Consumidas **S1612 a
   S1615**.
 - **P-AV-3.** O `indice-de-regras-de-negocio.md` **não** foi tocado: estava modificado por outra lane
