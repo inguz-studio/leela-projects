@@ -25,7 +25,12 @@ Território: **READ-ONLY em código de produto**. Nenhum arquivo de `apps/` ou
 
 ## Veredito
 
-# REPROVADA
+# REPROVADA (2026-08-09) → LIBERADA PARA DEPLOY (2026-08-10)
+
+> **A lane FIX pagou os dois bloqueadores.** O veredito vigente é o do re-gate
+> delta, na última seção deste documento: **LIBERADA PARA DEPLOY**. O que vem
+> abaixo é a review original, preservada inteira porque é a prova de onde os dois
+> defeitos vieram.
 
 Duas coisas pagam antes do deploy. As duas são na tela de Engajamento, as duas são de
 derivação/rótulo em `apps/painel`, nenhuma pede arquitetura nova:
@@ -476,3 +481,243 @@ conserto: é julgamento de marca ou conferência que exige tela de verdade.
   tocada aqui. D-1 e D-2 são o pedido mínimo; D-3, D-5, D-7 e D-8 valem o mesmo despacho
   porque são baratos e ficam na mesma vizinhança de arquivos.
 - **Sem deploy, sem navegador**, conforme a regra da casa.
+
+---
+---
+
+# Re-gate delta (2026-08-10)
+
+Escopo estrito: **só os dois pagamentos**. Os dez achados não bloqueantes da
+review original seguem registrados e não reabrem aqui. Fonte: lane FIX, commits
+`5826466d` (código, 6 arquivos) e `c1c8124a` (board + handoff), handoff
+`.nirvana/handoffs/leela-redesign-ds-20260809-FIX.md`.
+
+## Veredito final
+
+# LIBERADA PARA DEPLOY
+
+D-1 e D-2 estão pagos, e pagos direito: a ponderação é a certa contra o contrato,
+o teste prova o que diz provar, e o rótulo passou a dizer o que o número é. Zero
+regressão nos onze arquivos que a review original usou como prova.
+
+O delta produziu três achados novos. Nenhum deles bloqueia, e digo por quê antes
+de listá-los: os dois bloqueadores originais eram defeitos do **caminho normal**
+(toda tela com mais de um desafio mostrava número sem significado; toda tela
+afirmava inatividade). Os três novos são de **caminho de borda** ou de raio
+menor, e caem na mesma faixa em que a review original já havia classificado o
+D-7 como "não bloqueia". Manter a barra no mesmo lugar vale mais do que
+aproveitar a proximidade do arquivo para subir a régua.
+
+---
+
+## D-1 · PAGO
+
+### A ponderação está certa contra o contrato
+
+`resumirPilares` passou a acumular `atual × peso` e `meta × peso` por pilar, com
+`peso = desafio.qtdParticipantes`, somar os pesos **por pilar** e dividir no
+final. É `Σ(atualᵢ·nᵢ)/Σnᵢ`, com `arred1`.
+
+A justificativa da lane FIX confere. Em
+`functions/src/jornada/onRegistroWrite.ts:211-242`, a MESMA `participantesSnap`
+(linha 211) gera o array `participantes` (218) que vai para
+`derivarProgressoPorPilar` (233-236, que divide por `participantes.length`) e o
+`qtdParticipantes: participantesSnap.size` (239), gravados no mesmo `update()`.
+Então `atualᵢ · nᵢ` recupera a soma bruta de pontos daquele desafio, e dividir
+pela soma dos pesos devolve a média real por participante da comunidade
+inteira. Não é aproximação: é a inversa exata da média que a Function tirou.
+
+O acumulador de peso é **por pilar**, não global, o que é o detalhe que faz a
+conta fechar quando um desafio reporta `fisico` e outro reporta `espiritual`.
+
+### O caso 2×500 prova o que diz provar
+
+Executei a função REAL (import direto de
+`apps/painel/src/routes/clubes/engajamento/_lib/engajamento.ts` via `tsx`, não
+transcrição minha):
+
+```
+(100*2 + 10*500)/502 = 10.358565737051793 -> arred1 = 10.4
+(200*2 + 20*500)/502 = 20.717131474103585 -> arred1 = 20.7
+funcao real          = {"pilar":"fisico","rotulo":"Físico","atual":10.4,"meta":20.7}
+soma crua (bug antigo) daria atual = 110  | media simples daria = 55
+```
+
+O teste separa três hipóteses de uma vez: ponderada (10,4), média simples (55) e
+soma crua (110). O primeiro teste do bloco, com pesos iguais (40/40), não
+distinguiria ponderada de simples sozinho, mas o 2×500 distingue, e o par ainda
+prova o denominador por pilar (mental sai 30 vindo só do desafio A, espiritual
+sai 10 vindo só do B). O `expect(...).not.toBe(110)` é redundante depois do
+`toBe(10.4)`, o que é ruído, não fraqueza.
+
+### O rótulo diz o que o número é
+
+"Média de pontos por participante em cada pilar sobre o mínimo exigido,
+ponderada pelo tamanho dos desafios que operam equilíbrio", e o `aria-label` do
+gráfico (o que o leitor de tela ouve) diz o mesmo. `formatValue` trocou para
+`formatDecimal1`, então a casa decimal é sempre visível (`150` sai `150,0`) e o
+número nunca se disfarça de contagem. Verificado no teste da View pela tabela
+`sr-only`: `75,4 / 150,9`.
+
+Resíduo mínimo, registrado e não bloqueante: o denominador exibido também é uma
+**média ponderada dos mínimos**, não um limiar único. Quando dois desafios têm
+mínimos diferentes, a barra compara contra um mínimo médio. O JSDoc do tipo diz
+isso ("Meta média ponderada pela mesma base"); a copy da tela diz "sobre o mínimo
+exigido", e o "ponderada" da frase se lê como qualificando a média, não o
+mínimo. Uma palavra resolve, se o dono achar que vale.
+
+---
+
+## D-2 · PAGO
+
+Rótulo: "Inativos (30 dias+)" → **"Sem registro (30 dias+)"** (confirmado
+executando o módulo: `ROTULO_SITUACAO = {"novo":"Novos (7 dias)",
+"ativo":"Ativos","inativo":"Sem registro (30 dias+)"}`). Legenda: "quem está sem
+atividade há 30 dias ou mais" → "quem está há 30 dias ou mais **sem nenhum
+registro de atividade**". A frase deixou de afirmar um fato sobre o membro e
+passou a afirmar a ausência de registro, que é o que o sistema sabe.
+
+O teste da View não só afirma a legenda nova, como **falsifica a antiga**
+(`expect(screen.queryByText(/sem atividade há 30 dias/i)).not.toBeInTheDocument()`).
+Teste de falsificação é o formato certo aqui, e é o que impede a frase de
+voltar por descuido.
+
+### A varredura que o maestro pediu
+
+`grep -rniE "sem atividade|inativ|última atividade|atividade há"` sobre
+`apps/painel/src` e `apps/landing`, descartando testes e comentários. **A tela de
+Engajamento está limpa.** Sobraram três superfícies, **todas pré-existentes e
+fora do diff deste pacote** — não bloqueiam este deploy, mas a resposta honesta à
+pergunta é que o produto ainda carrega a afirmação em outro lugar:
+
+1. **`apps/landing/app/(public)/minha-conta/PainelClubes.tsx:58`** —
+   `inativo: 'Sem atividade'`. É a frase exata que o D-2 removeu do painel, viva
+   no painel do **próprio atleta**, sobre o mesmo `status` e o mesmo
+   `derivarStatus`. Audiência pior: diz à pessoa que ela não teve atividade,
+   quando ela pode ter treinado ontem. É o item que eu levaria primeiro para a
+   próxima lane.
+2. **`apps/painel/src/routes/clubes/clube/membros/MembrosList.tsx:111`** —
+   `<KpiCard label="Inativos" hint="candidatos a reengajamento" />`, e o badge
+   `_lib/membros.ts:17` (`label: 'Inativo'`). O rótulo afirma comportamento e o
+   `hint` empurra uma ação baseada nele.
+3. Sem defeito: `_components/MembrosTable.tsx:65` usa o cabeçalho **"Último
+   registro"** para `ultimaAtividadeEm`. Já é honesto. A coluna simplesmente
+   fica vazia em produção. Achado retirado.
+
+A pendência real continua sendo o **escritor de `membro.ultimaAtividadeEm`**,
+card de backend, corretamente recusado pela lane FIX por território.
+
+---
+
+## Achados novos do delta (nenhum bloqueia)
+
+### N-1 · O ramo defensivo do D-1 desenha zero onde não há base
+
+`resumirPilares` incrementa `desafiosComPilar += 1` **antes** da guarda
+`if (peso <= 0) continue`. Executando a função real:
+
+```
+=== A · desafio COM pilar e qtdParticipantes = 0 ===
+desafiosComPilar = 1
+linhas           = [{"p":"fisico","atual":0,"meta":0},{"p":"mental","atual":0,"meta":0},{"p":"espiritual","atual":0,"meta":0}]
+=> a tela desenha o grafico? SIM — tres barras em ZERO
+```
+
+A View decide o estado vazio por `semPilares = pilares.desafiosComPilar === 0`.
+Com `1`, ela pula o vazio honesto ("Sem desafio de equilíbrio") e desenha três
+barras em zero sob o rótulo "média de pontos por participante". É a mesma classe
+que o D-1: número sem base apresentado como medição.
+
+**E é alcançável em produção**, não só em teoria.
+`onRegistroWrite.ts:242` faz `if (progressoPorPilar) update['progressoPorPilar'] = ...`
+— quando `derivarProgressoPorPilar` devolve `null` (zero participantes) o campo
+**não é escrito e não é apagado**, enquanto `qtdParticipantes` é atualizado para
+`0` no mesmo `update()`. Um desafio que esvaziou fica exatamente com
+`progressoPorPilar` presente e `qtdParticipantes: 0`.
+
+Mesmo resultado com o campo ausente num doc legado (`undefined <= 0` é `false`,
+então a guarda não pega, e a conta vira `NaN` antes de virar `0`):
+
+```
+=== B · desafio COM pilar e qtdParticipantes AUSENTE (doc legado) ===
+desafiosComPilar = 1
+linhas           = [{"p":"fisico","atual":0,"meta":0}, ...]
+```
+
+O caso misto está **correto**, e é por isso que isto não bloqueia: um desafio
+vazio ao lado de um cheio não distorce nada (`fisico = {"atual":50,"meta":80}`,
+os valores exatos do desafio que pesou). O defeito só aparece quando **todos** os
+desafios com pilar no recorte têm peso zero.
+
+O teste novo da lane (`'desafio sem participante não pesa (e não gera NaN)'`)
+afirma `atual: 0, meta: 0` e **não afirma `desafiosComPilar`** — trava a saída
+errada sem enxergar a consequência na tela. É o ponto cego.
+
+**Conserto (1 linha):** mover `desafiosComPilar += 1` para depois da guarda, ou
+derivar `desafiosComPilar` dos desafios que efetivamente pesaram. O teste ganha
+uma asserção de `desafiosComPilar === 0`.
+
+### N-2 · D-7 está pago pela metade, e a metade que faltou é a mais visível
+
+O handoff FIX registra D-7 como pago. `membrosAtivos` ganhou `?? 0`;
+`participacoes`, três linhas abaixo no mesmo objeto, não. Executado:
+
+```
+membrosAtivos = 120 | renderiza = "120"
+participacoes = NaN | renderiza = "NaN"
+```
+
+"Participações" é um dos quatro KPIs do topo da tela. Um desafio sem
+`qtdParticipantes` escrito ainda imprime **"NaN"** para o organizador.
+Não bloqueia porque o D-7 nunca foi bloqueador na review original, e mover a
+régua agora só porque o arquivo está aberto seria incoerente. Mas a afirmação
+"D-7 pago" no handoff FIX precisa virar "D-7 pago em `membrosAtivos`".
+
+**Conserto (1 linha):** `?? 0` também em
+`ativos.reduce((s, d) => s + d.desafio.qtdParticipantes, 0)`.
+
+### N-3 · Herdado, sem novidade
+
+`resumirPilares` continua devolvendo os três pilares sempre (`PILARES.map`), então
+um Modelo C que declare mínimo só para `fisico` segue desenhando "Mental 0" e
+"Espiritual 0". Já estava no D-12 da review original, não mudou, e não reabre.
+
+---
+
+## Regressão: nenhuma
+
+| Verificação | Resultado |
+|---|---|
+| Território | `git show --name-only 5826466d`: **6 arquivos, todos em `apps/painel/src/routes/clubes/`**. Zero em `packages/`, zero token, zero rota |
+| Zero hex/px/rgba nas linhas adicionadas | `git show 5826466d -- 'apps/painel/**' \| grep '^+' \| grep -E '#[0-9a-fA-F]{3,8}\|rgba?\(\|[0-9]+px'` → **saída vazia** |
+| Painel · type-check | `tsc --noEmit` limpo, sem output |
+| Painel · lint | `eslint src --max-warnings 0` limpo, sem output |
+| Arquivos tocados, isolados | `engajamento.test.ts` **23/23** · `EngajamentoView.test.tsx` **18/18** · `format.test.ts` **4/4** |
+| Os 8 arquivos que a REV usou como prova, isolados | `ClubesRoutes` 6/6 · `marca-executavel` 9/9 · `superficie` 19/19 · `SuperficieDoPainel` 5/5 · `GlowDaPagina` 3/3 · `ComunidadeResumo` 6/6 · `OcupacaoEventos` 11/11 · `ocupacao` 7/7 — **todos idênticos ao pré-FIX** |
+| Painel · suíte completa | `vitest run` → **2387 passed / 2387, 225 arquivos, exit 0**, 375,79s (era 2378/224 antes do FIX: +9 testes, +1 arquivo, exatamente o que a lane acrescentou) |
+| DS | não re-rodado por escopo: o commit não toca `packages/` (provado acima) |
+
+Nenhum dos vetores da review original mudou de resposta. O isolamento de tema, a
+fiação do vidro, a guarda de rota e a prova de marca continuam como estavam.
+
+---
+
+## O que vai junto para a próxima lane
+
+Ordem de valor por custo, todos de uma linha mais teste:
+
+1. **N-1** — `desafiosComPilar` depois da guarda de peso. É o único que produz
+   número falso na tela.
+2. **N-2** — `?? 0` em `participacoes`, e corrigir a linha do handoff FIX.
+3. **D-2 residual** — `'Sem atividade'` no painel do atleta
+   (`apps/landing/.../PainelClubes.tsx:58`) e o par
+   `label="Inativos"` + `hint="candidatos a reengajamento"` em `MembrosList.tsx:111`.
+4. **D-9** — `aria-expanded` em `AppShell.tsx:114`, recusado por território pela
+   lane FIX com razão. Precisa de mandato sobre `packages/design-system`.
+5. Os demais achados da review original (D-3, D-4, D-5, D-6, D-8, D-11, D-12),
+   inalterados.
+
+E a pendência de produto que nenhuma lane de painel resolve: **o escritor de
+`membro.ultimaAtividadeEm`**. Enquanto ele não existir, "Sem registro (30 dias+)"
+é o teto de honestidade da tela, e é isso que ela afirma agora.
+
