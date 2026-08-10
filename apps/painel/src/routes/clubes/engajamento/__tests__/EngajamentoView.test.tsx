@@ -115,13 +115,12 @@ describe('EngajamentoView · o que tem fonte', () => {
 });
 
 describe('EngajamentoView · o que não tem fonte', () => {
-  it('frequência não vira gráfico: nomeia a métrica e a causa', () => {
+  it('o Mapa de Check-ins se nomeia, diz a causa e escreve "Em breve" — sem forma de gráfico', () => {
     render(<EngajamentoView {...props()} />);
-    const secao = screen.getByRole('region', { name: 'Frequência e presença' });
-    expect(
-      within(secao).getByText('Frequência da comunidade ainda não é medida')
-    ).toBeInTheDocument();
-    expect(within(secao).getByText(/só existe check-in de largada de evento/i)).toBeInTheDocument();
+    const secao = screen.getByRole('region', { name: 'Mapa de Check-ins' });
+    expect(within(secao).getByRole('heading', { name: 'Mapa de Check-ins' })).toBeInTheDocument();
+    expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+    expect(within(secao).getByText(/QR na largada de um evento/i)).toBeInTheDocument();
     expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 

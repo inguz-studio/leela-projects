@@ -35,7 +35,7 @@ import {
   cn,
   type BarChartDatum,
 } from '@leela/design-system';
-import { Activity, GitBranch, Users } from 'lucide-react';
+import { Activity, CalendarClock, GitBranch, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
@@ -126,6 +126,37 @@ export function alturaDeBarras(n: number): number {
 
 function barrasDeContagem(itens: readonly ContagemRotulada[]): BarChartDatum[] {
   return itens.map((c) => ({ label: c.rotulo, value: c.total }));
+}
+
+/**
+ * Card de métrica que a tela NOMEIA mas ainda não pode desenhar (REFACTOR
+ * itens 7, 11 e 13; diretriz literal do dono: "se tiver algo que não
+ * implementamos ainda, deixe escrito 'em breve'").
+ *
+ * O que diferencia isto de um card quebrado é a ordem da informação: primeiro
+ * o NOME da métrica (o organizador precisa saber que ela está prevista),
+ * depois a CAUSA em uma frase (por que não há número), e por último o "em
+ * breve" — promessa, não desculpa. Nenhuma forma de gráfico aparece aqui: um
+ * eixo vazio ou um heatmap todo na cor mais fraca sugerem que a medição
+ * aconteceu e deu quase zero, que é exatamente a leitura errada.
+ */
+function CardEmBreve({
+  titulo,
+  causa,
+  icon,
+}: {
+  titulo: string;
+  causa: string;
+  icon: ReactNode;
+}): JSX.Element {
+  return (
+    <section aria-label={titulo} className="flex flex-col">
+      <SecaoHead titulo={titulo} />
+      <Painel className="flex-1">
+        <EmptyState icon={icon} title="Em breve" description={causa} />
+      </Painel>
+    </section>
+  );
 }
 
 /**
@@ -414,16 +445,17 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               />
             </section>
 
-            <section aria-label="Frequência e presença" className="flex flex-col">
-              <SecaoHead titulo="Frequência e presença" />
-              <Painel>
-                <EmptyState
-                  icon={<Activity aria-hidden />}
-                  title="Frequência da comunidade ainda não é medida"
-                  description="Mapa de horários, volume por período e ranking de ações dependem de um registro de presença do club — hoje só existe check-in de largada de evento, e os registros de atividade do atleta não são legíveis pelo organizador. Enquanto a fonte não existir, esta seção não mostra número."
-                />
-              </Painel>
-            </section>
+            {/* Frequência e presença — as métricas ficam NOMEADAS uma a uma
+                (REFACTOR itens 7, 11 e 13). Uma caixa só, genérica, escondia
+                quantas análises estão previstas e qual delas destrava com qual
+                fonte. Todas dependem do mesmo registro que não existe. */}
+            <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-3">
+              <CardEmBreve
+                titulo="Mapa de Check-ins"
+                icon={<CalendarClock aria-hidden />}
+                causa="O club não registra presença: o único check-in que existe é o do QR na largada de um evento, e os registros de atividade do atleta não são legíveis pelo organizador. Sem essa fonte, não há hora nem dia para pintar."
+              />
+            </div>
 
             {/* ── Seção 2 · a ponte ──────────────────────────────────────── */}
             <SecaoTitulo
