@@ -85,8 +85,11 @@ item 12 (domínio) e CRM-1..4 SEGUEM com o dono.
 
 ## Fila da retomada, na ordem
 
-1. **Conferir DEPLOY-CORTE** (o handoff dela **não existe** — a lane morreu sem registrar; medir
-   produção contra o baseline `leela-retomada-20260808-DEPLOY-FINAL.md`, deploys de 23:27/23:37).
+1. ✅ **PAGO (09/08 noite).** Medição provou: functions subiram 13:09, painel/landing não. A
+   DEPLOY-CORTE-RET completou de worktree pinado em `9fbcd9ab`: painel `index-_EVW2ljU.js` (fix
+   `d9394f51` provado por diff de build) e landing `main-app-a3edf82a` (frase da sexta recusa no
+   ar). Handoffs: `leela-painel-corte-20260809-DEPLOY-CORTE.md` (medição + adendo) e
+   `leela-deploy-corte-ret-20260809.md` (deploy).
 2. **REDESIGN-DS** (entrou no lugar do JUROS-ALINHAMENTO cancelado): aplicar o handoff de design de
    `leela-specs/02-rodadas/2026-08-09-redesign-ds/handoff/` — tema `dark-wine` + camada glass +
    tipografia do brasa (Exo 2 + Rubik) + telas Visão Geral v3/Engajamento. Painel do organizador em
