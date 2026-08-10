@@ -283,7 +283,7 @@ describe('glass — valores do brasa que o item 4 fixa (dark-wine e wine não mu
   });
 
   it('page-glow do brasa tem as TRÊS radiais (a terceira fecha o canto inferior direito)', () => {
-    const glow = glass.glass['page-glow'].brasa;
+    const glow = glass.glass['page-glow'].brasa!;
     expect(glow.match(/radial-gradient/g) ?? []).toHaveLength(3);
     expect(glow).toContain('radial-gradient(75% 55% at 22% -8%, rgba(92,16,26,.72), transparent 62%)');
     expect(glow).toContain('radial-gradient(55% 45% at 96% 8%, rgba(255,69,12,.06), transparent 60%)');
