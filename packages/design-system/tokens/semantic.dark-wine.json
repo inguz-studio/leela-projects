@@ -8,7 +8,8 @@
     "raised": "{neutral.900}",
     "overlay": "rgba(255, 255, 255, 0.028)",
     "high": "rgba(255, 255, 255, 0.055)",
-    "sunken": "{neutral.975}"
+    "sunken": "{neutral.975}",
+    "raised-opaque": "{neutral.900}"
   },
   "text": {
     "primary": "{neutral.50}",

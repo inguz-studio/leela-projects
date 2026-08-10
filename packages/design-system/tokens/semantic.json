@@ -8,7 +8,8 @@
     "raised": "{neutral.900}",
     "overlay": "{neutral.850}",
     "high": "{neutral.750}",
-    "sunken": "{neutral.975}"
+    "sunken": "{neutral.975}",
+    "raised-opaque": "{neutral.900}"
   },
   "text": {
     "primary": "{neutral.50}",
@@ -96,5 +97,9 @@
     "info": "{heroico.500}",
     "info-fg": "{heroico.300}",
     "info-surface": "#351322"
+  },
+  "page": {
+    "$description": "REDESIGN-DS-0809 §2 (glass): default opaco de --page-glow é 'none' — nenhum tema antigo tinha glow ambiente de página antes desta lane. [data-glass=\"on\"] sobrescreve para --glass-page-glow (tokens/glass.json). dark-wine é a exceção: seu glow é parte da identidade do tema (README §1, 'dois radiais de vinho, fixos no viewport'), não só do modo glass — por isso semantic.dark-wine.json sobrescreve este valor incondicionalmente.",
+    "glow": "none"
   }
 }

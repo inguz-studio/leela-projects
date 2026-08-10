@@ -158,6 +158,7 @@
   --surface-overlay: var(--neutral-100);
   --surface-high: var(--neutral-200);
   --surface-sunken: var(--neutral-100);
+  --surface-raised-opaque: var(--neutral-0);
   --text-primary: var(--neutral-900);
   --text-secondary: var(--neutral-700);
   --text-tertiary: var(--neutral-600);
@@ -222,6 +223,7 @@
   --feedback-info: var(--info-500);
   --feedback-info-fg: var(--info-800);
   --feedback-info-surface: var(--info-100);
+  --page-glow: none;
   --chart-swatch-size: 10px;
   --chart-swatch-radius: var(--radius-xs);
   --chart-legend-pct-w: var(--spacing-10);
@@ -402,6 +404,7 @@
   --motion-menu-duration: 120ms;
   --card-radius: var(--radius-lg);
   --card-critical-border: 3px;
+  --card-blur: none;
   --datebadge-px: var(--spacing-2-5);
   --datebadge-py: var(--spacing-1-5);
   --datebadge-gap: var(--spacing-2);
@@ -470,4 +473,21 @@
   --input: var(--border-strong);
   --ring: var(--border-focus);
   --radius: var(--radius-lg);
+  --glass-blur: blur(20px) saturate(1.3);
+  --glass-surface-raised: rgba(255, 255, 255, 0.62);
+  --glass-surface-overlay: rgba(0, 0, 0, 0.04);
+  --glass-elevation: 0 8px 28px rgba(72,20,28,0.14), inset 0 1px 0 rgba(255,255,255,0.7), inset 0 0 0 0.5px rgba(72,20,28,0.06);
+  --glass-page-glow: radial-gradient(75% 55% at 22% -8%, rgba(232,86,98,.16), transparent 62%), radial-gradient(65% 55% at 108% 104%, rgba(200,232,74,.12), transparent 62%);
+}
+
+[data-glass="on"] {
+  --card-blur: var(--glass-blur);
+  --surface-raised: var(--glass-surface-raised);
+  --surface-overlay: var(--glass-surface-overlay);
+  --elevation-2: var(--glass-elevation);
+  --page-glow: var(--glass-page-glow);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  [data-glass="on"] { --surface-raised: var(--surface-raised-opaque); }
 }

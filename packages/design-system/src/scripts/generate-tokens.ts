@@ -18,8 +18,17 @@ import semanticWine from '../../tokens/semantic.wine.json';
 import semanticDarkWine from '../../tokens/semantic.dark-wine.json';
 import component from '../../tokens/component.json';
 import shadcnAliases from '../../tokens/shadcn.json';
+import glassTokens from '../../tokens/glass.json';
 
-import { generateCSS, generateRNTheme, mergeTokens, type TokenRecord } from '../theme/generate.js';
+import {
+  generateCSS,
+  generateRNTheme,
+  mergeTokens,
+  glassExtraFor,
+  generateGlassActivationBlock,
+  type TokenRecord,
+  type GlassTokens,
+} from '../theme/generate.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = resolve(__dirname, '..', '..');
@@ -35,11 +44,22 @@ const semanticDarkWineMerged = mergeTokens(semanticBase as TokenRecord, semantic
 // Generate CSS files
 // ---------------------------------------------------------------------------
 
+// Camada glass (tokens/glass.json): uma coluna por tema, extraída aqui e
+// passada como tier `extra` de generateCSS — produz --glass-blur/
+// --glass-surface-raised/--glass-surface-overlay/--glass-elevation/
+// --glass-page-glow DENTRO do bloco de cada tema. O bloco de ativação
+// `[data-glass="on"]` + fallback `@supports` é texto idêntico em todo tema
+// (handoff §2) — apensado ao CSS de CADA tema para o arquivo publicado
+// ficar self-sufficient (brasa.css sozinho já sabe ligar/desligar glass,
+// igual ao rootFallback do brasa hoje).
+const glass = glassTokens as GlassTokens;
+const glassBlock = generateGlassActivationBlock();
+
 // brasa é o tema padrão: também cobre :root sem data-theme (anti-FOUC SSR)
 // aliases: ponte shadcn→brasa (tokens/shadcn.json) — CSS-only, vale nos 3 temas
-const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord, { rootFallback: true, aliases: shadcnAliases as TokenRecord });
-const wineCSS = generateCSS('wine', primitivesWine as TokenRecord, semanticWineMerged, component as TokenRecord, { aliases: shadcnAliases as TokenRecord });
-const darkWineCSS = generateCSS('dark-wine', primitivesDarkWine as TokenRecord, semanticDarkWineMerged, component as TokenRecord, { aliases: shadcnAliases as TokenRecord });
+const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord, { rootFallback: true, aliases: shadcnAliases as TokenRecord, extra: glassExtraFor(glass, 'brasa') }) + '\n\n' + glassBlock;
+const wineCSS = generateCSS('wine', primitivesWine as TokenRecord, semanticWineMerged, component as TokenRecord, { aliases: shadcnAliases as TokenRecord, extra: glassExtraFor(glass, 'wine') }) + '\n\n' + glassBlock;
+const darkWineCSS = generateCSS('dark-wine', primitivesDarkWine as TokenRecord, semanticDarkWineMerged, component as TokenRecord, { aliases: shadcnAliases as TokenRecord, extra: glassExtraFor(glass, 'dark-wine') }) + '\n\n' + glassBlock;
 const indexCSS = `/* Leela Design System — all themes combined */\n\n${brasaCSS}\n\n${wineCSS}\n\n${darkWineCSS}`;
 
 const themesDir = resolve(pkg, 'themes');

@@ -251,7 +251,8 @@
   },
   "card": {
     "radius":        "{radius.lg}",
-    "critical-border": "3px"
+    "critical-border": "3px",
+    "blur":          "none"
   },
   "datebadge": {
     "$description": "Pill de data do mockup `.date-badge`: pad 6x10 gap 8, texto 12/500 secondary sobre surface-overlay com hairline; dot 6px vitoria com glow (cor/sombra na camada semantic).",

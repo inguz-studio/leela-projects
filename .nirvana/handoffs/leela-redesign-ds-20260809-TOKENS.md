@@ -19,10 +19,14 @@ Território: `packages/design-system` SOMENTE — não toquei `apps/`.
 EM EXECUÇÃO. Plano de tarefas (mapeado após leitura completa do README + inspeção do gerador/ThemeProvider/testes existentes):
 
 1. [x] Tema dark-wine: `primitives.dark-wine.json` + `semantic.dark-wine.json` (com revisão de formato) + patch `generate-tokens.ts` + `pnpm generate-tokens` — commits `c23d916b` (+ fix `dbc66d5f`, ver Incidente abaixo)
-2. [ ] ThemeProvider (web+RN): `Theme` ganha `'dark-wine'`, validações, retrocompat intocada
+2. [x] ThemeProvider (web+RN): `Theme` ganha `'dark-wine'`, validações, retrocompat intocada — commit `5a895da8` (push feito: `d67c35db..5a895da8`)
 3. [ ] Camada glass: `glass.json` + bloco `[data-glass="on"]` + `@supports` fallback + testes de contraste do glass
 4. [ ] Tipografia do brasa: `font.family.ui` = Rubik, 4 tokens de peso, carga da webfont no mesmo mecanismo (showcase)
 5. [ ] Gates finais + diff review + board + veredito
+
+## Vetáveis abertos (registrados, não decididos)
+
+- **thumb.virtual do dark-wine falha AA em t=0.25** (ícone branco .9 sobre mix ≈ `#81AC30` = 2.45:1, piso é 3.0:1). `linear-gradient(135deg, #A3D93B, #1B2410)` vem literal de `semantic.dark-wine.json` (handoff do dono). Diferente do `border.strong` (mesma lane, CORRIGIDO — era desvio de padrão entre temas irmãos, não escolha de cor), aqui mudar o endpoint claro do gradiente é decisão de marca. Teste marcado `it.fails` em `contrast.test.ts` (rastreado, não mascarado) até o dono decidir a cor.
 
 ## Incidente (árvore compartilhada) — corrigido
 

@@ -8,7 +8,8 @@
     "raised":  "{neutral.0}",
     "overlay": "{neutral.100}",
     "high":    "{neutral.200}",
-    "sunken":  "{neutral.100}"
+    "sunken":  "{neutral.100}",
+    "raised-opaque": "{neutral.0}"
   },
   "text": {
     "primary":   "{neutral.900}",

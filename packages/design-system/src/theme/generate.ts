@@ -130,6 +130,17 @@ export interface GenerateCSSOptions {
    * consome shadcn e refs semânticas não resolvem contra primitives).
    */
   aliases?: TokenRecord;
+  /**
+   * Extra CSS-only tier appended AFTER aliases — usada pela camada glass
+   * (tokens/glass.json), que vive fora do pipeline de 3 tiers porque cada
+   * propriedade tem um valor POR TEMA num único arquivo compartilhado (a
+   * forma é `{ propriedade: { tema: valor } }`, não um JSON por tema como
+   * primitives/semantic). O chamador (generate-tokens.ts) já extrai a coluna
+   * do tema certo antes de passar aqui. Valores são sempre literais (nunca
+   * `{ref}`) — RN não consome este tier (glass é conceito só-CSS,
+   * `[data-glass="on"]` não existe em React Native).
+   */
+  extra?: TokenRecord;
 }
 
 /**
@@ -158,8 +169,11 @@ export function generateCSS(
   const aliasVars = options.aliases
     ? flattenTokens(options.aliases, '', primitives, 'css')
     : [];
+  const extraVars = options.extra
+    ? flattenTokens(options.extra, '', primitives, 'css')
+    : [];
 
-  const allVars = [...primVars, ...semVars, ...compVars, ...aliasVars];
+  const allVars = [...primVars, ...semVars, ...compVars, ...aliasVars, ...extraVars];
 
   const selector = options.rootFallback
     ? `:root:not([data-theme]),\n[data-theme="${theme}"] {`
@@ -226,4 +240,67 @@ export function collectRefs(obj: TokenRecord): string[] {
     }
   }
   return refs;
+}
+
+// ---------------------------------------------------------------------------
+// Glass layer — bloco de ativação teórico-agnóstico (mesmo texto em todo
+// tema, ver handoff §2). Extrai a coluna do tema certo de tokens/glass.json
+// (per-property, `{ propriedade: { tema: valor } }`) para o tier `extra` de
+// generateCSS, e o bloco `[data-glass="on"]` + fallback `@supports` remapeia
+// tokens genéricos (card-blur/surface-raised/surface-overlay/elevation-2/
+// page-glow) para os `--glass-*` que acabaram de nascer NAQUELE bloco de
+// tema — a cascata do CSS resolve sozinha qual tema está ativo.
+// ---------------------------------------------------------------------------
+
+export interface GlassTokens {
+  glass: {
+    blur: Record<string, string>;
+    'surface-raised': Record<string, string>;
+    'surface-overlay': Record<string, string>;
+    elevation: Record<string, string>;
+    'page-glow': Record<string, string>;
+  };
+}
+
+/**
+ * Extrai a coluna de um tema de tokens/glass.json, no formato que
+ * generateCSS({ extra }) espera: flatten produz `--glass-blur`,
+ * `--glass-surface-raised`, `--glass-surface-overlay`, `--glass-elevation`,
+ * `--glass-page-glow` — exatamente os nomes que o README §2 usa no bloco
+ * `[data-glass="on"]`.
+ */
+export function glassExtraFor(glass: GlassTokens, theme: string): TokenRecord {
+  const g = glass.glass;
+  return {
+    glass: {
+      blur: g.blur[theme],
+      'surface-raised': g['surface-raised'][theme],
+      'surface-overlay': g['surface-overlay'][theme],
+      elevation: g.elevation[theme],
+      'page-glow': g['page-glow'][theme],
+    },
+  };
+}
+
+/**
+ * Bloco `[data-glass="on"]` + fallback `@supports not (backdrop-filter)` —
+ * texto idêntico em todo tema (handoff §2, "Regra de arquitetura" e "Três
+ * regras não-negociáveis"). Remapeia tokens genéricos para os `--glass-*`
+ * do tema ativo; `--surface-raised-opaque` (tier semantic, per-tema) é o
+ * fallback quando `backdrop-filter` não existe — regra #3 do handoff.
+ */
+export function generateGlassActivationBlock(): string {
+  return [
+    '[data-glass="on"] {',
+    '  --card-blur: var(--glass-blur);',
+    '  --surface-raised: var(--glass-surface-raised);',
+    '  --surface-overlay: var(--glass-surface-overlay);',
+    '  --elevation-2: var(--glass-elevation);',
+    '  --page-glow: var(--glass-page-glow);',
+    '}',
+    '',
+    '@supports not (backdrop-filter: blur(1px)) {',
+    '  [data-glass="on"] { --surface-raised: var(--surface-raised-opaque); }',
+    '}',
+  ].join('\n');
 }
