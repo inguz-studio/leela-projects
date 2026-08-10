@@ -10,7 +10,7 @@
 >
 > **Personagens dos exemplos.** Ana compra, Castelo organiza eventos, Marina opera o painel, Téo é influenciador afiliado. São ilustrativos, não pessoas do banco.
 >
-> **A conta de hoje: 25 itens abertos.** São **21** em "Decisões que dependem de você" e **4** em "Ações que só você pode executar" — contados à mão, um a um, contra as duas seções abaixo. A "Fila de construção" no fim não é decisão e não entra na conta, agora sem exceção nenhuma: o **ADMIN-USUARIOS-1**, que morava lá dentro e pedia resposta sua, subiu para o bloco das decisões, que é onde uma decisão sua tem de estar.
+> **A conta de hoje: 30 itens abertos.** São **26** em "Decisões que dependem de você" e **4** em "Ações que só você pode executar" — contados à mão, um a um, contra as duas seções abaixo. Os cinco que entraram em 09/08 são os **ADMINVISAO-1 a ADMINVISAO-5**, da spec da visão master do painel admin: dois de dado pessoal, um de dinheiro, um de modelo e um de mecanismo. Eles fecham juntos, e a esteira não constrói as ondas que dependem deles enquanto isso não acontece. A "Fila de construção" no fim não é decisão e não entra na conta, agora sem exceção nenhuma: o **ADMIN-USUARIOS-1**, que morava lá dentro e pedia resposta sua, subiu para o bloco das decisões, que é onde uma decisão sua tem de estar.
 
 ## Decisões que dependem de você
 
@@ -258,6 +258,59 @@ O expurgo de 06/08 rodou limpo (2.873 operações, provadas contra o banco), e o
 - **Por que agora:** enquanto eles existirem, o "disponível para repasse" nasce menor do que a realidade — o guard `disponível = entrou − comprometido` desconta valor preso em referência morta.
 - **Opções:** cancelar os três repasses vetados de vez, liberando o comprometido — os dois de evento apagado não têm mais contra o que correr · cancelar só os dois órfãos e manter o terceiro, que aponta para evento vivo · deixar como está até a próxima rodada de caixa, aceitando o disponível menor.
 - **Onde aterrissa:** os três documentos de `repasses` com status vetado; a medição completa está em `.nirvana/handoffs/leela-apply-limpeza-20260806.md`. A lacuna estrutural (recomputo de saldo sem caminho de operador) segue registrada na REV3.
+
+### ADMINVISAO-1 · o que a ficha da produtora chama de "faturamento gerado"
+
+Você pediu "análise de faturamento gerado" por tenant. A palavra `faturamento` **não existe no código** — existem três números gravados que ela poderia nomear, e um quarto que não existe em lugar nenhum: `custoGateway`, `custoReal`, `receitaPlataforma` e qualquer cálculo de margem têm zero ocorrências em `packages/core`, `packages/api-client` e `functions/src`.
+
+- **Caso de uso:** você abre a ficha do Castelo para decidir se a taxa dele está certa e lê "faturamento gerado: R$ 120 mil". Se isso for GMV, é o que os compradores pagaram e não diz nada sobre o que sobrou para você. Se for receita da plataforma, é o que você faturou antes de pagar o gateway. Os dois são verdadeiros e levam a decisões opostas.
+- **Job story:** quando eu olho uma produtora para decidir preço, eu quero saber exatamente qual dinheiro cada número representa, para não negociar taxa olhando para a cifra errada.
+- **O que fica com você:** qual dos três a ficha chama de "faturamento gerado", e se a tela mostra os três com nomes distintos.
+- **Opções:** exibir **os três, nomeados** — GMV do produtor, receita da plataforma (bruta) e líquido do produtor —, com a coluna de margem vazia e rotulada "custo não configurado" até a S1610 subir (**default proposto**, porque não esconde nem inventa) · exibir **só GMV** e deixar receita e margem para depois da S1610 · esperar a S1610 inteira antes de qualquer número de faturamento na ficha, o que atrasa os dez outros itens por causa de um.
+- **Onde aterrissa:** RN-530 em [[LEELA-E16-plataforma-superadmin]]; tarefa `S1613-T4`. Detalhe em `02-rodadas/2026-08-09-admin-visao/03-spec.md §V-1`.
+
+### ADMINVISAO-2 · a aba de clientes mostra comportamento, ou mostra contato
+
+O CRM guarda, de propósito, muito pouco de cada cliente: nome, gênero, nascimento, quantidade de eventos e inscrições, valor gasto e LTV. Não guarda CPF, e-mail, telefone, cidade, endereço nem restrição médica, e a chave do documento é hash. Isso é a RN-172, e é desenho. O contato existe noutro lugar: `pedidos.responsavel` tem e-mail e telefone, e `inscritos.dadosPessoais` tem CPF e telefone.
+
+- **Caso de uso:** você abre a aba Clientes do Castelo para entender quem compra dele. Se a tela mostrar só comportamento, você vê padrão de consumo e não vê pessoa. Se mostrar contato, o painel master vira uma agenda de e-mails e telefones de todos os participantes de todos os produtores, num lugar só.
+- **Job story:** quando eu analiso a base de uma produtora, eu quero entender o comportamento de compra dela sem virar depositário do contato de gente que nunca falou comigo.
+- **O que fica com você:** se a aba Clientes é comportamento ou é contato.
+- **Por que agora:** as duas custam a mesma tela e fronteiras completamente diferentes. Comportamento usa um callable sobre o CRM e não abre nada. Contato exige ler pedidos e inscritos cross-tenant e concentra PII de participante no painel master, o que é frente do **LGPD-1**.
+- **Opções:** **só comportamento** (**default proposto** — atende "clientes" com a menor superfície de PII possível e não fecha porta nenhuma) · comportamento **e** contato, com o contato entrando como frente do LGPD-1 antes de subir · comportamento agora, contato como item separado quando houver caso de uso concreto.
+- **Onde aterrissa:** RN-532; tarefas `S1612-T5` e `S1612-T6`. Detalhe em `03-spec.md §V-2`.
+
+### ADMINVISAO-3 · "responsável" é o dono da conta, ou é outra pessoa
+
+Hoje o tenant tem `ownerUid` e nada mais de pessoa, e a ficha já mostra o nome do owner. Telefone e organização **já estão gravados** no documento do profissional, sem estarem no tipo — gravação em `packages/api-client/src/platform/profissionais.ts:113` que a interface nunca refletiu.
+
+- **Caso de uso:** o Castelo tem a Marina como dona da conta, mas quem responde sobre nota fiscal e repasse é o financeiro da produtora. Você precisa falar com o segundo e a tela só conhece a primeira.
+- **Job story:** quando eu preciso resolver algo de uma produtora, eu quero saber com quem falar, para não descobrir depois de duas mensagens que a pessoa da conta não é a pessoa do assunto.
+- **O que fica com você:** se "responsável" é o owner ou é um contato próprio.
+- **Opções:** **é o owner** — nada de campo novo, o trabalho é tipar telefone e organização e exibir (**default proposto**, porque é o que o dado já diz e custa uma tela) · é um **contato próprio**, e nasce `Tenant.responsavel?: { nome, email, telefone? }`, opcional, ausência significando "é o owner", escrita só do administrador da plataforma — campo novo, mas mínimo.
+- **Onde aterrissa:** RN-535 (só nasce na segunda opção); tarefa em `S1612`. Detalhe em `03-spec.md §V-3`.
+
+### ADMINVISAO-4 · o diretório de contas mostra CPF
+
+A coleção `pessoas` guarda CPF em claro e é cross-tenant. As Security Rules a fecham para **todo mundo**, inclusive para o administrador da plataforma (`firestore.rules:2688`). Não é omissão: é a escolha mais conservadora do arquivo inteiro.
+
+- **Caso de uso:** duas pessoas se cadastram com nomes parecidos e você precisa saber se são a mesma. Com CPF a resposta é imediata; sem, você compara e-mail e telefone e às vezes não resolve.
+- **Job story:** quando eu vou liberar o acesso de alguém, eu quero ter certeza de quem é a pessoa, para não liberar a conta errada.
+- **O que fica com você:** manter `pessoas` fechada, ou abrir uma leitura de CPF para o painel master.
+- **Por que agora:** abrir depois é a mesma decisão com uma tela já construída em cima, e a fronteira fica mais difícil de defender quando alguém já se acostumou a ver o número.
+- **Opções:** **manter fechada** — o diretório usa nome, e-mail, telefone e organização (**default proposto**, e é o que a base de código já decidiu por escrito) · abrir leitura de CPF **só** por callable auditado, com registro de cada consulta, no molde do `getBankDetailsForPayout` · abrir a Rule para o administrador — a mais barata de construir e a mais cara de defender, porque transforma a coleção de CPF do sistema inteiro em leitura de painel.
+- **Onde aterrissa:** RN-533; tarefas `S1615-T1` e `S1615-T5`. Frente jurídica: **LGPD-1**. Detalhe em `03-spec.md §V-4`.
+
+### ADMINVISAO-5 · o que "tenta fazer alguma ação" quer dizer, e como a liberação direta termina
+
+Vem da sua própria decisão de 09/08 (ADMIN-USUARIOS-1), e o registro daquele dia já dizia que ela viria como pergunta de spec. A **RN-510**, que está no ar, faz o aviso subir na **primeira interação** — qualquer gesto sobre algo acionável, botão, link, item de menu ou campo, inclusive por teclado; fechado, ele rearma. Sua frase foi "depois que a pessoa já entra no sistema e tenta fazer alguma ação".
+
+- **Caso de uso:** a pessoa entra, navega pelo menu para conhecer o painel e não clica em nada que faça coisa alguma. Pela regra em vigor, o aviso já subiu no primeiro item de menu. Pela leitura estrita da sua frase, ele só sobe quando ela tentar uma ação bloqueada.
+- **Job story:** quando eu chego num sistema novo sem acesso liberado, eu quero entender o que fazer sem ser interrompido antes de ter olhado nada.
+- **O que fica com você:** duas perguntas ligadas. **(a)** "Ação" é qualquer gesto, ou é ação **bloqueada**? **(b)** Quando você libera alguém direto, sem código: o que tira a conta da vitrine, o que o aviso passa a dizer para quem espera liberação em vez de código, e como a tela descobre que foi liberada sem a pessoa recarregar?
+- **Opções para (a):** ratificar a RN-510 (**default proposto** — é o que está no ar, foi medido em 08/08, e sua frase cabe nela) · restringir à ação bloqueada, com o custo de reescrever P11 e P14.
+- **Opções para (b):** **sem default proposto.** A liberação direta é caminho que a RN-510 não prevê, e inventar o comportamento aqui seria decidir por você numa superfície que você acabou de rever.
+- **Onde aterrissa:** delta na RN-510 em [[LEELA-E16-plataforma-superadmin]]; tarefas `S1615-T3` e `S1615-T4`. Detalhe em `03-spec.md §V-5`.
 
 ## Ações que só você pode executar
 

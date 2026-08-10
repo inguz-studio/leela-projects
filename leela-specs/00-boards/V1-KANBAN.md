@@ -110,6 +110,34 @@ tags:
         - [ ] S1610-T6 custo, markup e margem viram funções do core, com margem negativa à mostra ⚔
         - [ ] S1610-T7 a economia do parcelamento aparece na tela de termos, linha a linha
         - [ ] S1610-T8 a grade de taxa por parcela dos planos avisa que não move preço nenhum
+- [ ] **[E16] O painel master passa a mostrar cada produtora por dentro, e o sistema inteiro por cima** — você abre uma produtora e vê os eventos, os clubs, os clientes, as vendas, o que ela gerou, o que ela tem a receber, em que plano está e quem responde por ela; e passa a ter as listas de todos os eventos e de todos os clubs do sistema 📋 especificado em 09/08 · a conferência achou que o administrador **já** cruza a fronteira em 9 dos 11 itens, então quase nada é permissão e quase tudo é tela · **fica com você:** **V-1** (o que "faturamento" nomeia), **V-2** (clientes: comportamento ou contato), **V-3** (responsável é o dono da conta?), **V-4** (CPF no diretório) e **V-5** (o gatilho do aviso) [[LEELA-E16-plataforma-superadmin]]
+    - [ ] **S1612 · A ficha do tenant: o que ele produz e para quem** — uma rota com abas, não sete endereços
+        - [ ] S1612-T1 a SubNav da ficha nasce sem reescrever o resumo que já está no ar
+        - [ ] S1612-T2 leitura por tenant de eventos e clubs, paginada
+        - [ ] S1612-T3 a aba de eventos da produtora
+        - [ ] S1612-T4 a aba de clubs da produtora
+        - [ ] S1612-T5 os clientes chegam por servidor, e a regra que os protege continua fechada
+        - [ ] S1612-T6 a aba de clientes, sem contato e sem documento
+        - [ ] S1612-T7 o canário que impede alguém de "resolver" o problema abrindo a regra
+    - [ ] **S1613 · A ficha do tenant: a economia dele** — o número vem do carimbo, nunca da conta refeita
+        - [ ] S1613-T1 leitura por tenant de pedidos e pagamentos, paginada
+        - [ ] S1613-T2 a aba de vendas, com o líquido certo também no modo repassada ⚔
+        - [ ] S1613-T3 o agregado macro deixa de depender de alguém lembrar de clicar
+        - [ ] S1613-T4 o faturamento da produtora, com a idade do número à mostra ⚔
+        - [ ] S1613-T5 repasses e saldo da produtora dentro da ficha
+        - [ ] S1613-T6 o plano aplicado aparece, e a tela avisa quando o termo já não é ele
+    - [ ] **S1614 · Todos os eventos e todos os clubs do sistema** — duas listas, sem regra nova
+        - [ ] S1614-T1 leitura global paginada, com contagem que não mente
+        - [ ] S1614-T2 a lista de todos os eventos, com a produtora em cada linha
+        - [ ] S1614-T3 a lista de todos os clubs
+        - [ ] S1614-T4 os dois endereços entram no menu do painel master
+    - [ ] **S1615 · O diretório de contas no painel master** — uma tela, dois modos, e o mais fechado é o padrão
+        - [ ] S1615-T1 a leitura do diretório, com os campos mínimos
+        - [ ] S1615-T2 a tela de contas: fila de quem espera, diretório de quem existe
+        - [ ] S1615-T3 liberar acesso direto passa por servidor e deixa rastro
+        - [ ] S1615-T4 o aviso de boas-vindas se ajusta à sua resposta sobre o gatilho
+        - [ ] S1615-T5 o CPF de todo mundo continua fora do alcance do painel
+    - [ ] **Dívida · o crachá de administrador tem duas leituras que não conversam** — quem tem a capacidade nova e não o papel antigo lê tudo e é barrado em quase toda ação; telas carregam e botões falham sem explicar
 - [ ] **[E00] A limpeza das imagens de build entra no fechamento de sprint** — cada deploy de function guarda uma imagem no Artifact Registry e a fatura cresce sem nada avisando; a janela de 7 dias está decidida por default e a execução entra na esteira, sem voltar a você. Regra permanente da mesma leva: limpeza não interrompe o dono 📋 higiene · item 58 [[LEELA-E00-fundacao-tecnica]]
     - [ ] **S031 · Retenção das imagens de build**
         - [ ] S031-T1 limpeza religada com janela de 7 dias no Artifact Registry do `leela-hub`

@@ -1810,3 +1810,136 @@ a condição de reabertura do item, e continua sendo do dono.
 outras 26 telas que o usam seguem sem trava de fundo, e a review reforça a recomendação de subir
 — com um motivo a mais: fora do DS, o ciclo de vida da trava não está amarrado ao do diálogo, e
 foi dessa folga que os dois defeitos nasceram. É conversa com review própria.
+
+## Delta a visão master dos tenants (SPEC-ADMIN-VISAO · 2026-08-09)
+
+Ordem do dono em 09/08, verbatim e leitura completa em
+`02-rodadas/2026-08-09-admin-visao/01-ordem-do-dono.md`. Ele pediu duas famílias: **drill-down por
+tenant** (eventos, clubs, clientes, vendas, faturamento gerado, repasses, plano de cobrança,
+responsável) e **listas globais** (todos os eventos, todos os clubs, todos os usuários). A frase que
+fechou o pedido — *"temos isso no banco então acho que não seria dificuldade em ver isso no painel
+admin"* — foi tratada como hipótese a conferir campo a campo, não como fato. Inventário em
+`02-inventario-gap-map.md`, spec em `03-spec.md`, fila em `04-fila-build.md`.
+
+### O que a conferência devolveu, e onde a intuição do dono estava certa
+
+Na camada que ele não podia ver, ele estava certo. O `platform_admin` **já** atravessa a fronteira em
+`eventos` (`firestore.rules:744`), `clubes` (`:2018`), `atletas` (`:2812`, leitura),
+`profissionais` (`:2922`), `pagamentos` (`:2530`), `pedidos` (`:2671`), `inscritos` (`:931`) e
+`tenants` (`:154`). **Nove dos onze itens não pedem nenhuma Rule nova**, e as duas listas globais de
+eventos e clubs são coleções raiz cuja consulta passa hoje.
+
+Quatro achados mudam o tamanho da fila, e os quatro estão medidos:
+
+1. **`recomputePlatformRollups` não tem cron.** É `https.onCall` puro; nenhum `pubsub.schedule`
+   aponta para ela. A tela `/plataforma/macro` mostra o retrato do último clique, sem dizer que é
+   isso. Vira RN-531.
+2. **Custo e margem não existem em código.** `custoGateway`, `custoReal`, `receitaPlataforma` e
+   qualquer cálculo de margem têm **zero ocorrências** em `packages/core`, `packages/api-client` e
+   `functions/src` — existem só em markdown de spec. `economiaParcelamento.ts` (S1610-T6) não existe,
+   e o `netValue` do Asaas é descartado de propósito
+   (`functions/src/payments/asaasProvider.ts:1506`, com teste travando).
+3. **`crmClientes` é a única coleção tenant-scoped cujo `allow read` omite `isPlatformAdmin()` de
+   propósito** (`:382`), com a razão escrita na própria Rule: back-office usa Admin SDK. Vira RN-532.
+4. **Não existe nenhuma regra de `collectionGroup` no arquivo.** Toda CG vinda do client SDK é
+   negada, inclusive para administrador — enquanto `firestore.indexes.json` **já tem** índices
+   `COLLECTION_GROUP` servindo consumidores server-side. Índice existe, Rule não; o erro pareceria
+   falta de índice e não é.
+
+E dois itens em que "temos no banco" **não se sustenta**: não existe campo de **responsável** próprio
+do tenant (só `ownerUid`), e não existe **plano vivo** por tenant — `aplicarPlano` **estampa** os
+números no termo e grava `planoAplicadoId`, sem vínculo.
+
+### Regras de negócio novas (faixa RN-530 a RN-535)
+
+- **RN-530 · A visão master lê o carimbo, nunca recalcula dinheiro.** Toda cifra do painel master
+  deriva do gravado: `conciliacao.taxaValor` e `conciliacao.repasseOrganizador` por venda (congelados
+  na confirmação, RN-179), `gmvAcumulado` e os agregados de `platform/rollups`. O cliente não
+  recompõe taxa nem líquido a partir de percentual e não soma venda a venda para produzir total. A
+  **RN-182 é mode-aware**: `incorporada` ⇒ `face − taxa(meio)`; `repassada` ⇒ **face cheio**. Aplicar
+  `face − taxa` a todo mundo erraria o número de todo evento repassado. Fonte ausente ⇒ campo
+  **vazio com rótulo**, nunca zero e nunca estimativa silenciosa (espelha RN-455).
+- **RN-531 · Agregado macro tem idade declarada, e uma atualização confiável.** Toda superfície que
+  exiba valor de `platform/rollups` mostra o `atualizadoEm` e sinaliza obsolescência. O recompute
+  ganha execução agendada, preservada a invocação manual — é recompute integral e idempotente
+  (`set()` sobre a varredura de `tenants`), então agendar não introduz dupla contagem. Estende
+  RN-409.
+- **RN-532 · Perfil de cliente cruza a fronteira por servidor, nunca por Rule.** A visão de clientes
+  do painel master é servida por **callable com Admin SDK**, autorizado por `isPlatformAdmin` do
+  core; `firestore.rules:382` permanece como está e nenhuma leitura de `crmClientes` pelo client SDK
+  é acrescentada. O callable devolve só o que o CRM já minimiza (RN-172): sem CPF, e-mail, telefone
+  ou endereço.
+- **RN-533 · O diretório de contas é do administrador, é mínimo e não sai da tela.** Escopo
+  estritamente `platform_admin` (conta separada, RN-449). Alcance sobre `atletas` e `profissionais`;
+  **`pessoas` permanece fechada** (`:2688`) e CPF não aparece no painel master sem decisão própria.
+  **Sem export, CSV ou download.** Toda leitura que atravesse a fronteira por servidor registra
+  acesso, e a **negativa também**, no molde de `getBankDetailsForPayout`. Frente jurídica: LGPD-1.
+- **RN-534 · Plano aplicado é estampa, e a tela declara a divergência.** A ficha mostra
+  `planoAplicadoId` junto da versão do termo; quando os números vigentes divergem do plano estampado,
+  a tela **diz que divergiu** em vez de exibir o nome do plano como verdade. Sinal de leitura, não
+  bloqueio — a edição manual do termo é legítima.
+- **RN-535 · Responsável do tenant · condicionada ao veto do dono (V-3).** Se "responsável" for o
+  owner, a RN não nasce e o trabalho é tipar `telefone`/`organizacao` (hoje gravados por
+  `packages/api-client/src/platform/profissionais.ts:113` **sem estarem na interface `Profissional`**)
+  e exibir. Se for contato próprio, nasce `Tenant.responsavel?: { nome, email, telefone? }` —
+  opcional, ausência significando "é o owner", escrita exclusiva do `platform_admin` (RN-404), sem
+  coleção nem índice novo.
+
+### Histórias novas
+
+| História | O que entrega | Espera |
+|---|---|---|
+| **LEELA-S1612** · A ficha do tenant: o que ele produz e para quem | SubNav na rota que já existe + abas Eventos, Clubs e Clientes (esta por callable) | V-2, V-3 |
+| **LEELA-S1613** · A ficha do tenant: a economia dele | abas Vendas e Financeiro (faturamento, saldo, repasses) + plano aplicado com divergência | V-1 |
+| **LEELA-S1614** · Todos os eventos e todos os clubs do sistema | duas listas globais, coleção raiz, sem Rule nova e sem collection group | — |
+| **LEELA-S1615** · O diretório de contas no painel master | uma rota com dois modos: Fila (aguardando liberação) e Diretório (leitura) | V-4, V-5 |
+
+**O desenho que evita sete rotas.** O drill-down é **uma** rota — `/plataforma/tenants/:tenantId` —
+com SubNav e abas filhas. O dono não abre o painel para consultar "os clubs do Castelo"; abre para
+entender uma produtora, e a pergunta seguinte muda conforme a primeira responde. A rota já existe e
+carrega perfil, owner, quatro KPIs e as ações de lifecycle; nada do que está no ar é reescrito.
+
+### A costura com a ADMIN-USUARIOS-1, e por que é uma tela e não duas
+
+A decisão de 09/08 mandou o cadastro aparecer no painel master, com aprovação por código ou liberação
+direta. Ela e a "visão de todos os usuários" desta ordem se tocam sem serem iguais: uma é **fila de
+trabalho**, a outra é **diretório**. Duas telas duplicariam lista de pessoas no mesmo painel; uma
+tela sem separar os modos transformaria diretório em painel de ação e exporia mais gente do que o
+trabalho exige. A S1615 resolve com **uma rota, dois modos, Fila como padrão** — o recorte mais
+fechado é o que abre.
+
+A tensão com a **RN-510** continua onde estava e **não foi reaberta por esta lane**: se "tenta fazer
+alguma ação" é qualquer gesto (ratificando a regra em vigor) ou é ação **bloqueada** (mudando P11 e
+P14) é pergunta do dono, registrada como **V-5** com as duas leituras e o custo de cada uma, como o
+registro de 09/08 já havia determinado.
+
+### Dependências declaradas
+
+- **REDESIGN-DS** — as quatro ondas de tela dependem dele, e a dependência é maior do que parece. O
+  glass é atributo no `<html>` (`packages/design-system/src/theme/generate.ts:286-303`), e o painel
+  do organizador e o painel master são a **mesma aplicação**: alternar por área é decisão de
+  mecanismo daquela rodada. Além disso, **desligar o glass devolve os tokens opacos do tema e não
+  produz fundo preto** — preto exige variante de superfície ou quarto tema. O dono escreveu "se
+  possível" e mandou propor alternativa a ele em vez de decidir em silêncio.
+- **S1610** — dona de `platform/config.custoGateway` (T3), do carimbo do custo na venda (T4), do
+  custo real do gateway (T5) e do módulo de economia (T6). Esta rodada **consome** o que ela
+  entregar; enquanto não subir, a coluna de margem mostra "custo não configurado", que é o que a
+  RN-455 já manda.
+- **Vetáveis V-1 a V-5** — consolidados em `03-spec.md §Parte 5`, sobem ao dono de uma vez.
+
+### Dívida encontrada, registrada sem carona
+
+**A claim de administrador tem duas leituras que não conversam.** As Rules aceitam as duas pernas
+(`role == 'platform_admin'` **ou** `platformAdmin == true`, `firestore.rules:73-77`) e o core faz o
+mesmo (`packages/core/src/platform/roles.ts:131`). Mas quase toda guarda de callable compara
+`claims.role` na mão — `assertPlatformAdmin` (`functions/src/finance/atores.ts:45`), `aplicarPlano`,
+`setTaxaPlataformaGlobal`, `transitionTenant`, `provisionTenant`, `recomputePlatformRollups`. Só
+`setPlatformAdminCapability` usa o predicado. Uma conta com capacidade e sem o papel legado **lê**
+tudo e **é barrada** em quase toda escrita: telas carregam, ações falham, e o erro não explica por
+quê. Não bloqueia esta rodada (a conta do dono tem o papel legado) e por isso não entra em onda
+nenhuma — mas encosta em todas, e vira card próprio.
+
+**Três lacunas de teste** que esta rodada acrescenta como tarefa, porque as telas novas passam
+exatamente por elas: nenhum caso exercita `platform_admin` contra `crmClientes` (a negação mais
+consequente do arquivo não tem canário); nenhum caso de `collectionGroup` com crachá de
+administrador; e `pessoas` (`:2688`) não tem caso nomeado com administrador.
