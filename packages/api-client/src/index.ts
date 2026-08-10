@@ -551,6 +551,57 @@ export {
 export type { SetTaxaPlataformaGlobalResult } from './platform/taxaPlataforma';
 
 // ---------------------------------------------------------------------------
+// Plataforma — visão master de tenants: base de leitura, sem pixel
+// (ADMIN-VISAO onda 1 · S1612/S1613/S1614 · RN-539). Ficha do tenant
+// (eventos/clubs/vendas), listas globais e o callable de clientes —
+// tudo consumido pelas ondas de tela (2, 3, 4) que vêm depois desta.
+// ---------------------------------------------------------------------------
+export {
+  listarEventosDoTenantPaginado,
+  listarClubesDoTenantPaginado,
+  TENANT_DRILLDOWN_PAGE_SIZE,
+  TENANT_DRILLDOWN_PAGE_SIZE_MAX,
+} from './platform/tenantEventosClubs';
+export type {
+  TenantDrilldownCursor,
+  TenantDrilldownOptions,
+  ListarEventosDoTenantPaginadoResult,
+  ListarClubesDoTenantPaginadoResult,
+} from './platform/tenantEventosClubs';
+export {
+  listarPedidosDoTenantPaginado,
+  listarPagamentosDoTenantPaginado,
+  TENANT_VENDAS_PAGE_SIZE,
+  TENANT_VENDAS_PAGE_SIZE_MAX,
+} from './platform/tenantVendas';
+export type {
+  TenantVendasCursor,
+  TenantVendasOptions,
+  ListarPedidosDoTenantPaginadoResult,
+  ListarPagamentosDoTenantPaginadoResult,
+} from './platform/tenantVendas';
+export {
+  listarEventosGlobalPaginado,
+  listarClubesGlobalPaginado,
+  LISTA_GLOBAL_PAGE_SIZE,
+  LISTA_GLOBAL_PAGE_SIZE_MAX,
+} from './platform/listasGlobais';
+export type {
+  ListaGlobalCursor,
+  ListarEventosGlobalOptions,
+  ListarClubesGlobalOptions,
+  ListarEventosGlobalResult,
+  ListarClubesGlobalResult,
+} from './platform/listasGlobais';
+export { listarClientesDoTenant } from './platform/clientesTenant';
+export type {
+  ClienteTenantView,
+  ClienteTenantEventoResumo,
+  ListarClientesDoTenantInput,
+  ListarClientesDoTenantResult,
+} from './platform/clientesTenant';
+
+// ---------------------------------------------------------------------------
 // Overview — dashboard do profissional (LEELA-E02 · S600-T2)
 // KPIs + alertas via callable getOverview (contrato único, 1 round-trip).
 // ---------------------------------------------------------------------------
