@@ -329,6 +329,77 @@ describe('listarClientesDoTenant (callable) — autorização (RN-539/RN-401)', 
   });
 });
 
+// ---------------------------------------------------------------------------
+// ONDA1-FIX · D-3/D-4 — bordas honestas do cursor e do pageSize (RN-539).
+// Falsificação real (contra o código velho):
+//   D-3: cursor de doc apagado degradava EM SILÊNCIO para a página 1 — o
+//        `rejects.toMatchObject({ code: 'failed-precondition' })` falhava
+//        porque a promise RESOLVIA (com os itens da página 1 de novo).
+//   D-4: cursor 'a/b' → col.doc() lançava Error cru (path de 5 segmentos) e
+//        pageSize 'abc' → limit(NaN) lançava — nos dois casos o rejeitado não
+//        tinha code 'invalid-argument' (Error sem code → 'internal' no wire).
+// ---------------------------------------------------------------------------
+
+describe('listarClientesDoTenant — bordas do cursor e do pageSize (ONDA1-FIX · D-3/D-4)', () => {
+  const authAdmin = () => ({
+    auth: { uid: ADMIN_LEGADO_UID, token: { role: 'platform_admin' } },
+  });
+
+  it('cursor de doc APAGADO entre páginas → failed-precondition explícito, nunca página 1 em silêncio (D-3)', async () => {
+    const batch = adminDb.batch();
+    batch.set(adminDb.doc(crmPath(CASTELO_ID, 'c1')), crmClienteDoc({ nome: 'C1', ltv: 300 }));
+    batch.set(adminDb.doc(crmPath(CASTELO_ID, 'c2')), crmClienteDoc({ nome: 'C2', ltv: 200 }));
+    batch.set(adminDb.doc(crmPath(CASTELO_ID, 'c3')), crmClienteDoc({ nome: 'C3', ltv: 100 }));
+    await batch.commit();
+
+    const p1 = (await runCallable(
+      { tenantId: CASTELO_ID, pageSize: 2 },
+      authAdmin()
+    )) as { itens: AnyRec[]; proxCursor: string | null };
+    expect(p1.proxCursor).toBe('c2');
+
+    // O doc do cursor some entre as páginas (cliente reagregado/expurgado)
+    await adminDb.doc(crmPath(CASTELO_ID, 'c2')).delete();
+
+    await expect(
+      runCallable({ tenantId: CASTELO_ID, pageSize: 2, cursor: p1.proxCursor }, authAdmin())
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('cursor com "/" (viraria path de 5 segmentos no Admin SDK) → invalid-argument, não internal (D-4)', async () => {
+    await expect(
+      runCallable({ tenantId: CASTELO_ID, cursor: 'a/b' }, authAdmin())
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('cursor não-string ou vazio → invalid-argument, nunca ignorado em silêncio (D-4)', async () => {
+    await expect(
+      runCallable({ tenantId: CASTELO_ID, cursor: 42 }, authAdmin())
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(
+      runCallable({ tenantId: CASTELO_ID, cursor: '' }, authAdmin())
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('pageSize não numérico → invalid-argument, não internal via limit(NaN) (D-4)', async () => {
+    await expect(
+      runCallable({ tenantId: CASTELO_ID, pageSize: 'abc' }, authAdmin())
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(
+      runCallable({ tenantId: CASTELO_ID, pageSize: 2.5 }, authAdmin())
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('pageSize numérico fora da faixa continua CLAMPADO (comportamento preservado, não virou erro)', async () => {
+    await adminDb.doc(crmPath(CASTELO_ID, 'c1')).set(crmClienteDoc({ nome: 'C1' }));
+    const res = (await runCallable(
+      { tenantId: CASTELO_ID, pageSize: 0 },
+      authAdmin()
+    )) as { itens: AnyRec[] };
+    expect(res.itens).toHaveLength(1); // clamp para 1, sem erro
+  });
+});
+
 describe('listarClientesDoTenantCore — isolamento cross-tenant', () => {
   it('clientes de OUTRO tenant nunca aparecem na lista deste tenant', async () => {
     await adminDb.doc(crmPath(CASTELO_ID, 'do-castelo')).set(crmClienteDoc({ nome: 'Do Castelo' }));

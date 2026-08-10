@@ -29,6 +29,16 @@
 // vira registro em `auditoriaAcessos` — concedido E negado — gravado FORA de
 // transação e ANTES do throw. Sem uid autenticado não há a quem atribuir a
 // tentativa: `unauthenticated` não registra (mesma doutrina do vizinho).
+//
+// Bordas honestas (ONDA1-FIX · D-3/D-4, review ONDA1-REV): input malformado
+// de admin (cursor não-string/vazio/com "/", pageSize não inteiro) é
+// `invalid-argument` — nunca o Error cru do Admin SDK virando `internal`
+// opaco. Cursor apontando doc que sumiu entre páginas (cliente reagregado/
+// expurgado) é `failed-precondition` explícito: recomeçar da página 1 em
+// silêncio faria o consumidor que segue `proxCursor` ver duplicatas (e um
+// consumidor mecânico, loop). A validação vem DEPOIS da autorização (não
+// admin não sonda a borda) e ANTES de qualquer leitura — nesses throws
+// nenhuma PII foi lida e nada é registrado como `concedido`.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -152,23 +162,61 @@ export async function listarClientesDoTenantCore(
     );
   }
 
+  // Validação de input (ONDA1-FIX · D-4) — depois da autorização, antes de
+  // qualquer leitura: malformação de admin é `invalid-argument` honesto,
+  // nunca `internal` opaco (Math.max(1, NaN) → limit(NaN) lançava Error cru).
+  const pageSizeRaw = input?.pageSize;
+  if (
+    pageSizeRaw !== undefined &&
+    pageSizeRaw !== null &&
+    (typeof pageSizeRaw !== 'number' || !Number.isInteger(pageSizeRaw))
+  ) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      '"pageSize" deve ser um número inteiro.'
+    );
+  }
   const pageSize = Math.min(
-    Math.max(1, input?.pageSize ?? LISTAR_CLIENTES_TENANT_PAGE_SIZE),
+    Math.max(1, pageSizeRaw ?? LISTAR_CLIENTES_TENANT_PAGE_SIZE),
     LISTAR_CLIENTES_TENANT_PAGE_SIZE_MAX
   );
+
+  // `clienteKey` é um docId simples (hash) — "/" nunca é legítimo e viraria
+  // path de 5 segmentos em col.doc() (Error cru do Admin SDK → `internal`).
+  // Não-string/vazio também não é "sem cursor": é input quebrado, e ignorar
+  // em silêncio devolveria a página 1 como se fosse a continuação (D-4).
+  const cursorRaw = input?.cursor;
+  if (
+    cursorRaw !== undefined &&
+    cursorRaw !== null &&
+    (typeof cursorRaw !== 'string' ||
+      cursorRaw.length === 0 ||
+      cursorRaw.includes('/'))
+  ) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      '"cursor" deve ser um clienteKey válido (docId simples, sem "/").'
+    );
+  }
 
   const col = db.collection(`tenants/${tenantId}/${SUBCOLECAO_CRM_CLIENTES}`);
   let q = col.orderBy('ltv', 'desc').limit(pageSize);
 
-  if (typeof input?.cursor === 'string' && input.cursor.length > 0) {
-    const cursorSnap = await col.doc(input.cursor).get();
-    // Cursor apontando doc que sumiu entre páginas (raro — cliente
-    // reagregado/expurgado no meio da varredura): degrada para a primeira
-    // página em vez de lançar. Uma lista de PII não é o lugar para um erro
-    // opaco por causa de uma corrida inofensiva.
-    if (cursorSnap.exists) {
-      q = q.startAfter(cursorSnap);
+  if (typeof cursorRaw === 'string') {
+    const cursorSnap = await col.doc(cursorRaw).get();
+    if (!cursorSnap.exists) {
+      // ONDA1-FIX · D-3: o doc do cursor sumiu entre páginas (cliente
+      // reagregado/expurgado). Degradar em silêncio para a página 1 fazia o
+      // consumidor que segue `proxCursor` receber duplicatas — e um
+      // consumidor mecânico entrar em loop (página 1 cheia devolve
+      // `proxCursor` de novo). Erro honesto e RECUPERÁVEL: o chamador
+      // recomeça sem cursor, sabendo que recomeçou.
+      throw new https.HttpsError(
+        'failed-precondition',
+        'O cursor não aponta mais para um cliente existente — recomece a paginação sem "cursor".'
+      );
     }
+    q = q.startAfter(cursorSnap);
   }
 
   const snap = await q.get();
