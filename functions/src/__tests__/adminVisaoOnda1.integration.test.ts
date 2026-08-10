@@ -33,7 +33,7 @@ import {
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { SUBCOLECAO_CRM_CLIENTES } from '@leela/core';
@@ -159,6 +159,38 @@ describe('Canário RN-539/S1612-T7 — crmClientes SEGUE negado pelo client SDK'
 
   it('sanidade: o owner do PRÓPRIO tenant (isTenantWriter) continua lendo — a Rule não regrediu', async () => {
     await assertSucceeds(getDoc(doc(ownerCasteloA().firestore(), ...P())));
+  });
+
+  // ONDA1-FIX · D-6 (proposta da review adotada): as três pontas acima usam
+  // `getDoc` — falsificam a mutação `|| isPlatformAdmin()` no `allow read`,
+  // mas uma mutação que abrisse SÓ `allow list: if isPlatformAdmin()` (query,
+  // sem o get) passaria ilesa por elas. Esta ponta fecha o buraco: `getDocs`
+  // de uma QUERY na subcoleção, negado nas DUAS pernas do RN-401.
+  it('list (getDocs de query) TAMBÉM é negado nas duas pernas — mutação que abrisse só allow list não passa (D-6)', async () => {
+    await assertFails(
+      getDocs(
+        query(
+          collection(
+            adminLegado().firestore(),
+            'tenants',
+            CASTELO_ID,
+            SUBCOLECAO_CRM_CLIENTES
+          )
+        )
+      )
+    );
+    await assertFails(
+      getDocs(
+        query(
+          collection(
+            adminCapacidade().firestore(),
+            'tenants',
+            CASTELO_ID,
+            SUBCOLECAO_CRM_CLIENTES
+          )
+        )
+      )
+    );
   });
 });
 
