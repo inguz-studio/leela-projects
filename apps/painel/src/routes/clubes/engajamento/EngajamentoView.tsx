@@ -26,6 +26,7 @@
 import type { ReactNode } from 'react';
 import {
   BarChart,
+  Button,
   EmptyState,
   KpiCard,
   PageHeader,
@@ -36,7 +37,7 @@ import {
 } from '@leela/design-system';
 import { Activity, GitBranch, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
-import { formatInt } from '../_lib/format';
+import { formatDecimal1, formatInt } from '../_lib/format';
 import type {
   ContagemRotulada,
   DesafioEngajado,
@@ -178,13 +179,11 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             title="Nenhum club para analisar"
             description="O engajamento nasce da comunidade. Crie um club e esta tela passa a contar quem aparece, o que move o grupo e quanto disso chega aos seus eventos."
             action={
-              <button
-                type="button"
-                onClick={onCriarClube}
-                className="text-[length:var(--font-size-sm)] text-[var(--action-brand-tint-fg)] underline underline-offset-4"
-              >
+              // Botão do DS, não markup cru — mesmo trabalho que ComunidadeResumo.tsx
+              // já faz para "Criar um club" (D-10, REV 2026-08-09 · ADIÇÃO).
+              <Button variant="secondary" size="sm" onClick={onCriarClube}>
                 Criar um club
-              </button>
+              </Button>
             }
           />
         ) : error ? (
@@ -233,7 +232,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <section aria-label="Equilíbrio dos pilares" className="flex flex-col">
                 <SecaoHead
                   titulo="Equilíbrio dos pilares"
-                  descricao="Pontos acumulados sobre a meta de cada pilar, somando os desafios que operam equilíbrio."
+                  descricao="Média de pontos por participante em cada pilar sobre o mínimo exigido, ponderada pelo tamanho dos desafios que operam equilíbrio."
                 />
                 {loading || pilares === null ? (
                   <Skeleton variant="rect" className="h-40" />
@@ -253,9 +252,9 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                         value: l.atual,
                         ...(l.meta > 0 ? { total: l.meta } : {}),
                       }))}
-                      aria-label="Pontos acumulados por pilar sobre a meta"
+                      aria-label="Média de pontos por participante por pilar, ponderada por desafio, sobre o mínimo exigido"
                       height={alturaDeBarras(pilares.linhas.length)}
-                      formatValue={formatInt}
+                      formatValue={formatDecimal1}
                     />
                   </Painel>
                 )}
@@ -264,7 +263,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <section aria-label="Situação dos membros" className="flex flex-col">
                 <SecaoHead
                   titulo="Situação dos membros"
-                  descricao="Quem entrou nos últimos 7 dias, quem segue ativo e quem está sem atividade há 30 dias ou mais."
+                  descricao="Quem entrou nos últimos 7 dias, quem segue ativo e quem está há 30 dias ou mais sem nenhum registro de atividade."
                 />
                 {loading || situacao === null ? (
                   <Skeleton variant="rect" className="h-40" />

@@ -28,7 +28,7 @@ function props(over: Partial<EngajamentoViewProps> = {}): EngajamentoViewProps {
     pilares: {
       desafiosComPilar: 1,
       linhas: [
-        { pilar: 'fisico', rotulo: 'Físico', atual: 150, meta: 300 },
+        { pilar: 'fisico', rotulo: 'Físico', atual: 75.4, meta: 150.9 },
         { pilar: 'mental', rotulo: 'Mental', atual: 30, meta: 100 },
         { pilar: 'espiritual', rotulo: 'Espiritual', atual: 10, meta: 60 },
       ],
@@ -36,7 +36,7 @@ function props(over: Partial<EngajamentoViewProps> = {}): EngajamentoViewProps {
     situacao: [
       { id: 'novo', rotulo: 'Novos (7 dias)', total: 8 },
       { id: 'ativo', rotulo: 'Ativos', total: 120 },
-      { id: 'inativo', rotulo: 'Inativos (30 dias+)', total: 10 },
+      { id: 'inativo', rotulo: 'Sem registro (30 dias+)', total: 10 },
     ],
     entrada: [{ id: 'codigo', rotulo: 'Código do club', total: 90 }],
     desafios: [
@@ -74,14 +74,30 @@ describe('EngajamentoView · o que tem fonte', () => {
     expect(screen.getByText('nos desafios em andamento')).toBeInTheDocument();
   });
 
-  it('pilares aparecem com atual sobre meta', () => {
+  it('pilares aparecem com atual sobre meta, com decimal declarado (D-1: é média, não é pontuação inteira)', () => {
     render(<EngajamentoView {...props()} />);
-    expect(valorNaTabela('Físico')).toContain('150 / 300');
+    expect(valorNaTabela('Físico')).toContain('75,4 / 150,9');
   });
 
-  it('situação dos membros usa o vocabulário da RN-102', () => {
+  it('o bloco de pilares se nomeia como média por participante, no rótulo E no aria-label (D-1)', () => {
     render(<EngajamentoView {...props()} />);
-    expect(valorNaTabela('Inativos (30 dias+)')).toContain('10');
+    expect(
+      screen.getByText(/Média de pontos por participante em cada pilar/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: 'Média de pontos por participante por pilar, ponderada por desafio, sobre o mínimo exigido',
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('situação dos membros usa o rótulo honesto do dado (D-2: não é "sem atividade", é "sem registro")', () => {
+    render(<EngajamentoView {...props()} />);
+    expect(valorNaTabela('Sem registro (30 dias+)')).toContain('10');
+    expect(screen.queryByText(/sem atividade há 30 dias/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/há 30 dias ou mais sem nenhum registro de atividade/i)
+    ).toBeInTheDocument();
   });
 
   it('a ponte com eventos separa ligados de não ligados', () => {
@@ -167,6 +183,14 @@ describe('EngajamentoView · estados da tela', () => {
     expect(
       screen.queryByRole('region', { name: 'Números da comunidade' })
     ).not.toBeInTheDocument();
+  });
+
+  it('o CTA "Criar um club" é o botão do DS, não markup cru (D-10 · ADIÇÃO)', async () => {
+    const onCriarClube = vi.fn();
+    render(<EngajamentoView {...props({ semClubes: true, onCriarClube })} />);
+    const cta = screen.getByRole('button', { name: 'Criar um club' });
+    await userEvent.click(cta);
+    expect(onCriarClube).toHaveBeenCalledTimes(1);
   });
 });
 

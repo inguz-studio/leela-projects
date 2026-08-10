@@ -34,11 +34,21 @@ export const ROTULO_PILAR: Record<Pilar, string> = {
   espiritual: 'Espiritual',
 };
 
-/** Ordem de leitura da saúde da comunidade: quem chegou, quem fica, quem sumiu. */
+/**
+ * Ordem de leitura da saúde da comunidade: quem chegou, quem fica, quem sumiu.
+ *
+ * O rótulo de `inativo` NÃO diz "sem atividade": nenhuma Function em produção
+ * escreve `membro.ultimaAtividadeEm` (só o seed), então `derivarStatus`
+ * (`packages/core/clubs/membro.ts`) sempre cai no fallback `entrouEm` — o
+ * status é, na prática, "entrou há 30 dias ou mais, sem nenhum registro de
+ * atividade desde então", não "treinou pela última vez há 30 dias" (D-2, REV
+ * 2026-08-09). O escritor de `ultimaAtividadeEm` é card de backend próprio,
+ * fora desta lane.
+ */
 export const ROTULO_SITUACAO = {
   novo: 'Novos (7 dias)',
   ativo: 'Ativos',
-  inativo: 'Inativos (30 dias+)',
+  inativo: 'Sem registro (30 dias+)',
 } as const;
 
 export const ROTULO_ENTRADA = {
@@ -69,9 +79,16 @@ export interface ResumoDaComunidade {
 export interface LinhaDePilar {
   pilar: Pilar;
   rotulo: string;
-  /** Pontos acumulados no pilar, somados pelos desafios que reportam pilar. */
+  /**
+   * Média ponderada de pontos por participante no pilar — peso = nº de
+   * participantes do desafio (`qtdParticipantes`), a MESMA base que a
+   * Function usa para tirar o `atual` de cada desafio (`registro.ts` ·
+   * `derivarProgressoPorPilar`). Nunca é soma cross-desafio sem peso — um
+   * desafio de 500 pesa 250× mais que um de 2 (REDESIGN-DS · D-1, REV
+   * 2026-08-09).
+   */
   atual: number;
-  /** Meta do pilar (mínimo do Modelo C ou referência) — 0 quando não há meta. */
+  /** Meta média ponderada pela mesma base (mínimo por participante) — 0 quando não há meta. */
   meta: number;
 }
 
@@ -118,10 +135,17 @@ export function resumirComunidade(
   const ativos = desafios.filter((d) => estaAtivo(d.desafio));
   return {
     clubes: clubes.length,
-    membrosAtivos: clubes.reduce((s, c) => s + c.qtdMembrosAtivos, 0),
+    // ?? 0: club sem o agregado ainda (janela entre criação e a Function
+    // escrever) não pode virar "NaN" no KPI do tenant inteiro (D-7, REV 2026-08-09 · ADIÇÃO).
+    membrosAtivos: clubes.reduce((s, c) => s + (c.qtdMembrosAtivos ?? 0), 0),
     desafiosAtivos: ativos.length,
     participacoes: ativos.reduce((s, d) => s + d.desafio.qtdParticipantes, 0),
   };
+}
+
+/** Arredonda a 1 casa decimal — mesmo critério que a Function usa para persistir o agregado (`registro.ts`). */
+function arred1(x: number): number {
+  return Math.round(x * 10) / 10;
 }
 
 /**
@@ -132,13 +156,18 @@ export function resumirComunidade(
  * traz a chave, e é por isso que `desafiosComPilar` sai junto. Zero desafios
  * com pilar não é "comunidade equilibrada em zero" — é ausência de base, e a
  * tela precisa saber a diferença para não desenhar três barras vazias.
+ *
+ * `atual`/`meta` de cada desafio já são MÉDIAS por participante (fonte:
+ * `derivarProgressoPorPilar`), então cruzar desafios exige MÉDIA PONDERADA
+ * por `qtdParticipantes` — nunca soma cross-desafio sem peso (D-1, REV
+ * 2026-08-09: um desafio de 500 pesava igual a um de 2).
  * @pure
  */
 export function resumirPilares(desafios: readonly DesafioComClube[]): ResumoDosPilares {
-  const acumulado: Record<Pilar, { atual: number; meta: number }> = {
-    fisico: { atual: 0, meta: 0 },
-    mental: { atual: 0, meta: 0 },
-    espiritual: { atual: 0, meta: 0 },
+  const acumulado: Record<Pilar, { atualPonderado: number; metaPonderada: number; peso: number }> = {
+    fisico: { atualPonderado: 0, metaPonderada: 0, peso: 0 },
+    mental: { atualPonderado: 0, metaPonderada: 0, peso: 0 },
+    espiritual: { atualPonderado: 0, metaPonderada: 0, peso: 0 },
   };
   let desafiosComPilar = 0;
 
@@ -148,22 +177,28 @@ export function resumirPilares(desafios: readonly DesafioComClube[]): ResumoDosP
     const chaves = PILARES.filter((p) => porPilar[p] !== undefined);
     if (chaves.length === 0) continue;
     desafiosComPilar += 1;
+    const peso = desafio.qtdParticipantes;
+    if (peso <= 0) continue; // sem participante = sem peso; não distorce a média dos demais
     for (const pilar of chaves) {
       const p = porPilar[pilar];
       if (!p) continue;
-      acumulado[pilar].atual += p.atual;
-      acumulado[pilar].meta += p.meta;
+      acumulado[pilar].atualPonderado += p.atual * peso;
+      acumulado[pilar].metaPonderada += p.meta * peso;
+      acumulado[pilar].peso += peso;
     }
   }
 
   return {
     desafiosComPilar,
-    linhas: PILARES.map((pilar) => ({
-      pilar,
-      rotulo: ROTULO_PILAR[pilar],
-      atual: acumulado[pilar].atual,
-      meta: acumulado[pilar].meta,
-    })),
+    linhas: PILARES.map((pilar) => {
+      const { atualPonderado, metaPonderada, peso } = acumulado[pilar];
+      return {
+        pilar,
+        rotulo: ROTULO_PILAR[pilar],
+        atual: peso > 0 ? arred1(atualPonderado / peso) : 0,
+        meta: peso > 0 ? arred1(metaPonderada / peso) : 0,
+      };
+    }),
   };
 }
 

@@ -10,6 +10,18 @@ export function formatInt(valor: number): string {
 }
 
 /**
+ * Decimal com 1 casa SEMPRE visível, pt-BR (37.2 → "37,2"; 150 → "150,0").
+ * Usado onde o número é uma MÉDIA — a casa fixa é o que impede a tela de
+ * parecer contagem inteira por cima de um valor derivado (REDESIGN-DS · D-1).
+ */
+export function formatDecimal1(valor: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(valor);
+}
+
+/**
  * Iniciais para avatar (máx. 3). "Corrida Perfeita Sul" → "CPS";
  * "Wiser Trilhas" → "WT"; "Runners" → "RU".
  */

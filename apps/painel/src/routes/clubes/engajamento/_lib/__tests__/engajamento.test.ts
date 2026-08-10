@@ -42,6 +42,15 @@ describe('resumirComunidade · os quatro números do topo', () => {
     });
   });
 
+  it('um club sem o agregado ainda (janela pré-Function) não vira NaN no KPI do tenant (D-7 · ADIÇÃO)', () => {
+    const r = resumirComunidade(
+      [{ qtdMembrosAtivos: 120 }, { qtdMembrosAtivos: undefined as unknown as number }],
+      []
+    );
+    expect(r.membrosAtivos).toBe(120);
+    expect(Number.isNaN(r.membrosAtivos)).toBe(false);
+  });
+
   it('rascunho e encerrado não contam como desafio ativo nem como participação', () => {
     const r = resumirComunidade(
       [{ qtdMembrosAtivos: 10 }],
@@ -66,10 +75,11 @@ describe('resumirComunidade · os quatro números do topo', () => {
 });
 
 describe('resumirPilares · a assinatura do produto', () => {
-  it('soma atual e meta de cada pilar entre os desafios que reportam pilar', () => {
+  it('cruza atual e meta de cada pilar entre desafios pela MÉDIA PONDERADA por participante, nunca soma sem peso (D-1)', () => {
     const r = resumirPilares([
       doClube(
         mkDesafio({
+          qtdParticipantes: 40,
           progressoPorPilar: {
             fisico: { atual: 100, meta: 200 },
             mental: { atual: 30, meta: 100 },
@@ -78,6 +88,7 @@ describe('resumirPilares · a assinatura do produto', () => {
       ),
       doClube(
         mkDesafio({
+          qtdParticipantes: 40,
           progressoPorPilar: {
             fisico: { atual: 50, meta: 100 },
             espiritual: { atual: 10, meta: 60 },
@@ -86,11 +97,36 @@ describe('resumirPilares · a assinatura do produto', () => {
       ),
     ]);
     expect(r.desafiosComPilar).toBe(2);
+    // Pesos iguais (40 e 40) ⇒ a média ponderada equivale à média simples,
+    // NUNCA à soma crua (que daria 150/300 — o defeito que a REV achou).
     expect(r.linhas).toEqual([
-      { pilar: 'fisico', rotulo: 'Físico', atual: 150, meta: 300 },
+      { pilar: 'fisico', rotulo: 'Físico', atual: 75, meta: 150 },
       { pilar: 'mental', rotulo: 'Mental', atual: 30, meta: 100 },
       { pilar: 'espiritual', rotulo: 'Espiritual', atual: 10, meta: 60 },
     ]);
+  });
+
+  it('pondera por qtdParticipantes — um desafio de 500 não pesa igual a um de 2 (D-1, caso da REV)', () => {
+    const r = resumirPilares([
+      doClube(
+        mkDesafio({
+          qtdParticipantes: 2,
+          progressoPorPilar: { fisico: { atual: 100, meta: 200 } },
+        })
+      ),
+      doClube(
+        mkDesafio({
+          qtdParticipantes: 500,
+          progressoPorPilar: { fisico: { atual: 10, meta: 20 } },
+        })
+      ),
+    ]);
+    const fisico = r.linhas.find((l) => l.pilar === 'fisico')!;
+    // (100×2 + 10×500) / 502 = 10,358… → 10,4 | (200×2 + 20×500) / 502 = 20,717… → 20,7
+    expect(fisico.atual).toBe(10.4);
+    expect(fisico.meta).toBe(20.7);
+    // A soma crua (o bug antigo) daria 110 — bem longe do valor ponderado certo.
+    expect(fisico.atual).not.toBe(110);
   });
 
   it('sempre devolve os três pilares, na ordem do produto', () => {
@@ -110,6 +146,18 @@ describe('resumirPilares · a assinatura do produto', () => {
     const r = resumirPilares([doClube(mkDesafio({ progressoPorPilar: {} }))]);
     expect(r.desafiosComPilar).toBe(0);
   });
+
+  it('desafio sem participante não pesa (e não gera NaN)', () => {
+    const r = resumirPilares([
+      doClube(
+        mkDesafio({ qtdParticipantes: 0, progressoPorPilar: { fisico: { atual: 100, meta: 200 } } })
+      ),
+    ]);
+    const fisico = r.linhas.find((l) => l.pilar === 'fisico')!;
+    expect(fisico.atual).toBe(0);
+    expect(fisico.meta).toBe(0);
+    expect(Number.isNaN(fisico.atual)).toBe(false);
+  });
 });
 
 describe('resumirSituacao · RN-102', () => {
@@ -123,7 +171,10 @@ describe('resumirSituacao · RN-102', () => {
     expect(resumirSituacao(membros)).toEqual([
       { id: 'novo', rotulo: 'Novos (7 dias)', total: 1 },
       { id: 'ativo', rotulo: 'Ativos', total: 2 },
-      { id: 'inativo', rotulo: 'Inativos (30 dias+)', total: 1 },
+      // Rótulo honesto (D-2): nenhuma Function grava `ultimaAtividadeEm` em
+      // produção, então "inativo" aqui não é "sem atividade" — é "sem
+      // registro". Ver ROTULO_SITUACAO para a prova completa.
+      { id: 'inativo', rotulo: 'Sem registro (30 dias+)', total: 1 },
     ]);
   });
 
