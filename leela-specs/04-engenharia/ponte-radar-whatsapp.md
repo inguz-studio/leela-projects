@@ -229,7 +229,7 @@ Um para um, e é a fronteira de locação inteira. O identificador de instância
 
 A máquina que roda a instância é do organizador, e ele é o controlador do texto bruto que mora nela (RN-530). Isso não é detalhe de operação: é a frase que sustenta a promessa de que mensagem, telefone e identificador morrem fora da Leela. Mudar a hospedagem muda o sujeito dessa frase, e é por isso que o F2 reabre a frente jurídica em vez de herdá-la calada.
 
-Esquecimento de participante se resolve nos dois lados, e agora os dois existem. Do lado local, o hash entra em lista de bloqueio e a próxima publicação de janela já sai sem ele. Do lado da nuvem, uma função de exclusão invocada pelo organizador ou pela operação remove o participante das janelas correntes e do `radarVinculos` pelo Admin SDK, e carimba o pedido (RN-536).
+Esquecimento de participante se resolve nos dois lados, e agora os dois existem. Do lado local, o hash entra em lista de bloqueio e a próxima publicação de janela já sai sem ele. Do lado da nuvem, uma função de exclusão invocada pelo organizador ou pela operação remove o participante das janelas correntes, da frota e do `radarVinculos` pelo Admin SDK, e carimba o pedido (RN-536).
 
 O lado da nuvem passou a ser obrigatório por dois motivos. O mecanismo antigo dependia de a máquina estar viva **e** de haver próxima publicação: instância morta ou radar abandonado congela o nome dentro das janelas, que são substituídas e não expiram. E o argumento que justificava o sal local — a Leela sozinha não reidentifica ninguém a partir do hash — perdeu força no dia em que o nome real passou a viajar no mesmo documento, ao lado do hash. O sal continua fora da nuvem porque protege a **reidentificação retroativa**, não porque o nome esteja escondido.
 
