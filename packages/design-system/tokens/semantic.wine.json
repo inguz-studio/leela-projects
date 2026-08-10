@@ -58,7 +58,9 @@
     "dot-glow": "0 0 8px #15803D"
   },
   "chart": {
-    "$description": "Paleta categórica wine (tema claro). Passos escurecidos p/ contraste ≥3:1 sobre surface clara e L dentro da banda (validate_palette.js: cat-1 success.600 / cat-2 heroico.500 / cat-3 primary.400 → PASS, CVD ΔE 24.3 > 12). track/grid claros.",
+    "$description": "Paleta categórica wine (tema claro). Passos escurecidos p/ contraste ≥3:1 sobre surface clara e L dentro da banda (validate_palette.js: cat-1 success.600 / cat-2 heroico.500 / cat-3 primary.400 → PASS, CVD ΔE 24.3 > 12). track/grid claros. accent/accent-2 (REDESIGN-V2 · item 2) são a rampa CONTÍNUA — uma variável, dois extremos — e não entram no ciclo categórico. No tema claro os dois extremos são escurecidos de propósito: o Oxblood da marca (primary.500) e um lime rebaixado (#7E9B12, literal do estudo — accent.400 lime puro reprova contraste sobre surface clara).",
+    "accent": "{primary.500}",
+    "accent-2": "#7E9B12",
     "cat-1": "{success.600}",
     "cat-2": "{heroico.500}",
     "cat-3": "{primary.400}",

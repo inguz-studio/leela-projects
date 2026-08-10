@@ -196,7 +196,8 @@
   --chart-cat-5: var(--neutral-400);
   --chart-track: var(--neutral-850);
   --chart-grid: var(--neutral-800);
-  --chart-accent-2: oklch(0.75 0.13 75);
+  --chart-accent: var(--primary-400);
+  --chart-accent-2: #C8E84A;
   --feedback-success: var(--success-400);
   --feedback-success-fg: var(--success-300);
   --feedback-success-surface: #0D1F0A;
