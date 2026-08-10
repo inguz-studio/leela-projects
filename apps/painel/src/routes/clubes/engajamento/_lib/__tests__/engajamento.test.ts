@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   RANKING_MAX_DESAFIOS,
+  pilarComMaiorMedia,
   ranquearDesafios,
   resumirComunidade,
   resumirEntrada,
@@ -198,6 +199,36 @@ describe('resumirEntrada · a porta de cada membro', () => {
 
   it('sem membros devolve lista vazia (a tela mostra vazio, não três zeros)', () => {
     expect(resumirEntrada([])).toEqual([]);
+  });
+});
+
+describe('pilarComMaiorMedia · onde a comunidade pesa (item 12)', () => {
+  const linha = (pilar: 'fisico' | 'mental' | 'espiritual', atual: number) => ({
+    pilar,
+    rotulo: pilar,
+    atual,
+    meta: 100,
+  });
+
+  it('aponta o pilar de maior média por participante', () => {
+    const r = pilarComMaiorMedia([linha('fisico', 75), linha('mental', 30), linha('espiritual', 10)]);
+    expect(r?.pilar).toBe('fisico');
+  });
+
+  it('empate não elege líder — escolher no empate é o computador decidindo por fato', () => {
+    expect(
+      pilarComMaiorMedia([linha('fisico', 30), linha('mental', 30), linha('espiritual', 10)])
+    ).toBeNull();
+  });
+
+  it('tudo em zero não é "equilíbrio perfeito", é ausência de acúmulo', () => {
+    expect(
+      pilarComMaiorMedia([linha('fisico', 0), linha('mental', 0), linha('espiritual', 0)])
+    ).toBeNull();
+  });
+
+  it('sem linha nenhuma, não há frase para dizer', () => {
+    expect(pilarComMaiorMedia([])).toBeNull();
   });
 });
 

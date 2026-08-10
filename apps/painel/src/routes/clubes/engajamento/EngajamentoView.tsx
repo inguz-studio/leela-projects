@@ -40,6 +40,7 @@ import { SecaoHead } from '../../../components/SecaoHead';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
   RANKING_MAX_DESAFIOS,
+  pilarComMaiorMedia,
   type ContagemRotulada,
   type DesafioEngajado,
   type ResumoDaComunidade,
@@ -129,6 +130,25 @@ function barrasDeContagem(itens: readonly ContagemRotulada[]): BarChartDatum[] {
 }
 
 /**
+ * A única frase de conjunto que os pilares sustentam (REFACTOR item 12).
+ *
+ * O que saiu daqui foi a marca de "ponto de equilíbrio (33%)" e a linha "X
+ * pontos acima/abaixo do equilíbrio" — o REFACTOR as declarou invenção de
+ * design, e a busca no repositório confirma que elas nunca chegaram a este
+ * código (viviam só no protótipo). O que entra no lugar não é um alvo: é onde
+ * a comunidade está pesando. Em empate, nada é dito.
+ */
+function LinhaDoPilarLider({ pilares }: { pilares: ResumoDosPilares }): JSX.Element | null {
+  const lider = pilarComMaiorMedia(pilares.linhas);
+  if (!lider) return null;
+  return (
+    <p className="mt-[var(--spacing-3)] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+      {lider.rotulo} é o pilar com a maior média por participante.
+    </p>
+  );
+}
+
+/**
  * Card de métrica que a tela NOMEIA mas ainda não pode desenhar (REFACTOR
  * itens 7, 11 e 13; diretriz literal do dono: "se tiver algo que não
  * implementamos ainda, deixe escrito 'em breve'").
@@ -211,7 +231,13 @@ function RankingDeDesafios({
     <>
       <SecaoHead
         titulo="Desafios que mais movem a comunidade"
-        descricao="Participantes por desafio em andamento, do maior para o menor."
+        // A explicação ACOMPANHA O RECORTE (REFACTOR item 12): dizer "do maior
+        // para o menor" enquanto a tela mostra cinco de nove é meia verdade.
+        ajuda={
+          excedeTop && recorte === 'top'
+            ? `Os ${RANKING_MAX_DESAFIOS} desafios em andamento com mais participantes, de ${lista.length} no total. Troque o recorte para ver todos.`
+            : 'Participantes por desafio em andamento, do maior para o menor. Só entram os ativos: um desafio encerrado teve o ciclo inteiro, e comparar os dois não compara coisas comparáveis.'
+        }
         controle={
           excedeTop ? (
             <Select
@@ -357,7 +383,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <section aria-label="Equilíbrio dos pilares" className="flex flex-col">
                 <SecaoHead
                   titulo="Equilíbrio dos pilares"
-                  descricao="Média de pontos por participante em cada pilar sobre o mínimo exigido, ponderada pelo tamanho dos desafios que operam equilíbrio."
+                  ajuda="Média de pontos por participante em cada pilar sobre o mínimo exigido, ponderada pelo tamanho dos desafios que operam equilíbrio. Não existe distribuição-alvo entre os três: o bloco mostra onde a comunidade está pesando, não onde ela deveria pesar."
                 />
                 {loading || pilares === null ? (
                   <Skeleton variant="rect" className="h-40" />
@@ -383,6 +409,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                         formatValue={formatDecimal1}
                       />
                     </GraficoAnimado>
+                    <LinhaDoPilarLider pilares={pilares} />
                   </Painel>
                 )}
               </section>
@@ -390,7 +417,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <section aria-label="Situação dos membros" className="flex flex-col">
                 <SecaoHead
                   titulo="Situação dos membros"
-                  descricao="Quem entrou nos últimos 7 dias, quem segue ativo e quem está há 30 dias ou mais sem nenhum registro de atividade."
+                  ajuda="Quem entrou nos últimos 7 dias, quem segue ativo e quem está há 30 dias ou mais sem nenhum registro de atividade."
                 />
                 {loading || situacao === null ? (
                   <Skeleton variant="rect" className="h-40" />
@@ -412,7 +439,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             <section aria-label="Como a comunidade entra" className="flex flex-col">
               <SecaoHead
                 titulo="Como a comunidade entra"
-                descricao="A porta por onde cada membro chegou ao club."
+                ajuda="A porta por onde cada membro chegou ao club. Canal sem ninguém sai da lista: barra zerada ocupa espaço e não informa."
               />
               {loading || entrada === null ? (
                 <Skeleton variant="rect" className="h-32" />
@@ -471,7 +498,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             <section aria-label="Desafios ligados a um evento" className="flex flex-col">
               <SecaoHead
                 titulo="Desafios ligados a um evento"
-                descricao="Quanto da atividade em andamento já está apontada para uma prova sua. É intenção declarada no desafio, não inscrição confirmada."
+                ajuda="Quanto da atividade em andamento já está apontada para uma prova sua. É intenção declarada no desafio, não inscrição confirmada: um desafio ligado a um evento não significa que os participantes se inscreveram nele."
               />
               {loading || ponte === null ? (
                 <Skeleton variant="rect" className="h-32" />

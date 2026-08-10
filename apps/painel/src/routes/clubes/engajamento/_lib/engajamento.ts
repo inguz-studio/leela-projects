@@ -203,6 +203,30 @@ export function resumirPilares(desafios: readonly DesafioComClube[]): ResumoDosP
 }
 
 /**
+ * Qual pilar concentra a maior média por participante (REFACTOR item 12).
+ *
+ * É a ÚNICA leitura de conjunto que este dado sustenta. O estudo desenhava uma
+ * marca de "ponto de equilíbrio (33%)" sobre as barras, e o próprio REFACTOR a
+ * declarou invenção de design: não existe equilíbrio-alvo entre os três pilares
+ * em regra nenhuma do produto, então uma marca ali transformava distribuição em
+ * nota. A linha honesta diz onde a comunidade está pesando — e nada sobre onde
+ * deveria pesar.
+ *
+ * Empate devolve `null` de propósito: eleger um líder no empate é escolha do
+ * computador apresentada como fato. Tudo em zero também devolve `null` — sem
+ * acúmulo não há concentração, e o bloco de pilares já tem estado próprio para
+ * ausência de base.
+ * @pure
+ */
+export function pilarComMaiorMedia(linhas: readonly LinhaDePilar[]): LinhaDePilar | null {
+  const comAcumulo = linhas.filter((l) => l.atual > 0);
+  if (comAcumulo.length === 0) return null;
+  const maior = Math.max(...comAcumulo.map((l) => l.atual));
+  const lideres = comAcumulo.filter((l) => l.atual === maior);
+  return lideres.length === 1 ? lideres[0]! : null;
+}
+
+/**
  * Situação dos membros (RN-102). A ordem é a da narrativa — quem chegou, quem
  * está, quem sumiu — e não a alfabética.
  * @pure

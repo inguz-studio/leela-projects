@@ -60,6 +60,12 @@ function valorNaTabela(rotulo: string): string {
   return linha?.textContent ?? '';
 }
 
+/** Abre o "?" de um bloco e devolve o texto da explicação (item 8: em portal). */
+async function abrirAjuda(bloco: string): Promise<HTMLElement> {
+  await userEvent.click(screen.getByRole('button', { name: `O que "${bloco}" mostra` }));
+  return screen.getByRole('dialog');
+}
+
 describe('EngajamentoView · o que tem fonte', () => {
   it('mostra os quatro números da comunidade', () => {
     render(<EngajamentoView {...props()} />);
@@ -79,25 +85,23 @@ describe('EngajamentoView · o que tem fonte', () => {
     expect(valorNaTabela('Físico')).toContain('75,4 / 150,9');
   });
 
-  it('o bloco de pilares se nomeia como média por participante, no rótulo E no aria-label (D-1)', () => {
+  it('o bloco de pilares se nomeia como média por participante, no "?" E no aria-label (D-1)', async () => {
     render(<EngajamentoView {...props()} />);
-    expect(
-      screen.getByText(/Média de pontos por participante em cada pilar/)
-    ).toBeInTheDocument();
     expect(
       screen.getByRole('img', {
         name: 'Média de pontos por participante por pilar, ponderada por desafio, sobre o mínimo exigido',
       })
     ).toBeInTheDocument();
+    const ajuda = await abrirAjuda('Equilíbrio dos pilares');
+    expect(ajuda).toHaveTextContent(/Média de pontos por participante em cada pilar/);
   });
 
-  it('situação dos membros usa o rótulo honesto do dado (D-2: não é "sem atividade", é "sem registro")', () => {
+  it('situação dos membros usa o rótulo honesto do dado (D-2: não é "sem atividade", é "sem registro")', async () => {
     render(<EngajamentoView {...props()} />);
     expect(valorNaTabela('Sem registro (30 dias+)')).toContain('10');
     expect(screen.queryByText(/sem atividade há 30 dias/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/há 30 dias ou mais sem nenhum registro de atividade/i)
-    ).toBeInTheDocument();
+    const ajuda = await abrirAjuda('Situação dos membros');
+    expect(ajuda).toHaveTextContent(/há 30 dias ou mais sem nenhum registro de atividade/i);
   });
 
   it('a ponte com eventos separa ligados de não ligados', () => {
@@ -106,11 +110,81 @@ describe('EngajamentoView · o que tem fonte', () => {
     expect(valorNaTabela('Sem evento vinculado')).toContain('1');
   });
 
-  it('a ponte é rotulada como intenção, nunca como inscrição confirmada', () => {
+  it('a ponte é rotulada como intenção, nunca como inscrição confirmada', async () => {
+    render(<EngajamentoView {...props()} />);
+    const ajuda = await abrirAjuda('Desafios ligados a um evento');
+    expect(ajuda).toHaveTextContent(/intenção declarada no desafio, não inscrição confirmada/i);
+  });
+});
+
+describe('EngajamentoView · cabeçalhos e o fim do "ponto de equilíbrio" (REFACTOR item 12)', () => {
+  it('a descrição sai da linha fixa do cabeçalho e vira o "?" — em portal, fora do card', async () => {
+    const { container } = render(<EngajamentoView {...props()} />);
+    expect(
+      screen.queryByText(/Média de pontos por participante em cada pilar/)
+    ).not.toBeInTheDocument();
+    const ajuda = await abrirAjuda('Equilíbrio dos pilares');
+    expect(container.contains(ajuda)).toBe(false);
+  });
+
+  it('a explicação do ranking ACOMPANHA o recorte do card', async () => {
+    const muitos = Array.from({ length: 9 }, (_, i) => ({
+      id: `d${i}`,
+      clubeId: 'floripa-run',
+      nome: `Desafio ${String.fromCharCode(65 + i)}`,
+      participantes: 100 - i,
+      progressoPct: 50,
+    }));
+    render(<EngajamentoView {...props({ desafios: muitos })} />);
+
+    const noTop = await abrirAjuda('Desafios que mais movem a comunidade');
+    expect(noTop).toHaveTextContent('de 9 no total');
+
+    await userEvent.keyboard('{Escape}');
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' }),
+      'todos'
+    );
+    const emTodos = await abrirAjuda('Desafios que mais movem a comunidade');
+    expect(emTodos).not.toHaveTextContent('de 9 no total');
+    expect(emTodos).toHaveTextContent(/do maior para o menor/);
+  });
+
+  it('nenhuma marca de equilíbrio-alvo na tela: nem 33%, nem "acima/abaixo do equilíbrio"', () => {
+    render(<EngajamentoView {...props()} />);
+    expect(screen.queryByText(/33\s*%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ponto de equilíbrio/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/(acima|abaixo) do equilíbrio/i)).not.toBeInTheDocument();
+  });
+
+  it('a média ponderada e o mínimo exigido NÃO regridem junto com a marca (conquista da lane FIX)', () => {
+    render(<EngajamentoView {...props()} />);
+    expect(valorNaTabela('Físico')).toContain('75,4 / 150,9');
+  });
+
+  it('o card diz qual pilar concentra a maior média — e só isso', () => {
     render(<EngajamentoView {...props()} />);
     expect(
-      screen.getByText(/intenção declarada no desafio, não inscrição confirmada/i)
+      screen.getByText('Físico é o pilar com a maior média por participante.')
     ).toBeInTheDocument();
+  });
+
+  it('em empate, o card não elege líder nenhum', () => {
+    render(
+      <EngajamentoView
+        {...props({
+          pilares: {
+            desafiosComPilar: 1,
+            linhas: [
+              { pilar: 'fisico', rotulo: 'Físico', atual: 30, meta: 100 },
+              { pilar: 'mental', rotulo: 'Mental', atual: 30, meta: 100 },
+              { pilar: 'espiritual', rotulo: 'Espiritual', atual: 10, meta: 60 },
+            ],
+          },
+        })}
+      />
+    );
+    expect(screen.queryByText(/é o pilar com a maior média/)).not.toBeInTheDocument();
   });
 });
 
