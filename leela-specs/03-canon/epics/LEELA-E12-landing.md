@@ -2898,6 +2898,12 @@ próprio, trocar a foto é ato da conta. Edição só pela própria pessoa, tudo
 vazia é estado válido, vocabulário D-0802-1 (experiência/participante). Visibilidade:
 default restrito, só a própria pessoa, até o veto ARENA-1.
 
+**+2026-08-10 (ARENA-2 decidido em 09/08, SPEC-ARENA-2-LISTA):** a frase "a lista dos pilares
+não existe em doc nenhum" envelheceu — a medição de 10/08 achou a taxonomia canônica (RN-114:
+3 pilares, 16 ações; mais as 9 modalidades do clube), e o dono mandou derivar dela (*"podemos
+usar de base"*). A lista de interesses passa a ser regida pelas **RN-553 a RN-557** (delta
+SPEC-ARENA-2-LISTA no fim deste épico); o corte do vocabulário exposto é o vetável **ARENA-4**.
+
 ### RN-472 (nova) · o dado sensível da Arena é opt-in, com consentimento específico e visibilidade restrita
 
 "Gêneros de pessoas com quem quer se conectar" permite inferir orientação sexual — dado
@@ -2958,7 +2964,11 @@ Critérios (Given/When/Then):
 
 **Tasks:** S1226-T1 (modelo + Rules, ⚔) · S1226-T2 (a seção na área) · S1226-T3
 (consentimento e visibilidade, ⚔). **Gated pelos vetos ARENA-1/2/3** e pela B2 da fila
-ADMINSEP. Fronteira com o E17 registrada lá e no painel (ARENA-3).
+ADMINSEP. Fronteira com o E17 registrada lá e no painel (ARENA-3). **+2026-08-10:** dos três
+gates, ARENA-3 fechou em 09/08 (seção da área do cliente — corte do painel), ARENA-2 fechou em
+09/08 e está especificado (RN-553 a RN-557, S1245 entrega a lista que a T2 consome), e ARENA-1
+foi respondido como direção (social é futuro; o primeiro estágio segue o default restrito desta
+RN). O gate vivo da lista exposta é o **ARENA-4** (o corte do vocabulário).
 
 ### Reconciliações desta rodada
 
@@ -3856,3 +3866,58 @@ o rebatismo da RN-468 nos rótulos).
 - **ADMINSEP-2.** Continua aberto, e esta rodada constrói sobre o default de lá (o botão leva ao
   painel do profissional). Se o dono trocar a leitura, muda em `portaOrganizador.ts` e em nenhum
   outro lugar.
+
+---
+
+## Delta SPEC-ARENA-2-LISTA · 2026-08-10 — a lista de interesses deriva da taxonomia
+
+Formaliza a decisão **ARENA-2** do dono (09/08, bloco 10 de
+`2026-08-09-decisoes-dono/01-decisoes-dono.md`): *"Nao temos essa listgem? de acordo com o
+spilares e modaldiades disponiveis? podemos usar de base."* Rodada completa em
+`02-rodadas/2026-08-10-arena-2-lista/` (decisão → inventário arquivo:linha → spec → fila).
+
+A medição corrigiu a premissa que abriu o item: a listagem **existe** — RN-114 (E05) define os
+3 pilares (Físico, Mental, Espiritual) e as 16 ações do catálogo
+(`packages/core/src/clubs/catalogo-acoes.ts`), semeadas em `catalogoAcoes` (16 docs em produção,
+conferidos pelo inventário congelado da purga de 10/08); e `MODALIDADES_CLUBE`
+(`clube-opcoes.ts:41-51`) fecha as 9 modalidades do clube. A varredura de 04/08 buscou "pilares
+de bem-estar" literal e não olhou o vocabulário dos clubes.
+
+### Regras de negócio novas (donas aqui — texto canônico na rodada, resumo abaixo)
+
+- **RN-553 · A lista de interesses da Arena deriva da taxonomia canônica, de fonte única.**
+  Função pura sobre as constantes do core (`PILARES` + `CATALOGO_ACOES` + `MODALIDADES_CLUBE`);
+  nenhuma cópia literal em consumidor, nenhuma leitura de Firestore para obtê-la, nenhuma edição
+  por organizador ou participante. As modalidades **do evento** (texto livre, RN-500-505) ficam
+  fora por decisão medida.
+- **RN-554 · O interesse grava o id canônico, e termo que morre não apaga escolha de ninguém.**
+  Persiste-se o valor canônico da fonte, nunca o rótulo. Termo removido vira órfão declarado:
+  some da oferta e da exibição, nenhum processo o apaga, e sai no primeiro save da própria
+  pessoa — escrito como comportamento deliberado. Termo novo aparece no deploy, sem migração.
+- **RN-555 · A ordem é a da fonte, e o vazio é honesto.** Pilares na ordem de `PILARES`, termos
+  na ordem de declaração; nunca alfabética, nunca popularidade. Nada pré-selecionado; Arena
+  vazia segue válida (RN-471). Os rótulos de pilar sobem do painel (`ROTULO_PILAR`) para o core,
+  num lugar só.
+- **RN-556 · Uma lista, dois consumidores — e as fronteiras que ela não cruza.** A mesma
+  derivação serve a Arena e a categorização futura da home (D-0802-1 — a home é do dono).
+  Fronteiras: nada de social (RN-471/472 intocadas, ARENA-1/LGPD-1); radar intocado (a RN-535
+  do E20 não usa pilares — conferido); agregados de desafio intocados; vitrine/evento intocados.
+- **RN-557 · O vocabulário exposto nasce do corte do dono — condicionada ao ARENA-4.** A
+  derivação achou 5 pares sobrepostos entre ações e modalidades e rótulos de hábito que não são
+  interesse; a tabela integral de 20 termos propostos está na spec e o corte é dele. Número
+  consumido de qualquer jeito (molde RN-546/RN-552).
+
+### História nova
+
+| História | O que entrega | Espera |
+|---|---|---|
+| **LEELA-S1245** · A lista de interesses nasce da taxonomia | derivação pura no core + rótulos de pilar num lugar só (T1) · lista exposta com o corte (T2) · órfão declarado (T3) | ARENA-4 (só T2) |
+
+A S1245 entrega o **contrato** que a `S1226-T2` (a seção da Arena) consome; a S1226 e os gates
+dela seguem intactos. Fila com territórios em `02-rodadas/2026-08-10-arena-2-lista/04-fila-codigo.md`.
+
+### Painel, na mesma aterrissagem
+
+**ARENA-2 saiu** do [[DECISOES-ABERTAS]] (decidido 09/08 + especificado hoje); no lugar entrou o
+**ARENA-4** — o corte do vocabulário, a única pergunta que a frase do dono não alcança. ARENA-1
+não foi tocado por esta rodada (social é fronteira, não assunto).
