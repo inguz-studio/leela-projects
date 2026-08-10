@@ -40,7 +40,7 @@ import { shellRailItems, shellSidebarSections } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
 import { usePaineisDaConta } from './paineis';
-import { AlternadorDePainel, nomeDoPainelAtual } from './AlternadorDePainel';
+import { AlternadorDePainel, nomeDoPainelAtual, travessia } from './AlternadorDePainel';
 
 export interface RootShellProps {
   children: React.ReactNode;
@@ -107,13 +107,32 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
     />
   ) : undefined;
 
+  // DELTA-UX-T4 (D-1008-R6): o perfil do rodapé do rail virou TRIGGER do
+  // popover do perfil — DropdownMenu canônico ancorado acima (L-021), com
+  // Configurações + alternador de painel. Os itens de menu SÃO o "flat
+  // button" do vocabulário do DS dentro de popover (sem preenchimento
+  // sólido; hover em accent) — nenhum variant novo precisou nascer.
+  // Default do maestro (registrado, vetável): Configurações CONTINUA também
+  // como item do rail — o popover soma um caminho, não rouba o existente.
+  const { destino, rotulo } = travessia(location.pathname);
+  const menuPerfil = {
+    menuLabel: 'Menu do perfil',
+    actions: [
+      { id: 'configuracoes', label: 'Configurações', onClick: () => navigate('/conta') },
+      // Só oferece a travessia a quem alcança os dois lados (regra 1 do
+      // alternador — botão que leva a 403 é pior que botão nenhum).
+      ...(paineis.podeAlternar
+        ? [{ id: 'alternar-painel', label: rotulo, onClick: () => navigate(destino) }]
+        : []),
+    ],
+  };
+
   // HIFI-REC · rail flutuante do protótipo Visao Geral v3 (ordem do dono,
   // 10/08): ≥ lg a navegação é o SidebarRail — pílula flutuante fechada em
   // 84px, aberta em 248px. A Sidebar clássica NÃO morreu: é o conteúdo do
   // Drawer < lg (anatomia certa para off-canvas, com brand/seções/rodapé).
-  // O AlternadorDePainel (papel duplo) entra no slot aberto do rail — função
-  // que o protótipo não previu e não pode sumir do desktop (divergência
-  // nomeada no handoff da lane).
+  // O AlternadorDePainel SAIU do slot aberto (D-1008-R6): a travessia agora
+  // vive no popover do perfil, alcançável com o rail FECHADO ou ABERTO.
   const rail = (
     <SidebarRail
       items={shellRailItems(location.pathname, navigate, eventosAtivos)}
@@ -121,18 +140,13 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
       brandLogo={<img src="/leela-logo-brasa.svg" alt="Leela" className="h-full w-auto" />}
       {...(nome ? { footerName: nome } : {})}
       footerSubtitle="Ver perfil"
-      onFooterClick={() => navigate('/conta')}
+      footerMenu={menuPerfil}
       // Rail aberto NOMEIA o painel (conquista PAPEL-DUPLO — o rótulo não
-      // mente no master) e oferece o alternador para quem alcança os dois.
+      // mente no master).
       slotAberto={
-        <div className="flex flex-col gap-[var(--spacing-3)] text-center">
-          <p className="text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
-            {nomeDoPainelAtual(location.pathname)}
-          </p>
-          {paineis.podeAlternar ? (
-            <AlternadorDePainel podeAlternar={paineis.podeAlternar} />
-          ) : null}
-        </div>
+        <p className="text-center text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
+          {nomeDoPainelAtual(location.pathname)}
+        </p>
       }
     />
   );

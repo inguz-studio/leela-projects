@@ -204,39 +204,63 @@ describe('RootShell (Adendo 13 — sem barra superior)', () => {
 });
 
 // =============================================================================
-// O ALTERNADOR DE PAINÉIS na moldura (FRONTEIRA-AUTH · sobre a PAPEL-DUPLO).
+// O POPOVER DO PERFIL na moldura (DELTA-UX-T4 · D-1008-R6, sobre a
+// FRONTEIRA-AUTH/PAPEL-DUPLO).
 //
-// A fiação é o que estes casos provam: o componente já tem suíte própria, o que
-// falta é a prova de que o shell o desenha para o crachá certo e de que o
-// rótulo de contexto deixou de mentir.
+// O alternador SAIU do corpo do rail aberto e virou item do menu do perfil —
+// o rodapé com o nome + "Ver perfil" é o trigger (button com aria-haspopup,
+// nome acessível SEMPRE, rail fechado E aberto — a dívida F5 morre aqui). O
+// que estes casos provam é a fiação: o shell desenha a travessia para o
+// crachá certo, com os rótulos NOVOS ("Acessar painel master"/"Acessar
+// painel profissional", RN-468), e Configurações vive no menu E no rail.
 // =============================================================================
 
-describe('RootShell · alternador de painéis', () => {
-  it('conta de organizador NÃO vê alternador — ela só tem um painel', async () => {
+/** Abre o popover do perfil pelo trigger do rodapé — SEM abrir o rail antes:
+ *  o ponto da T4 é a travessia alcançável com o rail fechado. */
+async function abrirMenuDoPerfil(): Promise<void> {
+  await userEvent.click(await screen.findByRole('button', { name: 'Marina Castelo' }));
+}
+
+describe('RootShell · popover do perfil (Configurações + alternador)', () => {
+  it('o rodapé fechado é trigger nomeado: aria-haspopup + aria-expanded (F5 morta)', async () => {
     renderAt('/');
-    await abrirRail();
-    await waitFor(() => expect(screen.getByText('Painel do Organizador')).toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: /Ir para o Painel/ })).toBeNull();
+    const trigger = await screen.findByRole('button', { name: 'Marina Castelo' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('o DONO (tenant_owner + capacidade) vê o alternador oferecendo o master', async () => {
+  it('conta de organizador: menu só com Configurações — ela só tem um painel', async () => {
+    renderAt('/');
+    await abrirMenuDoPerfil();
+    const menu = screen.getByRole('menu', { name: 'Menu do perfil' });
+    expect(within(menu).getByRole('menuitem', { name: 'Configurações' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('menuitem', { name: /Acessar painel/ })).toBeNull();
+  });
+
+  it('Configurações do menu leva a /conta (o item do rail CONTINUA existindo)', async () => {
+    renderAt('/');
+    // Default do maestro registrado: o popover soma um caminho — o item
+    // Configurações do rail não sai.
+    expect(within(nav()).getByRole('link', { name: 'Configurações' })).toBeInTheDocument();
+    await abrirMenuDoPerfil();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Configurações' }));
+    expect(screen.getByTestId('path')).toHaveTextContent('/conta');
+  });
+
+  it('o DONO (tenant_owner + capacidade) vê "Acessar painel master" no menu', async () => {
     cracha.atual = {
       tenantId: 'castelo-producoes',
       role: 'tenant_owner',
       platformAdmin: true,
     };
     renderAt('/');
-    await abrirRail();
+    await abrirMenuDoPerfil();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Ir para o Painel Master' })).toBeInTheDocument(),
+      expect(screen.getByRole('menuitem', { name: 'Acessar painel master' })).toBeInTheDocument(),
     );
   });
 
-  it('dentro do master, a moldura NOMEIA o master e oferece a volta', async () => {
-    // O sub da marca era o literal "Painel do Organizador" em TODA rota — e
-    // `/plataforma` sempre rodou dentro deste shell. Quem entrasse no painel
-    // master lia, no canto superior esquerdo, que estava no painel do
-    // organizador.
+  it('dentro do master, a moldura NOMEIA o master e o menu oferece a volta', async () => {
     cracha.atual = {
       tenantId: 'castelo-producoes',
       role: 'tenant_owner',
@@ -245,30 +269,42 @@ describe('RootShell · alternador de painéis', () => {
     renderAt('/plataforma/tenants');
     await abrirRail();
     await waitFor(() => expect(screen.getByText('Painel Master')).toBeInTheDocument());
+    await abrirMenuDoPerfil();
     expect(
-      screen.getByRole('button', { name: 'Ir para o Painel do Organizador' }),
+      screen.getByRole('menuitem', { name: 'Acessar painel profissional' }),
     ).toBeInTheDocument();
   });
 
-  it('o alternador leva de verdade para o outro painel', async () => {
+  it('a travessia leva de verdade para o outro painel', async () => {
     cracha.atual = {
       tenantId: 'castelo-producoes',
       role: 'tenant_owner',
       platformAdmin: true,
     };
-    const usuario = userEvent.setup();
     renderAt('/');
-    await abrirRail();
-    const alternar = await screen.findByRole('button', { name: 'Ir para o Painel Master' });
-    await usuario.click(alternar);
+    await abrirMenuDoPerfil();
+    const alternar = await screen.findByRole('menuitem', { name: 'Acessar painel master' });
+    await userEvent.click(alternar);
     expect(screen.getByTestId('path')).toHaveTextContent('/plataforma');
   });
 
-  it('admin LEGADO (sem tenant) não alterna — não há painel de organizador para ir', async () => {
+  it('admin LEGADO (sem tenant) não vê travessia — não há painel profissional para ir', async () => {
     cracha.atual = { role: 'platform_admin' };
     renderAt('/plataforma');
+    await abrirMenuDoPerfil();
+    const menu = screen.getByRole('menu', { name: 'Menu do perfil' });
+    expect(within(menu).queryByRole('menuitem', { name: /Acessar painel/ })).toBeNull();
+  });
+
+  it('os rótulos ANTIGOS morreram na moldura (grep vivo da D-1008-R6)', async () => {
+    cracha.atual = {
+      tenantId: 'castelo-producoes',
+      role: 'tenant_owner',
+      platformAdmin: true,
+    };
+    renderAt('/');
     await abrirRail();
-    await waitFor(() => expect(screen.getByText('Painel Master')).toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: /Ir para o Painel/ })).toBeNull();
+    await abrirMenuDoPerfil();
+    expect(screen.queryByText(/Ir para o Painel/)).toBeNull();
   });
 });

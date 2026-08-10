@@ -156,3 +156,69 @@ describe('SidebarRail — medidas por token, nunca literal', () => {
     expect(nav.className).toContain('motion-reduce:transition-none');
   });
 });
+
+// ---------------------------------------------------------------------------
+// DELTA-UX-T4 (D-1008-R6 + F5) — rodapé de perfil como TRIGGER do menu
+// ---------------------------------------------------------------------------
+
+describe('SidebarRail — footerMenu (popover do perfil)', () => {
+  const MENU = {
+    menuLabel: 'Menu do perfil',
+    actions: [
+      { id: 'configuracoes', label: 'Configurações', onClick: () => {} },
+      { id: 'alternar', label: 'Acessar painel master', onClick: () => {} },
+    ],
+  };
+
+  it('FECHADO: o rodapé é button com nome acessível + aria-haspopup/expanded (F5 morta)', () => {
+    renderRail({ footerMenu: MENU });
+    // A dívida F5: fechado, o rodapé só tinha o avatar aria-hidden e ficava
+    // SEM nome para a AT. Agora o aria-label dá o nome SEMPRE.
+    const trigger = screen.getByRole('button', { name: 'Vitor Piagge' });
+    expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('ABERTO: mesmo nome acessível (o aria-label não depende do estado do rail)', () => {
+    renderRail({ footerMenu: MENU, defaultOpen: true });
+    expect(screen.getByRole('button', { name: 'Vitor Piagge' })).toBeTruthy();
+  });
+
+  it('clique abre o DropdownMenu canônico ACIMA (side top), com as ações', () => {
+    renderRail({ footerMenu: MENU });
+    fireEvent.click(screen.getByRole('button', { name: 'Vitor Piagge' }));
+    const menu = screen.getByRole('menu', { name: 'Menu do perfil' });
+    // Ancorado por bottom = abre para CIMA (o rodapé cola no pé do viewport).
+    expect(menu.style.bottom).not.toBe('');
+    expect(screen.getByRole('menuitem', { name: 'Configurações' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Acessar painel master' })).toBeTruthy();
+    // Estado anunciado no trigger.
+    expect(
+      screen.getByRole('button', { name: 'Vitor Piagge' }).getAttribute('aria-expanded'),
+    ).toBe('true');
+  });
+
+  it('footerMenu tem precedência sobre onFooterClick (não navega, abre menu)', () => {
+    let navegou = false;
+    renderRail({ footerMenu: MENU, onFooterClick: () => { navegou = true; } });
+    fireEvent.click(screen.getByRole('button', { name: 'Vitor Piagge' }));
+    expect(screen.getByRole('menu', { name: 'Menu do perfil' })).toBeTruthy();
+    expect(navegou).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F4 (DELTA-UX) — tooltip do rail fechado visível também por teclado
+// ---------------------------------------------------------------------------
+
+describe('SidebarRail — F4: tooltip por focus-visible, não só hover', () => {
+  it('todo tooltip carrega o par group-focus-visible além do group-hover', () => {
+    const { container } = renderRail();
+    const tips = container.querySelectorAll('[data-rail-tip]');
+    expect(tips.length).toBe(2);
+    for (const tip of tips) {
+      expect(tip.className).toContain('group-hover/item:opacity-100');
+      expect(tip.className).toContain('group-focus-visible/item:opacity-100');
+    }
+  });
+});

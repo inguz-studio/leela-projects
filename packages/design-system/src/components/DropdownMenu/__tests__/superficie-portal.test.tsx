@@ -24,7 +24,6 @@
  * recebe. É a mesma disciplina file-based de glass.test.ts: prova o MECANISMO.
  */
 
-import * as React from 'react';
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

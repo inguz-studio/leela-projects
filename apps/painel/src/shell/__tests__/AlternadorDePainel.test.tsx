@@ -68,17 +68,17 @@ describe('AlternadorDePainel · quem vê', () => {
 describe('AlternadorDePainel · o rótulo é o DESTINO', () => {
   it('no painel do organizador, oferece ir para o master', () => {
     montar('/', true);
-    expect(botao()).toHaveTextContent('Ir para o Painel Master');
+    expect(botao()).toHaveTextContent('Acessar painel master');
   });
 
   it('no painel master, oferece voltar para o do organizador', () => {
     montar('/plataforma', true);
-    expect(botao()).toHaveTextContent('Ir para o Painel do Organizador');
+    expect(botao()).toHaveTextContent('Acessar painel profissional');
   });
 
   it('sub-rota do master ainda conta como master (prefixo, não igualdade)', () => {
     montar('/plataforma/tenants/castelo-producoes', true);
-    expect(botao()).toHaveTextContent('Ir para o Painel do Organizador');
+    expect(botao()).toHaveTextContent('Acessar painel profissional');
   });
 
   it('rota que só COMEÇA parecida não é o master', () => {

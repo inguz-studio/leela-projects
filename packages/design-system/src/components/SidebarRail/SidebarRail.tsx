@@ -30,6 +30,7 @@ import * as React from 'react';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SCROLL_Y_ONLY } from '../../utils/scroll';
+import { DropdownMenu, type DropdownMenuAction } from '../DropdownMenu';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +59,16 @@ export interface SidebarRailProps {
   /** Linha secundária do rodapé (ex.: "Ver perfil") — só visível aberto. */
   footerSubtitle?: string;
   onFooterClick?: () => void;
+  /**
+   * Menu do perfil (DELTA-UX-T4 · D-1008-R6): quando presente, o rodapé vira
+   * TRIGGER do DropdownMenu canônico (L-021 — nada de popover artesanal),
+   * ancorado ACIMA dele (side="top": o rodapé cola na borda inferior do
+   * viewport). O trigger é `button` com `aria-haspopup`/`aria-expanded`
+   * injetados via Slot e nome acessível SEMPRE (`aria-label` = footerName),
+   * rail fechado E aberto — fecha a dívida F5 da fila HIFI-REC-FIX.
+   * Tem precedência sobre `onFooterClick`.
+   */
+  footerMenu?: { menuLabel: string; actions: DropdownMenuAction[] };
   /** Estado inicial. O protótipo nasce FECHADO (84px). */
   defaultOpen?: boolean;
   /**
@@ -117,6 +128,7 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
       footerName,
       footerSubtitle,
       onFooterClick,
+      footerMenu,
       defaultOpen = false,
       slotAberto,
       className,
@@ -124,6 +136,7 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
     ref,
   ) => {
     const [open, setOpen] = React.useState(defaultOpen);
+    const [menuPerfilAberto, setMenuPerfilAberto] = React.useState(false);
     const rotuloToggle = open ? 'Recolher menu' : 'Abrir menu';
 
     const avatar =
@@ -151,23 +164,10 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
         </span>
       ) : null);
 
-    // Rodapé interativo quando o consumidor liga "Ver perfil" (mesmo padrão
-    // do SidebarFooter clássico: botão só quando há destino).
-    const RodapeComp: 'button' | 'div' = onFooterClick ? 'button' : 'div';
-    const rodape = (footerName || footerAvatar) && (
-      <RodapeComp
-        {...(onFooterClick ? { type: 'button' as const, onClick: onFooterClick } : {})}
-        className={cn(
-          'w-full flex items-center justify-center gap-[var(--spacing-3)]',
-          'border-t border-t-[var(--border-subtle)]',
-          'pt-[var(--spacing-4)] px-[var(--rail-px)] pb-[var(--spacing-1)]',
-          onFooterClick &&
-            cn(
-              'cursor-pointer bg-transparent border-x-0 border-b-0 text-left',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
-            ),
-        )}
-      >
+    // Conteúdo visual do rodapé — o mesmo nas três formas (div inerte, botão
+    // legado de navegação, trigger do menu do perfil).
+    const conteudoRodape = (
+      <>
         {avatar}
         {open && footerName ? (
           <span className="flex flex-col flex-1 min-w-0 text-left">
@@ -181,8 +181,58 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
             ) : null}
           </span>
         ) : null}
-      </RodapeComp>
+      </>
     );
+
+    const classesRodape = (interativo: boolean): string =>
+      cn(
+        'w-full flex items-center justify-center gap-[var(--spacing-3)]',
+        'border-t border-t-[var(--border-subtle)]',
+        'pt-[var(--spacing-4)] px-[var(--rail-px)] pb-[var(--spacing-1)]',
+        interativo &&
+          cn(
+            'cursor-pointer bg-transparent border-x-0 border-b-0 text-left',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
+          ),
+      );
+
+    // Rodapé (DELTA-UX-T4 · D-1008-R6): com `footerMenu`, o perfil é TRIGGER
+    // do DropdownMenu canônico ancorado ACIMA (side="top") — clique abre o
+    // popover pequeno (Configurações + alternador), rail fechado e aberto.
+    // `aria-label` dá o nome acessível SEMPRE (fechado só há o avatar
+    // aria-hidden — era a dívida F5); aria-haspopup/aria-expanded/aria-controls
+    // entram via Slot do DropdownMenu. Sem menu, vale o padrão antigo:
+    // botão só quando há destino (`onFooterClick`), senão div inerte.
+    const RodapeComp: 'button' | 'div' = onFooterClick ? 'button' : 'div';
+    const rodape =
+      (footerName || footerAvatar) &&
+      (footerMenu ? (
+        <DropdownMenu
+          open={menuPerfilAberto}
+          onOpenChange={setMenuPerfilAberto}
+          actions={footerMenu.actions}
+          menuLabel={footerMenu.menuLabel}
+          side="top"
+          align="left"
+          containerClassName="w-full"
+          trigger={
+            <button
+              type="button"
+              {...(footerName ? { 'aria-label': footerName } : {})}
+              className={classesRodape(true)}
+            >
+              {conteudoRodape}
+            </button>
+          }
+        />
+      ) : (
+        <RodapeComp
+          {...(onFooterClick ? { type: 'button' as const, onClick: onFooterClick } : {})}
+          className={classesRodape(Boolean(onFooterClick))}
+        >
+          {conteudoRodape}
+        </RodapeComp>
+      ));
 
     return (
       <nav
@@ -191,10 +241,11 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
         data-rail-open={open ? '1' : '0'}
         className={cn(
           'relative z-[5] shrink-0 flex flex-col items-center',
+          'bg-[var(--surface-raised)]',
+          'pt-[var(--rail-pt)] pb-[var(--rail-pb)]',
           'h-[calc(100%-2*var(--rail-margin))]',
           'my-[var(--rail-margin)] ml-[var(--rail-margin)]',
-          'rounded-[var(--rail-radius)] bg-[var(--surface-raised)] shadow-elev-3',
-          'pt-[var(--rail-pt)] pb-[var(--rail-pb)]',
+          'rounded-[var(--rail-radius)] shadow-elev-3',
           open ? 'w-[var(--rail-width-open)]' : 'w-[var(--rail-width)]',
           MOTION_RAIL,
           className,
@@ -380,6 +431,10 @@ function RailNavItem({ item, open }: RailNavItemProps): JSX.Element {
             'whitespace-nowrap shadow-elev-3',
             'opacity-0 [transform:translateY(-50%)_translateX(calc(-1*var(--spacing-1-5)))]',
             'group-hover/item:opacity-100 group-hover/item:[transform:translateY(-50%)_translateX(0)]',
+            // F4 (DELTA-UX): o rótulo visível também por TECLADO — hover-only
+            // deixava quem navega por Tab sem o tooltip (o nome acessível já
+            // estava no sr-only; isto é o rótulo VISÍVEL).
+            'group-focus-visible/item:opacity-100 group-focus-visible/item:[transform:translateY(-50%)_translateX(0)]',
             'transition-[opacity,transform] duration-[var(--motion-duration-fast)]',
             'motion-reduce:transition-none',
           )}

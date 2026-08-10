@@ -234,13 +234,13 @@ const SUPERFICIES: SuperficieNav[] = [
     // A moldura ≥ lg é o SidebarRail (HIFI-REC), e ele traz DOIS botões que
     // não são destino:
     //   · 'Abrir menu' — o toggle que abre/recolhe o rail. Ação pura.
-    //   · '' — o rodapé de perfil, FECHADO: o único conteúdo é o avatar
-    //     `aria-hidden`, então o botão fica sem nome acessível. A entrada
-    //     vazia declara essa dívida de a11y de propósito, junto com a F5 da
-    //     REV: o rodapé NAVEGA para /conta por botão (mesma exceção do
-    //     SidebarFooter clássico) — a dívida de virar âncora + onClick SPA
-    //     está anexada na fila do handoff HIFI-REC-FIX.
-    botoesQueNaoSaoDestino: ['Abrir menu', ''],
+    //   · 'Marina Castelo' — o rodapé de perfil, TRIGGER do popover do perfil
+    //     (DELTA-UX-T4 · D-1008-R6): aria-haspopup/aria-expanded + aria-label
+    //     com o nome da sessão, rail fechado E aberto. A dívida F5 morreu
+    //     aqui pelas duas metades: o botão deixou de ser destino de navegação
+    //     (abre menu, semântica certa de button) e deixou de ficar SEM nome
+    //     acessível fechado (a entrada '' que este inventário declarava).
+    botoesQueNaoSaoDestino: ['Abrir menu', 'Marina Castelo'],
     montar: () =>
       void render(
         <MemoryRouter initialEntries={['/']}>
