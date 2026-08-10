@@ -1,33 +1,42 @@
 # LEELA-E20 · Radar da comunidade no WhatsApp
 
 - **Superfície:** Painel
-- **Horizonte:** H2 (piloto convidado; F1 travado por parecer jurídico)
+- **Horizonte:** H2 (piloto convidado)
 - **MoSCoW:** Should
 - **Estimativa:** L
-- **Status:** 📋 spec escrita 09/08; F0.a despachável, F1 bloqueada pelo LGPD-1
-- **Depende de:** LEELA-E05 (clubs — a comunidade é o clube), LEELA-E11 (convenção de agregado mantido por Function), LGPD-1 (quarta frente do painel; trava o F1)
-- **De-para:** novo (sem BH- direto). Fonte técnica: estudo `arquitetura-radar-leela.md`, trace `c5a4a8bd-e9e4-4759-869c-a70f874c9c52`; decisões do dono em `02-rodadas/2026-08-09-radar-whatsapp/01-decisoes-dono.md`
+- **Status:** 📋 spec escrita 09/08, reparada no mesmo dia depois da review antagonista (trace `3ed45e7f`); F0.a despachável; **F1 destravado** pela decisão 12 do dono, que assumiu o risco jurídico
+- **Depende de:** LEELA-E05 (clubs — a comunidade é o clube), LEELA-E11 (convenção de agregado mantido por Function). O LGPD-1 **deixou de ser dependência bloqueante** em 09/08 (decisão 12): a quarta frente dele segue correndo com o advogado, em paralelo, sem gate sobre este épico
+- **De-para:** novo (sem BH- direto). Fonte técnica: estudo `arquitetura-radar-leela.md`, trace `c5a4a8bd-e9e4-4759-869c-a70f874c9c52`; decisões do dono em `02-rodadas/2026-08-09-radar-whatsapp/01-decisoes-dono.md`; review antagonista da spec, trace `3ed45e7f-73ee-460e-9f93-270f06b6c09c` (25 achados)
 
 ## Objetivo
 
 O organizador mantém a comunidade dos participantes no WhatsApp e não tem retrato nenhum dela dentro da Leela. Este épico entrega esse retrato no Painel Profissional: volume de conversa por dia, mapa de horários, palavras mais faladas, entradas e saídas de membro, e a pirâmide de engajamento com o nome de quem fala. O dado nasce fora, num número dedicado que observa os grupos daquele organizador, e chega ao painel já agregado.
 
-O radar não envia nada. Nunca. Nenhuma mensagem, nenhuma resposta, nenhum aviso automático em grupo, e nenhuma ponte entre o ranking e a tela de comunicação. Mensagem bruta, telefone e identificador de WhatsApp também não sobem: eles morrem na máquina que roda o motor. O que atravessa a fronteira são números e o nome de exibição que o participante já mostra na comunidade.
+O radar não envia nada. Nunca. Nenhuma mensagem, nenhuma resposta, nenhum aviso automático em grupo, e nenhuma ponte entre o ranking e a tela de comunicação. Mensagem bruta, telefone e identificador de WhatsApp também não sobem: eles morrem na máquina que roda o motor, que é a máquina do organizador (RN-530). O que atravessa a fronteira são números e o nome que o WhatsApp entrega — o `notify_name` que o próprio participante mostra na comunidade, até ele virar cliente e o cadastro passar a mandar (RN-532).
 
 ## Personas & JTBD
 
 - **Persona primária:** Profissional — Organizadora (**Marina Castelo**).
 - **Persona secundária:** Coordenador de Assessoria (**Felipe Martins**), quando a comunidade é do clube.
-- **JTBD atendidos:**
-  - "Saber quem são meus participantes mais engajados, pelo nome, para conversar com quem sustenta a comunidade."
-  - "Ver se a comunidade esquentou ou esfriou depois da experiência, sem rolar mil mensagens."
-  - "Descobrir do que a comunidade fala, para escolher o assunto da próxima experiência."
+- **JTBD atendidos, e a história que fecha cada um:**
+
+| Job | O que o organizador quer trocar | História que fecha |
+|---|---|---|
+| a. Compreender a própria base | trocar sensação por evidência sobre volume, horário, entrada e saída de gente | **S2005** |
+| b. Descobrir demandas | escolher o assunto da próxima experiência sem rolar mil mensagens | **S2006**, com o limite honesto declarado lá |
+| c. Reconhecer quem sustenta a comunidade | saber pelo nome quem carrega o grupo | **S2003** |
+| c′. Saber quais deles são clientes | parar de casar duas listas na memória | **S2008**, conciliação pela mão do admin |
+| d. Gerir as comunidades | ver qual está esfriando antes de ela morrer | **S2007**, a frota |
+
+Antes desta rodada, quatro dessas cinco linhas não tinham história nenhuma, e a coluna da direita ficava vazia enquanto o dado já estava contratado na ponte. Nenhuma das histórias novas coleta dado novo: todas leem o que a S2002 já publica.
+
 - **JTBD explicitamente não atendido:** falar com a comunidade a partir do radar. Disparo continua sendo E06 e a área de comunicação do clube, por dentro da Leela.
 
 ## Critérios de sucesso do épico
 
-- O organizador abre `/clubes/:slug/radar` e reconhece a própria comunidade nos números, com os sete estados de tela cobertos (sem instância, sem pareamento, sem grupo, sem dado no período, sincronismo atrasado, dia parcial, radar pausado).
-- Nenhuma superfície do produto oferece envio a partir do radar; a varredura de código não acha caminho do ranking para qualquer canal de saída.
+- O organizador abre `/clubes/:slug/radar` e reconhece a própria comunidade nos números, com os oito estados de tela cobertos (sem instância, sem pareamento, sem grupo, sem dado no período, sincronismo atrasado, dia parcial, cobertura desconhecida, radar pausado).
+- A tela entrega os quatro blocos de conteúdo, e não só o ranking: volume por dia, mapa de horários, palavras e saldo de entradas e saídas. Uma tela que renderize apenas a pirâmide não fecha este épico.
+- Nenhuma superfície do produto oferece envio a partir do radar; a varredura de código não acha caminho do ranking para qualquer canal de saída, e a prova é comportamental: zero job de envio na instância ao fim da medição.
 - Um tenant nunca lê o ramo do outro, provado por teste dirigido de rules e pela recusa de ingestão com tenant divergente.
 - Republicar o mesmo lote não muda `atualizadoEm`: a idempotência é observável, não presumida.
 - O expurgo roda com carimbo por grupo, no mesmo formato de incidente do expurgo de saúde, sem criar uma segunda política de alerta.
@@ -43,11 +52,14 @@ Pendurar isso no E11 misturaria um épico gelado de rollup interno com um produt
 
 ## Regras de negócio aplicáveis
 
-Definidas aqui: RN-520 a RN-529 (seção "Regras de negócio novas" adiante). Herdadas:
+Definidas aqui: RN-520 a RN-529 e RN-530 a RN-536 (seção "Regras de negócio novas" adiante). Herdadas:
 
-- **RN-172** — identidade individual tem fronteira própria; o radar expõe nome de participante e cai do lado de dentro dessa fronteira.
-- **RN-147** — dado pessoal tem retenção limitada e expurgo provado; o radar reusa o mecanismo, não inventa um segundo.
 - **Governança de agregados (E11)** — número que a tela mostra vem de documento mantido por Function; o cliente nunca calcula ranking.
+- **Mecanismo de expurgo da RN-147** — o radar reusa o **mecanismo** de expurgo criado para o dado de saúde, **sem herdar a base legal nem o prazo dela**. A RN-147 trata de dado sensível de saúde (LGPD Art. 11): ela exige consentimento específico e destacado e amarra a retenção ao ciclo do evento. O radar não tem esse consentimento, não pode obtê-lo e guarda 400 dias (RN-524). Herdar o enunciado inteiro importaria uma base legal e um prazo que contradizem este épico.
+
+**O que este épico não herda, e precisa dizer em voz alta.** A rodada anterior escreveu que o radar "cai do lado de dentro" da fronteira da RN-172. Não cai, e a review provou pelos dois eixos. A RN-172 ancora a base legal em legítimo interesse **sobre a base transacional própria**, e participante de grupo que nunca comprou não tem transação nem contrato para ancorar; e a minimização dela é uma lista fechada de seis atributos (nome, nº de eventos, valor/LTV, sexo, idade, aniversário), enquanto o radar acrescenta contagem de mensagens, horário e posição em ranking sobre as mesmas pessoas. A frente jurídica ia receber uma premissa errada.
+
+O radar cria uma **categoria nova**: agregado nominal de não-cliente. Ela não é o agregado sem identidade do [[LEELA-E11-analytics]], que declara dado individual de atleta fora de escopo por LGPD; não é a identidade transacional do [[LEELA-E19-crm]], que só constrói perfil de quem comprou e chama de incidente qualquer segmento que inclua quem nunca comprou; e vai na direção contrária da **RN-167** do [[LEELA-E17-perfil-social]], que fixou opt-in com padrão negativo para exibir participação de terceiro pelo nome. A categoria, a exceção e a fronteira contra o CRM estão na **RN-531**.
 
 ## Modelo de dados tocado
 
@@ -59,6 +71,7 @@ Contrato normativo completo em [[ponte-radar-whatsapp]]. Coleções novas, todas
 - `tenants/{tenantId}/radarGrupos/{grupoHash}/dias/{YYYY-MM-DD}` — o que é aditivo.
 - `tenants/{tenantId}/radarGrupos/{grupoHash}/janelas/{7d|30d|90d}` — os rankings, substituídos por inteiro.
 - `tenants/{tenantId}/radarFrota/{7d|30d|90d}` — comparação entre grupos do mesmo organizador.
+- `tenants/{tenantId}/radarVinculos/{participanteHash}` — o que o admin decidiu sobre aquele participante: nome corrigido à mão e vínculo com alguém do cadastro. É o único documento do conjunto que nasce de gesto humano, e mesmo assim quem escreve é a Function (RN-532, RN-533).
 
 Nada mora sob `clubes/`: o catch-all de subcoleção de clube está fechado por decisão declarada, e furá-lo por conveniência de caminho seria reabrir o que já foi fechado.
 
@@ -67,6 +80,7 @@ Nada mora sob `clubes/`: o catch-all de subcoleção de clube está fechado por 
 - Qualquer envio, resposta, automação de mensagem ou botão que leve do radar a um canal de saída (RN-520).
 - Telefone, identificador de WhatsApp, texto de mensagem, mídia e transcrição na nuvem (RN-523).
 - QR de pareamento dentro do painel (fica no fluxo operado fora, até F2).
+- **Resumo de conversa gerado por modelo, ainda que na máquina local.** O fork tem a capability `whatsapp.groups.intelligence`, que resume grupo e detecta oportunidade, e ela serviria o job de demandas melhor do que contagem de palavra. Fica fora porque resumo é derivado do texto, e a RN-523 quer o texto morrendo na origem: subir resumo é subir conteúdo de conversa com outro nome. A escolha é registrada aqui em vez de tomada por omissão, e reabre por decisão nova do dono, que é quem pode aceitar o risco de conteúdo agregado subir.
 - Provedor terceiro de API não oficial hospedando o motor: entregaria o texto integral das conversas a um terceiro, o que contradiz o princípio central do desenho.
 - Índice composto novo ou `fieldOverride` novo (RN-527).
 
@@ -341,21 +355,32 @@ Apagar dia vencido às 03h25 no fuso de São Paulo, com núcleo puro de relógio
 
 ## Regras de negócio novas (rodada 2026-08-09 · radar de WhatsApp)
 
-A faixa 515 estava anunciada como livre no índice, e não estava: as rodadas de 08/08 consumiram 515, 517, 518 e 519. Esta rodada começa na **520**. O 516 fica como buraco deliberado, junto com 460 e 499.
+A faixa 515 estava anunciada como livre no índice, e não estava: as rodadas de 08/08 consumiram 515, 517, 518 e 519. Esta rodada começa na **520**. O 516 é buraco por lane concorrente, da mesma família do 483-485, e não marcador de faixa como o 460 e o 499 — a classificação está assim no índice e a versão anterior deste épico a contava errado. A rodada de reparo de 09/08 consome **530 a 536**, conferida contra o índice antes de usar.
 
-### RN-520 · o radar é mudo por contrato, e a mudez não tem exceção de tela (nova · 2026-08-09)
+### RN-520 · o radar é mudo por contrato, e a mudez se prova por comportamento (nova · 2026-08-09 · reparada 09/08)
 
-Nenhuma superfície do produto, do motor ou do painel oferece envio a partir do radar. A capacidade de resposta é ausente da configuração da instância, não desligada por bandeira: bandeira desligada é bandeira que alguém liga. No painel, o ranking não tem botão de mensagem, de ligação nem de comunicado, e a tela do radar não se conecta à área de comunicação do clube, que é sua vizinha de rota.
+Nenhuma superfície do produto, do motor ou do painel oferece envio a partir do radar. No painel, o ranking não tem botão de mensagem, de ligação nem de comunicado, e a tela do radar não se conecta à área de comunicação do clube, que é sua vizinha de rota.
+
+Do lado do motor, a regra anterior dizia que a capacidade de resposta seria "ausente da configuração, não desligada por bandeira". A intenção estava certa e o enunciado era impossível de provar: o binário do fork é um sistema completo, que sabe enviar mensagem, tem fila de jobs de envio, followups, funis e um caminho de superadmin por WhatsApp. Uma varredura por capacidade de envio nesse binário nunca devolve zero, então o critério ou reprovava sempre ou era reinterpretado em silêncio por quem executasse, que é a pior das duas saídas.
+
+O que a regra exige, na forma conferível:
+
+- **Configuração da instância do radar**, checada antes de cada rodada: `superadmin.enabled == false` e tabela `superadmins` vazia; `followups.enabled == false`; `voice.whatsapp_followup == false`; `funnels.enabled == false`; o grupo observado em `analyze` e nenhum JID em `respond`.
+- **Comportamento**, que é a prova que vale: `count(*)` de jobs de envio igual a zero ao fim do período medido. Configuração diz o que estava ligado; a fila diz o que aconteceu.
+
+Um detalhe do fork precisa de conserto antes de a S2001 fechar: o `config.yaml` entregue traz o comentário "MASTER SWITCH: nasce OFF" logo acima de `superadmin.enabled: true`. Um dos dois está mentindo, e enquanto estiver assim a mudez do número depende de ninguém inserir uma linha na tabela `superadmins`.
 
 A proibição é de adjacência, e vale dizer por quê. O produto se posiciona hoje como o jeito de avisar os participantes sem depender do WhatsApp, e a primeira ponte entre um ranking de engajamento e um botão de enviar é o começo do caminho contrário. Se um dia essa ponte existir, ela nasce de decisão nova e declarada do dono, nunca de proximidade de tela.
 
-### RN-521 · o ranking mostra o nome real do participante, e o telefone nunca sobe (nova, dona · 2026-08-09)
+### RN-521 · o ranking mostra o nome real do participante, e o telefone nunca sobe (nova, dona · 2026-08-09 · reparada 09/08)
 
-Decisão do dono, verbatim de 09/08: nível de identidade sem pseudônimo, nome real, porque o job do organizador é enxergar a pirâmide de engajamento e reconhecer quem são os clientes e membros mais engajados. O que sobe é o **nome de exibição** que o participante já mostra na comunidade. O telefone, o identificador de WhatsApp e o texto do que foi dito continuam proibidos (RN-523).
+Decisão do dono, sem retoque, de 09/08: nível de identidade sem pseudônimo, nome real, porque o job do organizador é enxergar a pirâmide de engajamento e reconhecer quem são os clientes e membros mais engajados. O que sobe é o nome que o WhatsApp entrega, com a origem e a correção fixadas na RN-532. O telefone, o identificador de WhatsApp e o texto do que foi dito são proibidos pela **RN-523**, que é a dona desse enunciado — esta regra não o repete, para as duas não derivarem em silêncio como aconteceu com a RN-133 e a RN-312.
 
 A continuidade da pessoa entre períodos segue vindo do hash com sal do organizador, que é a chave estável: nome muda, chave não. O nome viaja ao lado dela como rótulo, com tamanho limitado pelo schema.
 
-**Divergência registrada.** O estudo recomendava pseudônimo estável como padrão e colocava nome vindo do WhatsApp fora de escopo. O dono decidiu diferente, com razão de produto declarada, e a consequência foi assumida por escrito: dado pessoal de participante exposto a terceiro, sem consentimento direto de quem foi medido. Por isso a **dependência jurídica é bloqueante** — a base legal e o termo do organizador entraram como quarta frente do LGPD-1 e travam a S2003 inteira. O F0 não depende disso, porque observa uma comunidade de teste do próprio dono.
+**Divergência registrada.** O estudo recomendava pseudônimo estável como padrão e colocava nome vindo do WhatsApp fora de escopo. O dono decidiu diferente, com razão de produto declarada, e a consequência foi assumida por escrito: dado pessoal de participante exposto a terceiro, sem consentimento direto de quem foi medido. Isso vai na direção contrária da RN-167 do [[LEELA-E17-perfil-social]], que fixou opt-in com padrão negativo para exibir participação de terceiro pelo nome, e a exceção do radar está declarada na RN-531 com o motivo: audiência restrita ao organizador, que é quem administra aquela comunidade, e não perfil público.
+
+**O que mudou em 09/08.** A dependência jurídica **deixou de ser bloqueante** pela decisão 12 do dono, que assumiu o risco agora. A quarta frente do LGPD-1 continua existindo e vai ao advogado em paralelo, e a pergunta que ela leva mudou de forma: com o radar mudo (RN-520) e sem aviso no grupo (RN-525), consentimento do participante é estruturalmente impossível de coletar, então a pergunta certa não é "como pedir consentimento" e sim qual base legal cobre medir e nomear alguém que nunca contratou nada com o organizador, num canal que o organizador não controla. O parecer, quando sair, é condição de reabertura de tudo isto.
 
 ### RN-522 · uma instância é um organizador, e a fronteira é conferida nos dois lados (nova · 2026-08-09)
 
@@ -385,6 +410,8 @@ Configurar perfil não é enviar mensagem, então essa camada não conflita com 
 
 O radar não é oferecido no catálogo nem aparece para organizador que não foi convidado. A porta abre organizador a organizador, por decisão da operação, e continua assim até existir medida de quanto tempo um número sobrevive. A condição de reabertura é numérica, não subjetiva: o critério de pronto do F1 pede dois organizadores além do dono por 30 dias, e o do F2 pede dez.
 
+Convidar não é só liberar a tela. Cada organizador do piloto entra com **máquina identificada, responsável nomeado e runbook de instalação escrito** — sem isso, os dois organizadores do F1 significam dois computadores fora do alcance da Leela guardando o texto das conversas de duas comunidades, sem ninguém declarado por eles (RN-530).
+
 ### RN-527 · o radar não declara índice novo, e o motivo é um defeito já pago (nova · 2026-08-09)
 
 Zero índice composto novo e zero `fieldOverride` novo. A varredura do expurgo ordena por identificador de documento, servida pelo índice automático que o Firestore mantém sozinho, porque a data em `YYYY-MM-DD` ordena igual ao calendário. A lista de instâncias é collection group sem filtro, que também dispensa declaração.
@@ -402,6 +429,80 @@ A ordenação vem da sequência, e não do carimbo de tempo, de propósito: comp
 Decisão do dono: quem paga o número é o organizador, para ter um chip próprio dedicado ao radar. O número existe só para observar as comunidades daquele organizador, nunca é usado para conversa pessoal e nunca é compartilhado entre organizadores.
 
 A consequência boa é o raio de explosão: um banimento derruba um radar, não a feature inteira. A consequência cara é operacional, um chip e um processo por organizador, e ela está tratada na S2004.
+
+---
+
+## Regras de negócio novas (rodada de reparo 2026-08-09 · pós-review antagonista)
+
+Sete regras nascidas dos achados da review `3ed45e7f` e das quatro decisões do dono do mesmo dia. A faixa 530 foi conferida no índice antes de usar, como o próprio índice recomenda.
+
+### RN-530 · a máquina que roda o motor é do organizador, e trocar isso reabre a frente jurídica (nova · 2026-08-09)
+
+A instância do motor roda em máquina do organizador. Ele é o controlador do texto bruto das conversas e do sal que gera os hashes, e nenhum dos dois entra na infraestrutura da Leela.
+
+A regra existe porque a promessa central do épico — "mensagem bruta, telefone e identificador morrem na máquina que roda o motor" — só é promessa enquanto a máquina não for da Leela. No F2, com host multi-instância operado por nós, o texto integral das conversas de todas as comunidades e o sal de cada organizador passariam a morar aqui, e a frase viraria o oposto do que está escrita sem que nenhuma regra registrasse a virada. Por isso a S2004 não herda esta regra calada: ela tem, como pré-condição declarada, reavaliar a RN-530 e reabrir a frente jurídica.
+
+No F1, a consequência é operacional e está na RN-526: máquina identificada, responsável nomeado, runbook escrito, por organizador. O custo recorrente de hospedagem do F2 segue como decisão do sócio, fora deste épico.
+
+### RN-531 · agregado nominal de não-cliente é categoria própria, e a fronteira com o CRM é dura (nova, dona · 2026-08-09)
+
+O radar cria uma categoria de dado que o produto não tinha: **agregado nominal de não-cliente**. Nome de pessoa, com atributo comportamental (quantas mensagens, em que horário, em que posição do ranking), sobre gente que pode nunca ter comprado nada.
+
+Ela não se encaixa em nenhuma das três fronteiras vizinhas, e a distinção precisa estar escrita para o advogado não receber premissa errada:
+
+- **[[LEELA-E11-analytics]]** trabalha só com agregado sem identidade e declara métrica individual de atleta fora de escopo por LGPD.
+- **[[LEELA-E19-crm]]** trabalha com identidade transacional, só de quem comprou, e chama de incidente de LGPD qualquer segmento que inclua quem nunca comprou.
+- **RN-167** do [[LEELA-E17-perfil-social]] fixou opt-in com padrão negativo para exibir participação de terceiro pelo nome.
+
+O radar abre exceção declarada a esse padrão, por decisão 9 do dono, com dois limites: a audiência é o organizador daquela comunidade, nunca perfil público, e o dado é de gestão da comunidade dele. A base legal está **aberta** — o dono assumiu o risco em 09/08 (decisão 12) e o advogado responde depois.
+
+A fronteira contra o CRM é executável, não retórica: **nenhum caminho do CRM lê documento do radar, e nenhum caminho do radar lê a base do CRM.** O único ponto de contato é o vínculo manual da RN-533, que grava identificador do lado do radar e não devolve nada para o CRM. O gate de PII que o E19 já tem (`FronteiraPII.test.ts`, que reprova por adição) ganha o caso que prova essa separação nos dois sentidos.
+
+### RN-532 · o nome do participante tem origem declarada, pode faltar, e o admin corrige (nova, dona · 2026-08-09)
+
+Três coisas, nesta ordem de precedência:
+
+1. **Enquanto a pessoa não é cliente**, o nome vem do WhatsApp — o `notify_name`, que é o que ela mostra na comunidade. Não é o `display_name`, que é o catálogo local da máquina do organizador e por isso pode trazer o apelido que ele mesmo digitou anos atrás.
+2. **O admin pode corrigir o nome à mão**, participante a participante, na superfície do radar. A correção fica em `radarVinculos` e vence qualquer publicação seguinte do motor. É a saída para nome ausente, apelido irreconhecível e nome com cara de telefone.
+3. **Quando a pessoa vira cliente e é conciliada** (RN-533), o cadastro da Leela passa a mandar e o nome do WhatsApp vira histórico.
+
+`nome` ausente é estado previsto, não erro: no motor ele é `string | null`, porque sai de um `LEFT JOIN`. O lote não é recusado por causa disso, e a tela mostra a linha com rótulo próprio de participante sem nome, com a ação de nomear ao lado. Nome com forma de telefone é recusado na borda (contrato da ponte), porque `nome` é a única string livre que atravessa e o schema fechado confere chave, não valor.
+
+### RN-533 · o vínculo entre participante e cliente é ato do admin, e nada sobe do motor para fazê-lo (nova · 2026-08-09)
+
+O organizador contratou o radar para saber quem sustenta a comunidade **e** quais dessas pessoas são clientes dele. A segunda metade não fecha sozinha: a chave de identidade do CRM é CPF, com queda para e-mail e `atletaId`, e o radar não coleta nenhuma das três — telefone e identificador de WhatsApp são proibidos pela RN-523, o hash tem sal local e nome de exibição não é chave.
+
+Então o vínculo é humano e explícito. O painel sugere candidatos do cadastro do clube para um participante do ranking, comparando nome, e **o admin confirma**. O que fica guardado é o identificador do lado da Leela dentro de `radarVinculos`, no ramo do próprio tenant. Nenhum dado novo sobe do motor por causa disso, nenhum perfil é criado no CRM e o participante não conciliado continua existindo no radar como sempre existiu.
+
+Sem esta regra, o épico entregava duas listas e a tarefa de casar na memória, que é justamente o trabalho que o organizador pagou para não fazer.
+
+### RN-534 · clube fora do ar não apaga o radar, e o radar não fica inalcançável (nova · 2026-08-09)
+
+Os documentos do radar moram sob `tenants/`, então a deleção de clube não os alcança. Sem regra, um clube deletado levaria o `clubeSlug` junto e deixaria `radarGrupos` órfão: nome de grupo, nomes de participantes e 400 dias de contagem correndo atrás de uma rota que responde 404.
+
+A decisão do dono de 09/08 sobre clube excluído é reter a base, e ela vale aqui: **o radar sobrevive ao clube.** O expurgo não olha o estado do clube, o `clubeSlug` fica gravado como histórico e o acesso passa a ser pela lista de radares do tenant, que não depende do clube existir. Dado retido e alcançável, ou nenhum dos dois.
+
+Condição de reabertura: parecer do advogado que aponte prazo máximo de retenção para dado de participante, que é a mesma condição da RN-524.
+
+### RN-535 · engajamento no radar é volume medido, com dois eixos, e o radar não afirma quem sustenta (nova · 2026-08-09)
+
+O ranking ordena por `n`, que é contagem de mensagens por remetente no período, e nada além disso. Contagem bruta destaca quem fala mais, que não é a mesma pessoa que sustenta a comunidade: cinquenta reações curtas passam à frente de quem responde a dúvida de cada recém-chegado.
+
+Duas consequências, e as duas são de spec, não de código:
+
+- O contrato carrega um segundo eixo barato, que o motor já tem como calcular: `diasAtivos`, o número de dias distintos com pelo menos uma mensagem no período. Ele separa o constante do episódico, e a tela mostra os dois.
+- A tela nomeia o que mostra. "Quem mais falou no período", com os dois números à vista, e a leitura de quem sustenta a comunidade continua sendo do organizador. Chamar a lista de pirâmide de engajamento sem dizer o que ela mede é vender interpretação como medida.
+
+### RN-536 · esquecimento tem caminho pelo lado da nuvem, e janela parada expira (nova · 2026-08-09)
+
+Esquecer um participante funciona nos dois lados, de forma independente:
+
+- **Local:** o hash entra na lista de bloqueio da instância e a próxima publicação já sai sem ele.
+- **Nuvem:** uma função de exclusão, chamada pelo organizador ou pela operação, remove o participante das janelas correntes, da frota e do `radarVinculos` pelo Admin SDK, e carimba o pedido.
+
+O caminho da nuvem existe porque o local sozinho depende de duas coisas que podem não valer: a máquina viva e a próxima publicação acontecer. Instância morta ou radar abandonado congelava o nome dentro de documentos de janela, que são substituídos e nunca expiram, e a pessoa ficava dependendo de um computador doméstico voltar a ligar.
+
+Pela mesma razão, **documento de janela ou de frota sem republicação há mais de 120 dias é apagado pelo expurgo**. A maior janela cobre 90 dias; uma parada de 120 descreve um período que já saiu inteiro do alcance do produto e só serve para guardar nome de gente.
 
 ---
 
