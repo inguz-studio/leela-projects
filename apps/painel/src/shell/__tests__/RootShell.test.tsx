@@ -308,3 +308,78 @@ describe('RootShell · popover do perfil (Configurações + alternador)', () => 
     expect(screen.queryByText(/Ir para o Painel/)).toBeNull();
   });
 });
+
+// =============================================================================
+// O MENU MOBILE no chrome v3 (DELTA-UX-T3 · D-1008-R5).
+//
+// O Drawer < lg montava a Sidebar clássica (be-hero, 240px, seções
+// OPERAÇÃO/CONTA) — a única superfície do painel fora do DS novo. Agora o
+// conteúdo do drawer é o PRÓPRIO SidebarRail em `variant="drawer"` (pele v3:
+// sempre aberto, altura total, sem toggle), com as MESMAS props do rail
+// desktop — itens, marca, nome do painel e popover do perfil. A anatomia
+// off-canvas não mudou: portal, scrim condicional (item 5 do REFACTOR) e
+// focus-trap seguem sendo do Drawer do AppShell — o que os casos de
+// AppShell.test.tsx já provam; aqui se prova a FIAÇÃO do painel.
+//
+// jsdom não aplica CSS: o rail desktop (hidden lg:block) coexiste no DOM com
+// o drawer aberto — por isso TODA query destes casos é scoped no dialog.
+// =============================================================================
+
+describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
+  async function abrirDrawer(): Promise<void> {
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir menu de navegação' }));
+  }
+  function dialogo(): HTMLElement {
+    return screen.getByRole('dialog', { name: 'Menu de navegação' });
+  }
+
+  it('o drawer monta o rail v3 sempre aberto — a Sidebar clássica saiu da moldura', async () => {
+    renderAt('/');
+    await abrirDrawer();
+    const drawerNav = within(dialogo()).getByRole('navigation', { name: 'Navegação principal' });
+    expect(drawerNav).toHaveAttribute('data-rail-open', '1');
+    // Anatomia clássica morta no drawer: sem rótulos de seção do be-hero.
+    expect(within(dialogo()).queryByText('OPERAÇÃO')).toBeNull();
+    expect(within(dialogo()).queryByText('CONTA')).toBeNull();
+    // Sem toggle: quem fecha o off-canvas é o Drawer (scrim/Esc).
+    expect(within(dialogo()).queryByRole('button', { name: 'Abrir menu' })).toBeNull();
+    expect(within(dialogo()).queryByRole('button', { name: 'Recolher menu' })).toBeNull();
+    // Os 6 destinos do produtor, rótulos em fluxo (anatomia aberta). O nome
+    // acessível pode carregar o badge de eventos ativos ("Eventos 2") — o
+    // badge é anatomia do rail aberto e chega por fetch, daí o prefixo.
+    expect(within(drawerNav).getAllByRole('link')).toHaveLength(6);
+    expect(within(drawerNav).getByRole('link', { name: /^Eventos/ })).toBeVisible();
+  });
+
+  it('o drawer NOMEIA o painel (papel-duplo vale no mobile também)', async () => {
+    renderAt('/');
+    await abrirDrawer();
+    expect(within(dialogo()).getByText('Painel do Organizador')).toBeInTheDocument();
+  });
+
+  it('o popover do perfil também vive no drawer (trigger nomeado, F5 vale < lg)', async () => {
+    renderAt('/');
+    await abrirDrawer();
+    const trigger = within(dialogo()).getByRole('button', { name: 'Marina Castelo' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+  });
+
+  it('navegar por um item do drawer fecha o drawer e troca a rota (contrato do AppShell)', async () => {
+    renderAt('/');
+    await abrirDrawer();
+    await userEvent.click(within(dialogo()).getByRole('link', { name: /^Eventos/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('path')).toHaveTextContent('/eventos');
+  });
+
+  it('/plataforma: o drawer monta a nav própria do super-admin no mesmo chrome', async () => {
+    renderAt('/plataforma/tenants');
+    await abrirDrawer();
+    const drawerNav = within(dialogo()).getByRole('navigation', { name: 'Navegação principal' });
+    expect(within(drawerNav).getByRole('link', { name: 'Tenants' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(drawerNav).queryByRole('link', { name: 'Visão Geral' })).toBeNull();
+  });
+});

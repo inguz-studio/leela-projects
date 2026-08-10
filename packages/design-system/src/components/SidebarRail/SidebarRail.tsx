@@ -11,7 +11,9 @@
  *
  * Convive com a `Sidebar` clássica (240px, be-hero) — este componente NÃO a
  * substitui no DS; o consumidor escolhe a anatomia. Abaixo de `lg` o AppShell
- * segue colapsando para Drawer (o rail é apresentação ≥ lg).
+ * segue colapsando para Drawer; desde a DELTA-UX (D-1008-R5) o rail também é
+ * a PELE do menu mobile via `variant="drawer"` (o protótipo desenha o drawer
+ * como o próprio rail, sempre aberto, altura total, sem margem/raio/toggle).
  *
  * Divergência deliberada do protótipo, registrada no handoff (P-REC-6): o
  * `.dc.html` põe `overflow:hidden` no item E o tooltip como filho absoluto
@@ -72,6 +74,15 @@ export interface SidebarRailProps {
   /** Estado inicial. O protótipo nasce FECHADO (84px). */
   defaultOpen?: boolean;
   /**
+   * Anatomia (DELTA-UX-T3 · D-1008-R5). 'flutuante' (default) é a pílula
+   * desktop do protótipo. 'drawer' é a MESMA nav como conteúdo do Drawer < lg
+   * — o protótipo desenha o menu mobile como o próprio rail, sempre aberto,
+   * altura total, sem margem/raio/toggle/tooltip (media query < lg do
+   * .dc.html). A anatomia off-canvas (portal, scrim, focus-trap) segue sendo
+   * do Drawer; aqui é só a pele v3.
+   */
+  variant?: 'flutuante' | 'drawer';
+  /**
    * Slot extra entre marca e itens, visível SÓ com o rail aberto. Existe para
    * função que o protótipo não previu e não pode sumir do desktop (ex.:
    * alternador de painel do papel duplo) — divergência nomeada no handoff.
@@ -130,12 +141,17 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
       onFooterClick,
       footerMenu,
       defaultOpen = false,
+      variant = 'flutuante',
       slotAberto,
       className,
     },
     ref,
   ) => {
-    const [open, setOpen] = React.useState(defaultOpen);
+    const drawer = variant === 'drawer';
+    const [railAberto, setOpen] = React.useState(defaultOpen);
+    // Drawer é a anatomia ABERTA por definição (protótipo < lg): rótulos no
+    // fluxo, badges visíveis, sem toggle nem tooltip.
+    const open = drawer || railAberto;
     const [menuPerfilAberto, setMenuPerfilAberto] = React.useState(false);
     const rotuloToggle = open ? 'Recolher menu' : 'Abrir menu';
 
@@ -243,16 +259,28 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
           'relative z-[5] shrink-0 flex flex-col items-center',
           'bg-[var(--surface-raised)]',
           'pt-[var(--rail-pt)] pb-[var(--rail-pb)]',
-          'h-[calc(100%-2*var(--rail-margin))]',
-          'my-[var(--rail-margin)] ml-[var(--rail-margin)]',
-          'rounded-[var(--rail-radius)] shadow-elev-3',
-          open ? 'w-[var(--rail-width-open)]' : 'w-[var(--rail-width)]',
-          MOTION_RAIL,
+          drawer
+            ? cn(
+                // Protótipo < lg: o menu mobile É o rail, sempre aberto, altura
+                // total, sem margem/raio (media query do .dc.html: top 0,
+                // height 100vh, margin 0, border-radius 0, width 248).
+                'h-full w-[var(--rail-width-open)] rounded-none',
+              )
+            : cn(
+                'h-[calc(100%-2*var(--rail-margin))]',
+                'my-[var(--rail-margin)] ml-[var(--rail-margin)]',
+                'rounded-[var(--rail-radius)] shadow-elev-3',
+                open ? 'w-[var(--rail-width-open)]' : 'w-[var(--rail-width)]',
+                MOTION_RAIL,
+              ),
           className,
         )}
       >
         {/* Toggle circular meio para fora da borda direita (protótipo:
-            32px, top 34, right -16 = metade do próprio diâmetro). */}
+            32px, top 34, right -16 = metade do próprio diâmetro). No drawer
+            NÃO existe (media query do protótipo: display none < lg — quem
+            fecha o off-canvas é o scrim/Esc do Drawer). */}
+        {!drawer && (
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -284,6 +312,7 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
             />
           </span>
         </button>
+        )}
 
         {/* Marca com crossfade: ícone (fechado) ↔ wordmark (aberto). */}
         {(brandIcon || brandLogo) && (

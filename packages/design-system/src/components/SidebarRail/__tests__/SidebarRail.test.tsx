@@ -208,6 +208,40 @@ describe('SidebarRail — footerMenu (popover do perfil)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// DELTA-UX-T3 (D-1008-R5) — variant="drawer": a pele v3 do menu mobile
+// ---------------------------------------------------------------------------
+
+describe('SidebarRail — variant="drawer" (menu mobile no chrome v3)', () => {
+  it('sempre aberto: rótulos no fluxo, badge visível, sem tooltip', () => {
+    const { container } = renderRail({ variant: 'drawer' });
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    expect(nav.getAttribute('data-rail-open')).toBe('1');
+    expect(screen.getByText('Eventos')).toBeTruthy(); // rótulo em fluxo, não sr-only
+    expect(screen.getByText('2')).toBeTruthy(); // badge (anatomia aberta)
+    expect(container.querySelectorAll('[data-rail-tip]').length).toBe(0);
+  });
+
+  it('sem toggle: quem fecha o off-canvas é o Drawer (scrim/Esc)', () => {
+    renderRail({ variant: 'drawer' });
+    expect(screen.queryByRole('button', { name: 'Abrir menu' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Recolher menu' })).toBeNull();
+  });
+
+  it('anatomia do protótipo < lg: altura total, largura 248 por token, sem margem/raio', () => {
+    renderRail({ variant: 'drawer' });
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    expect(nav.className).toContain('h-full');
+    expect(nav.className).toContain('w-[var(--rail-width-open)]');
+    expect(nav.className).toContain('rounded-none');
+    expect(nav.className).not.toContain('my-[var(--rail-margin)]');
+    expect(nav.className).not.toContain('ml-[var(--rail-margin)]');
+    expect(nav.className).not.toContain('rounded-[var(--rail-radius)]');
+    // A superfície segue a do rail (vidro sob data-glass): mesma pele, outra moldura.
+    expect(nav.className).toContain('bg-[var(--surface-raised)]');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // F4 (DELTA-UX) — tooltip do rail fechado visível também por teclado
 // ---------------------------------------------------------------------------
 

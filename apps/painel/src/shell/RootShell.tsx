@@ -28,19 +28,12 @@
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  AppShell,
-  Avatar,
-  SCROLL_Y_ONLY,
-  Sidebar,
-  SidebarFooter,
-  SidebarRail,
-} from '@leela/design-system';
-import { shellRailItems, shellSidebarSections } from './sidebar';
+import { AppShell, SCROLL_Y_ONLY, SidebarRail } from '@leela/design-system';
+import { shellRailItems } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
 import { usePaineisDaConta } from './paineis';
-import { AlternadorDePainel, nomeDoPainelAtual, travessia } from './AlternadorDePainel';
+import { nomeDoPainelAtual, travessia } from './AlternadorDePainel';
 
 export interface RootShellProps {
   children: React.ReactNode;
@@ -49,63 +42,9 @@ export interface RootShellProps {
 export function RootShell({ children }: RootShellProps): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
-  const { nome, fotoUrl } = useShellSession();
+  const { nome } = useShellSession();
   const eventosAtivos = useEventosAtivosBadge();
   const paineis = usePaineisDaConta();
-
-  // `navigate` vai INTEIRO, sem adaptador. O `(href) => navigate(href)` que
-  // morava aqui descartava em silêncio o segundo argumento, e com ele o
-  // `{ replace: true }` do A-7 (LEELA-DEBT-T5): o menu continuaria empilhando
-  // a rota atual a cada clique, e nenhum teste do construtor puro veria isso,
-  // porque lá o dublê recebe o que o construtor manda — o adaptador ficava
-  // entre os dois.
-  const sections = shellSidebarSections(location.pathname, navigate, eventosAtivos);
-
-  // Bloco de marca (T2): a ANATOMIA `.brand` (padding, hairline, sub) é do DS —
-  // reusamos os MESMOS tokens do SidebarBrand para não haver drift. O mark deixa
-  // de ser texto e passa a ser o wordmark oficial da Leela (variante brasa /
-  // verde-limão, o MESMO `/leela-logo-brasa.svg` do header da landing), que casa
-  // com o fundo escuro `--surface-base` da sidebar. `alt` textual garante a11y;
-  // altura = `--sidebar-brand-mark-size` (22px), o mesmo espaço vertical que o
-  // texto ocupava. Sub "Painel do Organizador" segue como descritor de contexto.
-  const brand = (
-    <div className="border-b border-b-[var(--border-subtle)] pt-[var(--sidebar-brand-pt)] px-[var(--sidebar-brand-px)] pb-[var(--sidebar-brand-pb)]">
-      <img
-        src="/leela-logo-brasa.svg"
-        alt="Leela"
-        data-slot="brand-logo"
-        className="h-[var(--sidebar-brand-mark-size)] w-auto"
-      />
-      {/* O sub deixou de ser literal (PAPEL-DUPLO): a MESMA moldura serve os
-          dois painéis — `/plataforma` sempre rodou dentro deste RootShell — e
-          o rótulo fixo "Painel do Organizador" mentia para quem estivesse no
-          painel master. Agora ele nomeia onde a conta está, que é o que faz o
-          alternador logo abaixo ser legível: um diz onde você está, o outro
-          diz para onde vai. */}
-      <p className="mt-[var(--sidebar-brand-sub-mt)] text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
-        {nomeDoPainelAtual(location.pathname)}
-      </p>
-      {/* Só desenha para quem alcança os dois lados. Não é autorização — quem
-          nega é Rules + guards das Functions; ver o cabeçalho do componente. */}
-      {paineis.podeAlternar ? (
-        <div className="mt-[var(--spacing-3)]">
-          <AlternadorDePainel podeAlternar={paineis.podeAlternar} />
-        </div>
-      ) : null}
-    </div>
-  );
-
-  // Rodapé só com sessão nomeada — sem usuário hardcoded (B4). "Ver perfil"
-  // agora navega para as configurações da conta (S020-T4); antes era um rótulo
-  // morto.
-  const footer = nome ? (
-    <SidebarFooter
-      avatar={<Avatar size="sm" name={nome} {...(fotoUrl ? { src: fotoUrl } : {})} />}
-      name={nome}
-      subtitle="Ver perfil"
-      onClick={() => navigate('/conta')}
-    />
-  ) : undefined;
 
   // DELTA-UX-T4 (D-1008-R6): o perfil do rodapé do rail virou TRIGGER do
   // popover do perfil — DropdownMenu canônico ancorado acima (L-021), com
@@ -129,33 +68,44 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
 
   // HIFI-REC · rail flutuante do protótipo Visao Geral v3 (ordem do dono,
   // 10/08): ≥ lg a navegação é o SidebarRail — pílula flutuante fechada em
-  // 84px, aberta em 248px. A Sidebar clássica NÃO morreu: é o conteúdo do
-  // Drawer < lg (anatomia certa para off-canvas, com brand/seções/rodapé).
-  // O AlternadorDePainel SAIU do slot aberto (D-1008-R6): a travessia agora
-  // vive no popover do perfil, alcançável com o rail FECHADO ou ABERTO.
-  const rail = (
-    <SidebarRail
-      items={shellRailItems(location.pathname, navigate, eventosAtivos)}
-      brandIcon={<img src="/leela-icon.svg" alt="" className="w-full h-full" />}
-      brandLogo={<img src="/leela-logo-brasa.svg" alt="Leela" className="h-full w-auto" />}
-      {...(nome ? { footerName: nome } : {})}
-      footerSubtitle="Ver perfil"
-      footerMenu={menuPerfil}
-      // Rail aberto NOMEIA o painel (conquista PAPEL-DUPLO — o rótulo não
-      // mente no master).
-      slotAberto={
-        <p className="text-center text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
-          {nomeDoPainelAtual(location.pathname)}
-        </p>
-      }
-    />
-  );
+  // 84px, aberta em 248px. O AlternadorDePainel SAIU do slot aberto
+  // (D-1008-R6): a travessia agora vive no popover do perfil, alcançável com
+  // o rail FECHADO ou ABERTO.
+  //
+  // `navigate` vai INTEIRO para o construtor de itens, sem adaptador: um
+  // `(href) => navigate(href)` descartaria em silêncio o `{ replace: true }`
+  // do A-7 (LEELA-DEBT-T5) e o menu voltaria a empilhar a rota atual.
+  //
+  // DELTA-UX-T3 (D-1008-R5): as MESMAS props servem as duas anatomias — a
+  // pílula desktop e o drawer < lg. A Sidebar clássica saiu da moldura: o
+  // menu mobile agora é o próprio rail no chrome v3 (`variant="drawer"`:
+  // sempre aberto, altura total, sem margem/raio/toggle — media query < lg
+  // do protótipo). A anatomia OFF-CANVAS fica (decisão registrada): portal,
+  // scrim condicional (item 5 do REFACTOR) e focus-trap seguem sendo do
+  // Drawer do AppShell; aqui só a pele mudou. Consequência aceita: o rodapé
+  // mobile mostra as iniciais (receita do rail), não mais a foto da sessão —
+  // paridade com o desktop, que já era assim desde a HIFI-REC.
+  const propsDoRail = {
+    items: shellRailItems(location.pathname, navigate, eventosAtivos),
+    brandIcon: <img src="/leela-icon.svg" alt="" className="w-full h-full" />,
+    brandLogo: <img src="/leela-logo-brasa.svg" alt="Leela" className="h-full w-auto" />,
+    ...(nome ? { footerName: nome } : {}),
+    footerSubtitle: 'Ver perfil',
+    footerMenu: menuPerfil,
+    // Rail aberto NOMEIA o painel (conquista PAPEL-DUPLO — o rótulo não
+    // mente no master). No drawer, sempre aberto, o rótulo está sempre lá.
+    slotAberto: (
+      <p className="text-center text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
+        {nomeDoPainelAtual(location.pathname)}
+      </p>
+    ),
+  };
 
   return (
     <AppShell
-      sidebar={rail}
+      sidebar={<SidebarRail {...propsDoRail} />}
       sidebarFlutuante
-      drawerSidebar={<Sidebar brand={brand} sections={sections} footer={footer} />}
+      drawerSidebar={<SidebarRail variant="drawer" {...propsDoRail} />}
       // GLOW DA PÁGINA na RAIZ da moldura (protótipo: background-image no flex
       // que contém nav+main): o rail é vidro translúcido e precisa do glow POR
       // BAIXO — pintado só no contêiner que rola, a faixa do rail ficava sobre
