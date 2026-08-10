@@ -14,6 +14,7 @@ import primitivesBrasa from '../../tokens/primitives.brasa.json';
 import primitivesWine from '../../tokens/primitives.wine.json';
 import primitivesDarkWine from '../../tokens/primitives.dark-wine.json';
 import semanticBase from '../../tokens/semantic.json';
+import semanticBrasa from '../../tokens/semantic.brasa.json';
 import semanticWine from '../../tokens/semantic.wine.json';
 import semanticDarkWine from '../../tokens/semantic.dark-wine.json';
 import component from '../../tokens/component.json';
@@ -33,10 +34,14 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = resolve(__dirname, '..', '..');
 
-// Semantic por tema: base compartilhada + overrides por tema (wine, dark-wine).
-// A base descreve o tema escuro (brasa); wine inverte os papéis dos neutros;
-// dark-wine é um terceiro escuro (vinho + lime), overrides próprios.
-const semanticBrasa = semanticBase as TokenRecord;
+// Semantic por tema: base compartilhada + overrides por tema (brasa, wine,
+// dark-wine). A base descreve o tema escuro (brasa) quase por inteiro; wine
+// inverte os papéis dos neutros; dark-wine é um terceiro escuro (vinho +
+// lime), overrides próprios. brasa ganhou seu primeiro override em BLUR
+// (REDESIGN-DS-0809 §6, tokens/semantic.brasa.json): chart.accent-2 é
+// específico do brasa e não pode morar em semantic.json (mergeTokens é deep
+// merge — qualquer chave nova na base vaza para wine/dark-wine por herança).
+const semanticBrasaMerged = mergeTokens(semanticBase as TokenRecord, semanticBrasa as TokenRecord);
 const semanticWineMerged = mergeTokens(semanticBase as TokenRecord, semanticWine as TokenRecord);
 const semanticDarkWineMerged = mergeTokens(semanticBase as TokenRecord, semanticDarkWine as TokenRecord);
 
@@ -57,7 +62,7 @@ const glassBlock = generateGlassActivationBlock();
 
 // brasa é o tema padrão: também cobre :root sem data-theme (anti-FOUC SSR)
 // aliases: ponte shadcn→brasa (tokens/shadcn.json) — CSS-only, vale nos 3 temas
-const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord, { rootFallback: true, aliases: shadcnAliases as TokenRecord, extra: glassExtraFor(glass, 'brasa') }) + '\n\n' + glassBlock;
+const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasaMerged, component as TokenRecord, { rootFallback: true, aliases: shadcnAliases as TokenRecord, extra: glassExtraFor(glass, 'brasa') }) + '\n\n' + glassBlock;
 const wineCSS = generateCSS('wine', primitivesWine as TokenRecord, semanticWineMerged, component as TokenRecord, { aliases: shadcnAliases as TokenRecord, extra: glassExtraFor(glass, 'wine') }) + '\n\n' + glassBlock;
 const darkWineCSS = generateCSS('dark-wine', primitivesDarkWine as TokenRecord, semanticDarkWineMerged, component as TokenRecord, { aliases: shadcnAliases as TokenRecord, extra: glassExtraFor(glass, 'dark-wine') }) + '\n\n' + glassBlock;
 const indexCSS = `/* Leela Design System — all themes combined */\n\n${brasaCSS}\n\n${wineCSS}\n\n${darkWineCSS}`;
@@ -74,7 +79,7 @@ writeFileSync(resolve(themesDir, 'index.css'), indexCSS, 'utf8');
 // Generate RN theme file
 // ---------------------------------------------------------------------------
 
-const brasaRN = generateRNTheme(primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord);
+const brasaRN = generateRNTheme(primitivesBrasa as TokenRecord, semanticBrasaMerged, component as TokenRecord);
 const wineRN = generateRNTheme(primitivesWine as TokenRecord, semanticWineMerged, component as TokenRecord);
 const darkWineRN = generateRNTheme(primitivesDarkWine as TokenRecord, semanticDarkWineMerged, component as TokenRecord);
 

@@ -1,0 +1,6 @@
+{
+  "$description": "Overrides semânticos do tema brasa. Merge sobre tokens/semantic.json, igual ao que semantic.wine.json e semantic.dark-wine.json fazem — só que brasa É a base (semantic.json foi escrito para o tema escuro brasa), então este arquivo fica propositalmente mínimo: só entra aqui o que NÃO pode morar em semantic.json sem vazar para wine/dark-wine via mergeTokens. Origem: REDESIGN-DS-0809 · lane BLUR §6 — o painel roda em brasa por ordem do dono, então a rampa de dataviz ganha a ponta âmbar (chart.accent-2) SÓ no brasa, com o mesmo valor literal que já existe em semantic.dark-wine.json (README §6). chart.accent (a ponta lime) não foi pedido para o brasa e não entra aqui.",
+  "chart": {
+    "accent-2": "oklch(0.75 0.13 75)"
+  }
+}
