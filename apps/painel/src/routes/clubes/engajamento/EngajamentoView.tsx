@@ -45,6 +45,7 @@ import {
   type ResumoDaComunidade,
   type ResumoDosPilares,
 } from './_lib/engajamento';
+import { classeDeReanimacao, useReanimacao } from './_lib/reanimacao';
 import { TODOS_OS_CLUBS } from './_data/engajamento';
 
 export interface OpcaoDeClube {
@@ -127,6 +128,19 @@ function barrasDeContagem(itens: readonly ContagemRotulada[]): BarChartDatum[] {
   return itens.map((c) => ({ label: c.rotulo, value: c.total }));
 }
 
+/**
+ * Envelope de reanimação de UM gráfico (REFACTOR item 10).
+ *
+ * O contador vive AQUI dentro, uma instância por gráfico — é o que garante o
+ * escopo. `chave` é a assinatura dos filtros que mexem NESTE card: mudou a
+ * chave, este gráfico se revela de novo; não mudou, ele fica parado enquanto o
+ * vizinho anima.
+ */
+function GraficoAnimado({ chave, children }: { chave: string; children: ReactNode }): JSX.Element {
+  const fase = useReanimacao(chave);
+  return <div className={classeDeReanimacao(fase)}>{children}</div>;
+}
+
 // ---------------------------------------------------------------------------
 // Ranking de desafios — o card com recorte PRÓPRIO (REFACTOR item 9)
 // ---------------------------------------------------------------------------
@@ -151,9 +165,11 @@ type RecorteDoRanking = 'top' | 'todos';
 function RankingDeDesafios({
   desafios,
   loading,
+  clubeSelecionado,
 }: {
   desafios: DesafioEngajado[] | null;
   loading: boolean;
+  clubeSelecionado: string;
 }): JSX.Element {
   const [recorte, setRecorte] = useState<RecorteDoRanking>('top');
   const lista = desafios ?? [];
@@ -190,12 +206,15 @@ function RankingDeDesafios({
         </Painel>
       ) : (
         <Painel>
-          <BarChart
-            data={visiveis.map((d) => ({ label: d.nome, value: d.participantes }))}
-            aria-label="Participantes por desafio em andamento"
-            height={alturaDeBarras(visiveis.length)}
-            formatValue={formatInt}
-          />
+          {/* Dois filtros mexem NESTE card: o recorte dele e o club lido. */}
+          <GraficoAnimado chave={`${clubeSelecionado}|${recorte}`}>
+            <BarChart
+              data={visiveis.map((d) => ({ label: d.nome, value: d.participantes }))}
+              aria-label="Participantes por desafio em andamento"
+              height={alturaDeBarras(visiveis.length)}
+              formatValue={formatInt}
+            />
+          </GraficoAnimado>
         </Painel>
       )}
     </>
@@ -321,16 +340,18 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                   </Painel>
                 ) : (
                   <Painel>
-                    <BarChart
-                      data={pilares.linhas.map((l) => ({
-                        label: l.rotulo,
-                        value: l.atual,
-                        ...(l.meta > 0 ? { total: l.meta } : {}),
-                      }))}
-                      aria-label="Média de pontos por participante por pilar, ponderada por desafio, sobre o mínimo exigido"
-                      height={alturaDeBarras(pilares.linhas.length)}
-                      formatValue={formatDecimal1}
-                    />
+                    <GraficoAnimado chave={clubeSelecionado}>
+                      <BarChart
+                        data={pilares.linhas.map((l) => ({
+                          label: l.rotulo,
+                          value: l.atual,
+                          ...(l.meta > 0 ? { total: l.meta } : {}),
+                        }))}
+                        aria-label="Média de pontos por participante por pilar, ponderada por desafio, sobre o mínimo exigido"
+                        height={alturaDeBarras(pilares.linhas.length)}
+                        formatValue={formatDecimal1}
+                      />
+                    </GraficoAnimado>
                   </Painel>
                 )}
               </section>
@@ -344,12 +365,14 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                   <Skeleton variant="rect" className="h-40" />
                 ) : (
                   <Painel>
-                    <BarChart
-                      data={barrasDeContagem(situacao)}
-                      aria-label="Membros por situação"
-                      height={alturaDeBarras(situacao.length)}
-                      formatValue={formatInt}
-                    />
+                    <GraficoAnimado chave={clubeSelecionado}>
+                      <BarChart
+                        data={barrasDeContagem(situacao)}
+                        aria-label="Membros por situação"
+                        height={alturaDeBarras(situacao.length)}
+                        formatValue={formatInt}
+                      />
+                    </GraficoAnimado>
                   </Painel>
                 )}
               </section>
@@ -371,18 +394,24 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 </Painel>
               ) : (
                 <Painel>
-                  <BarChart
-                    data={barrasDeContagem(entrada)}
-                    aria-label="Membros por porta de entrada"
-                    height={alturaDeBarras(entrada.length)}
-                    formatValue={formatInt}
-                  />
+                  <GraficoAnimado chave={clubeSelecionado}>
+                    <BarChart
+                      data={barrasDeContagem(entrada)}
+                      aria-label="Membros por porta de entrada"
+                      height={alturaDeBarras(entrada.length)}
+                      formatValue={formatInt}
+                    />
+                  </GraficoAnimado>
                 </Painel>
               )}
             </section>
 
             <section aria-label="Desafios que mais movem a comunidade" className="flex flex-col">
-              <RankingDeDesafios desafios={desafios} loading={loading} />
+              <RankingDeDesafios
+                desafios={desafios}
+                loading={loading}
+                clubeSelecionado={clubeSelecionado}
+              />
             </section>
 
             <section aria-label="Frequência e presença" className="flex flex-col">
@@ -418,12 +447,14 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 </Painel>
               ) : (
                 <Painel>
-                  <BarChart
-                    data={barrasDeContagem(ponte)}
-                    aria-label="Desafios em andamento com e sem evento vinculado"
-                    height={alturaDeBarras(ponte.length)}
-                    formatValue={formatInt}
-                  />
+                  <GraficoAnimado chave={clubeSelecionado}>
+                    <BarChart
+                      data={barrasDeContagem(ponte)}
+                      aria-label="Desafios em andamento com e sem evento vinculado"
+                      height={alturaDeBarras(ponte.length)}
+                      formatValue={formatInt}
+                    />
+                  </GraficoAnimado>
                 </Painel>
               )}
             </section>

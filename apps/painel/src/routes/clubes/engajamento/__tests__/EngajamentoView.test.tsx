@@ -231,6 +231,52 @@ describe('EngajamentoView · recorte por card (REFACTOR item 9)', () => {
   });
 });
 
+describe('EngajamentoView · animação escopada por filtro (REFACTOR item 10)', () => {
+  /** Nome do keyframe ativo no envelope daquele gráfico. */
+  function faseDoGrafico(nomeDoGrafico: string): string {
+    const envelope = screen
+      .getByRole('img', { name: nomeDoGrafico })
+      .closest('[class*="animate-revela-grafico"]');
+    return envelope?.className ?? '';
+  }
+
+  const muitos = Array.from({ length: 8 }, (_, i) => ({
+    id: `d${i}`,
+    clubeId: 'floripa-run',
+    nome: `Desafio ${String.fromCharCode(65 + i)}`,
+    participantes: 100 - i,
+    progressoPct: 50,
+  }));
+
+  it('trocar o recorte do ranking reanima o ranking e NÃO os vizinhos', async () => {
+    render(<EngajamentoView {...props({ desafios: muitos })} />);
+    const rankingAntes = faseDoGrafico('Participantes por desafio em andamento');
+    const situacaoAntes = faseDoGrafico('Membros por situação');
+    const entradaAntes = faseDoGrafico('Membros por porta de entrada');
+
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' }),
+      'todos'
+    );
+
+    expect(faseDoGrafico('Participantes por desafio em andamento')).not.toBe(rankingAntes);
+    expect(faseDoGrafico('Membros por situação')).toBe(situacaoAntes);
+    expect(faseDoGrafico('Membros por porta de entrada')).toBe(entradaAntes);
+  });
+
+  it('trocar o club reanima os gráficos que aquele filtro realmente muda', () => {
+    const { rerender } = render(<EngajamentoView {...props({ desafios: muitos })} />);
+    const situacaoAntes = faseDoGrafico('Membros por situação');
+    rerender(<EngajamentoView {...props({ desafios: muitos, clubeSelecionado: 'pedal-norte' })} />);
+    expect(faseDoGrafico('Membros por situação')).not.toBe(situacaoAntes);
+  });
+
+  it('todo gráfico carrega o desligamento por movimento reduzido', () => {
+    render(<EngajamentoView {...props()} />);
+    expect(faseDoGrafico('Membros por situação')).toContain('motion-reduce:animate-none');
+  });
+});
+
 describe('EngajamentoView · recorte por club', () => {
   it('o filtro lista "Todos os clubs" primeiro e depois cada club', () => {
     render(<EngajamentoView {...props()} />);
