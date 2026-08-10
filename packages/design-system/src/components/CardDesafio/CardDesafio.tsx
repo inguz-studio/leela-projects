@@ -43,6 +43,7 @@ function CardDesafio({
       className={cn(
         'flex flex-col gap-[var(--spacing-3)]',
         'bg-[var(--surface-raised)]',
+        '[backdrop-filter:var(--card-blur)]',
         'rounded-[var(--card-radius)]',
         'p-[var(--spacing-4)]',
         complete && 'shadow-[var(--elevation-brand)]',

@@ -51,6 +51,7 @@ function CardEvento({
   const rootClass = cn(
     'group block w-full text-left',
     'bg-[var(--surface-raised)]',
+    '[backdrop-filter:var(--card-blur)]',
     'rounded-[var(--card-radius)]',
     'overflow-hidden',
     'motion-safe:transition-[transform,box-shadow]',

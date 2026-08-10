@@ -64,6 +64,7 @@ export function KpiCard({
       className={cn(
         'flex flex-col gap-[var(--spacing-1)]',
         'rounded-[var(--card-radius)] bg-[var(--surface-raised)]',
+        '[backdrop-filter:var(--card-blur)]',
         'p-[var(--spacing-5)]',
         emphasis === 'critico' &&
           'border-l-4 border-l-[var(--border-danger)] pl-[var(--spacing-4)]',
