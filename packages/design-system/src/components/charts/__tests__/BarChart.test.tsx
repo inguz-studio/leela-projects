@@ -4,7 +4,7 @@ import { render, screen, within } from '@testing-library/react';
 // que a estrutura acessível (role img + rótulo + tabela equivalente) sobrevive.
 // Testamos esse CONTRATO do componente do DS (Testing Trophy), não o SVG da lib;
 // o plot real é provado ao vivo no showroom/preview.
-import { BarChart, TICK_MAX_CHARS, truncarRotulo } from '../BarChart';
+import { BarChart, TICK_MAX_CHARS, truncarRotulo, formatarTickEixoY } from '../BarChart';
 import { chartCategoryVar, pctOf } from '../chartPalette';
 
 describe('BarChart', () => {
@@ -65,6 +65,17 @@ describe('truncarRotulo (HIFI-REC · defeito nº 2 — colisão de rótulos)', (
     expect(
       within(screen.getByRole('table')).getByText('Corrida noturna — Ibirapuera')
     ).toBeInTheDocument();
+  });
+});
+
+describe('formatarTickEixoY (BARCHART-FIX · aridade do tickFormatter)', () => {
+  it('chamado exatamente como o Recharts chama — (valor, índice) — não deixa o índice virar `max`', () => {
+    // Recharts invoca tickFormatter(value, index): sem o wrapper de aridade,
+    // o índice cai no parâmetro `max` de truncarRotulo e trunca para 1 char.
+    expect(formatarTickEixoY('Corrida noturna — Ibirapuera', 0)).toBe('Corrida notu…');
+    expect(formatarTickEixoY('Ativos', 0)).toBe('Ativos');
+    expect(formatarTickEixoY('Ativos', 1)).toBe('Ativos');
+    expect(formatarTickEixoY('Ativos', 2)).toBe('Ativos');
   });
 });
 

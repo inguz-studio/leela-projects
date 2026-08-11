@@ -94,6 +94,18 @@ export function truncarRotulo(rotulo: string, max: number = TICK_MAX_CHARS): str
   return `${rotulo.slice(0, Math.max(1, max - 1)).trimEnd()}…`;
 }
 
+/**
+ * Wrapper de aridade do `tickFormatter` do eixo Y — o Recharts chama o
+ * formatter com `(valor, índice)`; passar `truncarRotulo` direto faz o
+ * índice da barra cair no parâmetro `max`, truncando TODO rótulo do eixo
+ * para 1 caractere (achado UXW-FIX, pré-existente desde `a826dc3a`). O 2º
+ * argumento é ignorado de propósito — só o valor decide o truncamento.
+ * @pure
+ */
+export function formatarTickEixoY(valor: string, _index?: number): string {
+  return truncarRotulo(valor);
+}
+
 export function BarChart({
   data,
   'aria-label': ariaLabel,
@@ -127,7 +139,7 @@ export function BarChart({
               tickLine={false}
               axisLine={false}
               tick={{ fill: 'var(--text-secondary)', fontSize: 13 }}
-              tickFormatter={truncarRotulo}
+              tickFormatter={formatarTickEixoY}
             />
             <Tooltip
               cursor={{ fill: 'var(--chart-track)', opacity: 0.4 }}
