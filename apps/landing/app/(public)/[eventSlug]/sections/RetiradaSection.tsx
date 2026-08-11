@@ -1,4 +1,5 @@
 import type { EventoPublico } from '@/lib/tipos';
+import { Card } from '@leela/design-system/server';
 import { Dobra } from './Dobra';
 
 /**
@@ -21,15 +22,14 @@ export function RetiradaSection({ evento }: { evento: EventoPublico }): React.JS
       </p>
       <ul className="mt-6 space-y-3">
         {evento.janelasRetirada.map((j, i) => (
-          <li
-            key={`${j.diaLabel}-${i}`}
-            className="flex flex-col gap-1 rounded-ds-md border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <span className="font-semibold text-text-primary">{j.diaLabel}</span>
-            <span className="text-sm text-text-secondary">
-              {j.horaInicio}–{j.horaFim}
-            </span>
-            <span className="text-sm text-text-secondary">{j.local}</span>
+          <li key={`${j.diaLabel}-${i}`}>
+            <Card className="flex flex-col gap-1 rounded-ds-md border-border-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
+              <span className="font-semibold text-text-primary">{j.diaLabel}</span>
+              <span className="text-sm text-text-secondary">
+                {j.horaInicio}–{j.horaFim}
+              </span>
+              <span className="text-sm text-text-secondary">{j.local}</span>
+            </Card>
           </li>
         ))}
       </ul>

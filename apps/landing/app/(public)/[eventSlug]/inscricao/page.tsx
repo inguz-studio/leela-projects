@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cupomDaEntrada } from '@leela/core';
+import { Card } from '@leela/design-system/server';
 import { getEventoPublicado } from '@/lib/leitor';
 import { rotuloEstadoVenda } from '@/lib/estadoVenda';
 import { CheckoutFlow } from './checkout/CheckoutFlow';
@@ -58,7 +59,7 @@ export default async function InscricaoPage({ params, searchParams }: Props): Pr
         <h1 className="mt-6 font-display text-3xl font-extrabold tracking-tight text-text-primary">
           Inscrição · {evento.nome}
         </h1>
-        <div className="mt-6 rounded-ds-lg border border-border-default bg-surface-raised p-6">
+        <Card className="mt-6 p-6">
           <p className="text-lg font-semibold text-text-primary">
             {rotuloEstadoVenda(evento.estadoVenda)}
           </p>
@@ -66,7 +67,7 @@ export default async function InscricaoPage({ params, searchParams }: Props): Pr
             As inscrições deste evento não estão abertas no momento, então o checkout está
             bloqueado. Você ainda pode consultar todas as informações na página do evento.
           </p>
-        </div>
+        </Card>
       </div>
     );
   }

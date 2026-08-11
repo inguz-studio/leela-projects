@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Card, buttonVariants } from '@leela/design-system/server';
+import { Input } from '@/app/_ds/ds';
+import { cn } from '@/lib/utils';
 
 /**
  * Bloco compartilhar/QR (S1201-T3 · RN-201). A URL amigável e o QR são
@@ -30,7 +33,7 @@ export function ShareBlock({
   }
 
   return (
-    <div className="flex flex-col gap-5 rounded-ds-lg border border-border-subtle bg-surface-raised p-6 sm:flex-row sm:items-center">
+    <Card className="flex flex-col gap-5 border-border-subtle p-6 sm:flex-row sm:items-center">
       <div
         className="mx-auto h-36 w-36 shrink-0 rounded-ds-md bg-surface-overlay p-2 [&>svg]:h-full [&>svg]:w-full"
         aria-label={`QR code para a página de ${nome}`}
@@ -44,16 +47,22 @@ export function ShareBlock({
           Mande o link para o grupo de treino ou aponte a câmera no QR.
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input
+          {/* Onda 1 do cânone: o campo era `<input readOnly>` cru (inventário
+              §3) e o botão replicava a variante `neutral` do `Button` à mão.
+              O `Input` entra pelo boundary de cliente único da landing; o botão
+              entra pela receita `buttonVariants` do subpath server-safe, que é
+              a entrada Radix-free do ADR-017 para ação em superfície pública. */}
+          <Input
             readOnly
             value={shareUrl}
             aria-label="Link público do evento"
-            className="min-w-0 flex-1 rounded-ds-md border border-border-default bg-surface-base px-3 py-2 text-sm text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            wrapperClassName="min-w-0 flex-1"
+            className="text-text-secondary"
           />
           <button
             type="button"
             onClick={copiar}
-            className="shrink-0 rounded-ds-md bg-action-secondary px-4 py-2 text-sm font-semibold text-action-secondary-fg transition-colors hover:bg-action-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            className={cn(buttonVariants({ variant: 'neutral' }), 'shrink-0')}
           >
             {copiado ? 'Copiado!' : 'Copiar link'}
           </button>
@@ -62,6 +71,6 @@ export function ShareBlock({
           {copiado ? 'Link da página pública copiado' : ''}
         </p>
       </div>
-    </div>
+    </Card>
   );
 }

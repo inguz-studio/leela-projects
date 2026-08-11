@@ -27,7 +27,7 @@
 // DS (ADR-017), sem boundary de cliente e sem JS de hidratação.
 // =============================================================================
 
-import { Badge, EmptyState } from '@leela/design-system/server';
+import { Badge, Card, EmptyState } from '@leela/design-system/server';
 import { ehPreview, FEED_MOCK } from '../../../lib/mockImagem';
 
 export function SecaoFeed(): React.JSX.Element {
@@ -44,12 +44,12 @@ export function SecaoFeed(): React.JSX.Element {
 /** Produção sem publicação real: estado vazio digno, sem pedir desculpa. */
 function FeedVazio(): React.JSX.Element {
   return (
-    <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
+    <Card className="border-border-subtle py-10">
       <EmptyState
         title="Ainda não há publicações"
         description="Quando este organizador publicar, os avisos e bastidores das experiências aparecem aqui."
       />
-    </div>
+    </Card>
   );
 }
 

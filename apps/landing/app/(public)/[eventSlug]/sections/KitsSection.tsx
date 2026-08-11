@@ -3,6 +3,7 @@ import { formatarPreco } from '@/lib/formato';
 import { imagemDoKit, rotuloKit } from '@/lib/kitImagem';
 import { ehPreview } from '@/lib/mockImagem';
 import { KitImagem } from '@/app/components/KitImagem';
+import { Card } from '@leela/design-system/server';
 import { Dobra } from './Dobra';
 
 /** Rótulo do delta do kit (RN-211: negativo = desconto; 0 = incluso). */
@@ -41,10 +42,8 @@ export function KitsSection({ evento }: { evento: EventoPublico }): React.JSX.El
             preview,
           );
           return (
-          <li
-            key={k.id}
-            className="flex flex-col justify-between rounded-ds-lg border border-border-subtle bg-surface-raised p-6"
-          >
+          <li key={k.id} className="flex">
+            <Card className="flex flex-1 flex-col justify-between border-border-subtle p-6">
             <div>
               {/* Imagem 1:1 do kit — clicável p/ ampliar quando é foto (T2). */}
               <KitImagem src={img.src} alt={rotuloKit(k.nome)} ampliavel={img.ampliavel} />
@@ -71,6 +70,7 @@ export function KitsSection({ evento }: { evento: EventoPublico }): React.JSX.El
             >
               {labelDeltaKit(k.preco)}
             </p>
+            </Card>
           </li>
           );
         })}

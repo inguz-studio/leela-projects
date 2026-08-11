@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '@/lib/containerPublico';
+import { buttonVariants } from '@leela/design-system/server';
 import { painelUrl } from '@/lib/painel';
+import { cn } from '@/lib/utils';
 import { ContaHeader } from './ContaHeader';
 
 /**
@@ -73,7 +75,10 @@ export function PublicHeader(): React.JSX.Element {
           <ContaHeader />
           <a
             href={painelUrl('/cadastrar')}
-            className="whitespace-nowrap rounded-ds-pill border border-border-default px-2 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-3 sm:text-sm"
+            className={cn(
+              buttonVariants({ variant: 'secondary', size: 'sm' }),
+              'whitespace-nowrap rounded-ds-pill',
+            )}
           >
             Criar conta de organizador
           </a>

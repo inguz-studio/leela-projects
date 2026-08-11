@@ -58,7 +58,9 @@ import {
 // (comprimento + número + caractere especial) mora em `politicaDeSenha`, é a
 // mesma que as Functions chamam, e é ela que decide se o botão libera.
 import { avaliarSenha, exigenciaDeSenha } from '@leela/core';
+import { buttonVariants } from '@leela/design-system/server';
 import { Button, Input, InputSenha } from '@/app/_ds/ds';
+import { cn } from '@/lib/utils';
 import { EntrarOverlay } from '@/app/components/EntrarOverlay';
 import { ensureLeela } from '@/lib/leelaClient';
 import { destinoPosEntrada } from '@/lib/areaDoCliente';
@@ -228,7 +230,7 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
         </p>
         <a
           href={destino.href}
-          className="mt-6 inline-flex rounded-ds-pill border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'mt-6 rounded-ds-pill')}
         >
           {destino.rotulo}
         </a>

@@ -17,14 +17,22 @@
 // =============================================================================
 
 import type { IngressoDaConta } from '@leela/api-client';
+import { Card, buttonVariants } from '@leela/design-system/server';
 import { Badge, EmptyState } from '@/app/_ds/ds';
 import { formatarDataEvento } from '@/lib/ingresso';
+import { cn } from '@/lib/utils';
 
+// Onda 1 do cânone: a moldura é o `Card` do DS; a constante guarda só o que
+// é LAYOUT deste cartão, não a anatomia da superfície.
 const CARTAO =
-  'flex flex-col gap-3 rounded-ds-lg border border-border-default bg-surface-raised p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:p-5';
+  'flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:p-5';
 
-const LINK =
-  'inline-flex items-center whitespace-nowrap rounded-ds-pill border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
+// Onda 1 do cânone: a receita do botão vem do DS (`buttonVariants`, entrada
+// Radix-free do ADR-017); a pílula é a forma de marketing da landing.
+const LINK = cn(
+  buttonVariants({ variant: 'secondary', size: 'sm' }),
+  'whitespace-nowrap rounded-ds-pill',
+);
 
 /** Rótulo do estado da inscrição — o vocabulário é de participante (D-0802-1). */
 const ROTULO_STATUS: Record<IngressoDaConta['status'], string> = {
@@ -44,7 +52,8 @@ const VARIANTE_STATUS: Record<IngressoDaConta['status'], 'vitoria' | 'alerta' | 
 function CartaoIngresso({ ingresso }: { ingresso: IngressoDaConta }): React.JSX.Element {
   const quando = formatarDataEvento(ingresso.eventoDataIso);
   return (
-    <li className={CARTAO} data-slot="ingresso-cartao">
+    <li>
+      <Card className={CARTAO} data-slot="ingresso-cartao">
       <div className="min-w-0">
         <p className="text-base font-semibold text-text-primary">
           {ingresso.eventoNome.length > 0 ? ingresso.eventoNome : 'Experiência'}
@@ -80,6 +89,7 @@ function CartaoIngresso({ ingresso }: { ingresso: IngressoDaConta }): React.JSX.
           </p>
         )}
       </div>
+      </Card>
     </li>
   );
 }
@@ -106,28 +116,28 @@ export function PainelIngressos({
         // O servidor ficou sem o keyring de assinatura. Falha de CONFIGURAÇÃO,
         // e ela aparece: link ausente calado foi o que fez o primeiro PIX real
         // passar sem ninguém notar.
-        <p
+        <Card
           role="status"
           data-slot="ingressos-sem-link"
-          className="rounded-ds-lg border border-border-default bg-surface-raised p-4 text-sm text-text-secondary"
+          className="p-4 text-sm text-text-secondary"
         >
           Não conseguimos abrir seus ingressos por aqui agora. O ingresso que chegou no e-mail da
           compra continua valendo, com o mesmo código.
-        </p>
+        </Card>
       ) : null}
 
       {!listaCompleta ? (
         // Degradação DECLARADA (ver `meusIngressos.ts`): a busca por ficha de
         // pessoa falhou e a lista pode não ter tudo. Calar aqui produziria a
         // lista vazia que mente.
-        <p
+        <Card
           role="status"
           data-slot="ingressos-lista-parcial"
-          className="rounded-ds-lg border border-border-default bg-surface-raised p-4 text-sm text-text-secondary"
+          className="p-4 text-sm text-text-secondary"
         >
           Pode estar faltando algum ingresso nesta lista. O que está no e-mail da compra continua
           valendo.
-        </p>
+        </Card>
       ) : null}
 
       {vazio ? (

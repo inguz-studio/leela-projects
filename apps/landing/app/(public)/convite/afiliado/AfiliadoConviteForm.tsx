@@ -8,6 +8,7 @@ import { provisionAfiliadoAccount } from '@leela/api-client';
 // com a sua é o que faz o piso subir num lugar só. A política de `@leela/core`
 // é a autoridade única — a mesma que a Function de provisionamento chama.
 import { avaliarSenha, exigenciaDeSenha } from '@leela/core';
+import { Card } from '@leela/design-system/server';
 import { Button, Input, InputSenha } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 
@@ -85,7 +86,7 @@ export function AfiliadoConviteForm({ eventoId, afiliadoId, token }: Props): Rea
 
   if (estado.fase === 'ok') {
     return (
-      <div className="mt-8 rounded-ds-lg border border-border-default bg-surface-raised p-6">
+      <Card className="mt-8 p-6">
         <p className="text-lg font-semibold text-text-primary">
           {estado.replay ? 'Convite já aceito' : 'Tudo pronto!'}
         </p>
@@ -100,19 +101,19 @@ export function AfiliadoConviteForm({ eventoId, afiliadoId, token }: Props): Rea
         >
           ← Voltar
         </Link>
-      </div>
+      </Card>
     );
   }
 
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="mt-8 flex flex-col gap-4" aria-label="Aceite do convite">
       {estado.fase === 'erro' ? (
-        <div
+        <Card
           role="alert"
-          className="rounded-ds-lg border border-border-default bg-surface-raised p-4 text-sm font-medium text-feedback-danger-fg"
+          className="p-4 text-sm font-medium text-feedback-danger-fg"
         >
           {estado.mensagem}
-        </div>
+        </Card>
       ) : null}
 
       <p className="text-sm text-text-tertiary">
