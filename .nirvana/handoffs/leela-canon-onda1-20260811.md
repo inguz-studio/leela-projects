@@ -35,17 +35,16 @@ conferir. A lista da Regra 1 fica agora com **um** arquivo, do painel, que a Ond
 
 | Família | Convertidas | Para |
 |---|---|---|
-| Superfície reconstruída à mão | **27** em 19 arquivos | `Card` de `@leela/design-system/server` |
+| Superfície reconstruída à mão | **38** em 24 arquivos | `Card` de `@leela/design-system/server` |
 | CTA replicando variante publicada | **6** | `buttonVariants` de `/server` (5) + a receita `ctaStyles.ts` do próprio app (1) |
 | `<input readOnly>` cru (`ShareBlock.tsx`) | **1** | `Input`, pelo boundary `_ds/ds.ts` |
-| **Total** | **34** | |
+| **Total** | **45** | |
 
-**O total da onda no documento é 64, e este número é menor. A diferença não é trabalho que ficou
-para trás — é classificação, e ela está toda nomeada na §3.** Trinta instâncias que a leitura
-dirigida contou como "superfície reconstruída" ou "CTA replicando variante" **não são `Card` nem
-são `Button`**, e forçá-las nos dois teria produzido regressão visual na tela onde um desconhecido
-decide gastar dinheiro. Elas viram lacuna de cânone com arquivo e linha, que é o destino que a
-L-021 prevê para padrão sem canônico.
+**O total da onda no documento é 64; convertidas, 45. As 19 de diferença estão contadas uma a uma
+na §3, e nenhuma delas é trabalho que ficou para trás.** Seis são CTA que a leitura dirigida
+classificou como botão e são `<span>` informativo; treze são superfície que não é `Card`. Forçá-las
+teria produzido regressão visual na tela onde um desconhecido decide gastar dinheiro — viram lacuna
+de cânone com arquivo e linha, que é o destino que a L-021 prevê para padrão sem canônico.
 
 ### A medição anti-carga
 
@@ -69,8 +68,8 @@ estão prontos no formato do painel do dono em
 
 | # | Grupo | Commit |
 |---|---|---|
-| 1 | Checkout — 12 superfícies → `Card` | `2d5bfc5f` |
-| 2 | Landing pública — 19 superfícies, 6 CTAs, 1 controle; entrada morta do lint removida | `f8a75d32` |
+| 1 | Checkout e página de inscrição — 12 superfícies → `Card` | `2d5bfc5f` |
+| 2 | Landing pública — 26 superfícies, 6 CTAs, 1 controle; entrada morta do lint removida | `f8a75d32` |
 | 3 | Auto-seleção de opção única + 5 casos de teste | (ver commit da fila) |
 | 4 | Baseline do gate, decisões do dono, boards | (ver commit da fila) |
 
@@ -123,10 +122,10 @@ conveniência**, e sem essa asserção o defeito passaria verde.
 
 ---
 
-## 3 · As 30 instâncias que NÃO viraram `Card` nem `Button` — e por quê
+## 3 · As 19 instâncias que NÃO viraram `Card` nem `Button` — e por quê
 
-Esta seção existe para que a diferença entre 64 e 34 não vire silêncio. Cada linha tem arquivo e
-linha, e cada grupo é candidato nomeado à **CANONE-1**.
+Esta seção existe para que a diferença entre 64 e 45 não vire silêncio. Treze são superfície e seis
+são CTA. Cada grupo tem arquivo e linha, e cada um é candidato nomeado à **CANONE-1**.
 
 ### 3.1 · Placa e painel recuado — o `Card` tem elevação, e estes não têm (6)
 
@@ -181,18 +180,24 @@ para a CANONE-1.
 `_perfil/PerfilView.tsx:100` — o marcador dia/mês da timeline. O `DateBadge` do DS é uma pílula
 **horizontal** com dot "ao vivo" (`.date-badge` do mockup); não é a mesma peça. Lacuna.
 
-### 3.5 · Ratificados pelo ADR-017, fora do alvo por escrito (3)
+### 3.5 · Ratificados pelo ADR-017, fora do alvo por escrito (1 dos 12 CTAs)
 
 `[eventSlug]/ctaStyles.ts`, `sections/marca.tsx` e `checkout/tipografia.tsx` seguem como composição
 de app — o próprio documento da onda os exclui. O que mudou é que a **duplicata** do `ctaStyles.ts`
 morreu: o CTA da home reescrevia a receita classe por classe e agora a importa.
 
-### 3.6 · Resto (9)
+### 3.6 · As quatro que nenhum detector reproduz
 
-Nove superfícies em `surface-raised` de rotas fora do escopo declarado da onda
-(`sections/HeroSection.tsx:129` e os blocos de `PerfilView`/`SecaoFeed` já cobertos acima, mais
-instâncias que a leitura dirigida contou duas vezes por aninhamento). O gate é a régua com catraca,
-e ele mede **6** restantes na landing — exatamente as seis da §3.1.
+A §5 do inventário conta **51** superfícies na landing por leitura dirigida. Somando o que foi
+convertido (38) com o que as §3.1 a §3.4 nomeiam (6 + 1 + 1 + 1 = 9), chega-se a 47. **As outras
+quatro não são reproduzíveis por medição**: nem o detector do gate nem uma varredura própria mais
+larga (raio + fundo OU borda, sem exigir espaçamento) as encontra, e a hipótese mais provável é
+contagem dupla por aninhamento na leitura dirigida — cartão dentro de cartão contado nos dois
+níveis.
+
+Registro em vez de estimativa: **quatro instâncias do número 51 não têm arquivo e linha atrás.** A
+régua que fica é a do gate, que mede **6** restantes na landing — exatamente as seis da §3.1 — e é
+a única das três com catraca.
 
 ---
 
@@ -202,7 +207,7 @@ e ele mede **6** restantes na landing — exatamente as seis da §3.1.
 renderizada nos dois temas, e o brief desta lane não a inclui na lista de gates. Fica **pendente
 declarada**, e é o item que eu levantaria antes de qualquer deploy. O que olhar, e onde:
 
-1. **`shadow-elev-1` + `card-blur` em 27 superfícies da landing.** Nenhuma delas tinha sombra
+1. **`shadow-elev-1` + `card-blur` em 38 superfícies da landing.** Nenhuma delas tinha sombra
    antes. É o delta de maior alcance e o mais provável de gerar opinião do dono.
 2. **Os cinco CTAs de contorno** (`DefinirSenhaFlow`, `PublicHeader`, `PainelIngressos`,
    `PortasDaConta`, `AvisoPedidoEmConfirmacao`): a receita do DS troca a borda de repouso de

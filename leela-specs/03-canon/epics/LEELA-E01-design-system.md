@@ -716,7 +716,7 @@ commits de código, nenhum deploy.
 | Item | Prova |
 |---|---|
 | Checkout: 12 superfícies reconstruídas à mão → `Card` | `2d5bfc5f` — entrada por `@leela/design-system/server` (Radix-free, ADR-017); tom de borda e tintas de feedback preservados, zero string tocada |
-| Landing pública: 15 superfícies, 6 CTAs e o último controle cru da landing | `f8a75d32` — `ShareBlock` paga três divergências numa tela só (superfície, `<input readOnly>` → `Input`, botão → `buttonVariants`) |
+| Landing pública: 26 superfícies, 6 CTAs e o último controle cru da landing | `f8a75d32` — `ShareBlock` paga três divergências numa tela só (superfície, `<input readOnly>` → `Input`, botão → `buttonVariants`) |
 | Opção única deixa de cobrar clique (passo de arquitetura nº 2) | `64be6b70` — `StepModalidadeKit` auto-seleciona modalidade e kit quando a lista tem um item; 5 casos, um deles contando os patches para provar que o efeito estabiliza |
 
 **A catraca desceu, e é a primeira vez.** `superficie-crua.landing` **27 → 6**;
@@ -734,7 +734,7 @@ arquivo, do painel, que a Onda 3 paga.
 prometia 13 contando só a auto-seleção; os cliques que somem são **dois** (modalidade + kit), não
 três. 14 é o número certo, e vai a 12 se a decisão do endereço liberar.
 
-**Trinta das 64 instâncias não viraram `Card` nem `Button`, e isso está nomeado, não silenciado.**
+**Quarenta e cinco das 64 instâncias foram convertidas; as 19 restantes estão nomeadas, não silenciadas.**
 A leitura dirigida do inventário classificou como "superfície reconstruída" seis **placas recuadas**
 (`surface-base`/`sunken`/`overlay`: o QR do PIX, o QR do ingresso, o código do ingresso, o painel do
 kit, o bloco de totais, a placa do compartilhar) — e o `Card` carrega `shadow-elev-1` + `card-blur`,
@@ -744,6 +744,10 @@ contorno** que são `<span>`, não botão — o `Badge` do brasa é 10px UPPERCA
 publica variante `outline`** (a esteira shadcn→brasa dropou a do stock). Cada grupo virou candidato
 nomeado à **CANONE-1**, com arquivo e linha no handoff. A variante `outline` do `Badge` é o item
 mais bem definido que esta onda manda para lá: uma variante resolve as cinco de uma vez.
+
+**E quatro instâncias do número 51 não têm arquivo e linha atrás.** Nem o detector do gate nem
+uma varredura própria mais larga as reproduz; a hipótese é contagem dupla por aninhamento na
+leitura dirigida. Fica registrado como limite da medição de origem, em vez de estimado.
 
 **Dois furos do próprio gate, achados por quem o usou.** A catraca varre
 `div|section|article|li|aside` e **não vê `<p>`** — duas superfícies com anatomia de cartão viviam
