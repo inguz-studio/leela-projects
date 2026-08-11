@@ -12,14 +12,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  excluirMarca,
+  definirStatusDaMarca,
   getLeelaDb,
   listarMarcas,
   marcaIdDoNome,
   salvarMarca,
   uploadLogoMarca,
 } from '@leela/api-client';
-import type { Marca, MarcaInput } from '@leela/core';
+import type { Marca, MarcaInput, StatusMarca } from '@leela/core';
 
 export interface ListaMarcasState {
   itens: Marca[];
@@ -77,12 +77,17 @@ export async function salvarMarcaDoProfissional(
   return salvarMarca(getLeelaDb(), uid, input, marcaId);
 }
 
-/** Exclui a marca do registro reutilizável (owner-only). */
-export async function excluirMarcaDoProfissional(
+/**
+ * Liga/desliga a marca no registro (PATROCINADOR-TOGGLE). Não existe mais porta
+ * de exclusão neste módulo: marca desligada sai do autocomplete de patrocínios
+ * novos e continua no registro para poder voltar.
+ */
+export async function definirStatusDaMarcaDoProfissional(
   uid: string,
   marcaId: string,
+  status: StatusMarca,
 ): Promise<void> {
-  return excluirMarca(getLeelaDb(), uid, marcaId);
+  return definirStatusDaMarca(getLeelaDb(), uid, marcaId, status);
 }
 
 /**

@@ -96,8 +96,15 @@ export function MarcaFormModal({
     }
     if (contratoUrl.trim() !== '') base.contratoUrl = contratoUrl.trim();
     if (logoUrl.trim() !== '') base.logoUrl = logoUrl.trim();
+    // O `status` NÃO é campo deste formulário — ele é o interruptor da lista
+    // (PATROCINADOR-TOGGLE), e dois lugares mexendo no mesmo estado é como um
+    // deles passa a mentir. Mas ele viaja no input mesmo assim, porque a
+    // escrita é um `setDoc` com `merge` que carimba `status: input.status ??
+    // 'ativa'`: sem esta linha, editar o telefone de uma marca DESLIGADA a
+    // religava em silêncio, e ela voltava ao autocomplete sem ninguém pedir.
+    if (initial != null) base.status = initial.status;
     return base;
-  }, [nome, modeloComercial, valorAnual, contrapartida, contratoUrl, logoUrl]);
+  }, [nome, modeloComercial, valorAnual, contrapartida, contratoUrl, logoUrl, initial]);
 
   const erros = useMemo(() => validarMarcaInput(input), [input]);
   const valido = erros.length === 0;

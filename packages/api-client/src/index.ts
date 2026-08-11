@@ -822,8 +822,7 @@ export type { ResgatarConviteResult } from './platform/onboarding';
 export {
   listarMarcas,
   salvarMarca,
-  inativarMarca,
-  excluirMarca,
+  definirStatusDaMarca,
   upsertMarcaDoPatrocinio,
   marcaIdDoNome,
 } from './brands';

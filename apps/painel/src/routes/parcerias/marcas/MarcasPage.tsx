@@ -8,39 +8,66 @@
 // HONESTIDADE DE DADO (RN-171 recorte): NÃO exibimos "em quantos patrocínios a
 // marca é usada" — a consolidação de ativações é o E10-S812 (Icebox) e não há
 // reader barato neste recorte. Em vez de um número inventado, a página explica
-// o papel do registro. Excluir remove o doc do registro reutilizável: a marca
-// sai do autocomplete de patrocínios FUTUROS; patrocínios já cadastrados em
-// eventos/clubes são cópias independentes e permanecem intactos.
+// o papel do registro.
+//
+// MARCA NÃO SE APAGA (PATROCINADOR-TOGGLE · decisão do dono de 09/08,
+// `02-rodadas/2026-08-09-decisoes-dono/01-decisoes-dono.md` §20). O botão
+// Excluir saiu da tela e a porta de exclusão saiu do api-client junto: a marca
+// desligada some do autocomplete de patrocínios NOVOS e continua no registro,
+// com o estado visível, para poder voltar. Patrocínios já cadastrados em
+// eventos e clubes nunca foram tocados — são cópias independentes —, e agora
+// isso é provado por teste em vez de descrito num modal de exclusão.
+//
+// O CONTROLE É O `Switch` DO DS, E O AVISO É O TOAST. Cânone §3: liga/desliga
+// com efeito imediato é `Switch`; `Checkbox` é o que espera Submit. O
+// `ConfirmModal` ficou para trás de propósito — ele existe para ação
+// DESTRUTIVA (cânone §8, botão `destructive`), e vestir de vermelho um gesto
+// reversível ensinaria de novo o medo que esta decisão removeu. O "avisando"
+// que o dono pediu é a frase genérica do §20, e ela sai no toast da escrita
+// (cânone §11), dizendo o que muda e o que não muda.
+//
+// O NÚMERO DE PATROCÍNIOS AFETADOS CONTINUA FORA. Ele exige o leitor barato que
+// o E10-S812 nunca teve; a frase genérica é o que cabe hoje, e trocá-la pelo
+// número custa uma string no dia em que o S812 sair do gelo.
 //
 // Owner-scoped por `uid` (Rules: uid == profId) — a lista é a do profissional
 // logado, curta e pessoal; a busca roda no cliente sobre ela.
 // =============================================================================
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Button,
-  ConfirmModal,
   EmptyState,
   PageHeader,
   SearchInput,
   Skeleton,
+  Switch,
   Table,
   Thumb,
   useToast,
   type TableColumn,
 } from '@leela/design-system';
-import type { Marca } from '@leela/core';
+import type { Marca, StatusMarca } from '@leela/core';
 import { siglaDe } from '@/lib/sigla';
 import { useMarcasSession } from './_data/session';
 import {
-  excluirMarcaDoProfissional,
+  definirStatusDaMarcaDoProfissional,
   salvarMarcaDoProfissional,
   uploadLogoDaMarca,
   useMarcas,
 } from './_data/marcas';
 import { MarcaFormModal } from './MarcaFormModal';
 import type { MarcaInput } from '@leela/core';
+
+/**
+ * O "avisando" do dono, em frase genérica (§20). Uma string: o dia em que o
+ * E10-S812 entregar a contagem, ela vira o número de patrocínios afetados.
+ */
+const AVISO_DESLIGAR =
+  'Ela não aparece mais no autocomplete ao cadastrar patrocínios novos. Os patrocínios já cadastrados em eventos e clubes continuam intactos, e você pode religar quando quiser.';
+
+const AVISO_LIGAR = 'Ela volta a aparecer no autocomplete ao cadastrar patrocínios novos.';
 
 function formatBRL(valor: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -88,14 +115,26 @@ export function MarcasPage(): JSX.Element {
   const [busca, setBusca] = useState('');
   const [formAberto, setFormAberto] = useState(false);
   const [editando, setEditando] = useState<Marca | null>(null);
-  const [excluir, setExcluir] = useState<Marca | null>(null);
-  const [excluindo, setExcluindo] = useState(false);
+  // Estado recém-escrito, aplicado por cima do retrato do reader. O toggle
+  // NÃO faz refetch: uma volta ao servidor só para reler o campo que acabamos
+  // de escrever deixaria o controle inerte por um instante, que é o defeito de
+  // interruptor que não responde. A sobreposição morre quando o reader traz
+  // uma lista nova (salvar, criar, retry) — o servidor é quem manda.
+  const [statusLocal, setStatusLocal] = useState<Record<string, StatusMarca>>({});
+  const [alternando, setAlternando] = useState<string | null>(null);
+
+  useEffect(() => setStatusLocal({}), [itens]);
+
+  const lista = useMemo(
+    () => itens.map((m) => (statusLocal[m.id] ? { ...m, status: statusLocal[m.id]! } : m)),
+    [itens, statusLocal],
+  );
 
   const filtradas = useMemo(() => {
     const termo = normalizar(busca);
-    if (termo === '') return itens;
-    return itens.filter((m) => normalizar(m.nome).includes(termo));
-  }, [itens, busca]);
+    if (termo === '') return lista;
+    return lista.filter((m) => normalizar(m.nome).includes(termo));
+  }, [lista, busca]);
 
   function abrirNova(): void {
     setEditando(null);
@@ -126,18 +165,28 @@ export function MarcasPage(): JSX.Element {
     return uploadLogoDaMarca(marcaId, nome, file);
   }
 
-  async function confirmarExclusao(): Promise<void> {
-    if (!uid || !excluir) return;
-    setExcluindo(true);
+  /** Liga/desliga a marca no registro, com o aviso do §20 no toast da escrita. */
+  async function alternarStatus(m: Marca, ligada: boolean): Promise<void> {
+    if (!uid) return;
+    const novo: StatusMarca = ligada ? 'ativa' : 'inativa';
+    setAlternando(m.id);
     try {
-      await excluirMarcaDoProfissional(uid, excluir.id);
-      toast({ variant: 'success', title: `${excluir.nome} removida do registro` });
-      setExcluir(null);
-      refetch();
+      await definirStatusDaMarcaDoProfissional(uid, m.id, novo);
+      setStatusLocal((s) => ({ ...s, [m.id]: novo }));
+      toast({
+        variant: 'success',
+        title: ligada ? `${m.nome} ativada` : `${m.nome} desativada`,
+        description: ligada ? AVISO_LIGAR : AVISO_DESLIGAR,
+      });
     } catch {
-      toast({ variant: 'danger', title: 'Não foi possível excluir a marca' });
+      toast({
+        variant: 'danger',
+        title: ligada
+          ? 'Não foi possível ativar a marca'
+          : 'Não foi possível desativar a marca',
+      });
     } finally {
-      setExcluindo(false);
+      setAlternando(null);
     }
   }
 
@@ -177,6 +226,29 @@ export function MarcasPage(): JSX.Element {
           ),
       },
       {
+        // O estado é rótulo (`Badge`, cânone §4) e o controle é `Switch`
+        // (cânone §3). O nome acessível do interruptor nomeia a MARCA e o que
+        // o estado governa, e não o estado em si: um rótulo que muda junto com
+        // a posição do controle deixa a lista com cinco controles chamados
+        // "Ativa" e ninguém sabe qual é qual fora da leitura visual.
+        key: 'estado',
+        header: 'No autocomplete',
+        render: (m) => {
+          const ativa = m.status === 'ativa';
+          return (
+            <div className="flex items-center gap-[var(--spacing-3)]">
+              <Switch
+                checked={ativa}
+                disabled={alternando !== null}
+                aria-label={`${m.nome}: aparecer no autocomplete de patrocínios novos`}
+                onCheckedChange={(v) => void alternarStatus(m, v)}
+              />
+              <Badge variant={ativa ? 'vitoria' : 'neutro'}>{ativa ? 'Ativa' : 'Inativa'}</Badge>
+            </div>
+          );
+        },
+      },
+      {
         key: 'acoes',
         header: '',
         align: 'right',
@@ -185,14 +257,11 @@ export function MarcasPage(): JSX.Element {
             <Button variant="secondary" size="sm" onClick={() => abrirEdicao(m)}>
               Editar
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setExcluir(m)}>
-              Excluir
-            </Button>
           </div>
         ),
       },
     ],
-    [],
+    [alternando, uid],
   );
 
   const semSessao = session.status === 'anonymous';
@@ -201,7 +270,7 @@ export function MarcasPage(): JSX.Element {
     <div className="flex flex-col gap-[var(--spacing-6)]">
       <PageHeader
         title="Marcas"
-        subtitle="Seus patrocinadores reutilizáveis num lugar só. Cadastre uma vez e reaproveite no autocomplete ao vincular patrocínios em eventos e clubes."
+        subtitle="Seus patrocinadores reutilizáveis num lugar só. Cadastre uma vez e reaproveite no autocomplete ao vincular patrocínios em eventos e clubes. Marca desativada sai do autocomplete e continua aqui, para voltar quando você quiser."
         actions={
           !semSessao ? (
             <Button variant="primary" onClick={abrirNova} disabled={!uid}>
@@ -258,25 +327,6 @@ export function MarcasPage(): JSX.Element {
         onUploadLogo={uploadLogo}
       />
 
-      <ConfirmModal
-        open={excluir !== null}
-        onOpenChange={(o) => {
-          if (!o) setExcluir(null);
-        }}
-        title="Excluir marca do registro?"
-        description="Esta marca sai do seu registro reutilizável de patrocinadores."
-        target={excluir?.nome}
-        loses={[
-          'Não aparece mais no autocomplete ao cadastrar patrocínios futuros — você teria de digitar tudo de novo.',
-        ]}
-        keeps={[
-          'Patrocínios já cadastrados em eventos e clubes continuam intactos (são cópias independentes desta marca).',
-          'Você pode cadastrar a marca de novo quando quiser.',
-        ]}
-        confirmLabel="Excluir marca"
-        loading={excluindo}
-        onConfirm={() => void confirmarExclusao()}
-      />
     </div>
   );
 }

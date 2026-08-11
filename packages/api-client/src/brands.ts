@@ -15,7 +15,6 @@
 
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   orderBy,
@@ -31,6 +30,7 @@ import {
   validarMarcaInput,
   type Marca,
   type MarcaInput,
+  type StatusMarca,
 } from '@leela/core';
 
 // ---------------------------------------------------------------------------
@@ -111,25 +111,30 @@ export async function salvarMarca(
   return id;
 }
 
-/** Inativa (soft) — a exclusão dura fica p/ E10 (preview de ativações). */
-export async function inativarMarca(
+/**
+ * Liga/desliga a marca no registro (PATROCINADOR-TOGGLE · decisão do dono de
+ * 09/08, `02-rodadas/2026-08-09-decisoes-dono/01-decisoes-dono.md` §20).
+ *
+ * MARCA NÃO SE APAGA. A exclusão dura saiu daqui junto com o botão que a
+ * chamava: `inativa` some do autocomplete de patrocínios NOVOS e continua no
+ * registro, com o estado visível, para poder voltar. O que se perdia antes era
+ * o registro reutilizável, e a perda não tinha volta.
+ *
+ * A escrita é mínima de propósito — `status` e o carimbo. Reaproveitar o
+ * `salvarMarca` reescreveria o documento inteiro a partir do retrato que a tela
+ * tem em mãos, e um campo alterado noutra aba voltaria atrás no gesto de
+ * desligar.
+ */
+export async function definirStatusDaMarca(
   db: Firestore,
   profId: string,
-  marcaId: string
+  marcaId: string,
+  status: StatusMarca
 ): Promise<void> {
   await updateDoc(doc(marcasCol(db, profId), marcaId), {
-    status: 'inativa',
+    status,
     atualizadoEm: serverTimestamp(),
   });
-}
-
-/** Remove de vez (owner-only; sem ativações modeladas neste recorte). */
-export async function excluirMarca(
-  db: Firestore,
-  profId: string,
-  marcaId: string
-): Promise<void> {
-  await deleteDoc(doc(marcasCol(db, profId), marcaId));
 }
 
 /**
