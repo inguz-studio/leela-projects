@@ -99,6 +99,35 @@ depois**. Ler as specs existentes de modalidades/kit antes de mexer (JTBD primei
 correção for reestrutura pesada de IA, a lane devolve proposta em vez de código
 (escalate_if).
 
+> **Leva 4 — 11/08 (dono de volta, validando o :4601).** Registradas no mesmo ato.
+> Viram a lane PARCERIAS-NAV (roda após a ENGAJAMENTO-DASH — mesma árvore, nunca paralelo).
+
+## D-1008-R16 · Rotas de clubs: menu secundário não pode abandonar, layout não pode quebrar
+Na íntegra: "identifiquei que voce precisa revisar as rotas de clubs, para que o menu
+secundário nao leve a abas sem menu e que voce nao quebre o layout, como em assessorias
+parceiras."
+→ Defeito da implementação do R9: aba alcançada pelo menu secundário (`ClubesAreaNav`)
+que renderiza SEM o menu = abandono de navegação; layout quebrado em assessorias
+parceiras nomeado como exemplo. Régua: **toda rota da área mantém o menu secundário
+presente e o layout íntegro** — auditoria rota a rota, com prova por teste de moldura da
+área.
+
+## D-1008-R17 · "Marcas" vira "Parcerias" e absorve as assessorias parceiras
+Na íntegra: "vejo que Marcas no Menu principal pode alterar para 'Parcerias' onde
+incluimos tanto marcas quanto assessorias parceiras. faz mas sentido do que deixar em
+clubs."
+→ Item do menu principal **Marcas → Parcerias**; a área Parcerias passa a conter
+**marcas + assessorias parceiras**; assessorias parceiras SAI da área de clubs (o
+`ClubesAreaNav` perde essa aba).
+**Adendo do dono (mesmo ato):** "o mesmo se aplica para minhas afiliações e
+influenciadores" → **minhas afiliações / influenciadores TAMBÉM migram para Parcerias**.
+A área de clubs fica com o que é comunidade (engajamento/análise geral); Parcerias
+concentra as três frentes: **Marcas · Assessorias parceiras · Afiliações
+(influenciadores)**. Defaults do maestro (registrados, vetáveis): rotas antigas ganham
+redirect SPA (link salvo não morre); "Parcerias" ocupa o slot que era de "Marcas" no
+rail; dentro de Parcerias, menu secundário canônico com as três abas no mesmo padrão do
+R9.
+
 ## D-1008-R15 · REGISTRO DO DONO: dashboard do estudo de Engajamento NÃO implementado
 Na íntegra (ao embarcar, 10/08): "para fins de registro, voce nao implementou o dashboard da
 visao geral que estava no claude design na página engajamento estudo."
