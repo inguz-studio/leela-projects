@@ -41,9 +41,16 @@ import {
   cn,
   type BarChartDatum,
 } from '@leela/design-system';
-import { Activity, CalendarClock, GitBranch, ListOrdered, Users } from 'lucide-react';
+import { Activity, CalendarClock, CreditCard, GitBranch, ListOrdered, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
 import { Cascata } from '../../../components/CartaoV3';
+// Blocos da banda Eventos (estudo · D-1008-R15) — componentes da VG v3
+// RATIFICADA (D-1008-R3), CONSUMIDOS daqui, nunca re-implementados: a
+// "Ocupação" desta tela é a versão analytics (E02) do MESMO bloco, e o card
+// "em breve" estilizado v3 é o mesmo padrão de honestidade da VG.
+import { OcupacaoEventos } from '../../overview/_components/OcupacaoEventos';
+import { EmBreveV3 } from '../../overview/_components/EmBreveV3';
+import type { OcupacaoDosEventos } from '../../overview/_lib/ocupacao';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
   RANKING_MAX_DESAFIOS,
@@ -72,6 +79,16 @@ export interface EngajamentoViewProps {
   desafios: DesafioEngajado[] | null;
   /** A única ponte club→evento com dado: desafios com/sem evento vinculado. */
   ponte: ContagemRotulada[] | null;
+  /**
+   * Banda Eventos (estudo · D-1008-R15) — ocupação REAL dos últimos eventos,
+   * derivada pelo canônico da VG (`derivarOcupacao`). Estado PRÓPRIO: eventos
+   * são do organizador, não de um club, então nem o filtro de club nem o erro
+   * da leitura de clubs alcançam este bloco.
+   */
+  ocupacao: OcupacaoDosEventos | null;
+  eventosLoading: boolean;
+  eventosError: boolean;
+  onRetryEventos?: (() => void) | undefined;
   loading: boolean;
   error: Error | null;
   /** Sem nenhum club no tenant — a tela inteira degrada para o convite. */
@@ -315,6 +332,10 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
     entrada,
     desafios,
     ponte,
+    ocupacao,
+    eventosLoading,
+    eventosError,
+    onRetryEventos,
     loading,
     error,
     semClubes,
@@ -581,6 +602,36 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               </Painel>
             </section>
             </Cascata>
+
+            {/* ── Seção 3 · o resultado (estudo · D-1008-R15) ────────────── */}
+            <SecaoTitulo
+              titulo="Eventos"
+              legenda="O resultado: ocupação das provas e como as pessoas pagam."
+            />
+
+            <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2 items-stretch">
+              {/* Bloco REAL: mesma fonte e mesmo componente da VG (chave de
+                  query partilhada — o cache reidrata entre as telas). O card
+                  carrega estado de erro e retry PRÓPRIOS: eventos que falham
+                  não derrubam a análise da comunidade. */}
+              <Cascata i={8} className="flex [&>*]:flex-1">
+                <OcupacaoEventos
+                  ocupacao={ocupacao}
+                  loading={eventosLoading}
+                  error={eventosError}
+                  onRetry={onRetryEventos}
+                />
+              </Cascata>
+              {/* Sem fonte (impedimento HIFI-REC): nenhum agregado por forma
+                  de pagamento chega ao cliente — nada de donut fabricado. */}
+              <Cascata i={9} className="flex [&>*]:flex-1">
+                <EmBreveV3
+                  titulo="Formas de pagamento"
+                  icon={<CreditCard aria-hidden />}
+                  causa="O doc de pagamento guarda a forma (PIX ou cartão), mas nenhum agregado por forma de pagamento chega ao cliente — e este painel não varre documentos financeiros para somar por conta própria. Quando a série financeira existir, o donut do estudo aparece aqui."
+                />
+              </Cascata>
+            </div>
           </>
         )}
       </div>

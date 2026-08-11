@@ -46,6 +46,16 @@ function props(over: Partial<EngajamentoViewProps> = {}): EngajamentoViewProps {
       { id: 'com-evento', rotulo: 'Ligados a um evento', total: 2 },
       { id: 'sem-evento', rotulo: 'Sem evento vinculado', total: 1 },
     ],
+    ocupacao: {
+      linhas: [
+        { slug: 'corrida-da-ilha', nome: 'Corrida da Ilha', inscritos: 42, capacidade: 50, ocupacao: 0.84 },
+        { slug: 'pedal-do-norte', nome: 'Pedal do Norte', inscritos: 12, capacidade: 40, ocupacao: 0.3 },
+      ],
+      semCapacidade: 0,
+    },
+    eventosLoading: false,
+    eventosError: false,
+    onRetryEventos: vi.fn(),
     loading: false,
     error: null,
     semClubes: false,
@@ -242,6 +252,68 @@ describe('EngajamentoView · o que não tem fonte', () => {
     render(<EngajamentoView {...props({ entrada: [] })} />);
     const secao = screen.getByRole('region', { name: 'Como a comunidade entra' });
     expect(within(secao).getByText('Ninguém entrou ainda')).toBeInTheDocument();
+  });
+});
+
+describe('EngajamentoView · banda Eventos (estudo · D-1008-R15)', () => {
+  it('a banda existe com a legenda do estudo', () => {
+    render(<EngajamentoView {...props()} />);
+    expect(screen.getByRole('heading', { name: 'Eventos' })).toBeInTheDocument();
+    expect(
+      screen.getByText('O resultado: ocupação das provas e como as pessoas pagam.')
+    ).toBeInTheDocument();
+  });
+
+  it('a ocupação é REAL: inscritos sobre vagas por evento, no componente canônico da VG', () => {
+    render(<EngajamentoView {...props()} />);
+    const bloco = screen.getByRole('region', { name: 'Ocupação dos últimos eventos' });
+    expect(
+      within(bloco).getByRole('img', {
+        name: 'Corrida da Ilha: 42 de 50 vagas (84%)',
+      })
+    ).toBeInTheDocument();
+    expect(
+      within(bloco).getByRole('img', { name: 'Pedal do Norte: 12 de 40 vagas (30%)' })
+    ).toBeInTheDocument();
+  });
+
+  it('evento sem capacidade não vira barra — a nota diz quantos ficaram de fora', () => {
+    render(
+      <EngajamentoView
+        {...props({
+          ocupacao: {
+            linhas: [
+              { slug: 'a', nome: 'Prova A', inscritos: 10, capacidade: 20, ocupacao: 0.5 },
+            ],
+            semCapacidade: 2,
+          },
+        })}
+      />
+    );
+    expect(
+      screen.getByText('2 eventos ficaram de fora por não ter capacidade definida.')
+    ).toBeInTheDocument();
+  });
+
+  it('erro na leitura de eventos fica CONTIDO no card — a análise da comunidade segue de pé', () => {
+    const onRetryEventos = vi.fn();
+    render(<EngajamentoView {...props({ eventosError: true, ocupacao: null, onRetryEventos })} />);
+    const bloco = screen.getByRole('region', { name: 'Ocupação dos últimos eventos' });
+    expect(
+      within(bloco).getByText('Não foi possível carregar a ocupação dos seus eventos.')
+    ).toBeInTheDocument();
+    // Os vizinhos de outra fonte não caem junto.
+    expect(screen.getByRole('region', { name: 'Números da comunidade' })).toBeInTheDocument();
+  });
+
+  it('formas de pagamento se nomeia, diz a causa e escreve "Em breve" — sem donut fabricado', () => {
+    render(<EngajamentoView {...props()} />);
+    const secao = screen.getByRole('region', { name: 'Formas de pagamento' });
+    expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+    expect(
+      within(secao).getByText(/nenhum agregado por forma de pagamento chega ao cliente/i)
+    ).toBeInTheDocument();
+    expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 });
 

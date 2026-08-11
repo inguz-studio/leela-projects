@@ -14,11 +14,16 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EngajamentoView } from './EngajamentoView';
 import { ClubesAreaNav } from '../_components/ClubesAreaNav';
+// Derivação CANÔNICA da ocupação (VG v3 ratificada, D-1008-R3) — CONSUMIDA,
+// nunca re-implementada: a banda Eventos do estudo mostra o MESMO bloco na
+// versão analytics (E02), e duas cópias da razão inscritos/vagas driftariam.
+import { derivarOcupacao } from '../../overview/_lib/ocupacao';
 import {
   TODOS_OS_CLUBS,
   clubesNoRecorte,
   useClubesDoTenant,
   useDadosDoEngajamento,
+  useEventosDoOrganizador,
 } from './_data/engajamento';
 import {
   ranquearDesafios,
@@ -45,6 +50,27 @@ export function EngajamentoPage(): JSX.Element {
 
   const recorte = useMemo(() => clubesNoRecorte(clubes, selecao), [clubes, selecao]);
   const dados = useDadosDoEngajamento(recorte);
+
+  // Banda Eventos (estudo · D-1008-R15): eventos são do ORGANIZADOR, não de um
+  // club — o filtro de club não recorta esta leitura, e o erro dela fica
+  // contido no card (a análise da comunidade não pode cair junto).
+  const eventosState = useEventosDoOrganizador();
+  const ocupacao = useMemo(
+    () =>
+      eventosState.data
+        ? derivarOcupacao(
+            eventosState.data.map((evento) => ({
+              nome: evento.nome,
+              slug: evento.slug,
+              qtdInscritos: evento.qtdInscritos,
+              // `?? null` cobre literais legados sem o campo (padrão da VG).
+              capacidade: evento.capacidade ?? null,
+              data: evento.data,
+            }))
+          )
+        : null,
+    [eventosState.data]
+  );
 
   const loading = clubesState.loading || dados.loading;
   const error = clubesState.error ?? dados.error;
@@ -73,6 +99,10 @@ export function EngajamentoPage(): JSX.Element {
       entrada={derivado?.entrada ?? null}
       desafios={derivado?.desafios ?? null}
       ponte={derivado?.ponte ?? null}
+      ocupacao={ocupacao}
+      eventosLoading={eventosState.loading}
+      eventosError={eventosState.error !== null}
+      onRetryEventos={eventosState.refetch}
       loading={loading}
       error={error}
       semClubes={semClubes}

@@ -19,10 +19,11 @@
 // =============================================================================
 
 import { useQueries, useQuery } from '@tanstack/react-query';
-import type { Clube, Desafio, Membro } from '@leela/core';
+import type { Clube, Desafio, Evento, Membro } from '@leela/core';
 import {
   clubesDoTenantQuery,
   desafiosDoClubeQuery,
+  eventosDoOrganizadorQuery,
   membrosDoClubeQuery,
 } from '../../../../lib/query/queries';
 import { useTenantSession } from '../../../../lib/session/tenantSession';
@@ -98,4 +99,41 @@ export function useDadosDoEngajamento(
   );
 
   return { data: { membros, desafios }, loading: false, error: null };
+}
+
+/** Estado assíncrono que a tela pode pedir para recarregar (banda Eventos). */
+export interface EstadoAsyncRecarregavel<T> extends EstadoAsync<T> {
+  refetch: () => void;
+}
+
+/**
+ * Eventos do organizador — a fonte do bloco "Ocupação dos últimos 5 eventos"
+ * (banda Eventos do estudo · D-1008-R15). A chave é a MESMA da Visão Geral e
+ * do hub de eventos (`queryKeys.eventos.doOrganizador`): quem passou por
+ * qualquer uma das três telas reidrata do cache — nenhuma leitura nova entra
+ * por causa desta banda, o mesmo argumento das queries por club acima.
+ *
+ * O erro fica CONTIDO no bloco (o card de ocupação tem estado de erro e
+ * retry próprios): eventos que falham não podem derrubar a análise da
+ * comunidade, que vem de outra fonte.
+ */
+export function useEventosDoOrganizador(): EstadoAsyncRecarregavel<Evento[]> {
+  const session = useTenantSession();
+  const enabled =
+    session.status === 'authenticated' && !!session.uid && !!session.tenantId;
+  const query = useQuery({
+    ...eventosDoOrganizadorQuery({
+      tenantId: session.tenantId ?? '',
+      organizadorId: session.uid ?? '',
+    }),
+    enabled,
+  });
+  const refetch = () => {
+    void query.refetch();
+  };
+
+  if (session.status !== 'loading' && !enabled) {
+    return { data: null, loading: false, error: new Error('Sessão não autenticada.'), refetch };
+  }
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null, refetch };
 }
