@@ -567,10 +567,10 @@ teria produzido um conserto que não conserta.
 | Tarefa | Estado | Prova |
 |---|---|---|
 | S005-T1 · o cartão volta a existir onde a informação estava solta (R11) | ✅ | `a60690c2`, `3ddb3c99` — kit, item e o bloco de modalidade viraram o Card canônico; a causa era marcação crua sob o filme de vidro, não a tela |
-| S005-T2 · o inventário das telas que ainda usam superfície crua | 📋 | cerca de 40 telas do painel com a mesma família de defeito, levantadas pela lane AJUSTES-DONO |
-| S005-T3 · o mapa padrão para componente canônico, com o que falta proposto | 📋 | ordem do dono de 10/08 sobre listas, seletores, formulários, cartões e bentos |
-| S005-T4 · as ondas de revisão, cada uma com o número de passos até o trabalho antes e depois | 📋 | a medida contra excesso é número, não adjetivo |
-| S005-T5 · a trava que reprova controle cru fora do design system | 📋 | no padrão dos gates que o projeto já tem |
+| S005-T2 · o inventário das telas que ainda usam superfície crua | ✅ | `02-rodadas/2026-08-11-roadmap-componentes/02-inventario-componentes.md` — 223 divergências e 106 instâncias de layout sem cânone, com arquivo e linha; a medição **derrubou** o número que esta linha carregava (ver delta abaixo) |
+| S005-T3 · o mapa padrão para componente canônico, com o que falta proposto | ✅ | `03-canon/canone-de-componentes.md`, promovido a canônico; as quatro lacunas viraram a decisão CANONE-1 no painel do dono |
+| S005-T4 · as ondas de revisão, cada uma com o número de passos até o trabalho antes e depois | ✅ | `02-rodadas/2026-08-11-roadmap-componentes/04-ondas-roadmap.md` — seis ondas por JTBD, com os passos medidos em seis telas |
+| S005-T5 · a trava que reprova controle cru fora do design system | 📋 | spec pronta em `02-rodadas/2026-08-11-roadmap-componentes/05-gate-leela-canon.md`; o código é o primeiro item da Onda 0 |
 
 **Por que uma história e não uma rodada solta:** o dono já disse que respeitar componente é
 critério de aceite de interface, e a mesma família de defeito apareceu três vezes em duas
@@ -578,3 +578,89 @@ semanas. A revisão vira história do épico para poder ser cobrada como qualque
 
 **Ordem de disparo:** o inventário só mede a verdade depois que o redesign entrar na main. Medir
 antes seria medir tela morta.
+
+## Delta o cânone de componentes nasce, e a medição corrige o número do próprio épico (2026-08-11 · ROADMAP-COMPONENTES)
+
+A lane disparou depois do merge `b51cdcd9` e mediu `main` em `b0f979e5`, com o redesign inteiro
+dentro. Quatro documentos em `02-rodadas/2026-08-11-roadmap-componentes/`, um canônico novo
+(`03-canon/canone-de-componentes.md`) e um vetável no painel do dono. Nenhuma tela se mexeu.
+
+**A correção que a medição impôs a este épico.** A prova da S005-T2 dizia "cerca de 40 telas do
+painel" com superfície crua, herdado do handoff `leela-redesign-ajustes-dono.md`. A varredura
+**não confirma esse número, e a natureza do defeito é outra**. Background cru literal — `bg-white`,
+`bg-gray-*`, `bg-[#hex]` — tem **zero** ocorrências no painel e **zero** na landing; as 199
+ocorrências de `bg-[var(--…)]` foram auditadas uma a uma e **100% apontam para token semântico**. O
+gate de marca está verde e não está mentindo.
+
+O defeito real é maior: o mesmo trio `rounded-[var(--card-radius)]` + `bg-[var(--surface-raised)]` +
+`p-[var(--spacing-*)]` foi **reescrito à mão 192 vezes** — 141 no painel (86 arquivos) e 51 na
+landing (37 arquivos) — em vez de `Card`. Tokens certos, marca conforme, procedência errada. É a
+L-021 em estado puro, e nenhum gate existente a via.
+
+**O placar da procedência.** 223 divergências: 192 superfícies reconstruídas, 17 botões e CTAs
+replicando variante publicada, 8 estados vazios artesanais, 5 controles nativos crus e 1 typeahead
+fora do `Combobox`. Contra 237 arquivos que importam componente do DS.
+
+**A notícia boa, e ela muda a leitura do resto.** A §8 shadcn-first **pegou** onde foi apontada:
+zero `<input>` cru, zero `<textarea>` cru, zero checkbox, radio ou file nativos no painel; zero
+`<select>` na landing; zero menu artesanal nos dois apps. Sobraram cinco controles crus no
+repositório inteiro — e **dois deles estão dentro do próprio design system**: o `ConfirmModal`
+duplica os motores de `Textarea` (`ConfirmModal.tsx:198`) e de `Checkbox` (`:226-228`) em vez de
+compô-los. Toda tela que usa `ConfirmModal` herda estados que não passaram pelo AA por estado do
+`Checkbox`. É a violação mais grave da lista, e não pela contagem.
+
+**O que o DS não tem, e por isso não podia ser respeitado.** Nenhum dos 50 componentes é layout.
+Não há `Grid`, `Bento`, `Stack`, `Section` nem `Surface`. Bento e slot, dois dos padrões que o dono
+nomeou na ordem, caem inteiros nessa lacuna — 106 ocorrências de `grid-cols-*` com **23 assinaturas
+distintas** para três famílias reais. A evidência mais limpa vem de dentro: o showroom precisou
+escrever o próprio `Section` local (`showcase/src/ui.tsx:27`) porque o DS não oferece um. Isso
+virou o **CANONE-1** no painel do dono, com a conta dos dois lados; a forma técnica dos primitivos
+não sobe, só o alcance.
+
+**Saúde do catálogo, medida:** 50 componentes, 50 exports, zero componente morto. **40 de 50 com
+story** — e sete das dez lacunas são controle de formulário (`Checkbox`, `Field`, `InputSenha`,
+`Radio`, `Select`, `Switch`, `Textarea`). Controle sem vitrine é controle que a próxima pessoa não
+encontra, o que é causa plausível de reincidência num sistema onde formulário é metade da
+superfície. **49 de 50 com teste**; o único sem nenhum é o `Command`, que é a base do `Combobox`.
+
+**A carga cognitiva, medida em seis telas.** A hipótese confortável era que ela estivesse espalhada
+pelo painel. Não está: quatro das seis telas têm zero passo de arquitetura e duas têm zero passo —
+Visão Geral e Engajamento abrem resolvidas, e o balcão funde retirada e presença num gesto por
+decisão registrada (RN-205). Dos 20 passos de carga medidos no produto, **16 estão no checkout**, a
+única tela onde um desconhecido decide pagar. JTBD e carga apontam para a mesma primeira onda por
+caminhos diferentes.
+
+**Achados registrados que não são desta família e precisam de lane própria:**
+`charts/BarChart.tsx:130` passa `tickFormatter={truncarRotulo}` e o Recharts chama a função com
+`(valor, índice)` — o índice vira o limite de caracteres e trunca todo rótulo do eixo para um
+caractere (pré-existente, `a826dc3a`). E `overview/_components/ActiveEvents.tsx` **não é importado**
+por `OverviewContent.tsx`: é componente órfão sustentando suíte verde.
+
+### RN-558 · toda instância de padrão nomeado usa o componente canônico, e padrão sem canônico vira decisão (nova · 2026-08-11 · ROADMAP-COMPONENTES)
+
+A regra que torna conferível o critério de aceite que o dono já tinha declarado, e que derivou
+mesmo assim. Ela tem duas metades, e a segunda é a que faltava.
+
+**Primeira metade.** Toda instância de padrão nomeado — seleção, data, formulário, cartão,
+superfície, slot, bento, tabela, lista, modal, overlay, navegação, estado, feedback, indicador,
+botão — usa o componente declarado em `03-canon/canone-de-componentes.md`, importado de
+`@leela/design-system`. Re-implementação local por divs estilizadas é violação **mesmo com todos os
+tokens corretos**: procedência é gate distinto de marca e de escolha do padrão, e os três são
+necessários.
+
+**Segunda metade.** Padrão que aparece no código **sem** componente canônico declarado não vira
+componente novo em silêncio nem bespoke de tela: vira decisão agrupada no painel do dono. Enquanto
+a decisão não volta, a instância é permitida e **contada**, nunca ignorada.
+
+**Porta única de exceção:** ADR ou nota de decisão com contexto, critérios ordenados e a11y provada,
+no padrão do ADR-017. Sem esse registro é violação, não exceção.
+
+**Como se prova:** gate `leela-canon` (spec em
+`02-rodadas/2026-08-11-roadmap-componentes/05-gate-leela-canon.md`) — regra ESLint para o fato
+sintático, script com baseline versionado para o agregado ambíguo. A regra nasce `warn` e vira
+`error` quando a contagem chega a zero; ligar dura antes quebraria o build inteiro no primeiro
+`pnpm lint`, e gate que nasce vermelho é desligado no mesmo dia.
+
+**Onde vive:** `03-canon/canone-de-componentes.md` (a fonte), `04-engenharia/governanca-design.md`
+§8 (a regra em prosa), `04-engenharia/definition-of-done.md` (DoD de Tela ganha a linha geral de
+procedência, além da linha de seleção que já existe), e todo brief de UI a partir de agora.
