@@ -802,11 +802,23 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
 
   // ── [B4] O que o plano NÃO conserta, e o runbook precisa. ────────────────
   const recomputesObrigatorios = [
-    'platform/rollups — os quatro números (gmvTotal, receitaLeelaTotal, tenantsAtivos e o ' +
-      'eventosAtivos de cada tenant) JÁ VÃO no PATCH desta corrida [F7]. `recomputePlatformRollups` ' +
-      '(callable de platform_admin; NÃO há cron) fica como CONFERÊNCIA depois, não como correção. ' +
-      'Atenção: o callable copia `tenants/{id}.eventosAtivos` do documento do tenant, que ninguém ' +
-      'mantém — rodá-lo sem corrigir esse campo desfaz o eventosAtivos que este plano acerta.',
+    'PRIMEIRO de todos — `recomputarSaudeDeTodosOsTenants(db)` ' +
+      '(functions/src/platform/agregarSaudeTenant.ts). Reconstrói `tenants/{id}.gmvAcumulado` e ' +
+      '`.eventosAtivos` a partir da FONTE (Σ receitaConfirmada dos eventos vivos). NÃO tem gatilho, ' +
+      'NÃO tem cron e NÃO tem callable: se ninguém rodar à mão, ninguém roda. Foi exatamente o passo ' +
+      'que faltou na LIMPEZA-PROD de 10/08 — o backfill de 11/08 achou `castelo-producoes` com ' +
+      'gmvAcumulado 167.277 e eventosAtivos 5 enquanto a fonte tinha UM evento de R$ 10 ' +
+      '(167.277 → 10, 5 → 1). O agregado sobreviveu à purga apontando para eventos que não existiam ' +
+      'mais, e o post-check da corrida carimbou `OK gmvTotal 167277` porque conferiu o rollup contra ' +
+      'ele mesmo, e não contra a fonte. É idempotente (2ª execução: escritos=0).',
+    'DEPOIS dele — platform/rollups. Os quatro números (gmvTotal, receitaLeelaTotal, tenantsAtivos e ' +
+      'o eventosAtivos de cada tenant) JÁ VÃO no PATCH desta corrida [F7], então ' +
+      '`recomputePlatformRollups` (callable de platform_admin; NÃO há cron) é CONFERÊNCIA, não ' +
+      'correção. A ORDEM importa: o callable SOMA `tenants/{id}.gmvAcumulado` e copia ' +
+      '`.eventosAtivos` do documento do tenant, então rodá-lo antes do passo acima propaga o agregado ' +
+      'órfão para os totais da plataforma. (O aviso antigo aqui dizia que ninguém mantinha esses ' +
+      'campos; desde `30084e5a` quem mantém é o `recomputarSaudeTenant` — o conserto é a ordem, e ' +
+      'não pular o callable.)',
     'tenants/{tenant}/saldo/current — recomputar EXPLICITAMENTE. Antes ele se curava por acidente, ' +
       'porque as 3 edições de repasses eram as últimas operações e disparavam onRepasseWrite. ' +
       'Com o snapshot fora do renomeador [A1] essas escritas somem, e a cura some junto.',

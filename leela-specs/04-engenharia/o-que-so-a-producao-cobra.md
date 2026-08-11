@@ -1,7 +1,7 @@
 ---
-tags: [leela, deploy, producao, indices, rules, iam, segredos, gate, processo, prontidao]
-atualizado: 2026-08-06
-trace: leela-pixreal-diag-20260804
+tags: [leela, deploy, producao, indices, rules, iam, segredos, gate, processo, prontidao, purga, agregados, recompute]
+atualizado: 2026-08-11
+trace: leela-redesign-v2-20260810
 ---
 
 # Leela · o que só a produção cobra
@@ -248,3 +248,59 @@ Sem isso, o inventário não erra por pouco: ele erra **silenciosamente e para m
 ## Em uma frase
 
 Listagem mostra quem tem pai. Se a sua decisão apaga coisas, você precisa ver também os órfãos que já existem — e `showMissing` é a única porta.
+
+---
+
+# Purga que não recomputa agregado deixa o número mentindo
+
+**Lane:** `INFRA-DEPLOY` · 2026-08-11 · achado provado em produção pelo backfill da madrugada, cinco dias depois da operação que o causou.
+
+## O que aconteceu
+
+A LIMPEZA-PROD de 10/08 apagou cerca de 2.873 documentos, entre eles os eventos de `castelo-producoes`. Em 11/08, ao rodar `recomputarSaudeDeTodosOsTenants` como backfill declarado de outra lane, o número não subiu de zero como o plano previa. Ele **desabou**:
+
+| Tenant | `gmvAcumulado` | `eventosAtivos` |
+|---|---|---|
+| `castelo-producoes` | 167.277 → 10 | 5 → 1 |
+
+O diagnóstico somente-leitura da coleção fechou a conta: produção tinha **um** evento, de R$ 10, publicado. Os 167.277 e os cinco eventos ativos eram agregado órfão, sobrevivente da purga, apontando para documentos que não existiam mais. Por cinco dias o painel da plataforma declarou um GMV que era ficção.
+
+## Por que ninguém viu
+
+O post-check da própria purga carimbou `OK  gmvTotal  167277  integerValue`. Ele conferiu o rollup **contra ele mesmo** — leu o campo depois de escrever e confirmou que o valor estava lá. Nenhuma etapa comparou o agregado com a fonte que ele resume.
+
+É a assinatura da família inteira deste documento, aplicada a dado em vez de infraestrutura: verde em tudo que alguém pensou em olhar, e errado no único lugar que importa.
+
+## A causa
+
+Agregado não é derivado ao vivo: é campo materializado, mantido por gatilho. Gatilho reage a escrita em documento que existe. Uma purga apaga o documento, e o gatilho que manteria o agregado do PAI ou não acorda, ou acorda e reescreve a partir de um mundo já parcialmente destruído.
+
+O plano de limpeza já sabia disso para os agregados de EVENTO: a ordem `[B1]` mata o documento do evento primeiro justamente para desarmar os quatro gatilhos que o recomputariam. O que ficou de fora foi o nível acima. `tenants/{id}.gmvAcumulado` e `.eventosAtivos` ganharam escritor em `30084e5a` (`recomputarSaudeTenant`), e esse escritor **não tem gatilho, não tem cron e não tem callable**. Se ninguém o roda à mão, ninguém o roda.
+
+## A regra
+
+**Todo apply de purga termina com o passo de recompute, e a ordem faz parte do passo.**
+
+1. `recomputarSaudeDeTodosOsTenants(db)` — `functions/src/platform/agregarSaudeTenant.ts`. Reconstrói `gmvAcumulado` e `eventosAtivos` de cada tenant a partir da soma de `receitaConfirmada` dos eventos vivos. Sem gatilho e sem cron: invocação manual, contra o artefato compilado em `functions/lib/`, com ADC. Idempotente — a segunda execução devolve `escritos=0`, e é assim que se confere que a primeira fechou.
+2. `recomputePlatformRollups` — callable de `platform_admin`, em `functions/src/platform/rollups.ts`. Soma `gmvAcumulado` dos tenants e copia `eventosAtivos` de cada documento de tenant.
+
+A ordem não é preferência. O passo 2 **soma o campo que o passo 1 conserta**; rodar o rollup da plataforma primeiro pega o agregado órfão e o propaga para os totais da raiz, trocando um número errado num tenant por números errados na plataforma inteira.
+
+Os demais recomputes que a purga não faz (`tenants/{tenant}/saldo/current`, `profissionais/{uid}/dashboard/current`) já estavam declarados e seguem valendo.
+
+## Onde isto está versionado
+
+O executor da purga vive **fora do repo**, em `C:\dev\leela-purga-executor-20260810\` (`executar-purga.mjs`, `nucleo.mjs`, `io.mjs`), e é descartável por desenho: cada operação destrutiva ganha o seu, congelado com o plano daquela corrida. Documentar só lá seria perder o registro no próximo expurgo.
+
+A lista canônica mora no repo, em `functions/src/limpeza/planoLimpeza.ts`, no array `recomputesObrigatorios` que o runner imprime na tela do operador ao fim do dry-run (`functions/scripts/limpeza-prod-leela-hub.ts`). O passo 1 entrou lá, em primeiro lugar e com a ordem explicada, e `limpezaProd.test.ts` pina tanto a presença quanto a precedência sobre o rollup de plataforma. Um checklist que não é impresso não é checklist; um que não é testado envelhece calado, que foi como o aviso anterior sobre `eventosAtivos` ficou desatualizado por cinco dias depois de ganhar escritor.
+
+## O que generaliza
+
+1. **Conferir agregado contra ele mesmo não é conferência.** O post-check tem de comparar com a fonte, ou ele só prova que a escrita não falhou.
+2. **Campo materializado sem gatilho, sem cron e sem callable é um campo que só existe se alguém lembrar.** Ou ganha invocação automática, ou ganha lugar num checklist impresso.
+3. **Recompute tem topologia.** Rollup que soma outro rollup exige ordem, e ordem errada espalha o defeito em vez de corrigi-lo.
+4. **Aviso em comentário apodrece.** O que muda o comportamento tem de estar num teste; o texto explica, o teste é que segura.
+
+## Em uma frase
+
+Apagar documento é metade da purga. A outra metade é reconstruir, de baixo para cima, todo número que resumia o que foi apagado.
