@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "build": "node ../../scripts/verificar-frescor-do-workspace.mjs && next build",
+    "verify:frescor": "node ../../scripts/verificar-frescor-do-workspace.mjs",
     "start": "next start --port 3000",
     "lint": "eslint app lib --max-warnings 0",
     "test": "vitest run",
