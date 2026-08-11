@@ -76,6 +76,15 @@ export { recomputePlatformRollups } from './platform/rollups';
 // Invocação manual (`recomputePlatformRollups`, acima) preservada intacta.
 export { agendarRecomputePlatformRollups } from './platform/rollups';
 
+// Plataforma — agregados ∑ de SAÚDE do tenant (`gmvAcumulado`,
+// `eventosAtivos`). Os dois campos nasciam em 0 no provisionamento e NENHUMA
+// Function os escrevia: o macro do admin mostrava GMV e Receita Leela zerados
+// para sempre e todo tenant ativo aparecia como 'atencao'. Recomputação FULL
+// a partir de `eventos` no write do evento (lane METRICAS-PAGANTES-BACKEND).
+// ⛔ O backfill dos tenants existentes é passo SEPARADO da fase de deploy
+// (`recomputarSaudeDeTodosOsTenants` — sem gatilho, sem cron, sem callable).
+export { onEventoWriteSaudeTenant } from './platform/agregarSaudeTenant';
+
 // Clubs — status derivado do membro (RN-102) + agregado ∑ qtdMembrosAtivos
 // por recontagem idempotente (E05-S103-T1)
 export { onMembroWrite } from './clubs/onMembroWrite';
