@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ClubeShell } from '../ClubeShell';
 import { mkClube } from '../../_test/fixtures';
+import { clicarNoDom } from '../../../../test/clique';
 
 const noop = () => {};
 
@@ -22,6 +23,27 @@ describe('ClubeShell', () => {
     expect(screen.getByRole('heading', { level: 1, name: /Corrida Perfeita Sul/i })).toBeInTheDocument();
     expect(screen.getByText('Assessoria esportiva')).toBeInTheDocument();
     expect(screen.getByText(/120 membros/)).toBeInTheDocument();
+  });
+
+  // D-1008-R10: dentro do painel de um club, a volta para a listagem geral é a
+  // trilha canônica "Clubes › {nome}" — âncora de VERDADE (href navegável, lei
+  // navegacao-spa) com clique simples interceptado para SPA.
+  it('trilha "Clubes › {nome}": âncora real para /clubes que navega por SPA (D-1008-R10)', () => {
+    render(
+      <MemoryRouter>
+        <ClubeShell clube={mkClube()} ativa="overview" onCopiarCodigo={noop}>
+          <p>c</p>
+        </ClubeShell>
+      </MemoryRouter>,
+    );
+    const volta = screen.getByRole('link', { name: 'Clubes' });
+    expect(volta).toHaveAttribute('href', '/clubes');
+    // Clique simples: preventDefault (SPA) — o documento não recarrega.
+    expect(clicarNoDom(volta).defaultPrevented).toBe(true);
+    // Ctrl+clique pertence ao NAVEGADOR (nova aba) — o default sobrevive.
+    expect(clicarNoDom(volta, { ctrlKey: true }).defaultPrevented).toBe(false);
+    // O nome do club fecha a trilha como página atual (texto, não link).
+    expect(screen.queryByRole('link', { name: /Corrida Perfeita Sul/i })).not.toBeInTheDocument();
   });
 
   it('mostra o código de convite 8A3K9 e o botão de copiar (RN-101)', async () => {

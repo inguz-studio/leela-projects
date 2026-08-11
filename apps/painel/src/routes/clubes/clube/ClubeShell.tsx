@@ -11,12 +11,12 @@
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, Badge, PageHeader, SubNav } from '@leela/design-system';
+import { Avatar, Badge, Breadcrumb, PageHeader, SubNav } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
 import { anoDe, formatInt } from '../_lib/format';
 import { clubeSubNavTabs, type ClubeAbaId } from '../_lib/subnav';
-import { tabsComNavSpa } from '../../../lib/navSpa';
+import { tabsComNavSpa, trilhaComNavSpa } from '../../../lib/navSpa';
 
 export interface ClubeShellProps {
   clube: Clube;
@@ -80,8 +80,20 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
     pathname,
   );
 
+  // D-1008-R10 ("os clubs eu posso acessar um painel, mas depois nao consigo
+  // retornar a aba geral"): trilha canônica "Clubes › {nome}" — o MESMO padrão
+  // do EventoShell. Âncora SPA de verdade (href + preventDefault via
+  // trilhaComNavSpa): ctrl+clique, clique do meio e copiar endereço vivem.
+  const trilha = trilhaComNavSpa(
+    [{ label: 'Clubes', href: '/clubes' }, { label: clube.nome }],
+    navigate,
+  );
+
   return (
     <div className="flex flex-col">
+      <div className="px-[var(--spacing-6)] pt-[var(--spacing-5)]">
+        <Breadcrumb items={trilha} />
+      </div>
       <PageHeader
         title={clube.nome}
         subtitle={subtitleParts.join(' · ')}
