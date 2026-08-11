@@ -220,10 +220,10 @@ export function MinhasAfiliacoesPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
-      <PageHeader
-        title="Minhas afiliações"
-        subtitle="Seu negócio como divulgador — quanto você trouxe, quanto vai receber e qual link usar. Só o seu."
-      />
+      {/* D-1008-R8: frase de apoio cortada — KPIs e cartões dizem o que há; o
+          recorte "só as suas conversões" segue garantido pela RN-318 (dado),
+          não por aviso. */}
+      <PageHeader title="Minhas afiliações" />
       {/* D-1008-R9: menu secundário canônico da área de clubs. */}
       <ClubesAreaNav ativa="minhas-afiliacoes" />
       <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">

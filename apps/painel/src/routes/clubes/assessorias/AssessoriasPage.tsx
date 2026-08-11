@@ -129,7 +129,10 @@ export function AssessoriasPage(): JSX.Element {
             Assessorias parceiras
           </h1>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-            Clubs parceiros com condição de desconto exclusiva — sem comissão, sem split (E18).
+            {/* D-1008-R8: "(E18)" era jargão interno vazando para o usuário —
+                cortado; a distinção sem comissão/split fica (é o que separa
+                assessoria de influenciador). */}
+            Clubs parceiros com condição de desconto exclusiva — sem comissão, sem split.
           </p>
         </div>
         <Button variant="primary" onClick={() => navigate('/clubes/assessorias/nova')}>

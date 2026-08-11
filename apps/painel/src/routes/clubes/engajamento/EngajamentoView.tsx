@@ -331,9 +331,10 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
 
   return (
     <>
+      {/* D-1008-R8: o subtítulo repetia as legendas das duas faixas abaixo
+          ("A comunidade em si…" / "A ponte…") — cortado; as faixas orientam. */}
       <PageHeader
         title="Engajamento"
-        subtitle="A saúde da sua comunidade: quem está nos clubs, o que os move e como isso chega aos seus eventos."
         actions={
           semClubes ? undefined : (
             <Select

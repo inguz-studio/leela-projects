@@ -96,9 +96,9 @@ export function HubClubes({
 
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
+      {/* D-1008-R8: sem frase de apoio — o título e os cards dizem o que é. */}
       <PageHeader
         title="Clubes"
-        subtitle="Comunidades em torno dos seus eventos"
         actions={
           // D-1008-R9: os 4 acessos secundários saíram daqui (viraram o menu
           // secundário da área — `areaNav`); fica só a AÇÃO primária.

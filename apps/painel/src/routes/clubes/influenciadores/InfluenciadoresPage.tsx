@@ -228,10 +228,8 @@ export function InfluenciadoresPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
-      <PageHeader
-        title="Influenciadores"
-        subtitle="Conversões e comissão de clubes-influenciadores e pessoas físicas por evento"
-      />
+      {/* D-1008-R8: frase de apoio cortada — a tabela abaixo tem as colunas. */}
+      <PageHeader title="Influenciadores" />
       {/* D-1008-R9: o menu secundário da área substitui o botão solto "Voltar
           para Clubes" — a entrada "Clubes" do menu é o caminho de volta. */}
       <ClubesAreaNav ativa="influenciadores" />
