@@ -18,24 +18,35 @@ do maestro + o handoff `leela-redesign-ajustes-dono.md` ANTES de qualquer retoma
   menu secundário · voltar dos clubs · kits sem contêiner · lotes 3 colunas ·
   modalidades antes de lotes · indicador deslizante.
 
-## Em voo no desligamento
+## AJUSTES-DONO: ATERRISSOU LIMPA antes do corte (emergency-stop honrado)
 
-- **Lane AJUSTES-DONO** (brief `.nirvana/briefs/leela-redesign-ajustes-dono-enriched.md`,
-  base `486ebaa4`) recebeu EMERGENCY-HANDOFF com ~2-3 min de aviso. O estado real dela no
-  corte está em **`leela-redesign-ajustes-dono.md`** — commits pagos, tarefa em curso,
-  diff órfão na árvore. ⛔ Na retomada: ler o handoff dela ANTES de re-despachar; verde
-  pré-corte não vale sem re-prova; diff órfão se resgata contra o contrato (protocolo
-  provado 2× hoje).
-- Servidores MORTOS com o desligamento: `:4601` (PID 22812, bundle `index-D-BqnPen.js` =
-  build da DELTA-UX; a leva 3 NÃO chegou a ser servida) e `:4599` (PID 25384, incidente
-  já fechado — não re-servir).
+- **8 commits pushed, base `486ebaa4` → HEAD `50c369ba`, árvore LIMPA, nada órfão.**
+  T1/R7 CTA altura canônica 36px, tokens `v3.cta-h` mortos (`1e7cdfe9`) · T2/R11 KitCard/
+  ItemCard/bloco de modalidade viraram Card canônico, root cause = markup cru sob o filme
+  glass (`a60690c2`+`3ddb3c99`) · T3/R12 lotes 3 colunas Table canônica (`b38ec3a6`) ·
+  T5/R9+R14 `ClubesAreaNav` + indicador deslizante SubNav/rail (`8cb1631b`+`ea79e9b9`) ·
+  T6/R10 trilha "Clubes › {nome}" SPA (`83eb1a12`) · T7/R8 5 cortes de frases, lista
+  VETÁVEL no handoff (`50c369ba`).
+- **T4/R13 = PROPOSTA, sem código** (escalate_if disparou: editor de modalidades NÃO
+  existe; solução já spec'ada na fila S316/D-0805-6). Proposta em 2 fases no handoff da
+  lane — **vetável do dono**.
+- Gates que rodaram: DS **1790/1790** · painel INTEIRA **2474/2474** · tsc/lint 0.
+  **Faltou (a retomada fecha ANTES da REV):** generate-tokens 2× formal, grep hex/px
+  (exceção declarada: px de runtime dos indicadores deslizantes), grep L-021.
+- Achado grande da T2: **~40 telas legadas com bg cru** da mesma família → fila do
+  roadmap-componentes.
+- **Preview channel PARA O DONO (avião):**
+  `https://leela-hub--redesign-v2-e5ptbqp7.web.app` (expira 2026-08-17) — build
+  `index-CWqLsgK1.js` = HEAD `50c369ba` com a LEVA 3 INTEIRA. Produção intocada
+  (channel isolado). Servidores locais morrem com o desligamento (:4601 PID 22812
+  ainda servia bundle pré-lane; :4599 não re-servir).
 
 ## Fila da retomada, na ordem
 
-1. Ler `leela-redesign-ajustes-dono.md` → **retomar/re-despachar AJUSTES-DONO** do ponto
-   exato (gates do zero; T1-T7 do brief).
-2. Rebuild + re-servir `:4601` (mesma porta) → avisar o dono do que já dá para conferir.
-3. **Re-gate REV antagonista delta** (`e64b8c47..HEAD` = FIX + DELTA-UX + AJUSTES-DONO;
+1. Fechar os 3 gates formais que faltaram (tokens 2×, hex/px, L-021) — rápido, antes da REV.
+2. Re-servir `:4601` do dist atual se o dono estiver presente (o preview channel cobre a
+   validação remota até 17/08).
+3. **Re-gate REV antagonista delta** (`e64b8c47..50c369ba` = FIX + DELTA-UX + AJUSTES-DONO;
    contexto fresco; sem LIBERADA, sem merge).
 4. **Merge `redesign-engajamento-v2` → main** (main ~21 commits à frente; conflito
    provável em `apps/painel`; destrava os 3 builds retidos SERV-3-RENOME /
