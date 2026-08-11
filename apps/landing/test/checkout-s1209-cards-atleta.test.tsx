@@ -47,7 +47,15 @@ const evento = {
   usaChip: false,
   qtdInscritos: 0,
   organizador: null,
-  modalidades: [{ nome: '5k', precoVigente: 5000 }],
+  // DUAS modalidades desde a Onda 1 do cânone: com uma só, a auto-seleção de
+  // opção única preenche a modalidade de TODO atleta no mount, e o erro
+  // "escolha uma modalidade" — que é o que o caso de reindexação precisa ver —
+  // não teria como aparecer. O evento com duas modalidades preserva o cenário;
+  // nenhuma asserção foi afrouxada.
+  modalidades: [
+    { nome: '5k', precoVigente: 5000 },
+    { nome: '10k', precoVigente: 8000 },
+  ],
   kits: [],
   itensTamanhados: [],
   precoMinimo: 5000,

@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
+import { buttonVariants } from '@leela/design-system/server';
 import { ctaMeusPedidos } from '@/lib/areaDoCliente';
+import { cn } from '@/lib/utils';
 
 /**
  * "Estamos confirmando o seu pedido" — a v1 do feedback pós-pagamento
@@ -115,7 +117,14 @@ export function AvisoPedidoEmConfirmacao({
         <Link
           href={cta.href}
           data-slot="cta-meus-pedidos"
-          className="inline-flex w-fit items-center rounded-ds-pill border border-feedback-info px-4 py-2 text-sm font-semibold text-feedback-info-fg transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          className={cn(
+            buttonVariants({ variant: 'secondary', size: 'sm' }),
+            // A cor semântica FICA: este CTA vive dentro do aviso `info` e é
+            // a única variante que o `Button` não publica. A pílula é a forma
+            // de marketing da landing (ADR-017).
+            'w-fit rounded-ds-pill border-feedback-info text-feedback-info-fg',
+            'hover:border-feedback-info hover:bg-surface-raised hover:text-feedback-info-fg',
+          )}
         >
           {cta.rotulo}
         </Link>

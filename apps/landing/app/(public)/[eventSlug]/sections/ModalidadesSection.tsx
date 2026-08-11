@@ -1,6 +1,7 @@
 import { Route } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
+import { Card } from '@leela/design-system/server';
 import { Dobra } from './Dobra';
 import { TituloSecao } from './marca';
 
@@ -31,10 +32,8 @@ export function ModalidadesSection({ evento }: { evento: EventoPublico }): React
         {evento.modalidades.map((m) => {
           const disponivel = m.precoVigente !== null;
           return (
-            <li
-              key={m.nome}
-              className="flex flex-col justify-between rounded-ds-lg border border-border-subtle bg-surface-raised p-6"
-            >
+            <li key={m.nome} className="flex">
+              <Card className="flex flex-1 flex-col justify-between border-border-subtle p-6">
               <div>
                 <p className="font-display text-3xl font-extrabold uppercase tracking-tight text-text-primary">
                   {m.nome}
@@ -55,6 +54,7 @@ export function ModalidadesSection({ evento }: { evento: EventoPublico }): React
                   {formatarPreco(m.precoVigente)}
                 </p>
               </div>
+              </Card>
             </li>
           );
         })}

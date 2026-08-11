@@ -30,6 +30,7 @@
 import { useRef, useState } from 'react';
 import { FileText, HeartPulse } from 'lucide-react';
 import { Dialog } from '@leela/design-system/dialog';
+import { Card } from '@leela/design-system/server';
 import { Checkbox } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { PoliticaVendasPublica } from '@/lib/tipos';
@@ -124,9 +125,14 @@ export function AceitesCompra({
     'font-[var(--font-weight-semibold)] text-text-brand underline underline-offset-2 hover:opacity-80';
 
   return (
-    <section
+    // Onda 1 do cânone: superfície do `Card` do DS, não reescrita à mão.
+    // `role="region"` + nome acessível reproduz EXATAMENTE o que o
+    // `<section aria-label>` computava — o `Card` renderiza `<div>`, e um div
+    // com aria-label e sem role não é landmark nenhum.
+    <Card
+      role="region"
       aria-label="Aceites obrigatórios da compra"
-      className="flex flex-col gap-3 rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5"
+      className="flex flex-col gap-3 border-border-subtle p-4 sm:p-5"
     >
       {/* (a) Termos da compra + política de cancelamento (resolve o A-1). */}
       <label className="flex cursor-pointer items-start gap-3 text-[length:var(--font-size-sm)] text-text-primary">
@@ -279,7 +285,7 @@ export function AceitesCompra({
           </div>
         </Dialog>
       ) : null}
-    </section>
+    </Card>
   );
 }
 

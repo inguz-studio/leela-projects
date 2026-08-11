@@ -1,6 +1,7 @@
 'use client';
 
 import { Pencil } from 'lucide-react';
+import { Card } from '@leela/design-system/server';
 import { Button, Field, Input, Select } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CotarInscricaoCheckoutResult, CotarParcelaResult } from '@leela/api-client';
@@ -147,7 +148,7 @@ export function StepResumo({
   return (
     <div className="flex flex-col gap-6">
       {/* Itens do pedido — D-0729-3: visível na hora de pagar e EDITÁVEL. */}
-      <section className="rounded-ds-lg border border-border-subtle bg-surface-raised">
+      <Card className="border-border-subtle">
         <h2 className="border-b border-border-subtle px-4 py-3 text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-text-primary sm:px-5">
           Seu pedido
         </h2>
@@ -186,7 +187,7 @@ export function StepResumo({
             );
           })}
         </ul>
-      </section>
+      </Card>
 
       {/* Cupom — MESMO componente do step 0 (D-4): a pessoa confere aqui o que
           já aplicou lá, ou aplica agora. Lógica única no CheckoutFlow. */}

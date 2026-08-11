@@ -1,5 +1,6 @@
 import { CalendarDays, Clock, MapPin, Route, Info, type LucideIcon } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
+import { Card } from '@leela/design-system/server';
 import { Dobra } from './Dobra';
 import { TituloSecao, iconeDoEsporte } from './marca';
 
@@ -35,16 +36,16 @@ export function SobreSection({ evento }: { evento: EventoPublico }): React.JSX.E
 
       <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {fatos.map((f) => (
-          <div
+          <Card
             key={f.rotulo}
-            className="rounded-ds-md border border-border-subtle bg-surface-raised p-4"
+            className="rounded-ds-md border-border-subtle p-4"
           >
             <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
               <f.icone size={14} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
               {f.rotulo}
             </dt>
             <dd className="mt-1 text-sm font-semibold text-text-primary">{f.valor}</dd>
-          </div>
+          </Card>
         ))}
       </dl>
     </Dobra>

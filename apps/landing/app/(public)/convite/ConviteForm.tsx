@@ -9,6 +9,7 @@ import { provisionAssessoriaAccount } from '@leela/api-client';
 // vez que o piso sobe. A política única de `@leela/core` cobre o mesmo caso e
 // ainda traz os requisitos que o comprimento sozinho não via.
 import { avaliarSenha, exigenciaDeSenha } from '@leela/core';
+import { Card } from '@leela/design-system/server';
 import { Button, Input, InputSenha } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 
@@ -87,7 +88,7 @@ export function ConviteForm({ tenantId, parceriaId, token }: Props): React.JSX.E
 
   if (estado.fase === 'ok') {
     return (
-      <div className="mt-8 rounded-ds-lg border border-border-default bg-surface-raised p-6">
+      <Card className="mt-8 p-6">
         <p className="text-lg font-semibold text-text-primary">
           {estado.replay ? 'Parceria já estava ativa' : 'Parceria ativada'}
         </p>
@@ -102,19 +103,19 @@ export function ConviteForm({ tenantId, parceriaId, token }: Props): React.JSX.E
         >
           ← Voltar para a Be Hero
         </Link>
-      </div>
+      </Card>
     );
   }
 
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="mt-8 flex flex-col gap-4" aria-label="Aceite do convite">
       {estado.fase === 'erro' ? (
-        <div
+        <Card
           role="alert"
-          className="rounded-ds-lg border border-border-default bg-surface-raised p-4 text-sm font-medium text-feedback-danger-fg"
+          className="p-4 text-sm font-medium text-feedback-danger-fg"
         >
           {estado.mensagem}
-        </div>
+        </Card>
       ) : null}
 
       <p className="text-sm text-text-tertiary">

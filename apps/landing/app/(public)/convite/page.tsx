@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Card } from '@leela/design-system/server';
 import { ConviteForm } from './ConviteForm';
 
 // Página transacional com TOKEN na query — fora do índice (W2-F-02 ·
@@ -44,7 +45,7 @@ export default function ConvitePage({ searchParams }: Props): React.JSX.Element 
       {linkCompleto ? (
         <ConviteForm tenantId={tenantId} parceriaId={parceriaId} token={token} />
       ) : (
-        <div className="mt-8 rounded-ds-lg border border-border-default bg-surface-raised p-6">
+        <Card className="mt-8 p-6">
           <p className="text-lg font-semibold text-text-primary">Convite inválido</p>
           <p className="mt-2 text-text-secondary">
             Este link está incompleto ou expirado. Peça ao organizador que reenvie o convite de
@@ -56,7 +57,7 @@ export default function ConvitePage({ searchParams }: Props): React.JSX.Element 
           >
             ← Voltar para a Be Hero
           </Link>
-        </div>
+        </Card>
       )}
     </div>
   );

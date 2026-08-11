@@ -24,6 +24,7 @@ import {
   MOTIVO_ACEITE_VERSAO_DIVERGENTE,
   MOTIVO_GATEWAY_SEM_RESPOSTA,
 } from '@leela/core';
+import { Card } from '@leela/design-system/server';
 import { Button, ToastProvider } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
@@ -1904,14 +1905,14 @@ export function CheckoutFlow({
       </div>
 
       {erroAuth ? (
-        <div role="alert" className="mt-8 rounded-ds-md border border-border-default bg-feedback-warning-surface p-4">
+        <Card role="alert" className="mt-8 rounded-ds-md bg-feedback-warning-surface p-4">
           <p className="text-[length:var(--font-size-base)] font-[var(--font-weight-medium)] text-feedback-warning-fg">{erroAuth}</p>
           <div className="mt-3">
             <Button variant="secondary" size="sm" onClick={iniciarAuth} disabled={tentandoAuth}>
               {tentandoAuth ? 'Tentando…' : 'Tentar novamente'}
             </Button>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       <div className="mt-10">

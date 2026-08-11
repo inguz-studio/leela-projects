@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { Card } from '@leela/design-system/server';
 
 /**
  * Ingresso por inscrito (ADR-011: cada inscrito recebe seu QR individual). O QR
@@ -56,7 +57,7 @@ export function Ticket({
   }, [inscritoId]);
 
   return (
-    <div className="flex items-center gap-4 rounded-ds-lg border border-border-subtle bg-surface-raised p-4">
+    <Card className="flex items-center gap-4 border-border-subtle p-4">
       <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-ds-md bg-surface-base">
         {qr ? (
           <img src={qr} alt={`Ingresso de ${titulo}`} className="h-full w-full object-contain" />
@@ -70,6 +71,6 @@ export function Ticket({
           {modalidade} · {kitLabel}
         </p>
       </div>
-    </div>
+    </Card>
   );
 }
