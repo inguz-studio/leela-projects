@@ -1,8 +1,12 @@
 // =============================================================================
-// OverviewKpis — 4 cards de métrica do Overview (LEELA-FID-EVT-T3), fiéis ao
+// OverviewKpis — os cards de métrica do Overview (LEELA-FID-EVT-T3), fiéis ao
 // mockup `Overview do Evento.html`: Receita confirmada (+Δ semana) · Ticket médio
 // (sparkline) · Taxa de conversão · Repasse previsto (após taxa + badge). Só LÊ
 // agregados (∑ `receitaConfirmada`, `financeiro/current`) — NUNCA recalcula.
+//
+// UXW-FIX (RN-489): a conversão deixou de ser um card fixo. Sem contagem de
+// visitantes — que não existe em camada nenhuma — não há denominador, e a
+// faixa nasce com três cards em vez de quatro com um buraco.
 //
 // D-1008-R19: o ticket médio chega DERIVADO (`ticketMedioPorPagante`), receita
 // confirmada ÷ clientes que PAGARAM. Aqui ele dividia por `qtdInscritos`, ou
@@ -32,7 +36,15 @@ export interface OverviewKpisProps {
   receitaSemana?: number | null | undefined;
   /** Série do ticket p/ sparkline (vazia = esconde). */
   ticketSparkline?: number[] | undefined;
-  /** Conversão visitantes→inscritos (% ; null = "—"). */
+  /**
+   * Taxa de conversão em % — e ela só existe quando o DENOMINADOR existir.
+   *
+   * RN-489: a contagem de visitantes não existe em camada nenhuma do sistema
+   * (nem SDK, nem contador no Firestore, nem fora dele — a varredura está na
+   * regra). Enquanto for assim, `null` não vira card com "—": o card inteiro
+   * some. Um indicador permanentemente vazio, com rótulo de fonte por baixo,
+   * promete uma medição que ninguém faz.
+   */
   taxaConversaoPct?: number | null | undefined;
   /** Repasse previsto ao produtor (R$; null = "—"). */
   repassePrevisto?: number | null | undefined;
@@ -77,11 +89,19 @@ export function OverviewKpis({
   taxaPct,
 }: OverviewKpisProps): JSX.Element {
   const temSpark = Array.isArray(ticketSparkline) && ticketSparkline.length >= 2;
+  // RN-489, item CONV-1 (default: esconder). Sem denominador não há taxa, e o
+  // card não fica no lugar mostrando "—" com "visitantes → inscritos" por
+  // baixo. A faixa se reorganiza para três colunas — quatro deixariam o buraco
+  // exato do card que saiu, que é a mesma promessa por outro meio.
+  const conversaoPct = typeof taxaConversaoPct === 'number' ? taxaConversaoPct : null;
 
   return (
     <section
       aria-label="Indicadores do evento"
-      className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 xl:grid-cols-4"
+      className={cn(
+        'grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2',
+        conversaoPct === null ? 'xl:grid-cols-3' : 'xl:grid-cols-4',
+      )}
     >
       <KpiTile label="Receita confirmada" value={formatBRL(receitaConfirmada)}>
         {typeof receitaSemana === 'number' && receitaSemana > 0 ? (
@@ -104,17 +124,22 @@ export function OverviewKpis({
             aria-label="Tendência do ticket médio"
             className="text-[var(--text-brand)]"
           />
-        ) : null}
+        ) : (
+          // UXW-FIX · MEL-20: a R19 trocou o denominador do ticket para quem
+          // PAGOU, e o card passou a mostrar "—" calado nos eventos sem venda
+          // fechada. O padrão da casa — cinco cards da tela de Engajamento —
+          // é nomear a causa. Sem sparkline no lugar, o slot estava livre.
+          typeof ticketMedio !== 'number' ? (
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              sem venda confirmada ainda
+            </span>
+          ) : null
+        )}
       </KpiTile>
 
-      <KpiTile
-        label="Taxa de conversão"
-        value={typeof taxaConversaoPct === 'number' ? `${formatInt(Math.round(taxaConversaoPct))}%` : '—'}
-      >
-        <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          visitantes → inscritos
-        </span>
-      </KpiTile>
+      {conversaoPct === null ? null : (
+        <KpiTile label="Taxa de conversão" value={`${formatInt(Math.round(conversaoPct))}%`} />
+      )}
 
       <KpiTile
         label="Repasse previsto"

@@ -84,9 +84,44 @@ describe('OverviewKpis', () => {
     expect(screen.getByText('Aguardando encerramento')).toBeInTheDocument();
   });
 
-  it('degrada honesto: sem conversão/repasse mostra "—"', () => {
+  it('degrada honesto: sem ticket/repasse mostra "—"', () => {
     render(<OverviewKpis receitaConfirmada={0} />);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+  });
+
+  /**
+   * RN-489 (item CONV-1, default esconder). A contagem de visitantes não
+   * existe em camada nenhuma do sistema, então a taxa não tem denominador. O
+   * defeito que isto fecha não era o "—": era o rótulo de fonte "visitantes →
+   * inscritos" DESENHADO SEMPRE por baixo dele, prometendo uma medição que
+   * ninguém faz — e contradizendo, no mesmo build, a tela de Engajamento, que
+   * declara a contagem de visitante ausente.
+   */
+  it('sem denominador, o card de conversão não é desenhado — nem o rótulo de fonte (RN-489)', () => {
+    render(<OverviewKpis receitaConfirmada={85617} ticketMedio={190.26} repassePrevisto={76602} />);
+    expect(screen.queryByText('Taxa de conversão')).not.toBeInTheDocument();
+    expect(screen.queryByText(/visitantes/i)).not.toBeInTheDocument();
+    // Os vizinhos com fonte seguem de pé: o corte é do card sem denominador.
+    expect(screen.getByText('Receita confirmada')).toBeInTheDocument();
+    expect(screen.getByText('Repasse previsto')).toBeInTheDocument();
+  });
+
+  it('com denominador, o card volta — e sem rótulo de fonte inventado', () => {
+    render(<OverviewKpis receitaConfirmada={85617} taxaConversaoPct={42} />);
+    expect(screen.getByText('Taxa de conversão')).toBeInTheDocument();
+    expect(screen.getByText('42%')).toBeInTheDocument();
+    expect(screen.queryByText(/visitantes/i)).not.toBeInTheDocument();
+  });
+
+  /**
+   * MEL-20. A R19 trocou o denominador do ticket para quem PAGOU, e o card
+   * passou a mostrar "—" calado em evento sem venda fechada. O padrão da casa
+   * é nomear a causa; o slot de apoio estava livre (sem série, sem sparkline).
+   */
+  it('ticket indeterminado diz a causa no slot de apoio, em vez de "—" calado', () => {
+    render(<OverviewKpis receitaConfirmada={85617} ticketMedio={null} />);
+    expect(valorDoCard('Ticket médio')).toBe('—');
+    expect(screen.getByText('sem venda confirmada ainda')).toBeInTheDocument();
   });
 
   /**

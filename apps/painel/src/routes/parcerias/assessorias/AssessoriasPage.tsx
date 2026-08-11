@@ -142,9 +142,12 @@ export function AssessoriasPage(): JSX.Element {
       />
       <div className="flex flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)]">
       {session.status === 'authenticated' && session.tenantId === null ? (
+        // UXW-FIX · BLQ-11/12: "tenant" é vocabulário de arquitetura
+        // multi-inquilino e "sessão" descreve o sistema, não o que a pessoa
+        // veio fazer. O estado passa a nomear a conta e o organizador.
         <EmptyState
-          title="Sessão sem organizador"
-          description="Não foi possível identificar seu tenant. Recarregue a página ou entre novamente."
+          title="Conta sem organizador vinculado"
+          description="Não foi possível identificar o organizador desta conta. Recarregue a página ou entre novamente."
         />
       ) : loading || session.status === 'loading' ? (
         <div className="flex flex-col gap-[var(--spacing-3)]" role="status" aria-label="Carregando parcerias">
@@ -160,7 +163,7 @@ export function AssessoriasPage(): JSX.Element {
       ) : parcerias.length === 0 ? (
         <EmptyState
           title="Nenhuma assessoria cadastrada"
-          description="Cadastre uma assessoria como club parceiro para dar condição de desconto aos atletas dela."
+          description="Cadastre uma assessoria como club parceiro para dar condição de desconto aos participantes dela."
           action={
             <Button variant="primary" onClick={() => navigate('/parcerias/assessorias/nova')}>
               Cadastrar assessoria
@@ -215,7 +218,10 @@ export function AssessoriasPage(): JSX.Element {
         open={alvo !== null}
         onOpenChange={(o) => !o && setAlvo(null)}
         title="Encerrar parceria"
-        description="Encerrar a parceria desativa a condição de desconto no checkout e invalida convites pendentes. O registro é retido por 90 dias (RN-144) e não pode ser reativado — recadastro é uma nova parceria."
+        // UXW-FIX · BLQ-09/10: "(RN-144)" é número de regra interna, e ele
+        // aparecia DUAS vezes na mesma confirmação. O prazo continua dito; a
+        // numeração da regra vive no cânone, não no modal.
+        description="Encerrar a parceria desativa a condição de desconto no checkout e invalida convites pendentes. O registro é retido por 90 dias e não pode ser reativado: recadastrar cria uma parceria nova."
         target={
           alvo ? (
             <div className="flex flex-col gap-[var(--spacing-1)]">
@@ -233,7 +239,7 @@ export function AssessoriasPage(): JSX.Element {
           'Convites de aceite ainda pendentes (o link deixa de valer)',
         ]}
         keeps={[
-          'O histórico da parceria (retido 90 dias — RN-144)',
+          'O histórico da parceria, retido por 90 dias',
           'O clube parceiro em si (vira clube comum, sem desconto)',
         ]}
         confirmLabel="Encerrar parceria"
