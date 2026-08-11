@@ -60,9 +60,53 @@ Logo: a validação da RN-559 aterrissa no caminho do LOTE, nas três camadas.
 | servidor (Function) | `functions/src/eventos/guardPrecoLote.ts` · `assertFaceMinimaVendaPaga` | Admin SDK bypassa Rule — guard com recusa nomeada |
 | tela | `apps/painel/.../lotes/_lib/loteForm.ts` | valida antes de enviar, mensagem em português comum |
 
+## O que ficou onde
+
+| Camada | Arquivo | Símbolo |
+|---|---|---|
+| core | `packages/core/src/eventos/faceMinimaVenda.ts` | `FACE_MINIMA_VENDA_PAGA_REAIS` = 10 · `faceMinimaVendaPagaValida` · `validarFaceMinimaVendaPaga` |
+| core (export) | `packages/core/src/index.ts` | bloco RN-559 |
+| Rule | `firestore.rules`, `match /lotes/{loteId}` | `faceMinimaVendaPagaOk()` + `precoTocadoNoUpdate()`, ligados no `allow create` e no `allow update` |
+| Function | `functions/src/eventos/guardPrecoLote.ts` | `assertFaceMinimaVendaPaga` · `CODIGO_RECUSA_FACE_MINIMA` |
+| tela | `apps/painel/.../lotes/_lib/loteForm.ts` | ramo novo em `validarFormLote` + causa nova em `mensagemErroServidor` |
+
+**Recusa nomeada:** `invalid-argument` com mensagem `RN-559/face_abaixo_da_minima` e `details`
+`{ regra, motivo, loteId }`. O segundo motivo é `face_nao_e_numero_valido` — negativo, infinito e
+não-número têm conserto diferente de preço barato demais.
+
+**Nenhuma Function nova:** `guardPrecoLote` não é reexportado em `functions/src/index.ts`, então a
+superfície de deploy de Functions não muda.
+
 ## Gates
 
-Suítes COMPLETAS dos pacotes tocados (functions, painel) + tsc + lint 0, em FOREGROUND, em série.
-Os 18 vermelhos ambientais de functions são conhecidos e não são desta lane.
+| Gate | Resultado |
+|---|---|
+| `faceMinimaVenda.test.ts` (core + guard + espelho da Rule) | **23/23** |
+| painel — suíte COMPLETA | **235 arquivos · 2591/2591** |
+| `loteForm.test.ts` | **55/55** (12 novos) |
+| lotes (painel, área tocada) | **97/97** |
+| tsc — core · painel · functions | **0 erro** nos três |
+| lint — core · painel · functions | **0** nos três (`--max-warnings 0`) |
+| functions — suíte COMPLETA | ver abaixo |
+
+**Falsificação executada em cada camada, e revertida:**
+
+- core: `FACE_MINIMA_VENDA_PAGA_REAIS` 10 → 5 ⇒ **6 de 15 vermelhos**;
+- Rule: `faceMinimaVendaPagaOk()` removido do `allow create` ⇒ **1 vermelho** (o espelho);
+- tela: ramo novo curto-circuitado com `false &&` ⇒ **4 vermelhos**.
+
+## Limite honesto: a suíte de ataque às Rules não pôde rodar aqui
+
+Os casos de ataque (9,99 recusa · 10,00 passa · 0,00 passa · 0,01 recusa · legado renomeável ·
+tocar o preço do legado exige o mínimo) estão **escritos** em
+`functions/src/__tests__/vendasRules.integration.test.ts` e **não foram executados**:
+`firebase-tools` 15 recusa JDK abaixo de 21 e a máquina tem o 17 (`Microsoft/jdk-17.0.19.10`).
+Não há segundo JDK instalado.
+
+O que cobre o buraco enquanto isso, e roda em qualquer máquina: o **teste de espelho** que lê
+`firestore.rules` por linha (nunca regex com `\n` — o repositório é CRLF) e amarra o número da
+Rule ao número do core, mais a presença do predicado nos dois `allow`. O risco real que sobra é
+sintaxe/semântica CEL não exercitada; o risco de deriva entre as duas fontes do mesmo número
+está fechado.
 
 ⛔ Nenhum deploy. A regra entra no ar no próximo pacote.
