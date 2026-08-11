@@ -10,6 +10,23 @@
  * confirmar é o Button variant="destructive" (bg-[var(--action-destructive)],
  * token referenciado direto pela matriz de contraste — não alias).
  *
+ * OS CONTROLES SÃO OS CANÔNICOS (Onda 0 · S005): motivo é o `Textarea` do DS,
+ * notificar é o `Checkbox` do DS. Até 11/08 este arquivo montava os dois à mão
+ * — um `<textarea>` cru e um `<input type="checkbox">` com `accent-color` —
+ * dentro do próprio design system. O inventário §3 classificou as duas
+ * instâncias como as mais graves das cinco medidas no repositório: o componente
+ * que serve de referência carregava por dentro o defeito que a governança §8
+ * proíbe nas telas, e as ~26 telas que consomem o ConfirmModal herdavam
+ * estados que nunca passaram pelo AA por estado do `Checkbox`.
+ *
+ * O que a composição paga, concretamente:
+ *   - o textarea cru nasceu ANTES do LEELA-FLAT-DEFAULT (ratificado 2026-07-17)
+ *     e ficou parado no `bg-surface-base` + `border-strong` da §2.16 antiga —
+ *     divergindo de todo campo do produto sem que nenhum gate visse;
+ *   - o checkbox cru pintava o marcador por `accent-color`, que não cobre o
+ *     check em todos os browsers; o `Checkbox` desenha a marca sobre
+ *     `appearance-none` e traz o estado `indeterminate` de fábrica.
+ *
  * Estrutura:
  *   - Card do alvo (crítico: border-left 3px Vulcão — exceção §2.16)
  *   - "O que você perde" — lista em Vulcão (danger)
@@ -26,6 +43,8 @@
 import * as React from 'react';
 import { cn } from '../../utils/cn';
 import { Button } from '../Button';
+import { Checkbox } from '../Checkbox';
+import { Textarea } from '../Textarea';
 import { Modal, type ModalSize } from './Modal';
 
 // ---------------------------------------------------------------------------
@@ -187,54 +206,30 @@ function ConfirmModal({
       <ConsequenceList heading="O que você perde" items={loses} tone="danger" />
       <ConsequenceList heading="O que se mantém" items={keeps} tone="success" />
 
+      {/* Motivo — Textarea do DS: casca (label + aria) e aparência flat vêm do
+          motor canônico, não deste arquivo. */}
       {reasonLabel && (
-        <div className="flex flex-col gap-[var(--spacing-2)]">
-          <label
-            htmlFor={reasonId}
-            className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]"
-          >
-            {reasonLabel}
-          </label>
-          <textarea
-            id={reasonId}
-            value={reason}
-            disabled={loading}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-            className={cn(
-              'w-full resize-y',
-              'bg-[var(--surface-base)]',
-              'text-[length:var(--input-font-size)] text-[var(--text-primary)]',
-              'rounded-[var(--input-radius)]',
-              // Borda de repouso usa border-strong (mesma razão do Input):
-              // é o ÚNICO identificador visual do campo (bg base ≈ bg do
-              // modal) e WCAG 1.4.11 exige ≥3:1 — border-default ficava em
-              // 1.67 (brasa) / 1.46 (wine); border-strong dá 4.13 / 3.60.
-              'border-[length:var(--input-border-width)] border-[var(--border-strong)]',
-              'p-[var(--spacing-3)]',
-              'placeholder:text-[var(--text-tertiary)]',
-              'focus-visible:outline-none focus-visible:border-[var(--border-focus)]',
-              'focus-visible:ring-1 focus-visible:ring-[color:var(--border-focus)]',
-              'disabled:opacity-40',
-            )}
-          />
-        </div>
+        <Textarea
+          id={reasonId}
+          label={reasonLabel}
+          value={reason}
+          disabled={loading}
+          onChange={(e) => setReason(e.target.value)}
+          rows={3}
+          wrapperClassName="gap-[var(--spacing-2)]"
+        />
       )}
 
+      {/* Notificar — Checkbox do DS. A label fica aqui porque o Checkbox é o
+          controle nu (é assim que a tabela densa o usa); o htmlFor liga os
+          dois e o nome acessível sai igual ao de antes. */}
       {notifyLabel && (
         <div className="flex items-center gap-[var(--spacing-2)]">
-          <input
+          <Checkbox
             id={notifyId}
-            type="checkbox"
             checked={notify}
             disabled={loading}
             onChange={(e) => setNotify(e.target.checked)}
-            className={cn(
-              'h-[var(--spacing-4)] w-[var(--spacing-4)]',
-              'accent-[var(--action-primary)]',
-              'focus-visible:outline-none focus-visible:ring-2',
-              'focus-visible:ring-[color:var(--border-focus)]',
-            )}
           />
           <label
             htmlFor={notifyId}

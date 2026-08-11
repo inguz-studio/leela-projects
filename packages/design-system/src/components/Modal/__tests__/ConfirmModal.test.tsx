@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as React from 'react';
 import { ConfirmModal } from '../ConfirmModal';
+import { Checkbox } from '../../Checkbox';
+import { Textarea } from '../../Textarea';
 
 const baseProps = {
   title: 'Desativar patrocinador?',
@@ -73,6 +75,83 @@ describe('ConfirmModal', () => {
     expect(onConfirm).toHaveBeenCalledWith({
       reason: 'Contrato encerrado',
       notify: true,
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Procedência dos controles (Onda 0 · inventário §3)
+  //
+  // O ConfirmModal montava `<textarea>` e `<input type="checkbox">` à mão DENTRO
+  // do design system. Os quatro casos abaixo provam que o motor renderizado é o
+  // canônico, e não uma cópia: a assinatura de classe do controle dentro do
+  // modal tem de ser IDÊNTICA à do componente renderizado sozinho. Reinlinar o
+  // engine passa a quebrar aqui, que é o ponto.
+  // ---------------------------------------------------------------------------
+  describe('compõe os controles canônicos do DS', () => {
+    it('o motivo É o Textarea do DS (mesma assinatura do componente isolado)', () => {
+      const isolado = render(<Textarea aria-label="referência" rows={3} />);
+      const referencia = isolado.getByRole('textbox').className;
+      isolado.unmount();
+
+      render(<Controlled reasonLabel="Motivo (opcional)" />);
+      const campo = screen.getByRole('textbox', { name: 'Motivo (opcional)' });
+
+      expect(campo.tagName).toBe('TEXTAREA');
+      expect(campo.className).toBe(referencia);
+      // Herda o flat default (LEELA-FLAT-DEFAULT) que o textarea cru não tinha.
+      expect(campo).toHaveClass('bg-[var(--surface-sunken)]');
+      expect(campo).toHaveClass('border-[color:var(--input-border-flat)]');
+      // E não sobrou nada da casca à mão de antes.
+      expect(campo).not.toHaveClass('bg-[var(--surface-base)]');
+      expect(campo).not.toHaveClass('border-[var(--border-strong)]');
+    });
+
+    it('o notificar É o Checkbox do DS (mesma assinatura do componente isolado)', () => {
+      const isolado = render(<Checkbox aria-label="referência" />);
+      const referencia = isolado.getByRole('checkbox').className;
+      isolado.unmount();
+
+      render(<Controlled notifyLabel="Notificar patrocinador por e-mail" />);
+      const caixa = screen.getByRole('checkbox', {
+        name: 'Notificar patrocinador por e-mail',
+      });
+
+      expect(caixa.className).toBe(referencia);
+      // A marca desenhada sobre appearance-none é o motor do DS; o cru pintava
+      // por accent-color, que não cobre o check em todo browser.
+      expect(caixa).toHaveClass('appearance-none');
+      expect(caixa).toHaveClass('checked:bg-[var(--action-primary)]');
+      expect(caixa).not.toHaveClass('accent-[var(--action-primary)]');
+    });
+
+    it('o estado de foco dos dois controles vem do ring canônico (AA por estado)', () => {
+      render(
+        <Controlled
+          reasonLabel="Motivo (opcional)"
+          notifyLabel="Notificar patrocinador por e-mail"
+        />,
+      );
+      for (const controle of [
+        screen.getByRole('textbox', { name: 'Motivo (opcional)' }),
+        screen.getByRole('checkbox', { name: 'Notificar patrocinador por e-mail' }),
+      ]) {
+        expect(controle).toHaveClass('focus:ring-2');
+        expect(controle).toHaveClass('focus:ring-ring');
+      }
+    });
+
+    it('loading desabilita os dois controles compostos', () => {
+      render(
+        <Controlled
+          loading
+          reasonLabel="Motivo (opcional)"
+          notifyLabel="Notificar patrocinador por e-mail"
+        />,
+      );
+      expect(screen.getByRole('textbox', { name: 'Motivo (opcional)' })).toBeDisabled();
+      expect(
+        screen.getByRole('checkbox', { name: 'Notificar patrocinador por e-mail' }),
+      ).toBeDisabled();
     });
   });
 
