@@ -534,3 +534,32 @@ marca já explica.
 
 Spec completa em `LEELA-E16-plataforma-superadmin` §"Catálogo de benefícios da plataforma".
 Prioridade baixa declarada pelo dono; não bloqueia nada deste épico.
+
+## Delta Marcas vira Parcerias e reúne as três frentes (2026-08-11 · PARCERIAS-NAV · D-1008-R17)
+
+Decisão do dono, na íntegra: *"vejo que Marcas no Menu principal pode alterar para 'Parcerias'
+onde incluimos tanto marcas quanto assessorias parceiras. faz mas sentido do que deixar em
+clubs."* No mesmo ato, o adendo: *"o mesmo se aplica para minhas afiliações e influenciadores."*
+Registro em `02-rodadas/2026-08-09-redesign-ds/01-decisoes-dono-1008-retomada.md`.
+
+O que muda de fronteira: a área de clubs fica com o que é comunidade; **Parcerias** concentra
+quem é parceiro de negócio. O épico segue sendo este; os conteúdos de assessoria parceira (E18) e
+de afiliação (E08) passam a morar numa área que este épico governa, sem que as regras deles
+mudem.
+
+**Aberto para o dono:** o nome do épico. Ele continua se chamando "Marcas" nos arquivos enquanto
+a área na tela já se chama "Parcerias". Renomear o épico é gesto de arquivo, não de produto, e
+fica esperando a palavra dele.
+
+### S813 · a área Parcerias reúne marcas, assessorias e afiliações
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S813-T1 · o item do menu principal passa a se chamar Parcerias, no mesmo lugar | 🔄 | lane PARCERIAS-NAV |
+| S813-T2 · a área nasce com três abas: marcas, assessorias parceiras e afiliações | 🔄 | mesma moldura das outras áreas do painel |
+| S813-T3 · as telas mudam de endereço, e o endereço antigo continua funcionando | 🔄 | link salvo não pode morrer |
+| S813-T4 · a área de clubs devolve as abas que não são de comunidade | 🔄 | sobram clubs e engajamento |
+
+**Cuidado que a lane registrou:** "marca" como conceito não muda de nome em lugar nenhum — o
+título da tela de marcas, o número de marcas ativadas nos kits e o que o código chama de marca
+seguem iguais. O que troca de nome é a **área**.

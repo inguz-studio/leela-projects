@@ -1523,3 +1523,57 @@ lista vazia honesta em cima de uma consulta que nem chegou a rodar.
 
 **Ponta que fica aberta e não é desta lane:** o painel continua engolindo a rejeição. Conserto de
 tela, sem dono.
+
+## Delta a área de clubs ganha moldura, e o estudo de engajamento ganha o painel desenhado (2026-08-10/11 · AJUSTES-DONO → ENGAJAMENTO-DASH → PARCERIAS-NAV)
+
+Origem: as levas 3 e 4 do dono validando o `:4601`, em
+`02-rodadas/2026-08-09-redesign-ds/01-decisoes-dono-1008-retomada.md` (D-1008-R9, R10, R15, R16,
+R17). Três histórias novas: nenhuma das doze existentes deste épico fala de navegação de área
+nem do estudo de engajamento, que nasceu depois delas.
+
+**O código destas histórias vive na branch `redesign-engajamento-v2` e ainda não está no ar.**
+
+### S113 · a área de clubs para de abandonar quem entra
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S113-T1 · os três acessos viram menu secundário, no lugar de botões soltos (R9) | ✅ | `8cb1631b`, `ea79e9b9` |
+| S113-T2 · quem entra no painel de um club consegue voltar para a lista (R10) | ✅ | `83eb1a12` — trilha "Clubes › nome do club", com rota de verdade |
+| S113-T3 · o menu passa a ser do layout da área, não colado página a página (R16) | 🔄 | lane PARCERIAS-NAV · a auditoria achou duas rotas sem menu nenhum e uma com largura fora do padrão das irmãs |
+| S113-T4 · a prova por teste: cada rota da área tem exatamente um menu e a aba certa marcada | 🔄 | lane PARCERIAS-NAV · as rotas que ficam de fora por desenho viram afirmação, não omissão |
+
+**O que a auditoria mediu, e que explica o relato do dono:** a área de clubs nunca teve rota de
+layout. O menu foi colado em cada página, então bastava alcançar uma tela que não recebeu a cola
+para o menu sumir — foi o que aconteceu no detalhe da assessoria parceira e no cadastro de uma
+nova. Ficam de fora da moldura, por desenho e registrado, a criação em tela cheia e o painel de
+um club, que tem casca própria.
+
+### S114 · o estudo de engajamento ganha o painel que foi desenhado
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S114-T1 · o mapa de qual bloco tem fonte de dado e qual não tem | ✅ | sete blocos medidos no código; dois com dado real, cinco sem |
+| S114-T2 · a faixa de eventos: ocupação das últimas provas e formas de pagamento | ✅ | `ff6302a5` — a ocupação é real e reusa o componente da Visão Geral; forma de pagamento diz por que ainda não existe |
+| S114-T3 · as modalidades da comunidade, na versão honesta | ✅ | `11f58fef` — mede membros ativos por modalidade dos clubs; "interesse declarado" não existe como dado |
+| S114-T4 · o bloco de check-ins ganha o nome do estudo e diz o que falta | ✅ | `a0a1cfec` |
+
+**A regra que sobreviveu à lane inteira:** bloco sem fonte não vira gráfico zerado. Ele ganha
+cartão com nome próprio, diz a causa e escreve "em breve". Nenhum controle vivo aparece em cartão
+sem dado — botão que não faz nada é promessa falsa.
+
+**Vetável do dono:** o cartão se chama "Modalidades da comunidade" e não "Top 5 modalidades de
+interesse", como no desenho. Se ele quiser o do desenho, é campo novo no atleta mais agregado —
+trabalho de servidor, fora desta história.
+
+### S115 · o organizador passa a poder contar os check-ins da comunidade
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S115-T1 · a contagem por ação e por período nasce como agregado | 📋 | hoje os registros do atleta são legíveis só pelo próprio atleta e pela administração |
+| S115-T2 · o total do período, a divisão por pilar e o ranking de ações | 📋 | as três partes do bloco 1 do estudo |
+| S115-T3 · o mapa de horários e o volume ao longo do tempo | 📋 | os blocos 2 e 3 do estudo, que hoje não têm eixo temporal para desenhar |
+
+**Por que esta história existe:** três blocos desenhados do estudo dependem de um número só que
+não existe — quantos registros houve, por ação e por período, legíveis pelo organizador. O
+agregado que existe guarda média de pontos por pilar, nunca a ação que formou o ponto. Sem esta
+história, os três blocos ficam em "em breve" para sempre.

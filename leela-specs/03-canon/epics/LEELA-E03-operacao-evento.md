@@ -2505,3 +2505,25 @@ sem dono.
 **Ressalva honesta:** a prova de que o conserto funciona é de **configuração**, não de upload. As
 sete conferências pós-deploy são todas de leitura, e nenhuma subiu um arquivo. Trocar a capa de um
 evento de verdade continua sendo conferência do dono.
+
+## Delta o painel conta quem pagou (2026-08-11 · D-1008-R19)
+
+A decisão transversal do dono sobre métrica de dinheiro está registrada no E09, com a conta errada
+localizada arquivo e linha. Aqui fica a metade que é deste épico: o número de inscritos que a
+operação exibe passa a distinguir quem pagou de quem apenas emitiu cobrança.
+
+Esta seção consolida no épico uma história que até hoje só existia na pasta da rodada de 05/08 e
+no kanban.
+
+### S221 · o contador de pagantes, separado do que congela a configuração
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S221-T1 · o campo de pagantes nasce no agregado, na mesma transação que já recalcula o financeiro | 📋 | RN-486 |
+| S221-T2 · as dezenove telas que mostram "N inscritos" passam a ler o número novo | 📋 | cabeçalho, sub-menu, contagem regressiva, hub, portfólio, esgotado, alertas e vagas restantes |
+| S221-T3 · a prova de que a fechadura não se mexeu | 📋 | RN-487; percurso, modalidade, kit, preço e modo de taxa continuam congelados por um evento que só tem PIX pendente |
+| S221-T4 · o retrato diário carrega o número novo sem perder o antigo | 📋 | para a série histórica não trocar de significado no meio |
+
+**O cuidado que a história inteira existe para preservar:** o contador que aparece na tela e o
+contador que tranca a configuração do evento são coisas diferentes. Separar o primeiro não pode
+afrouxar o segundo — é por isso que a T3 é um teste de ataque, e não uma nota.

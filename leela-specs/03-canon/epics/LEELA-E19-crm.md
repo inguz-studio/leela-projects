@@ -326,3 +326,26 @@ produziria um CRM em que ninguém confia. Atenuante real: o caminho inteiro est�
 por evento da RN-175, que nasce desligado.
 
 ⚠️ **A fronteira de PII é o único dos 8 riscos da rodada SEM prova executável.** Visão geral (agregado, k=5, RN-820/822) e Clientes (identidade individual, RN-172) passaram a dividir a casca de menu. A fronteira está declarada como diretriz de código no `CrmSubNav` e no `AnaliseVendasPage`, e nenhum recorte demográfico foi adicionado à lista — mas **nada no código impede** que alguém acrescente um "filtro de clientes por faixa etária", que reintroduziria exatamente a diferenciação que o k-anonimato fecha. Isso é vigilância, não garantia: segue como gatilho de bloqueio do gate antagonista de PII deste épico, e é o item que a review antagonista tem de atacar primeiro.
+
+## Delta o membro do club e o comprador do evento viram a mesma pessoa (2026-08-11 · destrava do estudo de engajamento)
+
+Origem: o mapeamento das fontes de dado do estudo de engajamento, na lane ENGAJAMENTO-DASH. O
+bloco de conversão da base foi desenhado com dois recortes — funil e por club — e não pôde ser
+construído por duas causas independentes. Uma é o contador de visitas, que é do E11. A outra é
+desta casa: **não existe ligação entre o membro de um club e o comprador de um evento**. Sem ela
+não dá para dizer quantos da comunidade viraram inscritos, que é a pergunta inteira do bloco.
+
+### S1904 · o membro do club e o comprador viram a mesma pessoa
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S1904-T1 · a ligação entre membro e ficha de cliente, pela mesma chave que o CRM já usa | 📋 | a posse de identidade por documento já está fechada neste épico |
+| S1904-T2 · o número de membros que compraram, por club e no total | 📋 | destrava o bloco de conversão do estudo de engajamento |
+| S1904-T3 · a tela do club diz quantos da comunidade compraram | 📋 | o recorte "por club" do desenho |
+
+**O cuidado herdado deste épico:** a ligação não pode nascer de igualdade de e-mail solta. Foi
+exatamente esse atalho que produziu o defeito de conta cega para as próprias compras, registrado
+no E00. A chave é a que o CRM já usa, com o segredo que ela já tem.
+
+**Preso no dono:** CRM-1 e CRM-4 tocam o mesmo território — o que se pede ao participante depois
+da compra e quais visões entram na primeira leva. A T3 espera CRM-1.

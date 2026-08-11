@@ -2399,3 +2399,43 @@ a T7 retida pelo ESTOURO-2), **depende da S322 no ar e provada**. Job stories, G
 territórios em `02-rodadas/2026-08-10-estouro-reserva/03-spec.md` e `04-fila-codigo.md`.
 **Nada construído.** ⚔ contador de vaga dentro da transação do dinheiro: rota opus, review
 antagonista (dupla na S323), lane própria, sem carona em deploy.
+
+## Delta a tela de lotes e a lista de modalidades, pela leva 3 do dono (2026-08-11 · AJUSTES-DONO · D-1008-R12 e R13)
+
+Duas falas do dono validando o `:4601`, registradas em
+`02-rodadas/2026-08-09-redesign-ds/01-decisoes-dono-1008-retomada.md`. Nenhuma delas cria história
+nova: a primeira entra na S315, que já é a história de "a tela de lotes diz a verdade"; a segunda
+cai inteira na S316, que já está especificada e nunca foi construída.
+
+### S315 ganha uma tarefa (D-1008-R12)
+
+Na íntegra: *"A tabela de lotes em vagas venvidas -disponiveis e total está meio quebrada,
+esquisita como coluna unica, simplifique para vendidos, disponiveis e total."*
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S315-T10 · a coluna única de vagas vira três colunas | ✅ | `b38ec3a6` — vendidos, disponíveis e total, com alinhamento numérico; o teste passa a exigir três cabeçalhos e afere célula a célula |
+
+### S316 recebe a leva 3 inteira (D-1008-R13)
+
+Na íntegra: *"Nao consigo ver a configuração de modalidades em lotes. Está consufo, pois eu
+precisaria primeiramente configurar as modalidades e depois os lotes."*
+
+A lane não escreveu código e devolveu proposta, com razão registrada: o que o dono pede exige um
+destino de navegação que não existe, e construí-lo é exatamente a S316 — servidor com integridade
+entre modalidade, lote, kit e campanha. Três fatos que a apuração devolveu:
+
+- as modalidades nascem uma vez, na criação do evento, e nenhuma tela do painel as edita depois;
+- a ordem que ele pede já é a ordem do domínio: modalidade nasce antes do lote. O que quebra a
+  leitura dele é a invisibilidade, não a sequência;
+- a solução completa já estava decidida em 05/08 e nunca saiu do papel. Zero linha construída.
+
+**Proposta em duas fases, vetável do dono:**
+
+| Fase | O que faz | Custo |
+|---|---|---|
+| A · visibilidade | a seção de data e modalidades passa a listar as modalidades do evento, e a tela de lotes ganha um caminho até lá | tela apenas, sem servidor |
+| B · edição de verdade | a fila da S316 sobe, a seção vira editor e o caminho da tela de lotes passa a levar à edição | servidor, com integridade de venda |
+
+**Também aberto, se ele quiser:** hoje o menu do evento é visão geral, inscritos, kits, lotes e
+configurações. Se modalidades ganharem lugar próprio, entram entre kits e lotes.

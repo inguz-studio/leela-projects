@@ -528,3 +528,53 @@ em vez de reimplementá-lo: uma reimplementação passaria verde com o arquivo e
 sincronia outra vez, é injetar `getThemeInitScript()` por `transformIndexHtml` no vite do showroom;
 foi recusado agora por trocar um defeito de duas linhas por um passo de build numa superfície só de
 desenvolvimento (o showroom não tem alvo de Hosting).
+
+## Delta o chrome do painel entra no tema novo (2026-08-10/11 · DELTA-UX → AJUSTES-DONO → PARCERIAS-NAV)
+
+Origem: as levas 3 e 4 de decisões do dono validando o `:4601`, registradas em
+`02-rodadas/2026-08-09-redesign-ds/01-decisoes-dono-1008-retomada.md` (D-1008-R4, R5, R6, R7,
+R11, R14, R18). O tema novo e a camada de vidro já estavam nos tokens e na tela; o que faltava
+era o resto do painel — menus, perfil, altura de botão, cartão e barra de abas — falar a mesma
+língua. Duas histórias novas, porque nenhuma das existentes deste épico cobre o assunto: a S002
+é movimento de overlay e a S003 é a barra superior.
+
+**O código destas duas histórias vive na branch `redesign-engajamento-v2` e ainda não está no
+ar.** Enquanto não houver merge e deploy com conferência visual, elas ficam em execução, nunca
+em feito.
+
+### S004 · os menus, o perfil e a altura dos controles no tema novo
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S004-T1 · menu suspenso, filtro e dica voltam a ser opacos (R4) | ✅ | `1a5d8491` — a causa não era portal fora da árvore de tema: sob o vidro o `--surface-overlay` vira filme de 4,5% e todo painel flutuante pintava esse filme tendo só a página escura atrás |
+| S004-T2 · o menu de celular ganha o desenho novo (R5) | ✅ | `486ebaa4` — a anatomia off-canvas fica; só a pele muda |
+| S004-T3 · o perfil abre um painel pequeno com configurações e a troca de painel (R6) | ✅ | `55ea0d42` — rótulos "Acessar painel master" e "Acessar painel profissional", coerentes com a RN-468 |
+| S004-T4 · o botão volta à altura do padrão (R7) | ✅ | `1e7cdfe9` — as medidas de 48 e 44 pixels vindas do protótipo morreram; o padrão do design system ganha do protótipo aqui, por decisão do dono |
+| S004-T5 · o indicador de item ativo desliza (R14) | ✅ | `8cb1631b`, `ea79e9b9` — um elemento que se move por medição de layout, no lugar de um traço por aba |
+| S004-T6 · a barra de abas fica transparente, com contraste medido contra a página (R18) | 🔄 | lane PARCERIAS-NAV · o fundo de pílula sai da navegação de área; segmentado dentro de cartão e menu flutuante ficam como estão |
+
+**A régua que ficou:** altura de controle é a do padrão canônico, não a do protótipo. Quando as
+duas medidas divergirem, o protótipo perde — foi essa a palavra do dono, e ela inverte um pino
+do arquivo de referência.
+
+**O que a R4 ensinou sobre diagnóstico:** a hipótese escrita no contrato da lane estava errada e
+foi derrubada por teste antes de virar código. Painel flutuante em portal está dentro da árvore
+de tema; o preto vinha da cascata do vidro. Vale a nota porque a hipótese errada era plausível e
+teria produzido um conserto que não conserta.
+
+### S005 · a revisão de componentes vira roadmap, cânone e trava
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S005-T1 · o cartão volta a existir onde a informação estava solta (R11) | ✅ | `a60690c2`, `3ddb3c99` — kit, item e o bloco de modalidade viraram o Card canônico; a causa era marcação crua sob o filme de vidro, não a tela |
+| S005-T2 · o inventário das telas que ainda usam superfície crua | 📋 | cerca de 40 telas do painel com a mesma família de defeito, levantadas pela lane AJUSTES-DONO |
+| S005-T3 · o mapa padrão para componente canônico, com o que falta proposto | 📋 | ordem do dono de 10/08 sobre listas, seletores, formulários, cartões e bentos |
+| S005-T4 · as ondas de revisão, cada uma com o número de passos até o trabalho antes e depois | 📋 | a medida contra excesso é número, não adjetivo |
+| S005-T5 · a trava que reprova controle cru fora do design system | 📋 | no padrão dos gates que o projeto já tem |
+
+**Por que uma história e não uma rodada solta:** o dono já disse que respeitar componente é
+critério de aceite de interface, e a mesma família de defeito apareceu três vezes em duas
+semanas. A revisão vira história do épico para poder ser cobrada como qualquer outra.
+
+**Ordem de disparo:** o inventário só mede a verdade depois que o redesign entrar na main. Medir
+antes seria medir tela morta.

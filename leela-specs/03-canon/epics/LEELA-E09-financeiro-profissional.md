@@ -1411,3 +1411,45 @@ de visitas (RN-490, dona em [[LEELA-E11-analytics]]). Não decide se o reembolso
 fora da janela, que segue sendo o item 23 do painel — o piso apenas aumenta o valor em disputa nas
 compras pequenas. Não toca RN-455 nem RN-459: o custo do gateway segue especificado e não
 construído, e o piso do Serviço não depende dele.
+
+## Delta o dinheiro conta cliente que pagou, nunca inscrito (2026-08-11 · D-1008-R19)
+
+Decisão do dono, na íntegra: *"nao faz sentido funil por inscritos, e ja te falei que ticket médio
+é só por clientes que pagaram, e nao pagamentos emitidos(pendentes + pagos). iss ja esta em vias
+dde correção também?"* Registro em
+`02-rodadas/2026-08-09-redesign-ds/01-decisoes-dono-1008-retomada.md`.
+
+A resposta honesta dada a ele foi não: não estava em vias de correção. A conta errada foi
+localizada na hora, em `apps/painel/src/routes/eventos/evento/overview/OverviewKpis.tsx:66`, onde
+a receita confirmada é dividida pela quantidade de inscritos. Enquanto houver um PIX pendente no
+evento, o denominador cresce e o ticket médio encolhe sem que nada tenha acontecido no caixa.
+
+**A regra, escrita de uma vez para todas as telas:** ticket médio é receita confirmada dividida
+pelo número de clientes que pagaram. Nunca por inscritos, nunca por cobranças emitidas. Onde
+houver funil, ele fecha em pagante.
+
+Esta seção consolida no épico duas histórias que até hoje só existiam na pasta da rodada de 05/08
+e no kanban — a de dentro deste épico e o piso do Serviço, que é vizinho de arquivo.
+
+### S908 · o ticket médio e o repasse previsto na tela do organizador
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S908-T1 · a linha que compõe o repasse previsto some da tela | 📋 | RN-496; o selo de liberação fica |
+| S908-T2 · o campo com o nome da plataforma anterior sai da ficha do inscrito | 📋 | RN-496 e RN-404; a taxa não se mostra ao produtor |
+| S908-T3 · o teste que impede o rótulo antigo de voltar passa a cobrir as três telas | 📋 | depende de T1 e T2 |
+| S908-T4 · o ticket médio vira campo do agregado, com o denominador de quem pagou | 📋 | RN-488; é aqui que a decisão do dono de 10/08 aterrissa |
+
+### S907 · o piso do Serviço na aritmética, no carimbo e no estorno
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S907-T1 · o piso entra no modelo da linha de taxa, com a tabela nascendo vazia | 📋 | RN-491 |
+| S907-T2 · a aritmética do piso mora num lugar só | 📋 | RN-491 e RN-494 |
+| S907-T3 · o carimbo diz que o piso mordeu | 📋 | RN-492 |
+| S907-T4 · o estorno com piso fecha sem centavo sobrando | 📋 | RN-493 |
+| S907-T5 · o consolidado da plataforma soma o carimbo em vez de estimar | 📋 | com piso, a estimativa fica enviesada para baixo |
+| S907-T6 · a coluna do piso na tela da tabela global | 📋 | valor vazio quer dizer "sem piso", não "piso zero" |
+
+**Preso no dono:** SERV-1 e SERV-2 (o piso de três reais contra vendas pequenas) e SERV-3 (até
+onde vai a palavra "Serviço"). A frente 4 da rodada de 05/08 inteira espera o SERV-3.

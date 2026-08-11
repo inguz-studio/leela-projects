@@ -487,3 +487,39 @@ Contrato mínimo, para que a primeira vez que alguém pedir não vire improviso:
 **Contrato especificado, construção não priorizada.** Não há tarefa na fila desta rodada, pelo
 mesmo molde da RN-458: o contador não existe, o dono não pediu para construí-lo, e a regra existe
 para que o pedido futuro não nasça improvisado.
+
+## Delta a conversão fecha em pagante, e a forma de pagamento vira análise (2026-08-11 · D-1008-R19 · destravas do estudo de engajamento)
+
+Duas frentes que chegaram por caminhos diferentes e caem no mesmo épico.
+
+A primeira é a metade da decisão do dono de 10/08 que é de análise: *"nao faz sentido funil por
+inscritos"*. Onde houver funil, ele fecha em quem pagou. Hoje o cartão de conversão promete uma
+taxa que não tem denominador — o contador de visitas não existe (RN-489, RN-490).
+
+A segunda veio do mapeamento do estudo de engajamento: o bloco de formas de pagamento foi
+desenhado e não pôde ser construído porque nenhum agregado por forma de pagamento chega à tela. O
+dado existe no pedido; o que não existe é o resumo. E o padrão da casa é firme: tela não varre
+documento financeiro.
+
+Esta seção consolida no épico a história do cartão de conversão, que até hoje só existia na pasta
+da rodada de 05/08 e no kanban.
+
+### S824 · o cartão de conversão sem denominador
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S824-T1 · o rótulo de visitantes para de ser desenhado sem o número que o sustenta | 📋 | RN-489; a faixa de indicadores se reorganiza |
+| S824-T2 · quando o funil ganhar fonte, ele fecha em pagante | 📋 | D-1008-R19; nunca em inscrito |
+
+**Preso no dono:** CONV-1, se o contador de visitas passa a existir. Enquanto ele não responder,
+a T1 é honestidade e a T2 é contrato escrito para a primeira vez que alguém pedir.
+
+### S825 · a distribuição por forma de pagamento chega à análise
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S825-T1 · o resumo por forma de pagamento nasce como agregado do evento | 📋 | destrava o bloco 7 do estudo de engajamento |
+| S825-T2 · a rosca de formas de pagamento sai do "em breve" na análise e no engajamento | 📋 | o desenho já existe; falta o número |
+
+**Por que a história é daqui e não do engajamento:** o número é de vendas, e a autoridade sobre
+número de vendas é esta. O engajamento apenas consome.
