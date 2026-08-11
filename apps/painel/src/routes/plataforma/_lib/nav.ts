@@ -4,6 +4,7 @@
 // A sidebar do super-admin é PRÓPRIA (separada da operação do tenant):
 // Tenants, Termos, Billing, Macro. Tenants e Macro são telas da Onda 1;
 // Termos é editado por tenant (entrada = lista de tenants); Billing é pós-V1.
+// As listas globais (Eventos, Clubs) entraram na ADMIN-VISAO onda 4.
 // =============================================================================
 
 export interface PlatformNavItem {
@@ -16,6 +17,13 @@ export interface PlatformNavItem {
 
 export const PLATFORM_NAV: PlatformNavItem[] = [
   { id: 'tenants', label: 'Tenants', href: '/plataforma/tenants' },
+  // ADMIN-VISAO onda 4 · S1614-T4: as duas listas globais entram COLADAS em
+  // Tenants, e a ordem diz a pergunta que cada uma responde. Tenants é "quem
+  // opera na plataforma"; Eventos e Clubs são "o que existe nela, sem passar
+  // por tenant". O resto da barra é comercial (Termos…Taxa) e dinheiro
+  // (Repasses…Billing) — nenhuma das duas é isso.
+  { id: 'eventos', label: 'Eventos', href: '/plataforma/eventos' },
+  { id: 'clubs', label: 'Clubs', href: '/plataforma/clubs' },
   { id: 'termos', label: 'Termos', href: '/plataforma/tenants' },
   { id: 'planos', label: 'Planos', href: '/plataforma/planos' },
   // S1608-T2 · RN-413: os códigos que liberam conta de organizador.
@@ -32,6 +40,10 @@ export const PLATFORM_NAV: PlatformNavItem[] = [
 
 /** id do item de nav ativo dado o pathname atual (null = nenhum). */
 export function activeNavId(pathname: string): string | null {
+  // ADMIN-VISAO onda 4: as listas globais. Ficam ANTES de `tenants` porque a
+  // ficha do tenant é que ganha sub-rotas (`/tenants/:id/...`), não elas.
+  if (pathname.startsWith('/plataforma/eventos')) return 'eventos';
+  if (pathname.startsWith('/plataforma/clubs')) return 'clubs';
   if (pathname.startsWith('/plataforma/macro')) return 'macro';
   if (pathname.startsWith('/plataforma/planos')) return 'planos';
   if (pathname.startsWith('/plataforma/convites')) return 'convites';

@@ -26,7 +26,7 @@ import {
   type SidebarRailItem,
   type SidebarSection,
 } from '@leela/design-system';
-import { Banknote, Building2, CreditCard, FileText, Gauge, Percent, Tags, TicketCheck, Undo2, type LucideIcon } from 'lucide-react';
+import { Banknote, Building2, CreditCard, FileText, Gauge, Heart, Percent, Tags, Ticket, TicketCheck, Undo2, type LucideIcon } from 'lucide-react';
 import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
 import { onClickSpa, type NavegarSpa } from '../lib/navSpa';
 
@@ -55,6 +55,12 @@ const HREF_POR_ID: Record<string, string | undefined> = {
  *  fora da tabela do doc de IA, que cobre só os 8 itens do produtor). */
 const PLATFORM_NAV_ICONS: Record<string, LucideIcon> = {
   tenants: Building2,
+  // ADMIN-VISAO onda 4 · S1614-T4: as listas globais pegam o MESMO glifo que o
+  // produtor já usa para os mesmos objetos (`DEFAULT_SIDEBAR_NAV_ICONS`:
+  // eventos = Ticket, clubs = Heart). Quem abre os dois painéis no mesmo dia
+  // não deveria reaprender o ícone de evento ao trocar de casa.
+  eventos: Ticket,
+  clubs: Heart,
   termos: FileText,
   planos: Tags,
   // S1608-T2 · RN-413: os códigos de convite de organizador.
