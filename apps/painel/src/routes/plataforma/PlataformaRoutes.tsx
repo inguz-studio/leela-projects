@@ -23,6 +23,7 @@ import { EstornosAdminRoute } from './estornos/EstornosAdminRoute';
 import { PlanosRoute } from './planos/PlanosRoute';
 import { ConvitesRoute } from './convites/ConvitesRoute';
 import { EventosGlobaisRoute } from './eventos/EventosGlobaisRoute';
+import { ClubsGlobaisRoute } from './clubs/ClubsGlobaisRoute';
 import { TaxaGlobalRoute } from './taxa/TaxaGlobalRoute';
 import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';
@@ -42,6 +43,8 @@ export function PlataformaRoutes(): JSX.Element {
           {/* ADMIN-VISAO onda 4 · S1614-T2: todos os eventos do sistema, sem
               passar por tenant. Leitura da onda 1, Rule que já existe. */}
           <Route path="eventos" element={<EventosGlobaisRoute />} />
+          {/* ADMIN-VISAO onda 4 · S1614-T3: a irmã da lista de eventos. */}
+          <Route path="clubs" element={<ClubsGlobaisRoute />} />
           {/* S1608-T2 · RN-413: gestão dos códigos que abrem a porta da
               plataforma (gerar, ver uso, revogar). */}
           <Route path="convites" element={<ConvitesRoute />} />
