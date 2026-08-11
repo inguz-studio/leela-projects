@@ -1,8 +1,10 @@
 {
   "_comment": "Config EXCLUSIVA de deploy da LANDING pública (Next.js) ao site de Hosting `leela-landing` do projeto real (alias `prod` = leela-hub). Lane LANDING-PREVIEW. Declara UM site e mais nada: sem `functions`, sem `firestore`, sem `emulators`. É por construção que este deploy não consegue tocar o painel (site `leela-hub`, canal `preview`) nem as Functions/Rules já em produção. Mesmo padrão de config-por-propósito já usado no repo (firebase.preview.json / firebase.r6.json / firebase.prod.json). Exige o experimento `webframeworks` ligado — o script apps/landing/scripts/deploy-leela-hub.mjs cuida disso.",
+  "_comment_predeploy": "SEGUNDA rede do gate de frescor, e nao a primeira. Achado da lane DEPLOY-NOTURNO (11/08): a integracao webframeworks IGNORA o script `build` do package.json e roda `next build` puro — ela avisa em letras proprias (`Your package.json contains a custom build that is being ignored`). A guarda da PONTE-FIX protegia `pnpm build` e `turbo run build`, e nao o funil que sobe. ⚠️ E o `predeploy` NAO conserta isso sozinho: em `firebase-tools/lib/deploy/index.js` o `prepareFrameworks()` (que roda o `next build`) e chamado na linha 80, ANTES de os hooks de predeploy serem sequer coletados (linha 108) e executados (linha 122). Ou seja, neste alvo o predeploy barra o ENVIO, e nao a CONSTRUCAO. Quem barra a construcao e o gate dentro de `apps/landing/scripts/deploy-leela-hub.mjs`, que roda antes de invocar o firebase. Esta entrada existe para quem chamar `firebase deploy --config firebase.landing.json` na mao, pulando o script da casa. Forma `npm --prefix`, e nao `node script.mjs <arg>`: o firebase envelopa o comando em cross-env-shell, que no Windows quebra comando com multiplos argumentos (ENOENT medido nesta lane).",
   "hosting": {
     "site": "leela-landing",
     "source": "apps/landing",
+    "predeploy": ["npm --prefix apps/landing run verify:frescor"],
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "frameworksBackend": {
       "region": "us-central1",
