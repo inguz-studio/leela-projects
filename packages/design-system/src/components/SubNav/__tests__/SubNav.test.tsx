@@ -252,12 +252,18 @@ describe('SubNav', () => {
     expect(screen.getByRole('button', { name: 'B' })).toHaveFocus();
   });
 
-  it('container é plano (bg-surface-base + px token, SEM border-b) — Vitor 2026-07-11', () => {
+  it('container é TRANSPARENTE (D-1008-R18) + px token, SEM border-b', () => {
     render(<SubNav tabs={tabs} />);
     const nav = screen.getByRole('navigation');
-    expect(nav.className).toContain('bg-[var(--surface-base)]');
+    // D-1008-R18: itens + indicador direto sobre a página. O fundo opaco
+    // (`--surface-base`) NÃO pode voltar — sobre o page-glow do vidro ele
+    // desenhava a faixa sólida que o dono mandou remover. Transparência
+    // explícita, não ausência de classe.
+    expect(nav.className).toContain('bg-transparent');
+    expect(nav.className).not.toContain('bg-[var(--surface-base)]');
     expect(nav.className).toContain('px-[var(--subnav-px)]');
-    // Plano: sem divisor inferior; o sublinhado da aba ativa é o único indicador.
+    // Plano (Vitor 2026-07-11): sem divisor inferior por default; o sublinhado
+    // da aba ativa é o único indicador.
     expect(nav.className).not.toContain('border-b');
   });
 

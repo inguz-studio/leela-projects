@@ -501,3 +501,61 @@ describe('Countdown — número gradient-text ≥ 3:1 (texto grande)', () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// SubNav transparente (D-1008-R18) — AA por estado contra o fundo da PÁGINA.
+//
+// A barra de navegação de área perdeu o fundo próprio (`--surface-base` opaco
+// virou `bg-transparent`): itens + indicador deslizante assentam DIRETO sobre
+// a página. Consequência de contrato: o par de contraste de CADA estado deixa
+// de ser "texto sobre a barra" e passa a ser "texto sobre --surface-base" (o
+// fundo da página flat — sob o vidro o page-glow só ESCURECE/tinge levemente
+// esse mesmo fundo, então o par sólido é o piso conservador). Estados:
+//
+//   ativo          → --text-primary    (≥ 4.5, WCAG 1.4.3)
+//   inativo        → --text-secondary  (≥ 4.5)
+//   hover          → --text-primary    (inativa em hover assume text-primary)
+//   focus-visible  → --border-focus    (anel, não-texto ≥ 3.0, WCAG 1.4.11)
+//   indicador      → --border-brand    (sublinhado sem trilho, ≥ 3.0)
+//
+// Alguns pares repetem entradas da matriz genérica DE PROPÓSITO: este bloco é
+// o gate NOMEADO da decisão — se um tema mudar e derrubar um estado do SubNav,
+// o erro diz "SubNav transparente", não uma célula anônima da matriz.
+// ---------------------------------------------------------------------------
+
+describe('SubNav transparente (D-1008-R18) — AA por estado sobre o fundo da página', () => {
+  for (const [themeName, tokens] of themes) {
+    describe(`tema ${themeName}`, () => {
+      const pagina = () => tokens['surface-base']!;
+
+      it('aba ATIVA: text-primary sobre a página ≥ 4.5:1', () => {
+        expect(contrastRatio(tokens['text-primary']!, pagina())).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('aba INATIVA: text-secondary sobre a página ≥ 4.5:1', () => {
+        expect(contrastRatio(tokens['text-secondary']!, pagina())).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('HOVER da inativa: text-primary sobre a página ≥ 4.5:1', () => {
+        expect(contrastRatio(tokens['text-primary']!, pagina())).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('FOCUS-VISIBLE: anel border-focus sobre a página ≥ 3.0:1 (não-texto)', () => {
+        expect(contrastRatio(tokens['border-focus']!, pagina())).toBeGreaterThanOrEqual(3.0);
+      });
+
+      it('INDICADOR deslizante: border-brand sobre a página ≥ 3.0:1 (visível sem trilho)', () => {
+        expect(contrastRatio(tokens['border-brand']!, pagina())).toBeGreaterThanOrEqual(3.0);
+      });
+
+      it('pill do contador segue legível: text-secondary sobre surface-raised ≥ 4.5:1', () => {
+        // O pill mantém fundo próprio (--surface-raised); sob o vidro a var é
+        // rgba — composta sobre a página, como a matriz genérica faz.
+        const bg = /^rgba\(/.test(tokens['surface-raised']!)
+          ? composeOver(tokens['surface-raised']!, pagina())
+          : tokens['surface-raised']!;
+        expect(contrastRatio(tokens['text-secondary']!, bg)).toBeGreaterThanOrEqual(4.5);
+      });
+    });
+  }
+});

@@ -10,7 +10,7 @@ verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
 import { SubNav, type SubNavProps, type SubNavTab } from '@leela/design-system'
 
 ## Quando usar
-Barra de sub-navegação entre ROTAS de uma seção (nav landmark + links com aria-current="page"). O underline Brasa 2px da ativa é um indicador ÚNICO que DESLIZA entre as abas ao trocar seleção (D-1008-R14; motion por token, motion-reduce honrado); contador opcional em pill.
+Barra de sub-navegação entre ROTAS de uma seção (nav landmark + links com aria-current="page"). Container TRANSPARENTE (D-1008-R18): itens + indicador direto sobre a página — o AA por estado é medido contra o fundo da PÁGINA (gate na suíte de contraste). O underline Brasa 2px da ativa é um indicador ÚNICO que DESLIZA entre as abas ao trocar seleção (D-1008-R14; motion por token, motion-reduce honrado); contador opcional em pill.
 
 ## Quando NÃO usar
 Não use para troca de conteúdo dentro da mesma página — isso é o Tabs (tablist ARIA). SubNav é navegação entre rotas, não tablist.
@@ -23,7 +23,7 @@ Não use para troca de conteúdo dentro da mesma página — isso é o Tabs (tab
 Nenhuma outra prop existe.
 
 ## Tokens consumidos (nenhum valor cru permitido)
-- --surface-base (fundo plano do container) / --surface-raised (pill do contador)
+- (container TRANSPARENTE desde D-1008-R18 — nenhum token de fundo) / --surface-raised (pill do contador)
 - --border-brand / --border-focus  (SubNav plano — sem border-bottom desde 2026-07-11)
 - --subnav-px / --subnav-height / --subnav-underline
 - --subnav-pill-height / --subnav-pill-min-width / --subnav-pill-radius / --subnav-pill-font-size

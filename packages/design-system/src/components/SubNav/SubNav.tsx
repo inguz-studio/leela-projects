@@ -1,21 +1,28 @@
 /**
  * SubNav — barra de sub-navegação (§2.14).
  *
- * Container: bg-surface-base (= fundo da página, plano), padding 0 40px
- * (--subnav-px), SEM border-bottom. O único indicador é o sublinhado Brasa 2px
- * da aba ativa (::after).
+ * Container: TRANSPARENTE (D-1008-R18), padding 0 40px (--subnav-px), SEM
+ * border-bottom (a `divider` opcional das terciárias segue existindo). Itens e
+ * indicador deslizante assentam DIRETO sobre a página.
  * Tab inativa: font-weight 400, text-secondary.
- * Tab ativa: font-weight 600, text-primary, underline Brasa 2px via ::after.
+ * Tab ativa: font-weight 600, text-primary, sublinhado Brasa 2px (indicador
+ * deslizante único — D-1008-R14).
  * Contador: pill radius 10px, min-width 28px, height 20px, bg-surface-raised
- * (um passo ACIMA do fundo plano p/ o pill não sumir), font-size 11px.
+ * (um passo ACIMA do fundo p/ o pill não sumir), font-size 11px.
  *
- * Decisão (Vitor 2026-07-11): SubNav plano — fundo igual ao da página e sem
- * divisor. Sobrepõe o "§2.16 flat: border-bottom é divider permitido": aqui a
- * palavra do Vitor vence, o sublinhado da aba ativa carrega a orientação
- * sozinho. O pill do contador inverte a relação de elevação (era base sobre
- * raised; agora raised sobre base) para preservar exatamente o mesmo delta de
- * luminância — o contraste do texto das abas sobre o novo fundo MELHORA
- * (text-secondary #BFBFBF sobre #0C0C0C ≈ 10.6:1; text-primary ≈ 18:1).
+ * Decisão (Vitor 2026-07-11): SubNav plano — sem divisor; o sublinhado da aba
+ * ativa carrega a orientação sozinho (sobrepõe o "§2.16 flat: border-bottom é
+ * divider permitido").
+ *
+ * D-1008-R18 (dono, 11/08): o fundo da barra fica TRANSPARENTE. O container
+ * pintava `--surface-base` opaco — igual à página FLAT, mas por cima do
+ * `--page-glow` do vidro isso desenhava uma faixa escura sólida ("o background
+ * dos menus secundários"). Escopo preciso da decisão: SÓ a barra de navegação
+ * de área/rota (este componente — todas as áreas herdam); controles
+ * segmentados DENTRO de cards (Tabs §2.7 e afins) mantêm a anatomia do
+ * protótipo; menus FLUTUANTES seguem opacos (D-1008-R4 de pé). AA por estado
+ * medido contra o fundo da PÁGINA nos 3 temas: gate na suíte de contraste
+ * (`contrast.test.ts` · describe D-1008-R18).
  *
  * Semântica: navegação entre rotas — nav landmark + lista de links com
  * aria-current="page" na ativa (não é tablist; Tabs §2.7 cobre troca in-page).
@@ -120,7 +127,11 @@ function SubNav({
         // offsetParent das abas, então offsetLeft e translateX falam a mesma
         // régua, e o indicador rola JUNTO com o conteúdo (abs dentro do
         // scroll container).
-        'relative bg-[var(--surface-base)]',
+        // D-1008-R18: fundo TRANSPARENTE — era `--surface-base` opaco, que
+        // sobre o page-glow do vidro virava uma faixa sólida. Explícito (e não
+        // ausência de classe) para o contrato ser grep-ável e o consumidor não
+        // "herdar" um fundo por acidente de composição.
+        'relative bg-transparent',
         'px-[var(--subnav-px)]',
         // Adendo 12 (R9-A · tablet/mobile): a barra de sub-navegação de eventos
         // tem N abas (Visão/Inscritos/Kits/…/Financeiro/Config) que estouravam a
