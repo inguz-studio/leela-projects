@@ -128,6 +128,16 @@ redirect SPA (link salvo não morre); "Parcerias" ocupa o slot que era de "Marca
 rail; dentro de Parcerias, menu secundário canônico com as três abas no mesmo padrão do
 R9.
 
+## D-1008-R18 · Barra de abas do menu secundário: fundo TRANSPARENTE
+Na íntegra: "o background dos menus secundários será alterado? Para ficar transparente."
+Desambiguado via pergunta curta (mesmo termo do R4, componentes diferentes): resposta do
+dono = **barra de abas** (navegação secundária de área — clubs, Parcerias). → O SubNav
+canônico perde o fundo de pílula (`surface-overlay`): itens + indicador deslizante direto
+sobre a página. Escopo preciso: vale para a BARRA DE NAVEGAÇÃO DE ÁREA; os controles
+segmentados DENTRO de cards (abas de recorte, Funil/Por club do estudo) mantêm a anatomia
+do protótipo; menus FLUTUANTES seguem opacos (R4 de pé). Contraste AA por estado dos
+itens (ativo/inativo/hover) agora se mede contra o fundo da PÁGINA — gate.
+
 ## D-1008-R15 · REGISTRO DO DONO: dashboard do estudo de Engajamento NÃO implementado
 Na íntegra (ao embarcar, 10/08): "para fins de registro, voce nao implementou o dashboard da
 visao geral que estava no claude design na página engajamento estudo."
