@@ -253,7 +253,7 @@ Rodados em série, no worktree, sem background deliberado.
 |---|---|
 | `apps/landing` · `tsc --noEmit` | ✅ |
 | `apps/landing` · `eslint --max-warnings 0` | ✅ |
-| `apps/landing` · suíte completa | (ver §6.1) |
+| `apps/landing` · suíte completa | ✅ **818 casos, 62 suítes** — 813/61 na execução serial + o arquivo restante verde isolado (§6.1) |
 | `gate-canon` (camadas A e B) | ✅ com baseline regravado no mesmo commit |
 | `generate-tokens` 2× | ✅ idempotente |
 | painel | não tocado — nenhum arquivo de `apps/painel` neste diff |
@@ -269,7 +269,12 @@ porque a próxima onda vai passar por isto:
 | A | padrão do vitest (~10 workers) | **150** | contenção |
 | B | `test:gate` (3 workers) | **9** | 2 regressões reais + 7 de contenção |
 | C | `test:gate` (3 workers), já com 5 worktrees vivos | **57** | contenção |
-| D | `--maxWorkers=1` (serial) | veredito da lane | — |
+| D | `--maxWorkers=1` (serial) | **5** (1 arquivo) | contenção — o arquivo passa 6/6 sozinho |
+
+**O veredito da lane.** A execução serial fecha em **813 de 818 casos** e **61 de 62 suítes**; o
+único arquivo vermelho (`checkout-ckux-rev-cotacao.test.tsx`) passa **6/6** rodado sozinho, no mesmo
+commit. Somando, **as 62 suítes foram observadas verdes nesta árvore** — nenhuma ficou sem
+veredito, e nenhuma falha sobreviveu ao isolamento.
 
 **O procedimento que funcionou** é o que o brief prescreve: re-rodar sozinha. Cada arquivo que
 falhou na execução C foi re-executado isolado ou em lote pequeno — **todos verdes** (as quatro
