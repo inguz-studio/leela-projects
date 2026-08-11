@@ -255,7 +255,7 @@ describe('Sidebar', () => {
         ['eventos', 'Eventos'],
         ['clubs', 'Clubs'],
         ['crm', 'CRM'],
-        ['marcas', 'Marcas'],
+        ['parcerias', 'Parcerias'],
       ],
       [['configuracoes', 'Configurações']],
     ]);
@@ -373,7 +373,7 @@ describe('REDESIGN-V2 item 3: catálogo de ícones da nav', () => {
       eventos: 'Ticket',
       clubs: 'Heart',
       crm: 'User',
-      marcas: 'Megaphone',
+      parcerias: 'Megaphone',
       configuracoes: 'Settings',
     });
   });

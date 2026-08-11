@@ -1,22 +1,23 @@
 // =============================================================================
-// MOLDURA DA ÁREA DE CLUBS — a prova do D-1008-R16.
+// MOLDURA DA ÁREA DE CLUBS — a prova do D-1008-R16 (reconciliada pela R17).
 //
 // A palavra do dono: "revisar as rotas de clubs, para que o menu secundário
 // nao leve a abas sem menu e que voce nao quebre o layout, como em assessorias
 // parceiras". A causa era anatomia: o R9 colou o `ClubesAreaNav` página a
-// página — quem não colou (detalhe de assessoria) ficou órfã de menu, quem
-// colou diferente (Assessorias) quebrou o layout. O conserto é o layout route
+// página — quem não colou ficou órfã de menu, quem colou diferente
+// (Assessorias) quebrou o layout. O conserto é o layout route
 // `ClubesAreaLayout`, ÚNICO dono do menu.
 //
-// Este arquivo percorre a régua da decisão rota a rota, sobre a ÁRVORE REAL de
-// rotas (`ClubesRoutes`): em TODA aba da área o menu secundário renderiza —
-// exatamente UM, com o item ativo certo — e as rotas declaradas FORA da moldura
-// (criação em tela cheia; shell próprio do club) estão afirmadas sem o menu,
-// para o veredito da auditoria não virar boa intenção.
+// Após a D-1008-R17 a área ficou com o que é COMUNIDADE (hub + engajamento);
+// assessorias e afiliações migraram para Parcerias (moldura própria, provada
+// em `parcerias/__tests__/moldura-da-area.test.tsx`) e as rotas antigas viram
+// redirects (cobertos em `ClubesRoutes.test.tsx` e no gate da RN-234).
 //
-// As telas viram marcadores, como em `ClubesRoutes.test.tsx`: o que está sob
-// teste é a MOLDURA, não o conteúdo (que tem suíte própria). O menu e o layout
-// da área renderizam de verdade.
+// Este arquivo percorre a régua da decisão rota a rota, sobre a ÁRVORE REAL
+// (`ClubesRoutes`): em TODA aba da área o menu secundário renderiza —
+// exatamente UM, com o item ativo certo — e as rotas declaradas FORA da
+// moldura estão afirmadas sem o menu, para o veredito da auditoria não virar
+// boa intenção. As telas viram marcadores, como em `ClubesRoutes.test.tsx`.
 // =============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
@@ -29,24 +30,6 @@ vi.mock('../novo/NovoClubePage', () => ({
 }));
 vi.mock('../engajamento/EngajamentoPage', () => ({
   EngajamentoPage: () => <div data-testid="tela">engajamento</div>,
-}));
-vi.mock('../assessorias/AssessoriasPage', () => ({
-  AssessoriasPage: () => <div data-testid="tela">assessorias</div>,
-}));
-vi.mock('../assessorias/CadastrarAssessoriaPage', () => ({
-  CadastrarAssessoriaPage: () => <div data-testid="tela">nova-assessoria</div>,
-}));
-vi.mock('../assessorias/ParceriaDetailPage', () => ({
-  ParceriaDetailPage: () => {
-    const { parceriaId } = useParams();
-    return <div data-testid="tela">{`parceria:${parceriaId ?? ''}`}</div>;
-  },
-}));
-vi.mock('../influenciadores/InfluenciadoresPage', () => ({
-  InfluenciadoresPage: () => <div data-testid="tela">influenciadores</div>,
-}));
-vi.mock('../influenciadores/MinhasAfiliacoesPage', () => ({
-  MinhasAfiliacoesPage: () => <div data-testid="tela">minhas-afiliacoes</div>,
 }));
 vi.mock('../clube/ClubeLayout', () => ({
   ClubeLayout: () => {
@@ -72,17 +55,11 @@ function montarEm(rota: string): () => void {
 }
 
 // Rota → [tela esperada, rótulo da aba ativa]. A tabela É o inventário da
-// auditoria R16 — cada linha nova da área entra aqui, senão o gate reprova
-// por contagem nenhuma: reprova porque a régua é "toda aba da área".
+// auditoria R16 — cada linha nova da área entra aqui, porque a régua é
+// "toda aba da área".
 const DENTRO_DA_MOLDURA: ReadonlyArray<[string, string, string]> = [
   ['/clubes', 'hub', 'Clubes'],
   ['/clubes/engajamento', 'engajamento', 'Engajamento'],
-  ['/clubes/minhas-afiliacoes', 'minhas-afiliacoes', 'Minhas afiliações'],
-  ['/clubes/influenciadores', 'influenciadores', 'Influenciadores'],
-  ['/clubes/assessorias', 'assessorias', 'Assessorias parceiras'],
-  // O beco que o dono encontrou: a linha da tabela leva ao detalhe, e o
-  // detalhe renderizava SEM menu. Herda a aba da entrada (sub-rota).
-  ['/clubes/assessorias/p-1', 'parceria:p-1', 'Assessorias parceiras'],
 ];
 
 // Vereditos "fora da moldura POR DESIGN" da auditoria — afirmados, não
@@ -91,7 +68,6 @@ const DENTRO_DA_MOLDURA: ReadonlyArray<[string, string, string]> = [
 // "Clubes › {nome}" do D-1008-R10 + abas do clube).
 const FORA_DA_MOLDURA: ReadonlyArray<[string, string]> = [
   ['/clubes/novo', 'novo-club'],
-  ['/clubes/assessorias/nova', 'nova-assessoria'],
   ['/clubes/floripa-run', 'club:floripa-run'],
 ];
 

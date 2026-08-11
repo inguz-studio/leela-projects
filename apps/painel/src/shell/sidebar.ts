@@ -40,9 +40,10 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   // `comunicacao`; a comunicação por evento/clube (E06/E05) segue nas próprias
   // telas — o hub soma, não substitui.
   crm: '/crm',
-  // E10 · S811 seed: o item Marcas leva ao módulo de patrocinadores
-  // reutilizáveis (RN-171). Deixa de ser placeholder inerte.
-  marcas: '/marcas',
+  // D-1008-R17: o item Parcerias (era "Marcas", E10 · S811 seed · RN-171)
+  // leva à área que reúne Marcas, Assessorias parceiras e Afiliações — as
+  // duas últimas migradas de clubs. `/marcas` legado redireciona (RN-234).
+  parcerias: '/parcerias',
   // RN-233/RN-366 (IAM-T5): `Configurações` deixa de ser inerte. Passa a
   // hospedar os Dados de recebimento — cadastro único do titular — e por isso
   // ganha destino. A regra "item de menu sem rota é proibido" nasce sem
@@ -82,7 +83,10 @@ export function painelActiveId(pathname: string): string | null {
   if (pathname.startsWith('/eventos')) return 'eventos';
   if (pathname.startsWith('/clubes')) return 'clubs';
   if (pathname.startsWith('/crm')) return 'crm';
-  if (pathname.startsWith('/marcas')) return 'marcas';
+  // `/marcas` legado fica FORA da tabela de propósito (mesma regra do
+  // `/financeiro`): a URL antiga só redireciona — nenhum item aceso é o
+  // estado honesto para um endereço que não é mais destino de menu.
+  if (pathname.startsWith('/parcerias')) return 'parcerias';
   if (pathname.startsWith('/conta')) return 'configuracoes';
   return null;
 }

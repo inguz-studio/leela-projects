@@ -1,5 +1,5 @@
 // =============================================================================
-// MinhasAfiliacoesPage — `/clubes/minhas-afiliacoes` (R9-E · S-R9-11-T7/T8 ·
+// MinhasAfiliacoesPage — `/parcerias/afiliacoes/minhas` (R9-E · S-R9-11-T7/T8 ·
 // RN-318/319, lado do INFLUENCIADOR). O clube-influenciador (dono do clube)
 // ou o influenciador PF vê SÓ as PRÓPRIAS conversões — projeção fechada do
 // reader (qtd/valor/instantes; nunca dado de outros compradores nem afiliado
@@ -222,7 +222,7 @@ export function MinhasAfiliacoesPage(): JSX.Element {
       {/* D-1008-R8: frase de apoio cortada — KPIs e cartões dizem o que há; o
           recorte "só as suas conversões" segue garantido pela RN-318 (dado),
           não por aviso. */}
-      {/* D-1008-R16: o menu secundário da área é da MOLDURA (ClubesAreaLayout). */}
+      {/* D-1008-R16/R17: o menu da área é da MOLDURA (ParceriasAreaLayout). */}
       <PageHeader title="Minhas afiliações" />
       <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">
         {temAfiliacoes ? (

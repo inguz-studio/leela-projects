@@ -75,7 +75,9 @@ const ROTAS_AUTENTICADAS: readonly string[] = [
   '/clubes/corrida-perfeita/membros',
   '/crm', // CrmRoutes (RN-233)
   '/crm/clientes',
-  '/marcas', // MarcasRoutes (E10)
+  '/parcerias', // ParceriasRoutes (D-1008-R17 — sucede o módulo Marcas E10)
+  '/parcerias/assessorias',
+  '/marcas', // rota LEGADA (RN-234) — o redirect também é guardado
   '/plataforma', // PlataformaRoutes (E16) — a rota do relato do dono
   '/plataforma/tenants',
   '/plataforma/macro',

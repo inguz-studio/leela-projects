@@ -162,7 +162,8 @@ const CONTROLES_DO_FUNDO: readonly string[] = [
   'A:Eventos',
   'A:Clubs',
   'A:CRM',
-  'A:Marcas',
+  // D-1008-R17: o slot que era de "Marcas" — mesmo nó, rótulo novo.
+  'A:Parcerias',
   'A:Configurações',
   'BUTTON:Abrir menu de navegação',
   'BUTTON:Como receber o código Leela',
@@ -207,11 +208,12 @@ describe('vitrine · o fundo sai do alcance enquanto o aviso está na frente (DE
 
   it('o link que a AT clicou na review está dentro da subárvore inerte', async () => {
     // O clique sintético da sonda achou "Marcas" e navegou para `/marcas` com o
-    // aviso na frente. É este nó, nomeado.
+    // aviso na frente. É este nó, nomeado — hoje com o rótulo "Parcerias"
+    // (D-1008-R17: mesmo slot do rail, área renomeada).
     await abrirVitrine();
-    const marcas = itemDeMenu(/Marcas/i);
+    const parcerias = itemDeMenu(/Parcerias/i);
     await subirOAviso();
-    expect(marcas.closest(`[${ATRIBUTO_INERTE}]`)).not.toBeNull();
+    expect(parcerias.closest(`[${ATRIBUTO_INERTE}]`)).not.toBeNull();
   });
 
   it('a região viva da vitrine também fica inerte (a sobra do vetor 7)', async () => {

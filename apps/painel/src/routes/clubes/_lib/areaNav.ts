@@ -1,12 +1,18 @@
 // =============================================================================
-// Nav secundária da ÁREA de clubs (D-1008-R9) — fonte única das 5 entradas.
+// Nav secundária da ÁREA de clubs (D-1008-R9, reconciliada pela D-1008-R17) —
+// fonte única das entradas.
 //
-// A decisão do dono: os acessos "afiliações influenciadores, assessorias
-// parceiras e engajamento" saem de BOTÕES SOLTOS no header do hub e viram um
-// menu secundário canônico (SubNav do DS — o mesmo padrão § 2.14 de eventos e
-// do clube). "Clubes" é a raiz da área (o hub); as demais são as rotas
-// estáticas irmãs de `ClubesRoutes` — este é o nível ACIMA do `_lib/subnav.ts`
-// do clube (que navega DENTRO de um clube).
+// O R9 criou o menu com 5 entradas (substituindo botões soltos do hub). A
+// D-1008-R17 migrou assessorias parceiras e afiliações/influenciadores para a
+// área Parcerias ("faz mas sentido do que deixar em clubs" — dono); a área de
+// clubs ficou com o que é COMUNIDADE:
+//
+//   Clubes      (`/clubes` — a raiz, o hub)
+//   Engajamento (`/clubes/engajamento` — a análise da comunidade)
+//
+// Este é o nível ACIMA do `_lib/subnav.ts` do clube (que navega DENTRO de um
+// clube). As rotas antigas das entradas migradas viram redirects SPA em
+// ClubesRoutes (RN-234 — link salvo não morre).
 //
 // @pure de propósito (padrão eventos/_lib/subnav): a fiação de SPA acontece no
 // ponto de render (ClubesAreaNav), nunca aqui.
@@ -14,12 +20,7 @@
 
 import type { SubNavTab } from '@leela/design-system';
 
-export type ClubesAreaId =
-  | 'clubes'
-  | 'engajamento'
-  | 'minhas-afiliacoes'
-  | 'influenciadores'
-  | 'assessorias';
+export type ClubesAreaId = 'clubes' | 'engajamento';
 
 interface EntradaDef {
   id: ClubesAreaId;
@@ -28,18 +29,12 @@ interface EntradaDef {
   segmento: string;
 }
 
-// Ordem = a mesma dos botões que este menu substitui (Engajamento primeiro
-// entre as secundárias: é a leitura de TODA a lista, não um destino lateral),
-// com "Clubes" (a raiz) na frente.
 const ENTRADAS: readonly EntradaDef[] = [
   { id: 'clubes', label: 'Clubes', segmento: '' },
   { id: 'engajamento', label: 'Engajamento', segmento: 'engajamento' },
-  { id: 'minhas-afiliacoes', label: 'Minhas afiliações', segmento: 'minhas-afiliacoes' },
-  { id: 'influenciadores', label: 'Influenciadores', segmento: 'influenciadores' },
-  { id: 'assessorias', label: 'Assessorias parceiras', segmento: 'assessorias' },
 ];
 
-/** Monta as 5 entradas do DS (href + active) para a área de clubs. @pure */
+/** Monta as entradas do DS (href + active) para a área de clubs. @pure */
 export function clubesAreaNavTabs(ativa: ClubesAreaId): SubNavTab[] {
   return ENTRADAS.map((e) => ({
     id: e.id,
@@ -55,7 +50,7 @@ export function clubesAreaNavTabs(ativa: ClubesAreaId): SubNavTab[] {
  * a auditoria do R16 provou que menu colado página a página produz aba órfã
  * (rota sem menu) e layout inconsistente. Prefixo mais específico primeiro;
  * o que não casar com nenhuma entrada secundária é a raiz (o hub). Sub-rotas
- * de uma entrada (ex.: `/clubes/assessorias/{id}`) herdam a aba da entrada.
+ * de uma entrada herdam a aba da entrada.
  * @pure
  */
 export function clubesAreaAtiva(pathname: string): ClubesAreaId {

@@ -7,7 +7,7 @@ import { OverviewRoutes } from './routes/overview/OverviewRoutes';
 import { EventosRoutes } from './routes/eventos/EventosRoutes';
 import { ClubesRoutes } from './routes/clubes/ClubesRoutes';
 import { CrmRoutes } from './routes/crm/CrmRoutes';
-import { MarcasRoutes } from './routes/marcas/MarcasRoutes';
+import { ParceriasRoutes } from './routes/parcerias/ParceriasRoutes';
 import { rotasLegadas } from './routes/_system/RotasLegadas';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
@@ -77,8 +77,12 @@ export function App() {
                       <Route path="/clubes/*" element={<ClubesRoutes />} />
                       {/* RN-233 · área CRM: Visão geral | Clientes | Comunicação */}
                       <Route path="/crm/*" element={<CrmRoutes />} />
-                      {/* E10 · S811 seed — módulo Marcas (patrocinadores reutilizáveis, RN-171) */}
-                      <Route path="/marcas/*" element={<MarcasRoutes />} />
+                      {/* D-1008-R17 · área Parcerias — sucede o módulo Marcas
+                          (E10 · S811 seed · RN-171) no rail e absorve
+                          assessorias parceiras + afiliações (migradas de
+                          clubs). `/marcas` legado redireciona (tabela RN-234
+                          abaixo). */}
+                      <Route path="/parcerias/*" element={<ParceriasRoutes />} />
                       {/* RN-234 · o módulo `financeiro` deixou de existir; as URLs
                           antigas continuam abrindo, agora redirecionando para os
                           endereços novos. Link salvo e favorito seguem vivos. */}

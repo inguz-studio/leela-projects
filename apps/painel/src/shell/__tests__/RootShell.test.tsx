@@ -114,7 +114,7 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
 
   it('os 6 itens do produtor renderizam com ícone (RN-233 · menu de 6 áreas)', () => {
     renderAt('/');
-    // 6 itens do DS: Visão Geral · Eventos · Clubs · CRM · Marcas · Configurações.
+    // 6 itens do DS: Visão Geral · Eventos · Clubs · CRM · Parcerias · Configurações.
     const itens = within(nav()).getAllByRole('link');
     expect(itens).toHaveLength(6);
     for (const item of itens) {

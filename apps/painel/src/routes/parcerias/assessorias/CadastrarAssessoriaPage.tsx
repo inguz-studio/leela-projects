@@ -1,5 +1,5 @@
 // =============================================================================
-// CadastrarAssessoriaPage (`/clubes/assessorias/nova`) — form de cadastro de
+// CadastrarAssessoriaPage (`/parcerias/assessorias/nova`) — form de cadastro de
 // assessoria como club parceiro (E18 · S1800). Documento (CNPJ/CPF) validado ao
 // vivo pelo core (a MESMA validação da Function). Dois desfechos honestos do
 // servidor:
@@ -118,10 +118,10 @@ export function CadastrarAssessoriaPage(): JSX.Element {
           </p>
         </header>
         <div className="flex items-center gap-[var(--spacing-3)]">
-          <Button variant="primary" onClick={() => navigate(`/clubes/assessorias/${resultado.parceriaId}`)}>
+          <Button variant="primary" onClick={() => navigate(`/parcerias/assessorias/${resultado.parceriaId}`)}>
             Definir condição de desconto
           </Button>
-          <Button variant="ghost" onClick={() => navigate('/clubes/assessorias')}>
+          <Button variant="ghost" onClick={() => navigate('/parcerias/assessorias')}>
             Ver todas
           </Button>
         </div>
@@ -178,7 +178,7 @@ export function CadastrarAssessoriaPage(): JSX.Element {
           <Button type="submit" variant="primary" disabled={!podeEnviar}>
             {enviando ? 'Cadastrando…' : 'Cadastrar'}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => navigate('/clubes/assessorias')}>
+          <Button type="button" variant="ghost" onClick={() => navigate('/parcerias/assessorias')}>
             Cancelar
           </Button>
         </div>

@@ -74,7 +74,7 @@ async function abrirModal(): Promise<void> {
 function renderPage(): void {
   render(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/clubes/influenciadores']}>
+      <MemoryRouter initialEntries={['/parcerias/afiliacoes']}>
         <InfluenciadoresPage />
       </MemoryRouter>
     </ToastProvider>,

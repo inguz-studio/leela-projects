@@ -58,11 +58,11 @@ const AREAS: readonly (readonly [string, AreaDaVitrine])[] = [
     },
   ],
   [
-    '/marcas',
+    '/parcerias',
     {
-      titulo: 'Marcas',
+      titulo: 'Parcerias',
       descricao:
-        'Os patrocinadores que se repetem entre experiências, cadastrados uma vez e reaproveitados.',
+        'Marcas patrocinadoras, assessorias parceiras e afiliações de influenciadores — as parcerias do seu negócio, em um lugar.',
     },
   ],
   [

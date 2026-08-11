@@ -1,5 +1,5 @@
 // =============================================================================
-// AssessoriasPage (`/clubes/assessorias`) — gestão das assessorias parceiras
+// AssessoriasPage (`/parcerias/assessorias`) — gestão das assessorias parceiras
 // (E18 · S1803). Lista densa com status/documento/condição + busca + EmptyState
 // honesto; "Cadastrar assessoria" abre o form (S1800); encerrar = ConfirmModal
 // §2.15 com disclaimer de retenção 90d (RN-144). A linha leva ao detalhe
@@ -122,7 +122,7 @@ export function AssessoriasPage(): JSX.Element {
   // da área vinha DENTRO de uma coluna `mx-auto max-w-5xl` com `px-0` e o
   // header era custom, então o menu saltava de posição e largura vs TODAS as
   // abas irmãs. Realinhada à anatomia da área: o menu é da moldura
-  // (ClubesAreaLayout), o header é o PageHeader canônico e o conteúdo corre
+  // (ParceriasAreaLayout, desde a migração D-1008-R17), o header é o PageHeader canônico e o conteúdo corre
   // full-width em `px-6`, como nas irmãs.
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
@@ -135,7 +135,7 @@ export function AssessoriasPage(): JSX.Element {
           'Clubs parceiros com condição de desconto exclusiva — sem comissão, sem split.'
         }
         actions={
-          <Button variant="primary" onClick={() => navigate('/clubes/assessorias/nova')}>
+          <Button variant="primary" onClick={() => navigate('/parcerias/assessorias/nova')}>
             Cadastrar assessoria
           </Button>
         }
@@ -162,7 +162,7 @@ export function AssessoriasPage(): JSX.Element {
           title="Nenhuma assessoria cadastrada"
           description="Cadastre uma assessoria como club parceiro para dar condição de desconto aos atletas dela."
           action={
-            <Button variant="primary" onClick={() => navigate('/clubes/assessorias/nova')}>
+            <Button variant="primary" onClick={() => navigate('/parcerias/assessorias/nova')}>
               Cadastrar assessoria
             </Button>
           }
@@ -186,10 +186,10 @@ export function AssessoriasPage(): JSX.Element {
               data={filtradas}
               keyExtractor={(p) => p.id}
               caption="Assessorias parceiras do organizador"
-              onRowClick={(p) => navigate(`/clubes/assessorias/${p.id}`)}
+              onRowClick={(p) => navigate(`/parcerias/assessorias/${p.id}`)}
               renderActions={(p) => (
                 <div className="flex items-center gap-[var(--spacing-2)]">
-                  <Button variant="ghost" onClick={() => navigate(`/clubes/assessorias/${p.id}`)}>
+                  <Button variant="ghost" onClick={() => navigate(`/parcerias/assessorias/${p.id}`)}>
                     Detalhes
                   </Button>
                   {p.status !== 'inativa' ? (

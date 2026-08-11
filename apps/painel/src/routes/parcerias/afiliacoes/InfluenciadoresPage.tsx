@@ -1,5 +1,5 @@
 // =============================================================================
-// InfluenciadoresPage — `/clubes/influenciadores` (R9-E · S-R9-11-T8 ·
+// InfluenciadoresPage — `/parcerias/afiliacoes` (R9-E · S-R9-11-T8 ·
 // RN-319, lado do ORGANIZADOR). Vendas/conversões de clube-influenciador e
 // influenciador PF de TODOS os eventos do tenant, na aba Clubs. FASE 2 (COMF2):
 // comissão acumulada/repassada/saldo por afiliado + registro de repasse MANUAL
@@ -230,7 +230,7 @@ export function InfluenciadoresPage(): JSX.Element {
       {/* D-1008-R8: frase de apoio cortada — a tabela abaixo tem as colunas. */}
       {/* D-1008-R9: o menu secundário da área substituiu o botão solto "Voltar
           para Clubes"; desde o D-1008-R16 quem o desenha é a MOLDURA
-          (ClubesAreaLayout) — a entrada "Clubes" do menu segue sendo a volta. */}
+          (ParceriasAreaLayout, D-1008-R17) — as abas da área são o caminho entre frentes. */}
       <PageHeader title="Influenciadores" />
       <div className="flex flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)]">
         {afiliados === null && erro === null ? (

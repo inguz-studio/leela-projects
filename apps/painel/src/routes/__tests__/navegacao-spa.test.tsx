@@ -26,6 +26,9 @@ import { ToastProvider } from '@leela/design-system';
 
 import { EventoShell } from '../eventos/evento/EventoShell';
 import { ClubeShell } from '../clubes/clube/ClubeShell';
+import { ClubesAreaLayout } from '../clubes/ClubesAreaLayout';
+import { ParceriasAreaLayout } from '../parcerias/ParceriasAreaLayout';
+import { AfiliacoesLayout } from '../parcerias/afiliacoes/AfiliacoesLayout';
 import { KitsLayout } from '../eventos/kits/KitsLayout';
 import { KitEditor } from '../eventos/kits/KitEditor';
 import { FinanceiroLayout } from '../eventos/financeiro/FinanceiroLayout';
@@ -158,6 +161,62 @@ const SUPERFICIES: SuperficieNav[] = [
           <EventoShell evento={EVENTO} ativa="overview">
             <p>c</p>
           </EventoShell>
+          <Sonda />
+        </MemoryRouter>,
+      ),
+  },
+  // ---------------------------------------------------------------------------
+  // D-1008-R16/R17 — as MOLDURAS de área (layout routes donos do menu
+  // secundário). Montam-se sozinhas: derivam a aba ativa do pathname e não
+  // leem dado nenhum. Clicar numa aba re-deriva a ativa — a sonda prova a ida.
+  // ---------------------------------------------------------------------------
+  {
+    nome: 'menu da área de clubes',
+    landmark: 'Seções de clubes',
+    ancoras: 2,
+    atual: 'Clubes',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/clubes']}>
+          <Routes>
+            <Route element={<ClubesAreaLayout />}>
+              <Route path="*" element={<p>c</p>} />
+            </Route>
+          </Routes>
+          <Sonda />
+        </MemoryRouter>,
+      ),
+  },
+  {
+    nome: 'menu da área de Parcerias',
+    landmark: 'Seções de Parcerias',
+    ancoras: 3,
+    atual: 'Marcas',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/parcerias']}>
+          <Routes>
+            <Route element={<ParceriasAreaLayout />}>
+              <Route path="*" element={<p>c</p>} />
+            </Route>
+          </Routes>
+          <Sonda />
+        </MemoryRouter>,
+      ),
+  },
+  {
+    nome: 'sub-abas de Afiliações',
+    landmark: 'Seções de afiliações',
+    ancoras: 2,
+    atual: 'Influenciadores',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/parcerias/afiliacoes']}>
+          <Routes>
+            <Route element={<AfiliacoesLayout />}>
+              <Route path="*" element={<p>c</p>} />
+            </Route>
+          </Routes>
           <Sonda />
         </MemoryRouter>,
       ),

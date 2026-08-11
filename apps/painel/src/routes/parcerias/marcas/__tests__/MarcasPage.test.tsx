@@ -52,7 +52,7 @@ function setSession(uid: string | null): void {
 
 function renderPage(): void {
   render(
-    <MemoryRouter initialEntries={['/marcas']}>
+    <MemoryRouter initialEntries={['/parcerias']}>
       <ToastProvider>
         <MarcasPage />
       </ToastProvider>

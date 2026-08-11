@@ -22,9 +22,14 @@ describe('painelActiveId', () => {
     ['/crm/clientes', 'crm'],
     ['/crm/clientes/tipo_abc123', 'crm'],
     ['/crm/comunicacao', 'crm'],
-    // E10 · S811 seed: o módulo Marcas ativa o item Marcas.
-    ['/marcas', 'marcas'],
-    ['/marcas/qualquer', 'marcas'],
+    // D-1008-R17: a área Parcerias (era o módulo Marcas) ativa o item
+    // Parcerias; `/marcas` legado só redireciona (RN-234) — nenhum item aceso,
+    // mesma regra do `/financeiro`.
+    ['/parcerias', 'parcerias'],
+    ['/parcerias/assessorias', 'parcerias'],
+    ['/parcerias/afiliacoes/minhas', 'parcerias'],
+    ['/marcas', null],
+    ['/marcas/qualquer', null],
     // RN-233/RN-366: Configurações deixou de ser inerte e leva a `/conta`.
     ['/conta', 'configuracoes'],
     ['/conta/perfil-publico', 'configuracoes'],
@@ -44,7 +49,8 @@ describe('shellSidebarSections', () => {
       'eventos',
       'clubs',
       'crm',
-      'marcas',
+      // D-1008-R17: "Parcerias" no MESMO slot que era de "Marcas".
+      'parcerias',
       'configuracoes',
     ]);
     expect(items.every((i) => i.icon)).toBe(true);
@@ -78,9 +84,10 @@ describe('shellSidebarSections', () => {
     // RN-233/RN-823: CRM é a porta única da análise de vendas + clientes.
     chamarOnClick(items.find((i) => i.id === 'crm')?.onClick);
     expect(navigate).toHaveBeenCalledWith('/crm');
-    // E10 · S811 seed: Marcas agora leva ao módulo de patrocinadores reutilizáveis.
-    chamarOnClick(items.find((i) => i.id === 'marcas')?.onClick);
-    expect(navigate).toHaveBeenCalledWith('/marcas');
+    // D-1008-R17: Parcerias leva à área que reúne marcas, assessorias e
+    // afiliações (sucede o módulo Marcas — E10 · S811 seed).
+    chamarOnClick(items.find((i) => i.id === 'parcerias')?.onClick);
+    expect(navigate).toHaveBeenCalledWith('/parcerias');
     // RN-233 sem exceção aberta: TODO item do menu tem destino. Configurações
     // leva a `/conta`, onde vivem os Dados de recebimento (RN-366 · IAM-T5).
     chamarOnClick(items.find((i) => i.id === 'configuracoes')?.onClick);

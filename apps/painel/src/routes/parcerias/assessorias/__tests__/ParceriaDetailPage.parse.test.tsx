@@ -53,9 +53,9 @@ const PARCERIA: ParceriaAssessoria = {
 function renderPage(): void {
   render(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/clubes/assessorias/12345678000199']}>
+      <MemoryRouter initialEntries={['/parcerias/assessorias/12345678000199']}>
         <Routes>
-          <Route path="/clubes/assessorias/:parceriaId" element={<ParceriaDetailPage />} />
+          <Route path="/parcerias/assessorias/:parceriaId" element={<ParceriaDetailPage />} />
         </Routes>
       </MemoryRouter>
     </ToastProvider>,

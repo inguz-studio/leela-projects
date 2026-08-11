@@ -1,5 +1,5 @@
 // =============================================================================
-// ParceriaDetailPage (`/clubes/assessorias/:parceriaId`) — detalhe da parceria
+// ParceriaDetailPage (`/parcerias/assessorias/:parceriaId`) — detalhe da parceria
 // (E18 · S1803) + editor da condição de desconto (S1802). A condição
 // materializa-se como CUPOM escopado `club_parceiro` num evento do tenant
 // (ADR-012 — sem split, sem segundo caminho). Só parceria ATIVA aceita condição
@@ -152,7 +152,7 @@ export function ParceriaDetailPage(): JSX.Element {
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-[var(--spacing-4)] p-[var(--spacing-6)]">
         <AuthAlert tone="info" message="Parceria não encontrada. Ela pode ter sido removida ou você não tem acesso." />
         <div>
-          <Button variant="secondary" onClick={() => navigate('/clubes/assessorias')}>
+          <Button variant="secondary" onClick={() => navigate('/parcerias/assessorias')}>
             Voltar para assessorias
           </Button>
         </div>
@@ -167,7 +167,7 @@ export function ParceriaDetailPage(): JSX.Element {
       <header className="flex flex-col gap-[var(--spacing-2)]">
         <button
           type="button"
-          onClick={() => navigate('/clubes/assessorias')}
+          onClick={() => navigate('/parcerias/assessorias')}
           className="w-fit text-[length:var(--font-size-sm)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
         >
           ← Assessorias

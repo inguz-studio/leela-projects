@@ -7,7 +7,7 @@
 // posição e largura ao trocar de aba. Este arquivo pina o conserto:
 //
 //   1. a página NÃO desenha menu de área nenhum — o menu é da MOLDURA
-//      (ClubesAreaLayout), e página que volta a colar menu reabre o defeito
+//      (ParceriasAreaLayout), e página que volta a colar menu reabre o defeito
 //      (o teste de moldura pega o duplo; este pega a recidiva na origem);
 //   2. o header é o PageHeader canônico (h1 + subtítulo + ação primária),
 //      como nas irmãs.
@@ -54,7 +54,7 @@ function parceria(over: Partial<ParceriaAssessoria> = {}): ParceriaAssessoria {
 
 function renderPage(): void {
   render(
-    <MemoryRouter initialEntries={['/clubes/assessorias']}>
+    <MemoryRouter initialEntries={['/parcerias/assessorias']}>
       <ToastProvider>
         <AssessoriasPage />
       </ToastProvider>
@@ -72,9 +72,9 @@ beforeEach(() => {
 });
 
 describe('AssessoriasPage · anatomia da área (D-1008-R16)', () => {
-  it('NÃO desenha menu de área — o menu é da moldura (ClubesAreaLayout)', () => {
+  it('NÃO desenha menu de área — o menu é da moldura (ParceriasAreaLayout)', () => {
     renderPage();
-    expect(screen.queryByRole('navigation', { name: 'Seções de clubes' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Seções de Parcerias' })).toBeNull();
   });
 
   it('abre com o PageHeader canônico, como as abas irmãs', () => {

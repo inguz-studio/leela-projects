@@ -48,9 +48,9 @@ const writeText = vi.fn<(s: string) => Promise<void>>();
 
 function renderPage(): void {
   // MemoryRouter: harness de montagem (a página vive sob o router; o menu da
-  // área saiu dela na D-1008-R16 — hoje é da moldura ClubesAreaLayout).
+  // área saiu dela na D-1008-R16 — hoje é da moldura ParceriasAreaLayout).
   render(
-    <MemoryRouter initialEntries={['/clubes/minhas-afiliacoes']}>
+    <MemoryRouter initialEntries={['/parcerias/afiliacoes/minhas']}>
       <ToastProvider>
         <MinhasAfiliacoesPage />
       </ToastProvider>

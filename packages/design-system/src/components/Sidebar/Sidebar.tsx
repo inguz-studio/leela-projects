@@ -2,7 +2,7 @@
  * Sidebar — painel de navegação lateral do shell.
  *
  * Seções (RN-233, rodada IA-MENU 2026-07-19 — o menu foi de 8 para 6 itens):
- *   OPERAÇÃO: Visão Geral, Eventos, Clubs, CRM, Marcas
+ *   OPERAÇÃO: Visão Geral, Eventos, Clubs, CRM, Parcerias
  *   CONTA:    Configurações
  *
  * `Financeiro` e `Analytics` saíram do catálogo: a análise de vendas virou
@@ -125,7 +125,7 @@ export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
  *   Eventos  CalendarDays → Ticket     evento é ingresso, não data
  *   Clubs    UsersRound   → Heart      comunidade, não um monte de pessoa
  *   CRM      Bell         → User       pessoa é o cliente (o sino era o aviso)
- *   Marcas   Briefcase    → Megaphone  patrocínio comunica, não é maleta
+ *   Parcerias (era Marcas) Briefcase → Megaphone  parceria/patrocínio comunica
  *
  * `Ticket` é EXCLUSIVO deste item de menu: agenda e campos de data seguem em
  * `CalendarDays`/`CalendarCheck`, e trocar isso confundiria "quando acontece"
@@ -155,7 +155,11 @@ export const DEFAULT_SIDEBAR_NAV_ICONS: readonly SidebarNavIconEntry[] = [
   { id: 'eventos',       label: 'Eventos',       iconName: 'Ticket',          Icon: Ticket },
   { id: 'clubs',         label: 'Clubs',         iconName: 'Heart',           Icon: Heart },
   { id: 'crm',           label: 'CRM',           iconName: 'User',            Icon: User },
-  { id: 'marcas',        label: 'Marcas',        iconName: 'Megaphone',       Icon: Megaphone },
+  // D-1008-R17: "Marcas" virou "Parcerias" no MESMO slot — a área absorveu
+  // assessorias parceiras e afiliações (migradas de clubs) além das marcas.
+  // Megaphone fica: patrocínio/parceria comunica (troca de ícone não foi
+  // decidida; candidata natural seria Handshake — vetável).
+  { id: 'parcerias',     label: 'Parcerias',     iconName: 'Megaphone',       Icon: Megaphone },
   { id: 'configuracoes', label: 'Configurações', iconName: 'Settings',        Icon: Settings },
 ] as const;
 
@@ -169,7 +173,7 @@ function itemPadrao(id: string): SidebarItem {
 export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     label: 'OPERAÇÃO',
-    items: ['visao-geral', 'eventos', 'clubs', 'crm', 'marcas'].map(itemPadrao),
+    items: ['visao-geral', 'eventos', 'clubs', 'crm', 'parcerias'].map(itemPadrao),
   },
   {
     label: 'CONTA',
