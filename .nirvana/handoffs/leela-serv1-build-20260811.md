@@ -87,7 +87,8 @@ superfície de deploy de Functions não muda.
 | lotes (painel, área tocada) | **97/97** |
 | tsc — core · painel · functions | **0 erro** nos três |
 | lint — core · painel · functions | **0** nos três (`--max-warnings 0`) |
-| functions — suíte COMPLETA | ver abaixo |
+| functions — 105 arquivos sem emulador | **101 verdes · 1 pulado · 3 vermelhos, todos fora do território desta lane** (2237 casos: 2222 verdes, 10 pulados, 5 vermelhos) |
+| functions — suíte COMPLETA (247 arquivos) | **não obtida** — ver abaixo |
 
 **Falsificação executada em cada camada, e revertida:**
 
@@ -109,4 +110,33 @@ Rule ao número do core, mais a presença do predicado nos dois `allow`. O risco
 sintaxe/semântica CEL não exercitada; o risco de deriva entre as duas fontes do mesmo número
 está fechado.
 
+## A suíte completa de functions travou, e o número está aqui
+
+`vitest run` sem filtro em `functions/` ficou **75 minutos a ~1% de CPU e escreveu zero byte**.
+Causa medida: `fileParallelism: false` (um arquivo por vez, por decisão do `vitest.config.ts`) ×
+**142 dos 247 arquivos exigindo emulador**, que nesta máquina não sobe — cada um espera o próprio
+teto de hook em vez de pular. O processo foi morto por decisão da lane, e o gate foi refeito
+sobre os **105 arquivos que não dependem de emulador**: 107 segundos, contra 75 minutos parados.
+
+Os três vermelhos desse recorte, um por um, e por que nenhum é desta lane:
+
+| Arquivo | Causa | Território |
+|---|---|---|
+| `platformAdminSeed.test.ts` | o próprio seed bloqueia fora do Auth Emulator (guarda deliberada) | ambiente |
+| `papelDuploConcessao.integration.test.ts` | `ECONNREFUSED 127.0.0.1:9099` — Auth Emulator | ambiente |
+| `emailIdentidade.test.ts` | token do tema derivou: espera `RGBA(30, 11, 16, 0.42)`, lê `#161616` | **lane vizinha** — o arquivo resolve `packages/design-system/themes/brasa.css`, que a ROADMAP-COMPONENTES tocou; esta lane não abriu um arquivo de design-system |
+
+A lane vizinha (`leela-roadmap-componentes-20260810`) intercalou commits em `main` durante a
+janela. Os cinco commits desta lane atravessaram intactos — `commit --only` com pathspec por
+camada, nenhum `amend`, nenhum `stash` na árvore compartilhada.
+
 ⛔ Nenhum deploy. A regra entra no ar no próximo pacote.
+
+## Para quem pegar isto depois
+
+1. **A prova que falta** é a suíte de ataque às Rules. Ela roda sozinha assim que houver JDK 21:
+   `firebase emulators:exec --only firestore --project demo-leela "cd functions && vitest run src/__tests__/vendasRules.integration.test.ts"`.
+2. **`emailIdentidade.test.ts` está vermelho** e o dono do conserto é quem mexeu no tema.
+3. **O gate serial de functions é caro por construção nesta máquina.** Rodar por recorte
+   (`grep -L "rules-unit-testing|FIRESTORE_EMULATOR_HOST"`) devolve sinal em 107s; a suíte inteira
+   sem emulador não devolve sinal nenhum.
