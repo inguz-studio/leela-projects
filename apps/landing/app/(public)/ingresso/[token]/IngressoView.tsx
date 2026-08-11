@@ -157,9 +157,9 @@ function Linha({ termo, valor }: { termo: string; valor: string }): React.JSX.El
  */
 export function IngressoNaoEncontrado(): React.JSX.Element {
   return (
-    <div
+    <Card
       data-testid="ingresso-nao-encontrado"
-      className="mx-auto w-full max-w-2xl rounded-ds-lg border border-border-default bg-surface-raised p-[var(--spacing-6)]"
+      className="mx-auto w-full max-w-2xl p-[var(--spacing-6)]"
     >
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-text-primary">
         Não encontramos este ingresso
@@ -169,7 +169,7 @@ export function IngressoNaoEncontrado(): React.JSX.Element {
         existir. Procure o e-mail da compra: ele traz o código do ingresso em texto e o link
         atual de cada inscrito.
       </p>
-    </div>
+    </Card>
   );
 }
 
@@ -180,9 +180,9 @@ export function IngressoNaoEncontrado(): React.JSX.Element {
  */
 export function IngressoIndisponivel(): React.JSX.Element {
   return (
-    <div
+    <Card
       data-testid="ingresso-indisponivel"
-      className="mx-auto w-full max-w-2xl rounded-ds-lg border border-border-default bg-surface-raised p-[var(--spacing-6)]"
+      className="mx-auto w-full max-w-2xl p-[var(--spacing-6)]"
     >
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-text-primary">
         Não conseguimos carregar seu ingresso agora
@@ -191,6 +191,6 @@ export function IngressoIndisponivel(): React.JSX.Element {
         O problema é nosso, não do seu link. Atualize a página em alguns segundos. Se insistir, o
         código do ingresso que está no e-mail da compra basta para o credenciamento.
       </p>
-    </div>
+    </Card>
   );
 }

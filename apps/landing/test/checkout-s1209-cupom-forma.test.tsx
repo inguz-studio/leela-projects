@@ -50,7 +50,15 @@ const evento: EventoPublico = {
   usaChip: false,
   qtdInscritos: 0,
   organizador: null,
-  modalidades: [{ nome: '5k', precoVigente: 5000 }],
+  // DUAS modalidades desde a Onda 1 do cânone: com uma só, a auto-seleção de
+  // opção única escolhe sozinha (é o passo de arquitetura nº 2) e o estado
+  // "nada escolhido ainda" — que é justamente o que este arquivo trava no campo
+  // de cupom — deixa de existir. O evento com duas modalidades preserva o
+  // cenário; nenhuma asserção foi afrouxada.
+  modalidades: [
+    { nome: '5k', precoVigente: 5000 },
+    { nome: '10k', precoVigente: 8000 },
+  ],
   kits: [],
   itensTamanhados: [],
   precoMinimo: 5000,

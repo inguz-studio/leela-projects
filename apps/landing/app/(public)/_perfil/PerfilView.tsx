@@ -31,7 +31,7 @@
 // rotula na tela é a própria aba) e um ícone invisível não tem função.
 import { CalendarDays, Handshake, MapPin, Users } from 'lucide-react';
 // ADR-017: estático via subpath server-safe do DS (sem boundary de cliente).
-import { EmptyState } from '@leela/design-system/server';
+import { Card, EmptyState } from '@leela/design-system/server';
 import { CoverImage } from '../../components/CoverImage';
 import { ShareBlock } from '../[eventSlug]/ShareBlock';
 import { formatarPreco } from '../../../lib/formato';
@@ -113,9 +113,7 @@ function LinhaEvento({
       {/* Card */}
       <div className="pb-6">
         {passado ? (
-          <div className="rounded-ds-lg border border-border-subtle bg-surface-raised p-3 opacity-80 sm:p-4">
-            {miolo}
-          </div>
+          <Card className="border-border-subtle p-3 opacity-80 sm:p-4">{miolo}</Card>
         ) : (
           <a
             href={`/${ev.slug}`}
@@ -167,7 +165,7 @@ function FaixaPatrocinadores({
       <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         {patrocinadores.map((p) => (
           <li key={p.nome}>
-            <div className="flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-ds-md border border-border-subtle bg-surface-raised p-3">
+            <Card className="flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-ds-md border-border-subtle p-3">
               {p.logoUrl !== undefined ? (
                 <img
                   src={p.logoUrl}
@@ -188,7 +186,7 @@ function FaixaPatrocinadores({
                   </span>
                 </>
               )}
-            </div>
+            </Card>
           </li>
         ))}
       </ul>
@@ -208,7 +206,7 @@ function FaixaPatrocinadores({
  */
 function CardClube({ clube }: { clube: ClubeResumoPublico }): React.JSX.Element {
   return (
-    <div className="overflow-hidden rounded-ds-lg border border-border-subtle bg-surface-raised">
+    <Card className="overflow-hidden border-border-subtle">
       <div className="relative aspect-[16/9] w-full overflow-hidden">
         <CoverImage src={clube.imagemUrl} alt={`Capa de ${clube.nome}`} />
       </div>
@@ -226,7 +224,7 @@ function CardClube({ clube }: { clube: ClubeResumoPublico }): React.JSX.Element 
             : `${clube.qtdMembrosAtivos} membros ativos`}
         </p>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -257,12 +255,12 @@ function SecaoEventos({
         Próximos eventos
       </h2>
       {futuros.length === 0 ? (
-        <div className="mt-5 rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
+        <Card className="mt-5 border-border-subtle py-10">
           <EmptyState
             title="Nenhum evento à vista"
             description="Quando este organizador publicar uma experiência, ela aparece aqui na linha do tempo."
           />
-        </div>
+        </Card>
       ) : (
         <TimelineEventos eventos={futuros} passado={false} />
       )}
@@ -287,12 +285,12 @@ function SecaoClubs({ clubes }: { clubes: ClubeResumoPublico[] }): React.JSX.Ele
         Clubs
       </h2>
       {clubes.length === 0 ? (
-        <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
+        <Card className="border-border-subtle py-10">
           <EmptyState
             title="Nenhum club público"
             description="Os clubs públicos deste organizador aparecem aqui."
           />
-        </div>
+        </Card>
       ) : (
         <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {clubes.map((clube) => (

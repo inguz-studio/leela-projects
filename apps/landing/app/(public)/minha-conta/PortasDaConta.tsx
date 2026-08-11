@@ -128,14 +128,22 @@ import {
 import { derivarSlugOrganizacao } from '@leela/core';
 import { Button, Checkbox, Input } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
+import { Card, buttonVariants } from '@leela/design-system/server';
 import { painelUrl } from '@/lib/painel';
 import { portaDaConta, type PortaDaConta } from '@/lib/portaOrganizador';
+import { cn } from '@/lib/utils';
 
-const CARTAO = 'rounded-ds-lg border border-border-default bg-surface-raised p-4 sm:p-5';
+// Onda 1 do cânone: a moldura é o `Card` do DS; a constante guarda só o
+// espaçamento próprio destes cartões.
+const CARTAO = 'p-4 sm:p-5';
 const TITULO = 'text-base font-semibold text-text-primary';
 const APOIO = 'mt-1 text-sm text-text-secondary';
-const LINK =
-  'mt-3 inline-flex w-fit items-center rounded-ds-pill border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';
+// Onda 1 do cânone: receita do DS (`buttonVariants`) + a pílula de marketing
+// da landing, que o ADR-017 ratificou como forma da superfície pública.
+const LINK = cn(
+  buttonVariants({ variant: 'secondary', size: 'sm' }),
+  'mt-3 w-fit rounded-ds-pill',
+);
 const ERRO =
   'mt-3 rounded-ds-lg border border-border-default bg-surface-base p-3 text-sm font-medium text-feedback-danger-fg';
 
@@ -231,7 +239,7 @@ function nomeInicialDaProdutora(nomeDaPessoa: string): string {
  */
 function PortaDeQuemJaEProfissional(): React.JSX.Element {
   return (
-    <section className={CARTAO} data-slot="porta-organizador">
+    <Card className={CARTAO} data-slot="porta-organizador">
       <h2 className={TITULO}>Você também organiza</h2>
       <p className={APOIO}>
         Suas experiências, inscrições e repasses ficam no painel profissional. {AVISO_SEGUNDO_LOGIN}
@@ -239,7 +247,7 @@ function PortaDeQuemJaEProfissional(): React.JSX.Element {
       <a className={LINK} href={painelUrl('/entrar')} data-slot="ir-para-painel">
         Ir para o painel profissional
       </a>
-    </section>
+    </Card>
   );
 }
 
@@ -333,7 +341,7 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
 
   if (fase === 'pronta') {
     return (
-      <section className={CARTAO} data-slot="porta-conhecer-painel">
+      <Card className={CARTAO} data-slot="porta-conhecer-painel">
         <h2 className={TITULO}>Pronto. O painel profissional já é seu</h2>
         {/* A confirmação é curta e a travessia vem junto: a pessoa acabou de
             pedir para conhecer, e mandá-la procurar o caminho seria devolver
@@ -363,12 +371,12 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
         <a className={LINK} href={painelUrl('/entrar')} data-slot="ir-para-painel-vitrine">
           Ir para o painel profissional
         </a>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className={CARTAO} data-slot="porta-conhecer-painel">
+    <Card className={CARTAO} data-slot="porta-conhecer-painel">
       {/* O título nomeia o LUGAR com a palavra do dono; os dois botões nomeiam
           os dois TRABALHOS e carimbam intenções diferentes (PONTE-CTA-1). */}
       <h2 className={TITULO}>{NOME_DO_LUGAR}</h2>
@@ -466,7 +474,7 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
           </Button>
         ))}
       </div>
-    </section>
+    </Card>
   );
 }
 

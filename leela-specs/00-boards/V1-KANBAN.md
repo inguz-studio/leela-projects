@@ -300,6 +300,15 @@ tags:
         - [x] a trava de procedência entra em vigor sem barrar ninguém, com o custo à vista (`2ceb9fd4`)
         - [x] os documentos corrigidos: três componentes que faltavam no mapa, e dois itens que já estavam prontos e a lista dizia que não (`3029022d`)
         - [ ] Parte B — retida na sua decisão sobre layout (CANONE-1)
+- [x] **[E01] A tela onde se paga para de reescrever o design system, e um clique inútil some** — o checkout e a página pública montavam o cartão da casa à mão, 38 vezes, em vez de usar o pronto. Agora usam. Junto: evento que só tem uma modalidade e um kit deixa de cobrar dois cliques que não decidem nada — o que é único já vem escolhido, e você pode trocar do mesmo jeito. Nenhuma palavra da tela mudou ✅ **construído, aguardando deploy** · lane `canon-onda-1` [[LEELA-E01-design-system]]
+    - [x] **Onda 1 · o caminho do dinheiro**
+        - [x] as 12 superfícies do checkout passam a usar o cartão da casa (`2d5bfc5f`)
+        - [x] a página do evento, a home, a conta, o convite e o ingresso, idem — e o bloco de compartilhar paga três coisas de uma vez (`f8a75d32`)
+        - [x] os botões da superfície pública passam a usar a receita da casa, sem perder o formato de pílula da marca (`f8a75d32`)
+        - [x] opção única já vem escolhida — o checkout cai de 16 para 14 passos (`64be6b70`)
+        - [x] a contagem da trava desceu pela primeira vez: 27 → 6 superfícies à mão, 5 → 0 botões, 4 → 3 controles
+        - [ ] duas perguntas suas no painel de decisões: o endereço cobrado de quem retira o kit no balcão, e o PIX que não avisa que entrou
+        - [ ] conferência na tela renderizada, nos dois temas — esta lane não subiu navegador
 - [ ] **[E01] O painel obedece ao tema novo em todo menu, botão e cartão** — você validou o `:4601` e apontou seis coisas fora do lugar: menu suspenso preto, menu de celular no desenho antigo, o alternador de painel solto no lado, botão de gerenciar evento fora da altura, seleção que pula em vez de deslizar e a barra de abas com fundo de pílula. As seis estão consertadas e mergeadas na main 🔄 D-1008-R4, R5, R6, R7, R14 e R18 · **construído, mergeado, aguardando deploy** (merge `b51cdcd9` em 11/08) [[LEELA-E01-design-system]]
     - [x] **S004 · Os menus, o perfil e a altura dos controles no tema novo**
         - [x] S004-T1 menu suspenso, filtro e dica voltam a ser opacos

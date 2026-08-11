@@ -40,16 +40,18 @@ const CANONE_DO_DS = canoneDoBarrel(
 // baseline versionado, público, com catraca que só desce.
 // ---------------------------------------------------------------------------
 
-/** Dívida da Regra 1 — controle nativo com canônico publicado. */
+/**
+ * Dívida da Regra 1 — controle nativo com canônico publicado.
+ *
+ * A entrada do `ShareBlock.tsx` da landing saiu na Onda 1 (11/08): o
+ * `<input readOnly>` de link copiável virou `Input`, a camada A do
+ * `gate-canon` acusou a entrada MORTA no mesmo dia, e a linha caiu junto com
+ * a conversão. É esse o ciclo que a lista promete — ela só encolhe, e nunca
+ * sobrevive ao item que silenciava.
+ */
 const DIVIDA_CONTROLE_CRU = [
   // Onda 3 · `<select>` cru + dois `<option>` → `Select` (inventário §3)
   "apps/painel/src/routes/plataforma/tenants/ProvisionTenantModal.tsx",
-  // Onda 1 · `<input readOnly>` de link copiável → `Input` (inventário §3).
-  // Os parênteses do route group e os colchetes do segmento dinâmico do Next
-  // são METACARACTERES de glob: sem escape, `[eventSlug]` vira classe de um
-  // caractere e o padrão não casa com nada. O gate passaria verde por erro de
-  // sintaxe do próprio ignore — que é como cobertura vira mentira.
-  "apps/landing/app/\\(public\\)/\\[eventSlug\\]/ShareBlock.tsx",
 ];
 
 /**

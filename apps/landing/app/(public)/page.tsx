@@ -11,7 +11,14 @@ import { CoverImage } from '../components/CoverImage';
 // ADR-017: estáticos vêm do subpath SERVER-SAFE do DS — renderizam como
 // Server Component puro, sem passar pelo boundary 'use client' de `_ds/ds.ts`
 // (zero hydration JS para conteúdo sem interatividade).
-import { Badge, CardEvento, EmptyState } from '@leela/design-system/server';
+import { Badge, Card, CardEvento, EmptyState } from '@leela/design-system/server';
+import { cn } from '../../lib/utils';
+// O CTA da home reescrevia, classe por classe, a MESMA receita de
+// `ctaStyles.ts` — a pílula de marketing que o ADR-017 ratificou como
+// composição de app (pendência 4: rebasear sobre `buttonVariants` muda visual
+// e é decisão do designer). A Onda 1 mata a duplicata importando a receita;
+// não redesenha o botão mais caro do produto por conta própria.
+import { CTA_BASE, CTA_ENABLED } from './[eventSlug]/ctaStyles';
 
 // Badge de ESTADO na capa (⛔ R14: estado visível por card). Variantes semânticas
 // do DS — vitória (verde/aberto), alerta (âmbar/esgotado), neutro (encerrado).
@@ -85,7 +92,7 @@ export default async function HomePage(): Promise<React.JSX.Element> {
           <div className="mt-8">
             <Link
               href="#eventos"
-              className="inline-flex items-center gap-2 rounded-ds-pill bg-action-primary px-6 py-3 text-base font-semibold text-action-primary-fg transition-colors hover:bg-action-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+              className={cn(CTA_BASE, CTA_ENABLED)}
             >
               Ver eventos
             </Link>
@@ -112,12 +119,12 @@ export default async function HomePage(): Promise<React.JSX.Element> {
         </div>
 
         {eventos.length === 0 ? (
-          <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-16">
+          <Card className="border-border-subtle py-16">
             <EmptyState
               title="Ainda não há eventos publicados"
               description="Quando um organizador publicar uma corrida, ela aparece aqui na hora."
             />
-          </div>
+          </Card>
         ) : (
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {eventos.map((ev) => (

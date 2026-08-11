@@ -149,6 +149,54 @@ export function StepModalidadeKit({
    */
   cupom?: CupomCampoProps;
 }): React.JSX.Element {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Opção única não é escolha (Onda 1 · passo de arquitetura nº 2).
+  //
+  // A medição de carga do checkout contou 16 passos até pagar, três deles
+  // postos ali pela arquitetura e não pelo job. Este é um: um evento com UMA
+  // modalidade e UM kit cobrava dois cliques que não decidem nada — o
+  // "filtro que só tem um valor útil", na forma de RadioGroup.
+  //
+  // O controle CONTINUA na tela e continua alterável: o que some é a
+  // obrigação de confirmar o óbvio, não a informação. Com uma opção só não há
+  // para onde trocar, e é exatamente por isso que o clique não valia nada.
+  //
+  // Literal de propósito — `length === 1`, nunca "a única disponível entre
+  // várias". Três modalidades com duas esgotadas ainda desenham uma paisagem
+  // que a pessoa precisa ver antes de ficar com o que sobrou; escolher por ela
+  // ali seria esconder o esgotamento, não poupar um passo.
+  //
+  // Fronteira com a RN-440/D-ACH-12 (forma de pagamento NUNCA pré-selecionada):
+  // lá a pré-seleção dispara `createInscricaoCharge` e faz nascer pedido,
+  // pagamento e inscritos PENDENTES no servidor. Aqui não nasce nada — o
+  // patch é estado de formulário, e o único efeito remoto possível é a
+  // COTAÇÃO, que é leitura e cujo resultado a pessoa queria de qualquer jeito.
+  // As duas regras não se contradizem: uma protege contra cobrança sem gesto,
+  // a outra tira o gesto que não protege ninguém.
+  // ─────────────────────────────────────────────────────────────────────────
+  React.useEffect(() => {
+    inscritos.forEach((inscrito, i) => {
+      if (inscrito.modalidade.length === 0) {
+        const unica = modalidades.length === 1 ? modalidades[0]! : null;
+        // Modalidade sem lote vigente entra DESABILITADA no RadioCard —
+        // auto-selecionar o que a pessoa não pode escolher travaria o fluxo
+        // num valor que o servidor recusa.
+        if (unica !== null && unica.precoVigente !== null) {
+          onInscrito(i, { modalidade: unica.nome, kitId: '', tamanhos: {} });
+        }
+        // O kit depende da modalidade; ele é decidido no ciclo seguinte, já
+        // com a oferta certa em mão.
+        return;
+      }
+      if (inscrito.kitId.length === 0) {
+        const ofertados = kitsDaModalidade(kits, inscrito.modalidade);
+        if (ofertados.length === 1) {
+          onInscrito(i, { kitId: ofertados[0]!.id, tamanhos: {} });
+        }
+      }
+    });
+  }, [modalidades, kits, inscritos, onInscrito]);
+
   return (
     <div className="flex flex-col gap-6">
       <div>

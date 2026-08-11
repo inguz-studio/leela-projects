@@ -7,6 +7,7 @@ import Link from 'next/link';
 // trocar `PED-` por outra coisa passa a ser a troca de uma constante e um
 // redeploy, nunca uma varredura por literal espalhado nas telas.
 import { formatarCodigoPedido } from '@leela/core';
+import { Card } from '@leela/design-system/server';
 import { Button } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type {
@@ -193,14 +194,14 @@ export function StepConfirmacao({
           queria chegar. Quem entra depois, de outro aparelho, chega pela
           `/minha-conta` — que é o caminho que a S1222-T2 abriu. */}
       {pago ? (
-        <section className="rounded-ds-lg border border-border-subtle bg-feedback-success-surface p-5">
+        <Card className="border-border-subtle bg-feedback-success-surface p-5">
           <h2 className="text-lg font-bold text-feedback-success-fg">Inscrição confirmada!</h2>
           <p className="mt-1 text-sm text-text-primary">
             {linhas.length === 1 ? 'Sua vaga está garantida' : 'As vagas estão garantidas'} em{' '}
             {eventoNome}.
           </p>
           <ReferenciaDaCompra codigoPedido={codigoPedido} className="mt-2" />
-        </section>
+        </Card>
       ) : (
         <div className="flex flex-col gap-2">
           {encerrado ? (
@@ -230,7 +231,7 @@ export function StepConfirmacao({
       ) : null}
 
       {/* Resumo financeiro — valores do resultado da cobrança (core) */}
-      <section className="rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">
+      <Card className="border-border-subtle p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-text-primary">Resumo do pedido</h3>
         <dl className="mt-3 flex flex-col gap-2 text-sm">
           <div className="flex items-center justify-between">
@@ -284,7 +285,7 @@ export function StepConfirmacao({
             </p>
           ) : null}
         </dl>
-      </section>
+      </Card>
 
       {/* Ingressos por inscrito */}
       <section className="flex flex-col gap-3">
