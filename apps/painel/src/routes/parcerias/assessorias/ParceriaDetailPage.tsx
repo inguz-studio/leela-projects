@@ -43,14 +43,16 @@ const SECAO =
 const SECAO_TITULO =
   'text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]';
 
-function mensagemErro(err: unknown): string {
+/** Exportada só para teste direto do fallback sem jargão interno (R-3). @pure */
+export function mensagemErro(err: unknown): string {
   const code = (err as { code?: string })?.code ?? '';
   const msg = (err as { message?: string })?.message ?? '';
   if (code.includes('already-exists')) {
     return 'Já existe um cupom com esse código neste evento (outro escopo/parceria). Use outro código.';
   }
   if (code.includes('failed-precondition')) {
-    return msg || 'A parceria precisa estar ativa para definir a condição (RN-364).';
+    // RN-364: só parceria ATIVA aceita condição de desconto.
+    return msg || 'A parceria precisa estar ativa para definir a condição.';
   }
   if (code.includes('permission-denied')) {
     return 'Você não tem permissão para definir a condição neste evento.';
@@ -287,7 +289,8 @@ export function ParceriaDetailPage(): JSX.Element {
           <span className={SECAO_TITULO}>Condição de desconto</span>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             {parceria.status === 'convite_pendente'
-              ? 'A condição de desconto só pode ser definida depois que o responsável aceitar o convite e a parceria ficar ativa (RN-364).'
+              ? // RN-364: só parceria ATIVA aceita condição de desconto.
+                'A condição de desconto só pode ser definida depois que o responsável aceitar o convite e a parceria ficar ativa.'
               : 'Esta parceria foi encerrada — não é possível definir condição de desconto.'}
           </p>
         </section>

@@ -125,6 +125,17 @@ describe('MarcasPage', () => {
     expect(marcaId).toBeUndefined();
   });
 
+  it('R-3 (REV-FINAL): descrição do modal não expõe jargão interno (RN-XXX)', async () => {
+    setSession('u1');
+    mocks.listarMarcas.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText('Nenhuma marca cadastrada ainda');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Nova marca' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).not.toHaveTextContent(/RN-\d+/);
+  });
+
   it('editar: abre com o alvo e salva fixando o docId', async () => {
     setSession('u1');
     mocks.listarMarcas.mockResolvedValue([marca()]);

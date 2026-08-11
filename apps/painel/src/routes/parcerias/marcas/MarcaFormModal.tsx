@@ -142,7 +142,8 @@ export function MarcaFormModal({
       open={open}
       onOpenChange={onOpenChange}
       title={editando ? 'Editar marca' : 'Nova marca'}
-      description="Registro reutilizável de patrocinador — reaproveitado no cadastro de patrocínios (RN-171)."
+      // RN-171: marca é registro reutilizável, reaproveitado no cadastro de patrocínios.
+      description="Registro reutilizável de patrocinador, reaproveitado no cadastro de patrocínios."
       footer={footer}
     >
       <div className="flex flex-col gap-[var(--spacing-4)]">

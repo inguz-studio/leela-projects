@@ -17,7 +17,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import type { ParceriaAssessoria } from '@leela/core';
-import { ParceriaDetailPage } from '../ParceriaDetailPage';
+import { ParceriaDetailPage, mensagemErro } from '../ParceriaDetailPage';
 import { REGUA_PONTO_E_VIRGULA } from '../../../../lib/textosDeCampo';
 import { mkEvento, ts } from '../../../eventos/_test/fixtures';
 
@@ -136,5 +136,30 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer na condição de desco
     fireEvent.change(campoTeto(), { target: { value: '1.000' } });
     expect(campoTeto()).toHaveValue('1.000');
     expect(campoTeto()).not.toHaveAttribute('aria-invalid');
+  });
+});
+
+// =============================================================================
+// R-3 (REV-FINAL) · jargão interno (RN-XXX) não pode chegar à tela renderizada.
+// Cobre as duas strings desta página que citavam "(RN-364)": o fallback de
+// erro de `mensagemErro` e o aviso de convite pendente.
+// =============================================================================
+describe('R-3 · sem jargão interno (RN-XXX) na superfície renderizada', () => {
+  it('mensagemErro: fallback de failed-precondition sem mensagem do servidor não cita RN-XXX', () => {
+    const msg = mensagemErro({ code: 'failed-precondition' });
+    expect(msg).not.toMatch(/RN-\d+/);
+    expect(msg).toBe('A parceria precisa estar ativa para definir a condição.');
+  });
+
+  it('convite pendente explica o motivo sem citar RN-XXX', () => {
+    mocks.useParceriasAssessoria.mockReturnValue({
+      data: [{ ...PARCERIA, status: 'convite_pendente' }],
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderPage();
+    const texto = screen.getByText(/responsável aceitar o convite/);
+    expect(texto.textContent).not.toMatch(/RN-\d+/);
   });
 });
