@@ -60,6 +60,8 @@ O acompanhamento tem três alturas de zoom, cada uma num arquivo:
 
 A hierarquia canônica dos nomes (Onda → Épico → História → Tarefa) mora em [[MODELO-ROADMAP]].
 
+Acima das três, e feita para leitura e não para operação, está a [[VISAO-DE-PROJETO]]: as três alturas juntas numa página só, com o que está travado em quem e as próximas entregas de cada frente. Ela se atualiza na aterrissagem, junto do kanban e do épico.
+
 ## Como nasce uma rodada nova (convenção de pastas)
 
 Reorganização de 2026-07-18: `leela-specs/` tem só `HOME.md` e `README.md` na raiz; o resto vive em pastas numeradas por função (mapa completo em [[HOME]]). Duas regras valem para toda rodada de trabalho daqui em diante:

@@ -13,7 +13,7 @@ Só `HOME.md` e `README.md` moram na raiz. O resto está em pastas numeradas por
 
 | Pasta | O que guarda |
 |---|---|
-| `00-boards/` | Acompanhamento vivo: [[V1-KANBAN]], [[BOARD-EPICOS]], [[BOARD-HISTORICO]], [[V1-CHECKLIST]], [[CONVENCAO-BOARDS]] |
+| `00-boards/` | Acompanhamento vivo: [[VISAO-DE-PROJETO]], [[V1-KANBAN]], [[BOARD-EPICOS]], [[BOARD-HISTORICO]], [[V1-CHECKLIST]], [[CONVENCAO-BOARDS]] |
 | `01-produto/` | Visão e decisões: [[ROADMAP]], [[ROADMAP-VISUAL]], `roadmap.html`, [[V1-PRODUTOR-web]], [[DECISOES-ABERTAS]], [[EXPLICACAO-ONDE-ESTAMOS]] |
 | `02-rodadas/` | Uma pasta por rodada de trabalho (`<data>-<slug>/`). 17 rodadas; a mais recente é `2026-08-02-retomada/`. A convenção **como é praticada** está em [[onboarding-externo]] §4 |
 | `03-canon/` | Fonte da verdade durável: `epics/` (um por épico) + `adr/` (decisões de arquitetura) |
@@ -51,6 +51,9 @@ Trilha completa para quem nunca viu o projeto e vai conferir o que foi construí
 - [[V1-PRODUTOR-web]] — **fatia V1: produtor (web) + app simples** (tickets, clubs, vendas, landing, comunicação, dashboard). Anti-streak adiado; MyDose/Creator Studio no horizonte.
 - [[V1-CHECKLIST]] — **checklist executável** (142 tasks por onda, IDs reais) para o Fable 5 construir a V1
 
+## Visão de projeto
+- [[VISAO-DE-PROJETO]] — **épicos pendentes, histórias, tarefas, o que está travado em quem e as três próximas entregas de cada frente.** Comece por aqui quando quiser a leitura de projeto inteira
+
 ## Visual
 - [[ROADMAP-VISUAL]] — Gantt das ondas, grafo de dependências e timeline por horizonte (Mermaid)
 - [[V1-KANBAN]] — board Kanban da V1 (requer plugin Kanban)
@@ -86,4 +89,4 @@ Trilha completa para quem nunca viu o projeto e vai conferir o que foi construí
 - Pasta `../be-hero-documentacao/be-hero-docs/` — PRD, USM, JIRA, SPECs, personas, JTBD
 - Telas: `../WEB-APPV2 (1)/` (36 telas do protótipo) · Design tema `brasa`
 
-> 20 épicos (E00–E19) · 10 ADRs · 17 rodadas · 256 regras de negócio. O [[README]] ainda traz a contagem antiga de 14 épicos e uma lista de decisões em aberto já resolvidas; até ele ser revisto, este arquivo e [[BOARD-EPICOS]] são a contagem corrente.
+> 21 épicos (E00–E20) · 10 ADRs · 17 rodadas · 256 regras de negócio. O [[README]] ainda traz a contagem antiga de 14 épicos e uma lista de decisões em aberto já resolvidas; até ele ser revisto, este arquivo e [[BOARD-EPICOS]] são a contagem corrente.
