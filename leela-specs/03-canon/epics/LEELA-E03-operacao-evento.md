@@ -2520,13 +2520,29 @@ no kanban.
 | Tarefa | Estado | Prova |
 |---|---|---|
 | S221-T1 · o campo de pagantes nasce no agregado, na mesma transação que já recalcula o financeiro | 📋 | RN-486 |
-| S221-T2 · as dezenove telas que mostram "N inscritos" passam a ler o número novo | 📋 | cabeçalho, sub-menu, contagem regressiva, hub, portfólio, esgotado, alertas e vagas restantes |
+| S221-T2 · as dezenove telas que mostram "N inscritos" passam a ler o número novo | ✅ **FECHADA por varredura** (lanes METRICAS-PAGANTES PAINEL+BACKEND, 11/08) | as telas de exibição estavam conformes: contam inscritos e é isso que prometem |
 | S221-T3 · a prova de que a fechadura não se mexeu | 📋 | RN-487; percurso, modalidade, kit, preço e modo de taxa continuam congelados por um evento que só tem PIX pendente |
 | S221-T4 · o retrato diário carrega o número novo sem perder o antigo | 📋 | para a série histórica não trocar de significado no meio |
 
 **O cuidado que a história inteira existe para preservar:** o contador que aparece na tela e o
 contador que tranca a configuração do evento são coisas diferentes. Separar o primeiro não pode
 afrouxar o segundo — é por isso que a T3 é um teste de ataque, e não uma nota.
+
+**O que as duas varreduras de 11/08 mudaram nesta história.** Somadas, elas cobrem o
+sistema inteiro: 24 superfícies do painel + 41 derivações de `functions/src` e
+`packages/core/src`. O escopo da S221 **encolheu**, e por um motivo bom — o defeito nunca
+esteve nas telas que exibem contagem, e sim nos **dois** lugares onde a contagem virava
+denominador: o ticket médio (painel, pago) e o funil (servidor, pago). A T2 fecha com
+esse achado.
+
+O rollup do profissional, além disso, **já não depende da T1**: ele reconta os pagantes da
+fonte por evento (`resolverPagantes`, `count()` sobre a régua única `STATUS_PAGANTE` de
+`packages/core/src/eventos/inscrito.ts`), sem esperar campo projetado. A T1 continua de pé
+para quem lê `evento.qtdInscritos` direto e não enxerga o agregado financeiro — e agora
+tem um consumidor de referência para copiar. A T4 segue aberta de propósito: o
+`AnalyticsSnapshot` **não** ganhou o campo novo, porque campo sem consumidor mexeria no
+contrato do histórico de graça; ele entra em `OverviewKPIs` e em `CAMPOS_KPI_SNAPSHOT` no
+mesmo commit, quando alguém precisar mostrar o número.
 
 **Registro da lane METRICAS-PAGANTES-PAINEL (11/08 · D-1008-R19) — a T1 tem menos trabalho do que
 parecia:** a contagem de pagantes **já existe publicada** em `eventos/{id}/financeiro/current`,

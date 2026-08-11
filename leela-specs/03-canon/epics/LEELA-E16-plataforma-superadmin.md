@@ -974,6 +974,42 @@ Manter `platform/rollups` por Cloud Function a partir dos eventos de pagamento d
 **Fora de escopo**
 Séries temporais/coortes (pós-V1); tela (T3).
 
+**⚡ O elo que faltava, achado e pago em 11/08** (lane METRICAS-PAGANTES-BACKEND ·
+`30084e5a`). A T2 foi construída como **full recompute** varrendo `tenants/*` e lendo
+`tenants/{id}.gmvAcumulado` — desenho melhor que o incremento previsto no passo 2 acima
+(idempotente por construção, sem contador distribuído). Só que **o campo lido nunca
+ganhou escritor**: `provisionTenant` o criava em `0` e nenhuma Function o tocava. O
+resultado é que os três critérios de aceite acima passavam nos testes (que semeavam
+`gmvAcumulado` na mão) e **falhavam em produção**: `/plataforma/macro` mostrava GMV total
+R$ 0,00 e Receita Leela total R$ 0,00 para sempre, e a ficha do tenant, GMV zerado.
+
+`eventosAtivos` estava no mesmo estado — e por isso `deriveTenantHealth(status, 0)`
+carimbava **toda** produtora ativa como `'atencao'` ("conta operável mas parada"), com
+evento no ar ou não. A saúde por tenant do card §2.5 estava inteira errada.
+
+Escritor novo: `functions/src/platform/agregarSaudeTenant.ts` —
+`recomputarSaudeTenant(db, tenantId)` recomputa `gmvAcumulado = Σ eventos.receitaConfirmada`
+e `eventosAtivos = |eventos publicado/ao_vivo|` a partir da FONTE, disparado pelo `onWrite`
+de `eventos/{id}` (é onde o efeito da venda aterrissa: o webhook soma e o estorno subtrai
+em `receitaConfirmada`; publicar/despublicar mexe em `status`). Escreve só quando difere —
+o no-op deixa `atualizadoEm` intocado, que é a prova externa da idempotência.
+
+Definição fixada com condição de reabertura: GMV é **valor de face CONFIRMADO** (E16 §
+"receita bruta confirmada acumulada"; spec ADMIN-VISAO V-1), portanto **cai no estorno**.
+Um acumulado monotônico faria o macro do admin discordar da tela do produtor sobre o mesmo
+dinheiro.
+
+Rejeitado — incrementar dentro da transação do `webhookPagamento` (o passo 2 original):
+toda confirmação do tenant escreveria no MESMO doc DENTRO da transação de dinheiro, e numa
+abertura de vendas isso serializa o checkout inteiro do tenant num único documento. Se o
+volume um dia chegar a ~1 write de evento por segundo por tenant, a saída é janela/cron ou
+contador shardado — **não** increment na transação de pagamento.
+
+⛔ **Backfill dos tenants existentes = passo SEPARADO da fase de deploy.**
+`recomputarSaudeDeTodosOsTenants(db)` existe e é testada (idempotente, re-executável), e
+não é chamada por gatilho, cron ou callable. Sem ela, tenant sem write de evento novo
+permanece no zero histórico.
+
 #### LEELA-S1605-T3 · Tela dashboard macro (KPIs + saúde por tenant)
 
 - **Tipo:** screen · **Depende de:** S1605-T1, S1605-T2, E01 (KPI cards, Table densa) · **Estimativa:** M · **V1-slim:** ✅ (básico)

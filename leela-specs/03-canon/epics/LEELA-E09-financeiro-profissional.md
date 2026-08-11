@@ -1457,6 +1457,26 @@ denominador ficou em `confirmado`, e NÃO em `STATUS_QUE_CONTAM_VENDA`
 (confirmado+estornado) — o estorno devolve o face em `receitaConfirmada`, então contar o
 estornado faria o ticket cair a cada reembolso. Reabrir = uma linha.
 
+**A varredura do SERVIDOR fechou o `Not-tested` da T4 (lane METRICAS-PAGANTES-BACKEND ·
+11/08 · `e1191818`/`30084e5a`).** A pergunta em aberto era se os rollups do servidor
+contavam pagante pela MESMA régua que o painel passou a usar. Resposta com o código na
+mão, sobre **41 derivações** de `functions/src` + `packages/core/src`:
+
+- **não existe ticket médio no backend** — a única divisão de dinheiro do sistema inteiro
+  era a do painel, e ela já estava consertada. Em `functions/src` não há **nenhuma**
+  divisão de métrica: tudo é soma, taxa por transação ou contagem;
+- a única violação viva do servidor era o **funil** (`derivarTaxaConversao` alimentada com
+  o total de inscritos) — paga, com a régua virando a constante única `STATUS_PAGANTE`
+  em `packages/core/src/eventos/inscrito.ts`. **O veto do TICKET-1 deixou de ser "uma
+  linha em cada lugar" e virou uma linha, ponto;**
+- `computeCrmCliente` (`ltv`/`valorGasto`) já aplicava o mesmo critério desde o E19 — é o
+  precedente que sustenta a decisão, não uma coincidência;
+- onde o critério **não** foi aplicado, de propósito: `virarLote` (vaga de lote = estoque:
+  a inscrição estornada consumiu um lugar) e `agregarEstoque` (camiseta volta para a
+  prateleira quando o dinheiro volta). Réguas diferentes, ambas corretas — a assimetria
+  está registrada no handoff para quando alguém perguntar por que o lote diz 100 vendidos
+  e o kit diz 98.
+
 ### S907 · o piso do Serviço na aritmética, no carimbo e no estorno
 
 | Tarefa | Estado | Prova |

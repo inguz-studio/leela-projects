@@ -509,7 +509,7 @@ da rodada de 05/08 e no kanban.
 | Tarefa | Estado | Prova |
 |---|---|---|
 | S824-T1 · o rótulo de visitantes para de ser desenhado sem o número que o sustenta | 📋 | RN-489; a faixa de indicadores se reorganiza |
-| S824-T2 · quando o funil ganhar fonte, ele fecha em pagante | 📋 · **defeito LOCALIZADO** (lane METRICAS-PAGANTES-PAINEL, 11/08) | D-1008-R19; nunca em inscrito |
+| S824-T2 · quando o funil ganhar fonte, ele fecha em pagante | ✅ **PAGA** (lane METRICAS-PAGANTES-BACKEND, `e1191818` · 11/08) | D-1008-R19; nunca em inscrito |
 
 **O endereço exato, achado pela varredura da METRICAS-PAGANTES-PAINEL:**
 `derivarKpis` (`packages/core/src/overview/kpis.ts:225`) chama
@@ -529,8 +529,24 @@ O rótulo "visitantes → inscritos" ficou INTOCADO de propósito — trocar a p
 "pagantes" sem trocar a conta criaria a mentira em vez de matá-la; conta e rótulo mudam
 no mesmo commit, quando a fonte existir.
 
+**O conserto (lane METRICAS-PAGANTES-BACKEND · 11/08 · `e1191818`):** `EventoKpiInput`
+ganhou `pagantes` **separado** de `qtdInscritos` — contagem de gente na lista e contagem
+de gente que pagou viraram campos distintos do contrato, justamente para não voltarem a
+se confundir por descuido. O servidor reconta da fonte (`resolverPagantes`: `count()`
+sobre `status in STATUS_PAGANTE`, no MESMO índice single-field que a query de pendentes
+já usava — nenhum índice novo), e a régua de "quem pagou" virou constante única em
+`packages/core/src/eventos/inscrito.ts`, onde o vetável TICKET-1 do dono passa a caber
+numa linha.
+
+Falsificação executada (denominador antigo de volta): 400 pagantes com 300 boletos
+parados e 100 canceladas sobre 2.000 visitas devolvia **40,0% onde a verdade é 20,0%**;
+um evento **sem venda nenhuma**, só com 300 emissões, devolvia **15,0% de conversão**;
+somando três eventos, **64,2% contra 35,0%**. Nada mudou na tela: sem visitas o valor
+segue nulo e o card mostra "—".
+
 **Preso no dono:** CONV-1, se o contador de visitas passa a existir. Enquanto ele não responder,
-a T1 é honestidade e a T2 é contrato escrito para a primeira vez que alguém pedir.
+a T1 é honestidade e a T2 já está paga — a conta certa esperando a fonte, com o rótulo
+"visitantes → inscritos" ainda intocado (a palavra troca junto com a chegada do número).
 
 ### S825 · a distribuição por forma de pagamento chega à análise
 
