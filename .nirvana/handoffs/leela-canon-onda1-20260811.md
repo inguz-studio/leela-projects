@@ -258,20 +258,41 @@ Rodados em série, no worktree, sem background deliberado.
 | `generate-tokens` 2× | ✅ idempotente |
 | painel | não tocado — nenhum arquivo de `apps/painel` neste diff |
 
-### 6.1 · Nota de contenção, e o teste morto
+### 6.1 · Nota de contenção — como esta lane separou flakiness de regressão
 
-O brief avisava de duas lanes vizinhas vivas. **Aconteceu, e vale registrar como se distingue
-flakiness de regressão:** uma execução da suíte com o paralelismo padrão do vitest devolveu 150
-falhas; as mesmas suítes, rodadas juntas e sozinhas, devolveram 55/55 verdes sem trocar uma linha
-de código. A diferença é o número de workers — o repositório já publica `test:gate`
-(`--maxWorkers=3 --minWorkers=1`) exatamente para isso, e é ele que vale como gate.
+O brief avisava de duas lanes vizinhas vivas. Ao longo da execução o número subiu para **cinco
+worktrees** na mesma máquina, e a suíte da landing virou um instrumento barulhento. O registro,
+porque a próxima onda vai passar por isto:
 
-`build-frescor-dist.test.ts` era o suíte morto conhecido (`Expected ident`, erro de parse do
-rollup) que fazia `pnpm test` sair 1 com todos os casos passando. A lane vizinha o consertou e o
-conserto está em `origin/main` (`f5b15472`, `399bfa7b`) — esta lane mergeou main antes de fechar,
-então o exit deixa de ser mascarado.
+| Execução | Paralelismo | Falhas | O que era |
+|---|---|---|---|
+| A | padrão do vitest (~10 workers) | **150** | contenção |
+| B | `test:gate` (3 workers) | **9** | 2 regressões reais + 7 de contenção |
+| C | `test:gate` (3 workers), já com 5 worktrees vivos | **57** | contenção |
+| D | `--maxWorkers=1` (serial) | veredito da lane | — |
 
----
+**O procedimento que funcionou** é o que o brief prescreve: re-rodar sozinha. Cada arquivo que
+falhou na execução C foi re-executado isolado ou em lote pequeno — **todos verdes** (as quatro
+suítes de `minha-conta` juntas: 97/97; as dez de checkout em dois lotes: 42/42 e 25/25).
+
+**Uma armadilha que quase me enganou, e vale mais que o resultado.** Para provar que as falhas de
+`minha-conta` não eram minhas, troquei os dois arquivos que tinha tocado pelas versões da main e
+rodei o mesmo lote: passou. Conclusão aparente — a regressão era minha. **Era controle inválido:**
+ao restaurar os meus arquivos e repetir, passou também. A variável que eu pensava estar isolando não
+era a única que tinha mudado entre as duas medições; a carga da máquina tinha. Controle que roda em
+instante diferente não é controle, e num ambiente com cinco lanes vivas essa é a diferença entre
+consertar um defeito e reverter trabalho bom.
+
+**As duas regressões reais** (execução B) estão consertadas no commit `64be6b70`: duas fixtures
+tinham UMA modalidade, e a auto-seleção passou a preencher justamente o que elas precisavam ver em
+branco. As fixtures ganharam uma segunda modalidade; nenhuma asserção foi afrouxada.
+
+**O teste morto morreu de verdade.** `build-frescor-dist.test.ts` fazia `pnpm test` sair 1 com todos
+os casos passando (erro de parse do rollup). A lane vizinha o consertou (`399bfa7b`, `f5b15472`),
+esta lane mergeou main, e ele agora **roda e passa (14/14)** — depois de um `pnpm build` dos pacotes
+do workspace, porque ele reprova `dist` defasado e o meu estava (buildado antes do merge). Fica a
+nota operacional para as próximas ondas: **merge de main pede rebuild dos pacotes antes de rodar a
+suíte**, senão este caso reprova por motivo de ambiente e parece defeito de código.
 
 ## 7 · Para quem pegar a próxima onda
 
