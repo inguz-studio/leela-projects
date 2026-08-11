@@ -16,12 +16,28 @@ function renderDashboard(ui: ReactElement): ReturnType<typeof render> {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
 }
 
+/**
+ * O NÚMERO de um card de KPI, lido pelo rótulo. Casar o valor pelo rótulo (e
+ * não por um texto solto na tela) é o que faz a asserção do ticket médio ser
+ * sobre o ticket médio — quatro cards de dinheiro dividem a mesma seção, e um
+ * `getByText(/190/)` acertaria qualquer um deles.
+ */
+function valorDoCard(rotulo: string): string {
+  const label = screen.getByText(rotulo);
+  const valor = label.nextElementSibling;
+  if (valor === null) throw new Error(`card "${rotulo}" sem valor ao lado do rótulo`);
+  return valor.textContent ?? '';
+}
+
 const baseProps = {
   dias: 8,
   dataLinha: 'Domingo, 27 de abril · 06:00',
   qtdInscritos: 453,
   capacidade: 600,
   receitaConfirmada: 85617,
+  // D-1008-R19: derivado por PAGANTE lá na página (85.617 ÷ 450 confirmados),
+  // não os 188,99 que sairiam da contagem de inscritos deste mesmo fixture.
+  ticketMedio: 190.26,
   receitaSemana: 12400,
   ticketSparkline: [156, 162, 171, 189],
   taxaConversaoPct: 42,
@@ -50,8 +66,8 @@ describe('OverviewKpis', () => {
   it('mostra os 4 cards fiéis: receita, ticket, conversão e repasse', () => {
     render(
       <OverviewKpis
-        qtdInscritos={453}
         receitaConfirmada={85617}
+        ticketMedio={190.26}
         receitaSemana={12400}
         taxaConversaoPct={42}
         repassePrevisto={76602}
@@ -59,6 +75,8 @@ describe('OverviewKpis', () => {
       />,
     );
     expect(screen.getByText(/85\.617/)).toBeInTheDocument();
+    // `formatBRL` do dashboard não mostra centavos: 190,26 → "R$ 190".
+    expect(valorDoCard('Ticket médio')).toMatch(/R\$\s*190/u);
     expect(screen.getByText('Taxa de conversão')).toBeInTheDocument();
     expect(screen.getByText('42%')).toBeInTheDocument();
     expect(screen.getByText('Repasse previsto')).toBeInTheDocument();
@@ -67,8 +85,33 @@ describe('OverviewKpis', () => {
   });
 
   it('degrada honesto: sem conversão/repasse mostra "—"', () => {
-    render(<OverviewKpis qtdInscritos={0} receitaConfirmada={0} />);
+    render(<OverviewKpis receitaConfirmada={0} />);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+  });
+
+  /**
+   * D-1008-R19. O componente não recebe mais contagem de inscritos: o ticket
+   * chega derivado por pagante (`ticketMedioPorPagante`) ou não chega. Com
+   * receita no card e ticket indeterminado, o lugar do número mostra "—" —
+   * receita > 0 nunca autoriza inventar um ticket.
+   */
+  it('ticket indeterminado mostra "—", mesmo com receita no card', () => {
+    render(<OverviewKpis receitaConfirmada={85617} ticketMedio={null} />);
+    expect(screen.getByText(/85\.617/)).toBeInTheDocument();
+    // Receita > 0 não autoriza inventar ticket: nem número, nem "R$ 0".
+    expect(valorDoCard('Ticket médio')).toBe('—');
+  });
+
+  it('não aceita mais contagem de inscritos — o denominador errado não tem porta', () => {
+    // O tipo já barra em compilação; aqui a prova é de runtime: passar
+    // `qtdInscritos` não ressuscita a divisão (85.617 ÷ 453 ≈ 189).
+    render(
+      <OverviewKpis
+        {...({ qtdInscritos: 453 } as unknown as Record<string, never>)}
+        receitaConfirmada={85617}
+      />,
+    );
+    expect(valorDoCard('Ticket médio')).toBe('—');
   });
 });
 

@@ -4,6 +4,10 @@
 // (sparkline) · Taxa de conversão · Repasse previsto (após taxa + badge). Só LÊ
 // agregados (∑ `receitaConfirmada`, `financeiro/current`) — NUNCA recalcula.
 //
+// D-1008-R19: o ticket médio chega DERIVADO (`ticketMedioPorPagante`), receita
+// confirmada ÷ clientes que PAGARAM. Aqui ele dividia por `qtdInscritos`, ou
+// seja, por emissões pendentes junto com as pagas — o número que o dono pegou.
+//
 // Reuso-first: Sparkline e Badge do DS; tokens de card. Degrada honesto: sem a
 // série/Δ/conversão/repasse (gap E12 em produção), o card mostra o que existe.
 // =============================================================================
@@ -13,8 +17,17 @@ import { Badge, Sparkline, cn } from '@leela/design-system';
 import { formatBRL, formatInt } from '../../_lib/format';
 
 export interface OverviewKpisProps {
-  qtdInscritos: number;
   receitaConfirmada: number;
+  /**
+   * Ticket médio JÁ DERIVADO (`ticketMedioPorPagante` — D-1008-R19): receita
+   * confirmada ÷ clientes que PAGARAM. `null`/omitido = indeterminado → "—".
+   *
+   * Chega pronto de propósito. Até a R19 este card dividia por `qtdInscritos`,
+   * e a contagem de inscritos estava aqui só para servir a essa divisão — a
+   * prop saiu junto com o defeito: sem inscritos no componente, o denominador
+   * errado não tem como voltar por descuido.
+   */
+  ticketMedio?: number | null | undefined;
   /** Δ de receita na semana (R$; null/omitido = esconde). */
   receitaSemana?: number | null | undefined;
   /** Série do ticket p/ sparkline (vazia = esconde). */
@@ -55,15 +68,14 @@ function KpiTile({
 }
 
 export function OverviewKpis({
-  qtdInscritos,
   receitaConfirmada,
+  ticketMedio,
   receitaSemana,
   ticketSparkline,
   taxaConversaoPct,
   repassePrevisto,
   taxaPct,
 }: OverviewKpisProps): JSX.Element {
-  const ticketMedio = qtdInscritos > 0 ? receitaConfirmada / qtdInscritos : 0;
   const temSpark = Array.isArray(ticketSparkline) && ticketSparkline.length >= 2;
 
   return (
@@ -82,7 +94,10 @@ export function OverviewKpis({
         ) : null}
       </KpiTile>
 
-      <KpiTile label="Ticket médio" value={formatBRL(ticketMedio)}>
+      <KpiTile
+        label="Ticket médio"
+        value={typeof ticketMedio === 'number' ? formatBRL(ticketMedio) : '—'}
+      >
         {temSpark ? (
           <Sparkline
             values={ticketSparkline as number[]}

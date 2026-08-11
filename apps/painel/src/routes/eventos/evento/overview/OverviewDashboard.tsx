@@ -24,6 +24,8 @@ export interface OverviewDashboardProps {
   capacidade: number | null;
   // KPIs
   receitaConfirmada: number;
+  /** Ticket médio já derivado por PAGANTE (D-1008-R19); null = "—". */
+  ticketMedio?: number | null | undefined;
   receitaSemana?: number | null | undefined;
   ticketSparkline?: number[] | undefined;
   taxaConversaoPct?: number | null | undefined;
@@ -117,8 +119,8 @@ export function OverviewDashboard(props: OverviewDashboardProps): JSX.Element {
       />
 
       <OverviewKpis
-        qtdInscritos={props.qtdInscritos}
         receitaConfirmada={props.receitaConfirmada}
+        ticketMedio={props.ticketMedio}
         receitaSemana={props.receitaSemana}
         ticketSparkline={props.ticketSparkline}
         taxaConversaoPct={props.taxaConversaoPct}

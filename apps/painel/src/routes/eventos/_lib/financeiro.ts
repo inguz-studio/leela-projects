@@ -24,10 +24,64 @@
 // =============================================================================
 
 import type { FinanceiroEvento } from '@leela/api-client';
-import { KITS_INSCRITO, STATUS_INSCRITO, computeDisponivelDoEvento } from '@leela/core';
+import type { StatusInscrito } from '@leela/core';
+import { KITS_INSCRITO, STATUS_INSCRITO, computeDisponivelDoEvento, roundMoney } from '@leela/core';
 import { kitInscritoLabel } from './kitLabels';
 import { statusInscritoBadge } from './statusInscrito';
 import { celulaCsv } from './csv';
+
+// ---------------------------------------------------------------------------
+// Denominador de métrica de dinheiro (D-1008-R19)
+// ---------------------------------------------------------------------------
+
+/**
+ * Status de inscrito cujo dinheiro ESTÁ dentro de `receitaBruta` — o único
+ * denominador legítimo de uma média de dinheiro nesta tela (D-1008-R19, nas
+ * palavras do dono: *"ticket médio é só por clientes que pagaram, e nao
+ * pagamentos emitidos (pendentes + pagos)"*).
+ *
+ * POR QUE NÃO É `STATUS_QUE_CONTAM_VENDA` (`functions/src/eventos/virarLote.ts`,
+ * = confirmado + estornado): aquela constante conta VAGA DE LOTE — estoque, não
+ * caixa. Uma inscrição estornada consumiu um lugar do lote (e por isso conta
+ * lá), mas `estornarInscricao` DEVOLVE o face em `eventos/{id}.receitaConfirmada`
+ * — que é exatamente o número espelhado em `receitaBruta`. Somar o estornado ao
+ * denominador dividiria uma receita já líquida de estorno por gente que não está
+ * mais nela: o ticket cairia sozinho a cada reembolso, que é a MESMA classe de
+ * mentira (denominador inflado) que a R19 manda matar. O cânone de dinheiro da
+ * casa já decidiu isso uma vez: `computeCrmCliente` deixa a estornada no
+ * histórico e FORA de `ltv`/`valorGasto` ("o dinheiro voltou").
+ *
+ * Se o dono quiser o estornado dentro da conta, é reabrir a régua — a mudança é
+ * esta linha e o teste que a pina.
+ */
+export const STATUS_PAGANTE: StatusInscrito = 'confirmado';
+
+/**
+ * Quantos CLIENTES PAGARAM, pelo agregado `financeiro/current`. `null` =
+ * indeterminado (agregado ainda não computado, ou contagem ausente no doc) — a
+ * tela mostra "—", nunca cai para um denominador de conveniência. @pure
+ */
+export function contarPagantes(fin: FinanceiroEvento | null | undefined): number | null {
+  if (fin === null || fin === undefined) return null;
+  const pagantes = fin.inscritos.porStatus[STATUS_PAGANTE];
+  return typeof pagantes === 'number' && Number.isFinite(pagantes) ? pagantes : null;
+}
+
+/**
+ * Ticket médio do evento = receita confirmada ÷ clientes que PAGARAM (R19).
+ *
+ * Numerador e denominador saem do MESMO doc (`financeiro/current`): ler a
+ * receita do `evento` e a contagem do agregado misturaria dois instantes do
+ * mesmo número. Sem agregado, ou com zero pagante, o resultado é `null` — não
+ * existe média de nenhum cliente, e 0 aqui leria como "ticket de R$ 0,00". @pure
+ */
+export function ticketMedioPorPagante(
+  fin: FinanceiroEvento | null | undefined,
+): number | null {
+  const pagantes = contarPagantes(fin);
+  if (fin === null || fin === undefined || pagantes === null || pagantes <= 0) return null;
+  return roundMoney(fin.receitaBruta / pagantes);
+}
 
 /**
  * Σ dos repasses VIVOS associados a UM evento (shape estrutural de
