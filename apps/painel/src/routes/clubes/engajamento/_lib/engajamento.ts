@@ -22,7 +22,7 @@
 // a mesma operação que o hub de clubes já faz nos KPIs dele.
 // =============================================================================
 
-import { PILARES, type Desafio, type Membro, type Pilar } from '@leela/core';
+import { PILARES, type Clube, type Desafio, type Membro, type Pilar } from '@leela/core';
 
 // ---------------------------------------------------------------------------
 // Rótulos (vocabulário do produto, não string solta na tela)
@@ -44,11 +44,16 @@ export const ROTULO_PILAR: Record<Pilar, string> = {
  * atividade desde então", não "treinou pela última vez há 30 dias" (D-2, REV
  * 2026-08-09). O escritor de `ultimaAtividadeEm` é card de backend próprio,
  * fora desta lane.
+ *
+ * UXW-FIX · MEL-07: o rótulo era "Sem registro (30 dias+)", e "sem registro"
+ * lê como "não se cadastrou" — a barra media gente parada, não gente sem
+ * cadastro. "Parados há 30 dias ou mais" diz o que a barra conta sem prometer
+ * a última atividade que a D-2 proíbe afirmar.
  */
 export const ROTULO_SITUACAO = {
   novo: 'Novos (7 dias)',
   ativo: 'Ativos',
-  inativo: 'Sem registro (30 dias+)',
+  inativo: 'Parados há 30 dias ou mais',
 } as const;
 
 export const ROTULO_ENTRADA = {
@@ -203,6 +208,30 @@ export function resumirPilares(desafios: readonly DesafioComClube[]): ResumoDosP
 }
 
 /**
+ * Qual pilar concentra a maior média por participante (REFACTOR item 12).
+ *
+ * É a ÚNICA leitura de conjunto que este dado sustenta. O estudo desenhava uma
+ * marca de "ponto de equilíbrio (33%)" sobre as barras, e o próprio REFACTOR a
+ * declarou invenção de design: não existe equilíbrio-alvo entre os três pilares
+ * em regra nenhuma do produto, então uma marca ali transformava distribuição em
+ * nota. A linha honesta diz onde a comunidade está pesando — e nada sobre onde
+ * deveria pesar.
+ *
+ * Empate devolve `null` de propósito: eleger um líder no empate é escolha do
+ * computador apresentada como fato. Tudo em zero também devolve `null` — sem
+ * acúmulo não há concentração, e o bloco de pilares já tem estado próprio para
+ * ausência de base.
+ * @pure
+ */
+export function pilarComMaiorMedia(linhas: readonly LinhaDePilar[]): LinhaDePilar | null {
+  const comAcumulo = linhas.filter((l) => l.atual > 0);
+  if (comAcumulo.length === 0) return null;
+  const maior = Math.max(...comAcumulo.map((l) => l.atual));
+  const lideres = comAcumulo.filter((l) => l.atual === maior);
+  return lideres.length === 1 ? lideres[0]! : null;
+}
+
+/**
  * Situação dos membros (RN-102). A ordem é a da narrativa — quem chegou, quem
  * está, quem sumiu — e não a alfabética.
  * @pure
@@ -232,7 +261,7 @@ export function resumirEntrada(membros: readonly Membro[]): ContagemRotulada[] {
 
 /**
  * A ÚNICA ponte club→evento que existe hoje no dado: o desafio pode declarar um
- * `eventoVinculadoId` (RN-113 — o desafio vira preparação para a prova). Não é
+ * `eventoVinculadoId` (RN-113 — o desafio vira preparação para o evento). Não é
  * conversão (ninguém sabe quem comprou), é INTENÇÃO: quanto da atividade da
  * comunidade já está apontada para um evento seu.
  *
@@ -253,7 +282,63 @@ export function resumirPonteComEventos(
   ];
 }
 
-/** Quantos desafios o ranking mostra. */
+/**
+ * Membros ativos somados numa modalidade dos clubs — o bloco 4 do estudo
+ * (D-1008-R15), na versão que o dado sustenta.
+ */
+export interface ModalidadeDaComunidade {
+  /** A própria modalidade (vocabulário fechado do club — já é rótulo humano). */
+  id: string;
+  rotulo: string;
+  membros: number;
+}
+
+/**
+ * Para onde a comunidade pende, por modalidade dos clubs.
+ *
+ * O estudo rotula este bloco "modalidades de interesse" DECLARADAS pelos
+ * membros — e esse dado não existe: nenhum campo de atleta ou membro declara
+ * interesse. O que existe é o par `clube.modalidade` (vocabulário fechado,
+ * validado no core) + `clube.qtdMembrosAtivos` (∑ mantido por Function), e é
+ * ISSO que a função soma — a tela diz o que mede, nunca "interesse declarado".
+ *
+ * Mesmas regras dos vizinhos: `?? 0` cobre o club na janela pré-Function
+ * (D-7 — um club recém-criado não vira NaN); modalidade sem ninguém SAI da
+ * lista (barra zerada ocupa espaço e não informa); uma pessoa ativa em dois
+ * clubs conta em cada um — igual ao KPI de participações, e a ajuda do card
+ * diz isso. Devolve a lista INTEIRA ordenada: o corte "Top 5" é recorte de
+ * card (REFACTOR item 9), não de derivação. Empate desempata por nome, para a
+ * ordem não oscilar entre renders.
+ * @pure
+ */
+export function resumirModalidades(
+  clubes: ReadonlyArray<Pick<Clube, 'modalidade' | 'qtdMembrosAtivos'>>
+): ModalidadeDaComunidade[] {
+  const porModalidade = new Map<string, number>();
+  for (const clube of clubes) {
+    const atual = porModalidade.get(clube.modalidade) ?? 0;
+    porModalidade.set(clube.modalidade, atual + (clube.qtdMembrosAtivos ?? 0));
+  }
+  return [...porModalidade.entries()]
+    .filter(([, membros]) => membros > 0)
+    .map(([modalidade, membros]) => ({ id: modalidade, rotulo: modalidade, membros }))
+    .sort((a, b) => b.membros - a.membros || a.rotulo.localeCompare(b.rotulo, 'pt-BR'));
+}
+
+/**
+ * Tamanho do recorte "Top" das modalidades — decisão de TELA, como o dos
+ * desafios abaixo. O estudo desenha cinco barras.
+ */
+export const RANKING_MAX_MODALIDADES = 5;
+
+/**
+ * Tamanho do recorte "Top" do ranking — é decisão de TELA (quantas barras cabem
+ * antes da lista virar rolagem), não de dado. Fica exportado aqui porque o
+ * vocabulário do bloco vive neste arquivo, mas quem corta é a View: desde o
+ * REFACTOR item 9 o card tem recorte próprio ("Top 5" × "Todos"), e um corte
+ * feito na derivação impediria o recorte de existir — a tela receberia cinco e
+ * nunca saberia que há mais.
+ */
 export const RANKING_MAX_DESAFIOS = 5;
 
 /**
@@ -261,11 +346,14 @@ export const RANKING_MAX_DESAFIOS = 5;
  * um desafio encerrado ao lado de um em andamento compara coisas que não são
  * comparáveis (um teve o ciclo inteiro, o outro está no meio dele).
  * Empate desempata por nome, para a ordem não oscilar entre renders.
+ *
+ * Devolve a lista INTEIRA por padrão (REFACTOR item 9). O `max` continua na
+ * assinatura para quem precisar de um teto duro.
  * @pure
  */
 export function ranquearDesafios(
   desafios: readonly DesafioComClube[],
-  max: number = RANKING_MAX_DESAFIOS
+  max: number = Number.POSITIVE_INFINITY
 ): DesafioEngajado[] {
   return desafios
     .filter((d) => estaAtivo(d.desafio) && d.desafio.qtdParticipantes > 0)

@@ -12,6 +12,7 @@ import { OverviewDashboard } from './OverviewDashboard';
 import { derivaAtividade } from './atividade';
 import { prepararModalidades } from './modalidades';
 import { derivaAlertas } from '../../_lib/alertas';
+import { ticketMedioPorPagante } from '../../_lib/financeiro';
 import { diasParaEvento, formatDataHoraExtenso } from '../../_lib/format';
 import { useFinanceiro } from '../../_data/financeiro';
 import { useInscritosRecentes } from '../../_data/eventos';
@@ -55,6 +56,11 @@ export function OverviewPage(): JSX.Element {
       qtdInscritos={evento.qtdInscritos}
       capacidade={capacidade}
       receitaConfirmada={evento.receitaConfirmada}
+      // D-1008-R19 · receita confirmada ÷ clientes que PAGARAM, os dois números
+      // do MESMO `financeiro/current`. Sem agregado, `null` → "—" honesto: o
+      // ticket não volta a ser dividido pela contagem de inscritos, que carrega
+      // emissão pendente junto com pagamento.
+      ticketMedio={ticketMedioPorPagante(fin)}
       receitaSemana={fin?.receitaSemana ?? null}
       ticketSparkline={fin?.ticketSparkline}
       taxaConversaoPct={fin?.taxaConversaoPct ?? null}

@@ -61,11 +61,12 @@
  * transparente que ainda engole clique é pior que um menu que some seco.
  *
  * AA (matriz de contraste): item default = popover-foreground sobre popover
- * (text-primary/surface-overlay ✓); hover/focus = accent-foreground sobre
- * accent (action-ghost-fg/action-ghost-hover ✓); item destrutivo =
- * text-danger sobre surface-overlay (PAR NOVO do lote, provado 6.75/6.68 na
- * matriz) e sobre feedback-danger-surface em hover (✓). border-border é
- * decorativa (frame shadcn), fora do gate 1.4.11.
+ * (text-primary/surface-overlay-opaque ✓ — DELTA-UX/D-1008-R4: o painel
+ * flutuante nunca pinta o filme translúcido do vidro; a prova do portal está
+ * em __tests__/superficie-portal.test.tsx); hover/focus = accent-foreground
+ * sobre accent (action-ghost-fg/action-ghost-hover ✓); item destrutivo =
+ * text-danger sobre surface-overlay-opaque e sobre feedback-danger-surface em
+ * hover (✓). border-border é decorativa (frame shadcn), fora do gate 1.4.11.
  */
 
 import * as React from 'react';
@@ -101,10 +102,23 @@ export interface DropdownMenuProps {
   /** Elemento único que dispara o menu (recebe props via Slot). */
   trigger: React.ReactElement;
   align?: 'left' | 'right';
+  /**
+   * Borda vertical de ancoragem (DELTA-UX-T4). Default 'bottom' (painel abre
+   * ABAIXO do trigger). 'top' abre ACIMA — o caso do rodapé de perfil do
+   * SidebarRail, colado na borda inferior do viewport: abrir para baixo
+   * mandaria o painel para fora da tela.
+   */
+  side?: 'bottom' | 'top';
   /** Rótulo do landmark do menu (nome acessível). Default: "Ações". */
   menuLabel?: string;
   /** Classe extra do PAINEL do menu (o popover em portal), não do trigger. */
   className?: string;
+  /**
+   * Classe extra do CONTAINER do trigger (o wrapper de ancoragem). Existe para
+   * o trigger poder ocupar a largura do pai (ex.: rodapé do rail, `w-full`) —
+   * o container é `inline-flex` e, sem isso, encolheria no conteúdo.
+   */
+  containerClassName?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,8 +172,10 @@ function DropdownMenu({
   onOpenChange,
   trigger,
   align = 'right',
+  side = 'bottom',
   menuLabel = 'Ações',
   className,
+  containerClassName,
 }: DropdownMenuProps): JSX.Element {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -171,9 +187,13 @@ function DropdownMenu({
   // cru — um menu em saída não é mais um menu, e não deve escutar nada.
   const { presente, estado } = usePresencaOverlay(open, DURACAO_MENU);
 
-  // Posição fixa ancorada no rect do trigger (menu vive em portal)
+  // Posição fixa ancorada no rect do trigger (menu vive em portal).
+  // Eixo vertical por `side`: 'bottom' ancora o topo do painel na base do
+  // trigger; 'top' ancora a BASE do painel no topo do trigger (via `bottom`
+  // em coordenadas de viewport — cresce para cima sem medir a própria altura).
   const [position, setPosition] = React.useState<{
-    top: number;
+    top?: number;
+    bottom?: number;
     left?: number;
     right?: number;
   }>({ top: 0, left: 0 });
@@ -181,12 +201,16 @@ function DropdownMenu({
   const updatePosition = React.useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPosition(
+    const vertical =
+      side === 'top'
+        ? { bottom: Math.max(0, window.innerHeight - rect.top) }
+        : { top: rect.bottom };
+    const horizontal =
       align === 'right'
-        ? { top: rect.bottom, right: Math.max(0, window.innerWidth - rect.right) }
-        : { top: rect.bottom, left: rect.left },
-    );
-  }, [align]);
+        ? { right: Math.max(0, window.innerWidth - rect.right) }
+        : { left: rect.left };
+    setPosition({ ...vertical, ...horizontal });
+  }, [align, side]);
 
   // Ancora ao abrir e re-ancora em scroll (capture pega scroll de qualquer
   // container pai, ex.: wrapper com overflow da Table) e resize.
@@ -288,7 +312,7 @@ function DropdownMenu({
   }
 
   return (
-    <div ref={containerRef} className="relative inline-flex">
+    <div ref={containerRef} className={cn('relative inline-flex', containerClassName)}>
       {/* Trigger — recebe props direto no elemento, sem wrapper clicável */}
       <Slot
         ref={triggerRef}
@@ -315,12 +339,14 @@ function DropdownMenu({
           data-state={estado}
           style={{
             top: position.top,
+            bottom: position.bottom,
             left: position.left,
             right: position.right,
             ...estiloMotion(estado, DURACAO_MENU),
           }}
           className={cn(
-            'fixed mt-[var(--spacing-1)] z-50',
+            'fixed z-50',
+            side === 'top' ? 'mb-[var(--spacing-1)]' : 'mt-[var(--spacing-1)]',
             'min-w-[var(--popover-min-width)] w-max',
             'overflow-hidden rounded-md border border-border',
             'bg-popover text-popover-foreground',

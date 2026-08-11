@@ -66,7 +66,12 @@ const ALIAS_TO_SEMANTIC: Record<string, string> = {
   foreground: 'text-primary',
   card: 'surface-raised',
   'card-foreground': 'text-primary',
-  popover: 'surface-overlay',
+  // DELTA-UX (D-1008-R4): popover deixou de seguir surface-overlay — sob o
+  // vidro ([data-glass="on"] no brasa/wine; nativo no dark-wine) o overlay é
+  // um FILME translúcido desenhado para elemento EM FLUXO sobre um cartão.
+  // Painel flutuante em portal pintava o filme sem nada atrás além da página
+  // e lia como PRETO. O companheiro opaco é a superfície do DS por tema.
+  popover: 'surface-overlay-opaque',
   'popover-foreground': 'text-primary',
   primary: 'action-primary',
   'primary-foreground': 'action-primary-fg',

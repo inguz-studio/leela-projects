@@ -116,10 +116,12 @@ describe('KitsCadastroView (RN-211/213/215/216)', () => {
   // O job: reconhecer o kit DE VISTA na grade, antes de abrir. As asserções
   // olham o que o organizador enxerga na linha do kit, não classe utilitária.
   describe('miniatura da imagem do kit (RN-227 · RN-236)', () => {
-    /** Card do kit pelo título — a miniatura tem de estar DENTRO dele. */
+    /** Card do kit pelo título — a miniatura tem de estar DENTRO dele.
+     *  Selector duplo (D-1008-R11): o card virou o Card CANÔNICO do DS com
+     *  role="article" (mesma semântica de AT do <article> anterior). */
     function cardDoKit(nome: string): HTMLElement {
       const titulo = screen.getByRole('heading', { name: nome });
-      const card = titulo.closest('article');
+      const card = titulo.closest('[role="article"], article');
       expect(card).not.toBeNull();
       return card as HTMLElement;
     }

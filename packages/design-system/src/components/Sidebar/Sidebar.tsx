@@ -2,7 +2,7 @@
  * Sidebar — painel de navegação lateral do shell.
  *
  * Seções (RN-233, rodada IA-MENU 2026-07-19 — o menu foi de 8 para 6 itens):
- *   OPERAÇÃO: Visão Geral, Eventos, Clubs, CRM, Marcas
+ *   OPERAÇÃO: Visão Geral, Eventos, Clubs, CRM, Parcerias
  *   CONTA:    Configurações
  *
  * `Financeiro` e `Analytics` saíram do catálogo: a análise de vendas virou
@@ -32,12 +32,12 @@
 
 import * as React from 'react';
 import {
-  Bell,
-  Briefcase,
-  CalendarDays,
+  Heart,
   LayoutDashboard,
+  Megaphone,
   Settings,
-  UsersRound,
+  Ticket,
+  User,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
@@ -116,25 +116,68 @@ export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
  * §Sidebar), reconciliado pela rodada IA-MENU: **6 itens**, não 8.
  *
  * O id `comunicacao` virou `crm` (rótulo "CRM") porque a casca deixou de ser
- * só comunicação — passa a abrigar Visão geral, Clientes e Comunicação. O
- * ícone segue o mesmo (`Bell`): a rodada renomeia o item, não redesenha a nav.
+ * só comunicação — passa a abrigar Visão geral, Clientes e Comunicação.
+ *
+ * REDESIGN-V2 · item 3 — quatro ícones trocaram de SIGNIFICADO, não de desenho.
+ * O menu antigo descrevia o dado que a tela guarda; o novo descreve o que o
+ * organizador vende ou cuida:
+ *
+ *   Eventos  CalendarDays → Ticket     evento é ingresso, não data
+ *   Clubs    UsersRound   → Heart      comunidade, não um monte de pessoa
+ *   CRM      Bell         → User       pessoa é o cliente (o sino era o aviso)
+ *   Parcerias (era Marcas) Briefcase → Megaphone  parceria/patrocínio comunica
+ *
+ * `Ticket` é EXCLUSIVO deste item de menu: agenda e campos de data seguem em
+ * `CalendarDays`/`CalendarCheck`, e trocar isso confundiria "quando acontece"
+ * com "o que se vende". Visão Geral e Configurações ficam como estavam.
  */
+export interface SidebarNavIconEntry {
+  id: string;
+  label: string;
+  /** Nome do componente Lucide — o que catálogos exibem sob o desenho. */
+  iconName: string;
+  Icon: LucideIcon;
+}
+
+/**
+ * Catálogo da nav default: id → rótulo → componente Lucide, em UM lugar.
+ *
+ * Existe porque `DEFAULT_SIDEBAR_SECTIONS` guarda o ícone já RENDERIZADO
+ * (`React.ReactNode`), e de um nó renderizado não se recupera o nome do
+ * componente — foi assim que a página de ícones do showcase pôde manter uma
+ * lista paralela escrita à mão, que derivou até citar "Financeiro" e
+ * "Analytics", dois itens que a rodada IA-MENU tinha removido. Re-sincronizar
+ * aquela lista consertaria o sintoma; derivá-la daqui é o que impede a próxima
+ * deriva. As seções abaixo e o showcase leem os dois deste array.
+ */
+export const DEFAULT_SIDEBAR_NAV_ICONS: readonly SidebarNavIconEntry[] = [
+  { id: 'visao-geral',   label: 'Visão Geral',   iconName: 'LayoutDashboard', Icon: LayoutDashboard },
+  { id: 'eventos',       label: 'Eventos',       iconName: 'Ticket',          Icon: Ticket },
+  { id: 'clubs',         label: 'Clubs',         iconName: 'Heart',           Icon: Heart },
+  { id: 'crm',           label: 'CRM',           iconName: 'User',            Icon: User },
+  // D-1008-R17: "Marcas" virou "Parcerias" no MESMO slot — a área absorveu
+  // assessorias parceiras e afiliações (migradas de clubs) além das marcas.
+  // Megaphone fica: patrocínio/parceria comunica (troca de ícone não foi
+  // decidida; candidata natural seria Handshake — vetável).
+  { id: 'parcerias',     label: 'Parcerias',     iconName: 'Megaphone',       Icon: Megaphone },
+  { id: 'configuracoes', label: 'Configurações', iconName: 'Settings',        Icon: Settings },
+] as const;
+
+/** Monta um item de seção a partir do id declarado no catálogo acima. */
+function itemPadrao(id: string): SidebarItem {
+  const entrada = DEFAULT_SIDEBAR_NAV_ICONS.find((e) => e.id === id);
+  if (!entrada) throw new Error(`item "${id}" não existe em DEFAULT_SIDEBAR_NAV_ICONS`);
+  return { id: entrada.id, label: entrada.label, icon: sidebarNavIcon(entrada.Icon) };
+}
+
 export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     label: 'OPERAÇÃO',
-    items: [
-      { id: 'visao-geral',  label: 'Visão Geral',   icon: sidebarNavIcon(LayoutDashboard) },
-      { id: 'eventos',      label: 'Eventos',        icon: sidebarNavIcon(CalendarDays) },
-      { id: 'clubs',        label: 'Clubs',          icon: sidebarNavIcon(UsersRound) },
-      { id: 'crm',          label: 'CRM',            icon: sidebarNavIcon(Bell) },
-      { id: 'marcas',       label: 'Marcas',         icon: sidebarNavIcon(Briefcase) },
-    ],
+    items: ['visao-geral', 'eventos', 'clubs', 'crm', 'parcerias'].map(itemPadrao),
   },
   {
     label: 'CONTA',
-    items: [
-      { id: 'configuracoes', label: 'Configurações', icon: sidebarNavIcon(Settings) },
-    ],
+    items: ['configuracoes'].map(itemPadrao),
   },
 ];
 

@@ -1,221 +1,195 @@
 // =============================================================================
-// KpiRow — os 4 cards de KPI do topo da Visão Geral (S600-T3, recomposto no
-// Lote FIDELIDADE T4 fiel ao mockup `.kpi` em densidade COMPACT). Presentational
-// puro: consome o retorno de `getOverview` (agregado ∑ — NUNCA recalcula).
+// KpiRow — a régua de indicadores da Visão Geral, recriada FIEL à seção
+// "Últimos 7 dias" do protótipo "Visao Geral v3" (lane HIFI-REC).
 //
-// Anatomia do mockup: label com ícone 14px · valor 34px display italic (com
-// slot de moeda 22px na Receita) · foot com trend chip (`.trend` 10px/700
-// uppercase, pares feedback-* da matriz AA) OU badge de risco OU sparkline.
-// Elevação: elev-1 em repouso, hover levanta 2px e sobe pra elev-2 (fecha o
-// minor m1 do QA-LIVE — os KPIs estavam chapados, sem anel hairline).
+// Anatomia do protótipo: UM cartão vidro de largura cheia com 4 células —
+// ícone num círculo de 46px, rótulo uppercase pequeno, número display 1.625rem
+// e a linha de delta ("↑ 12%") — separadas por divisórias verticais.
 //
-// Honestidade das vagas (#15): `derivarKpis` só soma vagas de evento PÚBLICO
-// com capacidade conhecida e marca `eventoEmRisco` para qualquer ocupação
-// ≥ LIMIAR_ESGOTANDO (0,9). Logo, um esgotamento real (vagas=0) SEMPRE acende
-// o risco (ocupação ≥ 1,0). Um `vagasRestantes===0` COM `eventoEmRisco===null`
-// só acontece quando NENHUMA capacidade é conhecida → 0 falso: renderiza "—"
-// (nunca 0 falso, contrato do próprio kpis.ts), distinto de "esgotado".
-// Trends: a janela real do contrato é 7d vs. 7d anteriores → "vs. 7 dias".
-// Conversão: série vazia até E12 → "—" sem sparkline (nunca inventa curva).
+// Verdade de dado (P-REC-4 — número não volta a mentir): o protótipo rotula
+// "Receita 7 dias" / "Inscrições 7 dias" / "Check-ins 7 dias". Os agregados
+// reais do `getOverview` são TOTAIS do portfólio (a janela de 7d existe só na
+// comparação do trend), e check-in de club não existe no backend. Os rótulos
+// seguem a semântica real — "Inscrições totais", "Receita confirmada", "Vagas
+// restantes", "Taxa de conversão" — e a seção se chama "Indicadores", não
+// "Últimos 7 dias". Divergência nomeada no handoff.
 //
-// Responsivo (Lote RESP-MOBILE M3, JTBD 04.4 "ter dados na mão no celular"):
-// o grid colapsa por breakpoint — 1 coluna abaixo de `sm` (mobile 390: cada
-// card ganha a largura cheia, o valor 34px não trunca), 2 colunas de `sm`
-// (640px) a `lg`, e 4 colunas de `lg` (1024px) para cima. A faixa de fidelidade
-// desktop (≥1024, alvo 1440) fica INTOCADA — `lg:grid-cols-4` é o mesmo de antes;
-// a mudança é aditiva só abaixo de `lg`. Breakpoints em `tailwind-preset.ts`.
+// Honestidade preservada da tela anterior: vagas 0-falso mostra "—" (nunca 0),
+// risco ≥ limiar acende "Esgotando", conversão sem série mostra "—" e o delta
+// só aparece quando o contrato manda base de comparação (null → sem linha).
+//
+// Responsivo (README §4 + REFACTOR item 6): 1 coluna abaixo de 480 (`xs`),
+// 2×2 de `xs` a `lg`, 4 colunas em `lg`; as divisórias acompanham as colunas.
 // =============================================================================
 
 import * as React from 'react';
-import { ArrowDown, ArrowUp, CreditCard, Route, TrendingUp, Users } from 'lucide-react';
+import { CreditCard, Route, TrendingUp, Users } from 'lucide-react';
 import { Badge, Sparkline, cn } from '@leela/design-system';
 import type { OverviewKPIs } from '@leela/core';
-import { formatBRL, formatInt, formatPct, formatTrend } from '../_lib/format';
+import { formatBRL, formatInt, formatPct } from '../_lib/format';
+import { CartaoV3, EyebrowV3 } from '../../../components/CartaoV3';
 
 export interface KpiRowProps {
   kpis: OverviewKPIs;
 }
 
-// ---------------------------------------------------------------------------
-// TrendChip — `.trend` do mockup: chip 10px/700 uppercase com seta 10px.
-// Cores pelos pares feedback-success/danger (fg sobre surface) já na matriz.
-// ---------------------------------------------------------------------------
-
-function TrendChip({ pct }: { pct: number }): JSX.Element {
-  const up = pct >= 0;
-  const Seta = up ? ArrowUp : ArrowDown;
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-[var(--trend-gap)] whitespace-nowrap',
-        'px-[var(--trend-px)] py-[var(--trend-py)] rounded-[var(--radius-xs)]',
-        'text-[length:var(--trend-font-size)] font-[var(--font-weight-bold)]',
-        'uppercase tracking-[var(--trend-spacing)]',
-        up
-          ? 'bg-[var(--feedback-success-surface)] text-[var(--feedback-success-fg)]'
-          : 'bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]'
-      )}
-    >
-      <Seta
-        aria-hidden
-        className="w-[var(--trend-icon-size)] h-[var(--trend-icon-size)] [stroke-width:2.5]"
-      />
-      {formatTrend(pct)}
-    </span>
+/** "↑ 12%" / "↓ 3%" do protótipo (valor absoluto; a seta carrega o sinal). @pure */
+export function deltaTexto(pct: number): string {
+  const abs = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(
+    Math.abs(pct)
   );
+  return `${pct >= 0 ? '↑' : '↓'} ${abs}%`;
 }
 
-// ---------------------------------------------------------------------------
-// KpiCard
-// ---------------------------------------------------------------------------
-
-interface KpiCardProps {
+interface CelulaProps {
   label: string;
   icon: React.ReactNode;
-  /** Valor principal (34px display italic — compact do mockup). */
-  value: string;
-  /** Prefixo de moeda (22px, secondary) — mockup `.kpi-value .currency`. */
-  currency?: string | undefined;
-  /** Trend real do contrato (null = sem base → "—"); omitido = não se aplica. */
+  valor: string;
+  /** Prefixo de moeda (protótipo mantém o número inteiro na mesma linha). */
+  moeda?: string | undefined;
   trendPct?: number | null | undefined;
-  /** Legenda ao lado do trend/badge (`.kpi-sub`, 11px, 1 linha). */
-  sub?: string | undefined;
-  /** Badge de risco (KPI de vagas — mockup badge-vulcao "Esgotando"). */
   riskBadge?: string | undefined;
-  /** Série do sparkline (só renderiza com ≥ 2 pontos). */
+  sub?: string | undefined;
   sparkline?: readonly number[] | undefined;
+  /** Divisória à esquerda (todas menos a 1ª, seguindo as colunas ativas). */
+  divisoria?: 'sempre' | 'nunca' | 'so-lg';
 }
 
-function KpiCard({
+function Celula({
   label,
   icon,
-  value,
-  currency,
+  valor,
+  moeda,
   trendPct,
-  sub,
   riskBadge,
+  sub,
   sparkline,
-}: KpiCardProps): JSX.Element {
+  divisoria = 'nunca',
+}: CelulaProps): JSX.Element {
   const temSparkline = sparkline !== undefined && sparkline.length >= 2;
-
   return (
     <div
       className={cn(
-        'flex flex-col gap-[var(--kpi-gap)]',
-        'rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--kpi-padding)]',
-        // Elevação do mockup (fecha m1): anel hairline no repouso, lift no hover
-        'shadow-elev-1 hover:shadow-elev-2',
-        'hover:translate-y-[calc(-1*var(--spacing-0-5))]',
-        'transition-[transform,box-shadow] duration-[var(--motion-duration-normal)] ease-[var(--motion-easing-default)]'
+        'flex items-center gap-[var(--spacing-4)] min-w-0',
+        'py-[var(--spacing-2)] xs:py-0',
+        'xs:px-[var(--spacing-6)] first:pl-0',
+        divisoria === 'sempre' && 'xs:border-l xs:border-l-[var(--border-subtle)]',
+        divisoria === 'so-lg' && 'lg:border-l lg:border-l-[var(--border-subtle)]',
       )}
     >
-      {/* Label com ícone (mockup `.kpi-label`) */}
+      {/* Círculo de 46px com o ícone na cor da marca (protótipo). */}
       <span
+        aria-hidden
         className={cn(
-          'flex items-center gap-[var(--kpi-label-gap)]',
-          'text-[length:var(--kpi-label-size)] font-[var(--font-weight-medium)]',
-          'text-[var(--text-tertiary)] tracking-[var(--kpi-label-spacing)]'
+          'shrink-0 flex items-center justify-center rounded-[var(--radius-pill)]',
+          'w-[var(--v3-kpi-icon)] h-[var(--v3-kpi-icon)]',
+          'bg-[var(--surface-overlay)] text-[var(--text-brand)]',
+          '[&_svg]:w-[var(--v3-icon-md)] [&_svg]:h-[var(--v3-icon-md)]',
         )}
       >
+        {icon}
+      </span>
+      <span className="min-w-0">
         <span
-          aria-hidden
-          className="shrink-0 flex items-center [&_svg]:w-[var(--kpi-label-icon-size)] [&_svg]:h-[var(--kpi-label-icon-size)]"
+          className={cn(
+            'block text-[length:var(--font-size-xs-plus)] font-[var(--font-weight-semibold)]',
+            'uppercase tracking-[var(--v3-label-spacing)] text-[var(--text-tertiary)]',
+            'truncate',
+          )}
         >
-          {icon}
+          {label}
         </span>
-        {label}
-      </span>
-
-      {/* Valor (mockup `.kpi-value`, compact 34px) */}
-      <span
-        className={cn(
-          'font-display italic font-[var(--font-weight-bold)]',
-          'text-[length:var(--kpi-value-size)] leading-none tracking-[var(--kpi-value-spacing)]',
-          'text-[var(--text-primary)]'
-        )}
-      >
-        {currency ? (
-          <span
-            className={cn(
-              'text-[length:var(--kpi-currency-size)] font-[var(--font-weight-semibold)]',
-              'text-[var(--text-secondary)] mr-[var(--spacing-1)]'
-            )}
-          >
-            {currency}
-          </span>
-        ) : null}
-        {value}
-      </span>
-
-      {/* Foot (mockup `.kpi-foot`, min-h 24) */}
-      <span className="flex items-center justify-between gap-[var(--kpi-label-gap)] min-h-[var(--kpi-foot-min-h)]">
-        {temSparkline ? (
-          <Sparkline values={sparkline} className="text-[var(--text-brand)]" />
-        ) : (
-          <>
-            {riskBadge ? (
-              <Badge variant="vulcao">{riskBadge}</Badge>
-            ) : trendPct === undefined || trendPct === null ? (
-              <span className="text-[length:var(--kpi-sub-size)] text-[var(--text-tertiary)]">
-                —
-              </span>
-            ) : (
-              <TrendChip pct={trendPct} />
-            )}
-            {sub ? (
-              <span className="min-w-0 truncate text-[length:var(--kpi-sub-size)] text-[var(--text-tertiary)]">
-                {sub}
-              </span>
-            ) : null}
-          </>
-        )}
+        <span
+          className={cn(
+            'block mt-[var(--spacing-1-5)] whitespace-nowrap',
+            'font-display font-[var(--font-weight-extrabold)]',
+            'text-[length:var(--v3-kpi-size)] leading-none text-[var(--text-primary)]',
+          )}
+        >
+          {moeda ? (
+            <span className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-secondary)] mr-[var(--spacing-1)]">
+              {moeda}
+            </span>
+          ) : null}
+          {valor}
+        </span>
+        <span className="flex items-center gap-[var(--spacing-2)] mt-[var(--spacing-1-5)] min-h-[var(--kpi-foot-min-h)]">
+          {temSparkline ? (
+            <Sparkline values={sparkline} className="text-[var(--text-brand)]" />
+          ) : (
+            <>
+              {riskBadge ? (
+                <Badge variant="vulcao">{riskBadge}</Badge>
+              ) : trendPct === undefined || trendPct === null ? (
+                <span className="text-[length:var(--font-size-sm-plus)] text-[var(--text-tertiary)]">
+                  —
+                </span>
+              ) : (
+                <span
+                  className={cn(
+                    'text-[length:var(--font-size-sm-plus)] font-[var(--font-weight-semibold)]',
+                    trendPct >= 0
+                      ? 'text-[var(--feedback-success)]'
+                      : 'text-[var(--feedback-danger)]',
+                  )}
+                >
+                  {deltaTexto(trendPct)}
+                </span>
+              )}
+              {sub ? (
+                <span className="min-w-0 truncate text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                  {sub}
+                </span>
+              ) : null}
+            </>
+          )}
+        </span>
       </span>
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// KpiRow
-// ---------------------------------------------------------------------------
 
 export function KpiRow({ kpis }: KpiRowProps): JSX.Element {
   // 0 sem risco = nenhuma capacidade conhecida (0 falso) → "—", não "0".
   const vagasDesconhecidas = kpis.vagasRestantes === 0 && kpis.eventoEmRisco === null;
 
   return (
-    <section
-      aria-label="Indicadores consolidados"
-      className="grid grid-cols-1 gap-[var(--layout-grid-gap)] sm:grid-cols-2 lg:grid-cols-4"
-    >
-      <KpiCard
-        label="Inscrições totais"
-        icon={<Users />}
-        value={formatInt(kpis.inscricoesTotais)}
-        trendPct={kpis.inscricoesTrendPct}
-        sub={kpis.inscricoesTrendPct !== null ? 'vs. 7 dias' : undefined}
-      />
-      <KpiCard
-        label="Receita confirmada"
-        icon={<CreditCard />}
-        currency="R$"
-        value={formatBRL(kpis.receitaConfirmada).replace(/^R\$\s?/u, '')}
-        trendPct={kpis.receitaTrendPct}
-        sub={kpis.receitaTrendPct !== null ? 'vs. 7 dias' : undefined}
-      />
-      <KpiCard
-        label="Vagas restantes"
-        icon={<Route />}
-        value={vagasDesconhecidas ? '—' : formatInt(kpis.vagasRestantes)}
-        riskBadge={kpis.eventoEmRisco ? 'Esgotando' : undefined}
-        sub={kpis.eventoEmRisco?.nome}
-      />
-      <KpiCard
-        label="Taxa de conversão"
-        icon={<TrendingUp />}
-        value={formatPct(kpis.taxaConversaoPct)}
-        sparkline={kpis.conversaoSparkline}
-      />
-    </section>
+    <CartaoV3 aria="Indicadores consolidados">
+      <EyebrowV3 icon={<TrendingUp />}>Indicadores</EyebrowV3>
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4">
+        <Celula
+          label="Inscrições totais"
+          icon={<Users />}
+          valor={formatInt(kpis.inscricoesTotais)}
+          trendPct={kpis.inscricoesTrendPct}
+          sub={kpis.inscricoesTrendPct !== null ? 'vs. 7 dias' : undefined}
+        />
+        <Celula
+          label="Receita confirmada"
+          icon={<CreditCard />}
+          moeda="R$"
+          valor={formatBRL(kpis.receitaConfirmada).replace(/^R\$\s?/u, '')}
+          trendPct={kpis.receitaTrendPct}
+          sub={kpis.receitaTrendPct !== null ? 'vs. 7 dias' : undefined}
+          divisoria="sempre"
+        />
+        <Celula
+          label="Vagas restantes"
+          icon={<Route />}
+          valor={vagasDesconhecidas ? '—' : formatInt(kpis.vagasRestantes)}
+          riskBadge={kpis.eventoEmRisco ? 'Esgotando' : undefined}
+          sub={kpis.eventoEmRisco?.nome}
+          divisoria="so-lg"
+        />
+        <Celula
+          label="Taxa de conversão"
+          icon={<TrendingUp />}
+          valor={formatPct(kpis.taxaConversaoPct)}
+          sparkline={kpis.conversaoSparkline}
+          divisoria="sempre"
+        />
+      </div>
+    </CartaoV3>
   );
 }
 

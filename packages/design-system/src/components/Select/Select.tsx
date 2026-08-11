@@ -86,6 +86,12 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               bordered
                 ? 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input'
                 : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-[color:var(--input-border-flat)]',
+              // DELTA-UX (D-1008-R4): o POPUP nativo do <select> herda o bg do
+              // CAMPO (sunken, quase preto) — era um dos "menus secundários em
+              // preto" vistos pelo dono. As <option> pintam explicitamente a
+              // superfície canônica de painel flutuante (par AA provado em
+              // contrast.test.ts, mesma dupla do DropdownMenu).
+              '[&_option]:bg-[var(--popover)] [&_option]:text-[var(--popover-foreground)]',
               // Foco — glow ring via alias ring (border-focus).
               'focus:outline-none',
               'focus:ring-2 focus:ring-ring focus:ring-offset-0',

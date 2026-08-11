@@ -18,7 +18,14 @@
 // =============================================================================
 
 export interface AreaDaVitrine {
-  /** Título da área, na mesma palavra que o menu usa. */
+  /**
+   * Título da área, na mesma palavra que o menu usa.
+   *
+   * O contrato já estava escrito aqui e mesmo assim derivou: o menu dizia
+   * "Clubs", o hub dizia "Clubes" e a vitrine ficou no meio (UXW-FIX · BLQ-20).
+   * A palavra da casa para a área é **"Clubs"** — em rail, SubNav, hub, trilha,
+   * KPI e filtro. A rota segue `/clubes`: endereço não é copy.
+   */
   titulo: string;
   /** Uma linha sobre o que a área serve. Sem número, sem exemplo. */
   descricao: string;
@@ -58,11 +65,11 @@ const AREAS: readonly (readonly [string, AreaDaVitrine])[] = [
     },
   ],
   [
-    '/marcas',
+    '/parcerias',
     {
-      titulo: 'Marcas',
+      titulo: 'Parcerias',
       descricao:
-        'Os patrocinadores que se repetem entre experiências, cadastrados uma vez e reaproveitados.',
+        'Marcas patrocinadoras, assessorias parceiras e afiliações de influenciadores — as parcerias do seu negócio, em um lugar.',
     },
   ],
   [

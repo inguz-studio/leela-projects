@@ -18,9 +18,12 @@
 // =============================================================================
 
 import {
+  DEFAULT_SIDEBAR_NAV_ICONS,
   DEFAULT_SIDEBAR_SECTIONS,
+  railNavIcon,
   sidebarNavIcon,
   type SidebarItem,
+  type SidebarRailItem,
   type SidebarSection,
 } from '@leela/design-system';
 import { Banknote, Building2, CreditCard, FileText, Gauge, Percent, Tags, TicketCheck, Undo2, type LucideIcon } from 'lucide-react';
@@ -37,9 +40,10 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   // `comunicacao`; a comunicação por evento/clube (E06/E05) segue nas próprias
   // telas — o hub soma, não substitui.
   crm: '/crm',
-  // E10 · S811 seed: o item Marcas leva ao módulo de patrocinadores
-  // reutilizáveis (RN-171). Deixa de ser placeholder inerte.
-  marcas: '/marcas',
+  // D-1008-R17: o item Parcerias (era "Marcas", E10 · S811 seed · RN-171)
+  // leva à área que reúne Marcas, Assessorias parceiras e Afiliações — as
+  // duas últimas migradas de clubs. `/marcas` legado redireciona (RN-234).
+  parcerias: '/parcerias',
   // RN-233/RN-366 (IAM-T5): `Configurações` deixa de ser inerte. Passa a
   // hospedar os Dados de recebimento — cadastro único do titular — e por isso
   // ganha destino. A regra "item de menu sem rota é proibido" nasce sem
@@ -79,7 +83,10 @@ export function painelActiveId(pathname: string): string | null {
   if (pathname.startsWith('/eventos')) return 'eventos';
   if (pathname.startsWith('/clubes')) return 'clubs';
   if (pathname.startsWith('/crm')) return 'crm';
-  if (pathname.startsWith('/marcas')) return 'marcas';
+  // `/marcas` legado fica FORA da tabela de propósito (mesma regra do
+  // `/financeiro`): a URL antiga só redireciona — nenhum item aceso é o
+  // estado honesto para um endereço que não é mais destino de menu.
+  if (pathname.startsWith('/parcerias')) return 'parcerias';
   if (pathname.startsWith('/conta')) return 'configuracoes';
   return null;
 }
@@ -154,4 +161,51 @@ export function shellSidebarSections(
     return platformSections(pathname, navigate);
   }
   return producerSections(painelActiveId(pathname), navigate, pathname, eventosAtivos);
+}
+
+/**
+ * Itens do RAIL FLUTUANTE (HIFI-REC, protótipo Visao Geral v3): lista PLANA —
+ * o protótipo não tem rótulo de seção (OPERAÇÃO/CONTA são anatomia da Sidebar
+ * clássica, que segue viva no Drawer < lg). Mesmos ids, rótulos, destinos,
+ * badge real de eventos e regra href+onClick SPA da nav clássica; ícones nos
+ * tokens do rail (21px, traço 2 — `railNavIcon`).
+ * @pure
+ */
+export function shellRailItems(
+  pathname: string,
+  navigate: NavegarSpa,
+  eventosAtivos?: number | null
+): SidebarRailItem[] {
+  if (pathname.startsWith('/plataforma')) {
+    const ativo = activeNavId(pathname);
+    return PLATFORM_NAV.map((item): SidebarRailItem => {
+      const Icon = PLATFORM_NAV_ICONS[item.id];
+      const base: SidebarRailItem = {
+        id: item.id,
+        label: item.label,
+        icon: Icon ? railNavIcon(Icon) : null,
+        active: item.id === ativo,
+      };
+      if (item.badge !== undefined) base.badge = item.badge;
+      if (item.href) {
+        base.href = item.href;
+        base.onClick = onClickSpa(navigate, item.href, pathname);
+      }
+      return base;
+    });
+  }
+  const ativoId = painelActiveId(pathname);
+  return DEFAULT_SIDEBAR_NAV_ICONS.map(({ id, label, Icon }): SidebarRailItem => {
+    const href = HREF_POR_ID[id];
+    return {
+      id,
+      label,
+      icon: railNavIcon(Icon),
+      active: id === ativoId,
+      ...(id === 'eventos' && typeof eventosAtivos === 'number' && eventosAtivos > 0
+        ? { badge: eventosAtivos }
+        : {}),
+      ...(href ? { href, onClick: onClickSpa(navigate, href, pathname) } : {}),
+    };
+  });
 }

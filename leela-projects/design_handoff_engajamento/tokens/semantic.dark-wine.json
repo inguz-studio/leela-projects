@@ -1,0 +1,95 @@
+{
+  "$description": "Overrides semânticos do tema dark-wine. Merge sobre tokens/semantic.json, igual ao que semantic.wine.json faz para o tema claro.",
+  "color": {
+    "scheme": "dark"
+  },
+  "surface": {
+    "base": "{neutral.950}",
+    "raised": "{neutral.900}",
+    "overlay": "rgba(255, 255, 255, 0.028)",
+    "high": "rgba(255, 255, 255, 0.055)",
+    "sunken": "{neutral.975}"
+  },
+  "text": {
+    "primary": "{neutral.50}",
+    "secondary": "{neutral.200}",
+    "tertiary": "{neutral.400}",
+    "disabled": "{neutral.600}",
+    "brand": "{accent.400}",
+    "danger": "{danger.500}",
+    "success": "{success.400}"
+  },
+  "action": {
+    "primary": "{accent.400}",
+    "primary-hover": "{accent.300}",
+    "primary-pressed": "{accent.500}",
+    "primary-disabled": "{neutral.700}",
+    "primary-fg": "#12160A",
+    "secondary": "{neutral.850}",
+    "secondary-hover": "{neutral.750}",
+    "secondary-fg": "{neutral.50}",
+    "ghost-hover": "{neutral.750}",
+    "ghost-fg": "{neutral.50}",
+    "brand-tint": "rgba(200, 232, 74, 0.12)",
+    "brand-tint-fg": "{accent.400}",
+    "destructive": "{danger.500}",
+    "destructive-hover": "{danger.400}",
+    "destructive-pressed": "{danger.300}",
+    "destructive-fg": "{neutral.950}"
+  },
+  "border": {
+    "subtle": "{neutral.800}",
+    "default": "{neutral.750}",
+    "strong": "{neutral.700}",
+    "brand": "{accent.400}",
+    "focus": "{accent.400}",
+    "focus-ring-shadow": "0 0 0 3px rgba(200, 232, 74, 0.18)",
+    "danger": "{danger.500}"
+  },
+  "chart": {
+    "$description": "No dark-wine a rampa de séries é contínua entre chart.accent (lime) e chart.accent-2 (âmbar) — ver §Dataviz do README. cat-1..5 seguem a paleta categórica do DS para gráficos que não usam rampa.",
+    "accent": "{accent.400}",
+    "accent-2": "oklch(0.75 0.13 75)",
+    "track": "{neutral.800}",
+    "grid": "{neutral.750}",
+    "cat-1": "{success.400}",
+    "cat-2": "{heroico.500}",
+    "cat-3": "{accent.400}",
+    "cat-4": "{warning.500}",
+    "cat-5": "{neutral.400}"
+  },
+  "feedback": {
+    "success": "{success.400}",
+    "success-fg": "{accent.400}",
+    "success-surface": "#1B2410",
+    "danger": "{danger.500}",
+    "danger-fg": "{danger.300}",
+    "danger-surface": "#3A1315",
+    "warning": "{warning.400}",
+    "warning-fg": "{warning.300}",
+    "warning-surface": "#33260B",
+    "heroico": "{heroico.500}",
+    "heroico-fg": "{heroico.300}",
+    "heroico-surface": "#351322",
+    "info": "{heroico.500}",
+    "info-fg": "{heroico.300}",
+    "info-surface": "#351322"
+  },
+  "countdown": {
+    "bg": "radial-gradient(120% 85% at 100% 0%, rgba(196,44,58,.24), transparent 58%), radial-gradient(100% 100% at 0% 100%, rgba(200,232,74,.05), transparent 60%)",
+    "border": "rgba(200, 232, 74, 0.16)",
+    "number-gradient": "linear-gradient(135deg, #DDF594, #B3D424)"
+  },
+  "thumb": {
+    "corrida": "linear-gradient(135deg, #D0434F, #38070E)",
+    "ciclismo": "linear-gradient(135deg, #E85662, #4E0B12)",
+    "yoga": "linear-gradient(135deg, #ED3585, #420521)",
+    "virtual": "linear-gradient(135deg, #A3D93B, #1B2410)",
+    "crossfit": "linear-gradient(135deg, #C39400, #4E3A00)",
+    "icon-fg": "rgba(255, 255, 255, 0.9)"
+  },
+  "page": {
+    "$description": "Glow de fundo da página — FIXO no viewport, nunca acompanha o scroll (ver §Glass).",
+    "glow": "radial-gradient(95% 65% at 32% -5%, rgba(122,21,32,.46), transparent 62%), radial-gradient(70% 60% at 105% 105%, rgba(122,21,32,.20), transparent 60%)"
+  }
+}

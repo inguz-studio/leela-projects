@@ -1,30 +1,25 @@
 // =============================================================================
-// ComunidadeResumo — o bloco "Clubs" da Visão Geral (REDESIGN-DS · v3).
+// ComunidadeResumo — o bloco "Clubs" da Visão Geral, recriado FIEL ao
+// protótipo "Visao Geral v3" (lane HIFI-REC).
 //
-// POR QUE ELE EXISTE, e não é só "o mockup pediu". O objetivo escrito do épico
-// LEELA-E02 é "consolidar eventos e clubes do profissional numa única leitura de
-// negócio", e a tela entregue consolidava só eventos: os dois números de
-// comunidade (`membrosAtivosTotais`, `desafiosAtivosTotais`) já vinham no
-// retorno de `getOverview` e não eram desenhados em lugar nenhum. O protótipo
-// não acrescenta uma métrica nova aqui — ele fecha um buraco entre a story e a
-// tela.
+// Anatomia do protótipo: eyebrow com coração · dois stats grandes lado a lado
+// · CTA neutro de largura cheia "Gerenciar clubs →". O protótipo mostra ainda
+// a IDENTIDADE de um club (avatar "FC · Floripa Run Coletivo") — isso exigiria
+// listar clubes na primeira tela depois do login, e o orçamento de LCP dela é
+// gate: os dois agregados chegam no MESMO round-trip dos KPIs, o nome não.
+// Divergência nomeada no handoff da lane; quem quer o nome está a um clique.
 //
-// CUSTO DE REDE ZERO, de propósito. O protótipo mostra a identidade de um club
-// ("FC · Floripa Run Coletivo"), o que exigiria listar clubes na tela inicial.
-// A Visão Geral é a primeira tela depois do login e o orçamento de LCP dela é
-// gate, não aspiração: um fetch a mais para desenhar um nome não paga. Os dois
-// agregados já chegam no MESMO round-trip dos KPIs. Quem quer o nome está a um
-// clique — que é o que o CTA faz.
-//
-// Números são AGREGADOS ∑ mantidos por Function; o cliente só lê (governança do
-// épico). Nada é somado aqui.
+// Verdade de dado (P-REC-4): o protótipo rotula o 2º stat como "check-ins" —
+// check-in de club NÃO existe no backend (nota do REFACTOR item 7). O 2º stat
+// é "desafios ativos", que é o agregado real que chega. Rótulo segue o dado.
 // =============================================================================
 
-import { Button, EmptyState, KpiCard, Skeleton } from '@leela/design-system';
+import { Button, EmptyState, Skeleton } from '@leela/design-system';
 import { Heart } from 'lucide-react';
 import type { OverviewKPIs } from '@leela/core';
 import { formatInt } from '../_lib/format';
 import { PanelError } from './PanelError';
+import { CartaoV3, CtaV3, EyebrowV3, StatV3 } from '../../../components/CartaoV3';
 
 export interface ComunidadeResumoProps {
   kpis: OverviewKPIs | null;
@@ -49,22 +44,15 @@ export function ComunidadeResumo({
     kpis !== null && kpis.membrosAtivosTotais === 0 && kpis.desafiosAtivosTotais === 0;
 
   return (
-    <section
-      aria-label="Clubs"
-      className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-5)]"
-    >
-      <div className="flex items-center gap-[var(--spacing-2)]">
-        <Heart
-          aria-hidden
-          className="w-[var(--kpi-label-icon-size)] h-[var(--kpi-label-icon-size)] text-[var(--text-tertiary)]"
-        />
-        <h2 className="text-[length:var(--font-size-sm)] font-[var(--peso-medio)] uppercase tracking-[var(--section-title-spacing)] text-[var(--text-secondary)]">
-          Clubs
-        </h2>
-      </div>
+    <CartaoV3 aria="Clubs" className="flex flex-col">
+      <EyebrowV3 icon={<Heart />}>Clubs</EyebrowV3>
 
       {loading ? (
-        <div role="status" aria-label="Carregando resumo dos clubs" className="grid grid-cols-2 gap-[var(--spacing-3)]">
+        <div
+          role="status"
+          aria-label="Carregando resumo dos clubs"
+          className="grid grid-cols-2 gap-[var(--spacing-3)]"
+        >
           <Skeleton variant="rect" className="h-20" />
           <Skeleton variant="rect" className="h-20" />
         </div>
@@ -85,24 +73,17 @@ export function ComunidadeResumo({
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-[var(--spacing-3)]">
-            <KpiCard
-              label="Membros ativos"
-              value={formatInt(kpis.membrosAtivosTotais)}
-              className="bg-[var(--surface-overlay)]"
-            />
-            <KpiCard
-              label="Desafios ativos"
-              value={formatInt(kpis.desafiosAtivosTotais)}
-              className="bg-[var(--surface-overlay)]"
-            />
+          <div className="grid grid-cols-2 gap-[var(--spacing-2-5)] mb-[var(--spacing-5)]">
+            <StatV3 valor={formatInt(kpis.membrosAtivosTotais)} rotulo="membros ativos" />
+            <StatV3 valor={formatInt(kpis.desafiosAtivosTotais)} rotulo="desafios ativos" />
           </div>
-          <Button variant="secondary" size="sm" onClick={onGerenciarClubs}>
+          <div className="flex-1" />
+          <CtaV3 variant="neutro" onClick={onGerenciarClubs}>
             Gerenciar clubs
-          </Button>
+          </CtaV3>
         </>
       )}
-    </section>
+    </CartaoV3>
   );
 }
 

@@ -13,6 +13,8 @@ export function HubRoute(): JSX.Element {
   const { data, loading, error } = useClubes();
   const session = useTenantSession();
 
+  // D-1008-R16: o menu secundário da área saiu daqui — quem o desenha é o
+  // ClubesAreaLayout (moldura), para nenhuma aba da área nascer órfã.
   return (
     <HubClubes
       clubes={data}
@@ -21,10 +23,6 @@ export function HubRoute(): JSX.Element {
       ownUserId={session.uid}
       onCriarClube={() => navigate('/clubes/novo')}
       onAbrirClube={(slug) => navigate(`/clubes/${slug}`)}
-      onAbrirAssessorias={() => navigate('/clubes/assessorias')}
-      onAbrirInfluenciadores={() => navigate('/clubes/influenciadores')}
-      onAbrirMinhasAfiliacoes={() => navigate('/clubes/minhas-afiliacoes')}
-      onAbrirEngajamento={() => navigate('/clubes/engajamento')}
     />
   );
 }

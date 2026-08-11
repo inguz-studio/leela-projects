@@ -188,7 +188,7 @@ describe('vitrine · o aviso fecha e REARMA (RN-510)', () => {
   it('Esc fecha o aviso e devolve a vitrine', async () => {
     await abrirVitrine();
     const user = usuario();
-    await user.click(itemDeMenu(/Marcas/i));
+    await user.click(itemDeMenu(/Parcerias/i));
     expect(avisoNaTela()).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
@@ -215,10 +215,10 @@ describe('vitrine · o menu continua navegando por baixo do aviso', () => {
   it('o endereço muda e o conteúdo acompanha depois de fechar', async () => {
     await abrirVitrine();
     const user = usuario();
-    await user.click(itemDeMenu(/Marcas/i));
-    expect(window.location.pathname).toBe('/marcas');
+    await user.click(itemDeMenu(/Parcerias/i));
+    expect(window.location.pathname).toBe('/parcerias');
 
     await user.click(screen.getByRole('button', { name: /Continuar olhando/i }));
-    expect(screen.getByRole('heading', { name: /^Marcas$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Parcerias$/i })).toBeInTheDocument();
   });
 });

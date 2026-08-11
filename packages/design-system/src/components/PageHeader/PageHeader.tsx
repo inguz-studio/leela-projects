@@ -16,7 +16,12 @@ import { cn } from '../../utils/cn';
 
 export interface PageHeaderProps {
   title: string;
-  subtitle?: string;
+  /**
+   * Uma linha de contexto sob o título. Aceita nó para ênfase inline — o
+   * protótipo Visao Geral v3 (HIFI-REC) pinta o nome do usuário em
+   * `<strong>` na cor da marca dentro da saudação.
+   */
+  subtitle?: React.ReactNode;
   avatar?: React.ReactNode;
   badges?: React.ReactNode;
   metadata?: React.ReactNode;
@@ -88,7 +93,9 @@ function PageHeader({
         {(subtitle || metadata) && (
           <div className="flex items-center gap-[var(--spacing-3)] flex-wrap">
             {subtitle && (
-              <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+              // 0.9375rem do protótipo v3 (era `sm`): a saudação é a linha de
+              // boas-vindas do painel, não uma legenda — o corpo dela sobe.
+              <p className="text-[length:var(--font-size-base-plus)] text-[var(--text-secondary)]">
                 {subtitle}
               </p>
             )}

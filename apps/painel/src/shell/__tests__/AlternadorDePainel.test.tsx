@@ -68,17 +68,17 @@ describe('AlternadorDePainel · quem vê', () => {
 describe('AlternadorDePainel · o rótulo é o DESTINO', () => {
   it('no painel do organizador, oferece ir para o master', () => {
     montar('/', true);
-    expect(botao()).toHaveTextContent('Ir para o Painel Master');
+    expect(botao()).toHaveTextContent('Acessar painel master');
   });
 
   it('no painel master, oferece voltar para o do organizador', () => {
     montar('/plataforma', true);
-    expect(botao()).toHaveTextContent('Ir para o Painel do Organizador');
+    expect(botao()).toHaveTextContent('Acessar painel profissional');
   });
 
   it('sub-rota do master ainda conta como master (prefixo, não igualdade)', () => {
     montar('/plataforma/tenants/castelo-producoes', true);
-    expect(botao()).toHaveTextContent('Ir para o Painel do Organizador');
+    expect(botao()).toHaveTextContent('Acessar painel profissional');
   });
 
   it('rota que só COMEÇA parecida não é o master', () => {
@@ -112,9 +112,21 @@ describe('AlternadorDePainel · a travessia leva para o outro lado', () => {
 
 describe('nomeDoPainelAtual · o rótulo de contexto do shell', () => {
   it('nomeia onde a conta ESTÁ, para o alternador dizer para onde ela VAI', () => {
-    expect(nomeDoPainelAtual('/')).toBe('Painel do Organizador');
-    expect(nomeDoPainelAtual('/crm/clientes')).toBe('Painel do Organizador');
+    expect(nomeDoPainelAtual('/')).toBe('Painel Profissional');
+    expect(nomeDoPainelAtual('/crm/clientes')).toBe('Painel Profissional');
     expect(nomeDoPainelAtual('/plataforma')).toBe('Painel Master');
     expect(nomeDoPainelAtual('/plataforma/macro')).toBe('Painel Master');
+  });
+
+  /**
+   * BLQ-19. O rótulo de contexto e o botão de travessia vivem no MESMO rail,
+   * a um clique um do outro. Enquanto o primeiro dizia "Painel do Organizador"
+   * e o segundo "Acessar painel profissional", o mesmo painel tinha dois nomes
+   * visíveis ao mesmo tempo — e a RN-468 nomeia um só.
+   */
+  it('o nome do painel e o rótulo do alternador falam a MESMA língua (RN-468)', () => {
+    expect(nomeDoPainelAtual('/')).toContain('Profissional');
+    expect(travessia('/plataforma').rotulo).toContain('profissional');
+    expect(nomeDoPainelAtual('/')).not.toMatch(/organizador/i);
   });
 });

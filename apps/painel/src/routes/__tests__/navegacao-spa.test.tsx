@@ -26,6 +26,9 @@ import { ToastProvider } from '@leela/design-system';
 
 import { EventoShell } from '../eventos/evento/EventoShell';
 import { ClubeShell } from '../clubes/clube/ClubeShell';
+import { ClubesAreaLayout } from '../clubes/ClubesAreaLayout';
+import { ParceriasAreaLayout } from '../parcerias/ParceriasAreaLayout';
+import { AfiliacoesLayout } from '../parcerias/afiliacoes/AfiliacoesLayout';
 import { KitsLayout } from '../eventos/kits/KitsLayout';
 import { KitEditor } from '../eventos/kits/KitEditor';
 import { FinanceiroLayout } from '../eventos/financeiro/FinanceiroLayout';
@@ -36,6 +39,7 @@ import { RootShell } from '../../shell/RootShell';
 import { mkEvento } from '../eventos/_test/fixtures';
 import { mkClube } from '../clubes/_test/fixtures';
 import { clicarNoDom } from '../../test/clique';
+import { nomeAcessivel } from '../../test/nomeAcessivel';
 import type { EventoOutletContext } from '../eventos/evento/EventoLayout';
 
 // Sessão + claims sem Firebase (mesma dublagem de RootShell.test.tsx); o
@@ -118,11 +122,13 @@ interface SuperficieNav {
   atual: string;
   /**
    * `<button>` que a superfície pode conter por NÃO ser destino de navegação
-   * (LEELA-DEBT-T4). A lista é a exceção declarada, texto por texto: quem
-   * acrescentar um botão aqui está afirmando que ele abre um menu ou dispara
-   * uma ação, e não que leva a uma rota. Destino em `<button>` é o defeito que
-   * este arquivo existe para pegar — a pessoa não consegue abrir em nova aba
-   * nem copiar o endereço.
+   * (LEELA-DEBT-T4). A lista é a exceção declarada, NOME ACESSÍVEL por nome
+   * acessível (HIFI-REC-FIX — o rail duplica rótulo no textContent via
+   * sr-only+tooltip; o nome acessível é o que a AT anuncia e é imune a isso):
+   * quem acrescentar um botão aqui está afirmando que ele abre um menu ou
+   * dispara uma ação, e não que leva a uma rota. Destino em `<button>` é o
+   * defeito que este arquivo existe para pegar — a pessoa não consegue abrir
+   * em nova aba nem copiar o endereço.
    */
   botoesQueNaoSaoDestino?: string[];
   montar: () => void;
@@ -159,9 +165,65 @@ const SUPERFICIES: SuperficieNav[] = [
         </MemoryRouter>,
       ),
   },
+  // ---------------------------------------------------------------------------
+  // D-1008-R16/R17 — as MOLDURAS de área (layout routes donos do menu
+  // secundário). Montam-se sozinhas: derivam a aba ativa do pathname e não
+  // leem dado nenhum. Clicar numa aba re-deriva a ativa — a sonda prova a ida.
+  // ---------------------------------------------------------------------------
   {
-    nome: 'abas do clube',
-    landmark: 'Seções do clube',
+    nome: 'menu da área de clubs',
+    landmark: 'Seções de clubs',
+    ancoras: 2,
+    atual: 'Clubs',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/clubes']}>
+          <Routes>
+            <Route element={<ClubesAreaLayout />}>
+              <Route path="*" element={<p>c</p>} />
+            </Route>
+          </Routes>
+          <Sonda />
+        </MemoryRouter>,
+      ),
+  },
+  {
+    nome: 'menu da área de Parcerias',
+    landmark: 'Seções de Parcerias',
+    ancoras: 3,
+    atual: 'Marcas',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/parcerias']}>
+          <Routes>
+            <Route element={<ParceriasAreaLayout />}>
+              <Route path="*" element={<p>c</p>} />
+            </Route>
+          </Routes>
+          <Sonda />
+        </MemoryRouter>,
+      ),
+  },
+  {
+    nome: 'sub-abas de Afiliações',
+    landmark: 'Seções de afiliações',
+    ancoras: 2,
+    atual: 'Influenciadores',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/parcerias/afiliacoes']}>
+          <Routes>
+            <Route element={<AfiliacoesLayout />}>
+              <Route path="*" element={<p>c</p>} />
+            </Route>
+          </Routes>
+          <Sonda />
+        </MemoryRouter>,
+      ),
+  },
+  {
+    nome: 'abas do club',
+    landmark: 'Seções do club',
     ancoras: 6,
     atual: 'Overview',
     montar: () =>
@@ -228,9 +290,16 @@ const SUPERFICIES: SuperficieNav[] = [
     landmark: 'Navegação principal',
     ancoras: 6,
     atual: 'Visão Geral',
-    // O rodapé da sidebar (B4) é o gatilho do menu do usuário: abre um menu,
-    // não leva a uma rota. Botão é o elemento certo para ele.
-    botoesQueNaoSaoDestino: ['MCMarina CasteloVer perfil'],
+    // A moldura ≥ lg é o SidebarRail (HIFI-REC), e ele traz DOIS botões que
+    // não são destino:
+    //   · 'Abrir menu' — o toggle que abre/recolhe o rail. Ação pura.
+    //   · 'Marina Castelo' — o rodapé de perfil, TRIGGER do popover do perfil
+    //     (DELTA-UX-T4 · D-1008-R6): aria-haspopup/aria-expanded + aria-label
+    //     com o nome da sessão, rail fechado E aberto. A dívida F5 morreu
+    //     aqui pelas duas metades: o botão deixou de ser destino de navegação
+    //     (abre menu, semântica certa de button) e deixou de ficar SEM nome
+    //     acessível fechado (a entrada '' que este inventário declarava).
+    botoesQueNaoSaoDestino: ['Abrir menu', 'Marina Castelo'],
     montar: () =>
       void render(
         <MemoryRouter initialEntries={['/']}>
@@ -419,7 +488,7 @@ describe('nenhuma superfície de navegação navega por botão', () => {
       montar();
       const nav = screen.getByRole('navigation', { name: landmark });
       expect(
-        within(nav).queryAllByRole('button').map((b) => b.textContent),
+        within(nav).queryAllByRole('button').map((b) => nomeAcessivel(b)),
         'destino de navegação em <button> não abre em nova aba nem copia endereço — ' +
           'se este botão realmente não é destino, declare-o em botoesQueNaoSaoDestino',
       ).toEqual(botoesQueNaoSaoDestino);

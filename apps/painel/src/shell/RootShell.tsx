@@ -28,18 +28,12 @@
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  AppShell,
-  Avatar,
-  SCROLL_Y_ONLY,
-  Sidebar,
-  SidebarFooter,
-} from '@leela/design-system';
-import { shellSidebarSections } from './sidebar';
+import { AppShell, SCROLL_Y_ONLY, SidebarRail } from '@leela/design-system';
+import { shellRailItems } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
 import { usePaineisDaConta } from './paineis';
-import { AlternadorDePainel, nomeDoPainelAtual } from './AlternadorDePainel';
+import { nomeDoPainelAtual, travessia } from './AlternadorDePainel';
 
 export interface RootShellProps {
   children: React.ReactNode;
@@ -48,66 +42,76 @@ export interface RootShellProps {
 export function RootShell({ children }: RootShellProps): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
-  const { nome, fotoUrl } = useShellSession();
+  const { nome } = useShellSession();
   const eventosAtivos = useEventosAtivosBadge();
   const paineis = usePaineisDaConta();
 
-  // `navigate` vai INTEIRO, sem adaptador. O `(href) => navigate(href)` que
-  // morava aqui descartava em silêncio o segundo argumento, e com ele o
-  // `{ replace: true }` do A-7 (LEELA-DEBT-T5): o menu continuaria empilhando
-  // a rota atual a cada clique, e nenhum teste do construtor puro veria isso,
-  // porque lá o dublê recebe o que o construtor manda — o adaptador ficava
-  // entre os dois.
-  const sections = shellSidebarSections(location.pathname, navigate, eventosAtivos);
+  // DELTA-UX-T4 (D-1008-R6): o perfil do rodapé do rail virou TRIGGER do
+  // popover do perfil — DropdownMenu canônico ancorado acima (L-021), com
+  // Configurações + alternador de painel. Os itens de menu SÃO o "flat
+  // button" do vocabulário do DS dentro de popover (sem preenchimento
+  // sólido; hover em accent) — nenhum variant novo precisou nascer.
+  // Default do maestro (registrado, vetável): Configurações CONTINUA também
+  // como item do rail — o popover soma um caminho, não rouba o existente.
+  const { destino, rotulo } = travessia(location.pathname);
+  const menuPerfil = {
+    menuLabel: 'Menu do perfil',
+    actions: [
+      { id: 'configuracoes', label: 'Configurações', onClick: () => navigate('/conta') },
+      // Só oferece a travessia a quem alcança os dois lados (regra 1 do
+      // alternador — botão que leva a 403 é pior que botão nenhum).
+      ...(paineis.podeAlternar
+        ? [{ id: 'alternar-painel', label: rotulo, onClick: () => navigate(destino) }]
+        : []),
+    ],
+  };
 
-  // Bloco de marca (T2): a ANATOMIA `.brand` (padding, hairline, sub) é do DS —
-  // reusamos os MESMOS tokens do SidebarBrand para não haver drift. O mark deixa
-  // de ser texto e passa a ser o wordmark oficial da Leela (variante brasa /
-  // verde-limão, o MESMO `/leela-logo-brasa.svg` do header da landing), que casa
-  // com o fundo escuro `--surface-base` da sidebar. `alt` textual garante a11y;
-  // altura = `--sidebar-brand-mark-size` (22px), o mesmo espaço vertical que o
-  // texto ocupava. Sub "Painel do Organizador" segue como descritor de contexto.
-  const brand = (
-    <div className="border-b border-b-[var(--border-subtle)] pt-[var(--sidebar-brand-pt)] px-[var(--sidebar-brand-px)] pb-[var(--sidebar-brand-pb)]">
-      <img
-        src="/leela-logo-brasa.svg"
-        alt="Leela"
-        data-slot="brand-logo"
-        className="h-[var(--sidebar-brand-mark-size)] w-auto"
-      />
-      {/* O sub deixou de ser literal (PAPEL-DUPLO): a MESMA moldura serve os
-          dois painéis — `/plataforma` sempre rodou dentro deste RootShell — e
-          o rótulo fixo "Painel do Organizador" mentia para quem estivesse no
-          painel master. Agora ele nomeia onde a conta está, que é o que faz o
-          alternador logo abaixo ser legível: um diz onde você está, o outro
-          diz para onde vai. */}
-      <p className="mt-[var(--sidebar-brand-sub-mt)] text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
+  // HIFI-REC · rail flutuante do protótipo Visao Geral v3 (ordem do dono,
+  // 10/08): ≥ lg a navegação é o SidebarRail — pílula flutuante fechada em
+  // 84px, aberta em 248px. O AlternadorDePainel SAIU do slot aberto
+  // (D-1008-R6): a travessia agora vive no popover do perfil, alcançável com
+  // o rail FECHADO ou ABERTO.
+  //
+  // `navigate` vai INTEIRO para o construtor de itens, sem adaptador: um
+  // `(href) => navigate(href)` descartaria em silêncio o `{ replace: true }`
+  // do A-7 (LEELA-DEBT-T5) e o menu voltaria a empilhar a rota atual.
+  //
+  // DELTA-UX-T3 (D-1008-R5): as MESMAS props servem as duas anatomias — a
+  // pílula desktop e o drawer < lg. A Sidebar clássica saiu da moldura: o
+  // menu mobile agora é o próprio rail no chrome v3 (`variant="drawer"`:
+  // sempre aberto, altura total, sem margem/raio/toggle — media query < lg
+  // do protótipo). A anatomia OFF-CANVAS fica (decisão registrada): portal,
+  // scrim condicional (item 5 do REFACTOR) e focus-trap seguem sendo do
+  // Drawer do AppShell; aqui só a pele mudou. Consequência aceita: o rodapé
+  // mobile mostra as iniciais (receita do rail), não mais a foto da sessão —
+  // paridade com o desktop, que já era assim desde a HIFI-REC.
+  const propsDoRail = {
+    items: shellRailItems(location.pathname, navigate, eventosAtivos),
+    brandIcon: <img src="/leela-icon.svg" alt="" className="w-full h-full" />,
+    brandLogo: <img src="/leela-logo-brasa.svg" alt="Leela" className="h-full w-auto" />,
+    ...(nome ? { footerName: nome } : {}),
+    footerSubtitle: 'Ver perfil',
+    footerMenu: menuPerfil,
+    // Rail aberto NOMEIA o painel (conquista PAPEL-DUPLO — o rótulo não
+    // mente no master). No drawer, sempre aberto, o rótulo está sempre lá.
+    slotAberto: (
+      <p className="text-center text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
         {nomeDoPainelAtual(location.pathname)}
       </p>
-      {/* Só desenha para quem alcança os dois lados. Não é autorização — quem
-          nega é Rules + guards das Functions; ver o cabeçalho do componente. */}
-      {paineis.podeAlternar ? (
-        <div className="mt-[var(--spacing-3)]">
-          <AlternadorDePainel podeAlternar={paineis.podeAlternar} />
-        </div>
-      ) : null}
-    </div>
-  );
-
-  // Rodapé só com sessão nomeada — sem usuário hardcoded (B4). "Ver perfil"
-  // agora navega para as configurações da conta (S020-T4); antes era um rótulo
-  // morto.
-  const footer = nome ? (
-    <SidebarFooter
-      avatar={<Avatar size="sm" name={nome} {...(fotoUrl ? { src: fotoUrl } : {})} />}
-      name={nome}
-      subtitle="Ver perfil"
-      onClick={() => navigate('/conta')}
-    />
-  ) : undefined;
+    ),
+  };
 
   return (
-    <AppShell sidebar={<Sidebar brand={brand} sections={sections} footer={footer} />}>
+    <AppShell
+      sidebar={<SidebarRail {...propsDoRail} />}
+      sidebarFlutuante
+      drawerSidebar={<SidebarRail variant="drawer" {...propsDoRail} />}
+      // GLOW DA PÁGINA na RAIZ da moldura (protótipo: background-image no flex
+      // que contém nav+main): o rail é vidro translúcido e precisa do glow POR
+      // BAIXO — pintado só no contêiner que rola, a faixa do rail ficava sobre
+      // preto chapado. `fixed` mantém a âncora no viewport (regra §2 nº 1).
+      className="[background-image:var(--page-glow)] [background-attachment:fixed]"
+    >
       {/* Área principal: único contêiner de rolagem da PÁGINA — a sidebar não
           rola junto, e o eixo horizontal é fechado (BUILD-SCROLL-PADRAO).
           O `overflow-y-auto` sozinho não entregava um contêiner de rolagem,
@@ -129,26 +133,15 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
           `<main>` do AppShell já é `relative` e barra a fuga; aqui a `relative`
           resolve o outro lado, que é a semântica: o absoluto pertence ao
           conteúdo que rola, não à moldura parada. */}
-      {/* GLOW DA PÁGINA (REDESIGN-DS §2, regra não-negociável nº 1): o brilho
-          de fundo é FIXO NO VIEWPORT. Se ele rolasse com o conteúdo, o
-          desfoque do vidro perderia o referencial e o efeito morreria — o card
-          translúcido revelaria sempre a mesma cor chapada.
-
-          Mora aqui, no contêiner que rola, e não no <body>: o AppShell pinta
-          `--surface-base` OPACO na raiz da moldura, então um glow no documento
-          ficaria escondido atrás dela. `background-attachment: fixed` faz a
-          área de posicionamento ser o viewport (é o que os raios em
-          porcentagem do token esperam) enquanto a pintura fica contida nesta
-          caixa — e como a Sidebar é opaca, não pintar o glow sob o rail é
-          visualmente idêntico a pintar.
-
-          `--page-glow` é `none` fora do modo vidro: na administração da
-          plataforma esta mesma linha não desenha nada, e o fundo preto do
-          `--surface-base` é o que o dono pediu. Nenhum valor cru aqui — só o
-          token que a lane TOKENS publicou. */}
-      <div
-        className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY} [background-image:var(--page-glow)] [background-attachment:fixed]`}
-      >
+      {/* GLOW DA PÁGINA (REDESIGN-DS §2, regra nº 1): o brilho é FIXO NO
+          VIEWPORT e SUBIU para a raiz da moldura (className do AppShell,
+          acima) na lane HIFI-REC. O argumento antigo para pintá-lo AQUI era
+          "a Sidebar é opaca, não pintar sob o rail é idêntico a pintar" — o
+          SidebarRail derrubou a premissa: ele é vidro translúcido flutuando
+          sobre a página, e o glow precisa existir POR BAIXO dele. O token
+          continua sendo a única fonte (`none` fora do modo vidro: a
+          administração segue preta). GlowDaPagina.test.tsx acompanhou. */}
+      <div className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY}`}>
         {children}
       </div>
     </AppShell>

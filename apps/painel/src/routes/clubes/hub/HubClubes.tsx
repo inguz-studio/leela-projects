@@ -1,8 +1,13 @@
 // =============================================================================
 // HubClubes — tela `/clubes` (S101-T2). Presentational: recebe estado async e
-// callbacks. KPIs globais no topo, Zona A (meus clubes) + Zona B (parceiros com
-// busca), EmptyState com CTA quando zero clubes, skeleton no load, bloco de
+// callbacks. KPIs globais no topo, Zona A (meus clubs) + Zona B (parceiros com
+// busca), EmptyState com CTA quando zero clubs, skeleton no load, bloco de
 // erro no fail (§2.12). Popover exclusivo (C3): um único aberto por vez.
+//
+// UXW-FIX (BLQ-20): a tela dizia "Clubes" e o menu que leva até ela dizia
+// "Clubs" — a mesma área com dois nomes a um clique de distância. A grafia da
+// casa é "Clubs"/"club" (default do maestro, vetável). A rota `/clubes` não
+// muda: endereço não é copy.
 // =============================================================================
 
 import { useMemo, useState } from 'react';
@@ -20,14 +25,6 @@ export interface HubClubesProps {
   ownUserId: string | null;
   onCriarClube: () => void;
   onAbrirClube: (slug: string) => void;
-  /** Abre a gestão de assessorias parceiras (E18). */
-  onAbrirAssessorias?: () => void;
-  /** Abre os influenciadores do tenant (R9-E · RN-319 — lado organizador). */
-  onAbrirInfluenciadores?: () => void;
-  /** Abre "minhas afiliações" (R9-E · RN-318/319 — lado clube/influenciador). */
-  onAbrirMinhasAfiliacoes?: () => void;
-  /** Abre a análise de engajamento da comunidade (REDESIGN-DS · lane TELA). */
-  onAbrirEngajamento?: () => void;
 }
 
 interface KpisGlobais {
@@ -55,10 +52,14 @@ function Kpis({ kpis }: { kpis: KpisGlobais }): JSX.Element {
       aria-label="Indicadores globais"
       className="grid grid-cols-2 gap-[var(--spacing-4)] md:grid-cols-4"
     >
-      <KpiCard label="Clubes ativos" value={formatInt(kpis.totalClubes)} hint={`${formatInt(kpis.meusClubes)} seu(s)`} />
-      <KpiCard label="Atletas alcançados" value={formatInt(kpis.atletasAlcancados)} hint="somados entre os clubes" />
+      <KpiCard label="Clubs ativos" value={formatInt(kpis.totalClubes)} hint={`${formatInt(kpis.meusClubes)} seu(s)`} />
+      {/* UXW-FIX · BLQ-01: "Atletas" era o nome que a PLATAFORMA dava às
+          pessoas da comunidade — a categoria, não a instância (D-0802-1). Num
+          club de bem-estar a palavra é falsa por construção. O campo interno
+          `atletasAlcancados` fica; o cânone governa o rótulo, não o modelo. */}
+      <KpiCard label="Pessoas alcançadas" value={formatInt(kpis.atletasAlcancados)} hint="somadas entre os clubs" />
       <KpiCard label="Desafios ativos" value={formatInt(kpis.desafiosAtivos)} />
-      <KpiCard label="Meus clubes" value={formatInt(kpis.meusClubes)} />
+      <KpiCard label="Meus clubs" value={formatInt(kpis.meusClubes)} />
     </section>
   );
 }
@@ -69,10 +70,6 @@ export function HubClubes({
   error,
   ownUserId,
   onCriarClube,
-  onAbrirAssessorias,
-  onAbrirInfluenciadores,
-  onAbrirMinhasAfiliacoes,
-  onAbrirEngajamento,
   onAbrirClube,
 }: HubClubesProps): JSX.Element {
   const [busca, setBusca] = useState('');
@@ -100,35 +97,22 @@ export function HubClubes({
 
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
+      {/* D-1008-R8: sem frase de apoio — o título e os cards dizem o que é. */}
       <PageHeader
-        title="Clubes"
-        subtitle="Comunidades em torno dos seus eventos"
+        title="Clubs"
         actions={
-          <div className="flex items-center gap-[var(--spacing-2)]">
-            {/* Engajamento primeiro entre as secundárias: é a leitura de TODA a
-                lista abaixo, não mais um destino lateral. */}
-            <Button variant="secondary" onClick={() => onAbrirEngajamento?.()}>
-              Engajamento
-            </Button>
-            <Button variant="secondary" onClick={() => onAbrirMinhasAfiliacoes?.()}>
-              Minhas afiliações
-            </Button>
-            <Button variant="secondary" onClick={() => onAbrirInfluenciadores?.()}>
-              Influenciadores
-            </Button>
-            <Button variant="secondary" onClick={() => onAbrirAssessorias?.()}>
-              Assessorias parceiras
-            </Button>
-            <Button variant="primary" onClick={onCriarClube}>
-              + Criar clube
-            </Button>
-          </div>
+          // D-1008-R9: os 4 acessos secundários saíram daqui (viraram o menu
+          // secundário da área — hoje desenhado pela MOLDURA ClubesAreaLayout,
+          // D-1008-R16); fica só a AÇÃO primária.
+          <Button variant="primary" onClick={onCriarClube}>
+            + Criar club
+          </Button>
         }
       />
 
       <div className="flex flex-col gap-[var(--spacing-8)] px-[var(--spacing-6)]">
         {loading ? (
-          <div role="status" aria-label="Carregando clubes" className="flex flex-col gap-[var(--spacing-6)]">
+          <div role="status" aria-label="Carregando clubs" className="flex flex-col gap-[var(--spacing-6)]">
             <div className="grid grid-cols-2 gap-[var(--spacing-4)] md:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} variant="rect" className="h-24" />
@@ -145,15 +129,15 @@ export function HubClubes({
             role="alert"
             className="rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-5)] text-[var(--text-primary)]"
           >
-            Não foi possível carregar seus clubes. Tente novamente.
+            Não foi possível carregar seus clubs. Tente novamente.
           </div>
         ) : !clubes || clubes.length === 0 ? (
           <EmptyState
-            title="Você ainda não tem nenhum clube"
-            description="Crie seu primeiro clube para reunir uma comunidade em torno dos seus eventos."
+            title="Você ainda não tem nenhum club"
+            description="Crie seu primeiro club para reunir uma comunidade em torno dos seus eventos."
             action={
               <Button variant="primary" onClick={onCriarClube}>
-                Criar clube
+                Criar club
               </Button>
             }
           />
@@ -161,13 +145,13 @@ export function HubClubes({
           <>
             <Kpis kpis={agregaKpis(clubes, ownUserId)} />
 
-            <section aria-label="Meus clubes" className="flex flex-col gap-[var(--spacing-4)]">
+            <section aria-label="Meus clubs" className="flex flex-col gap-[var(--spacing-4)]">
               <h2 className="text-[length:var(--font-size-sm)] uppercase tracking-[var(--table-header-spacing)] text-[var(--text-tertiary)]">
-                Meus clubes · {formatInt(meus.length)}
+                Meus clubs · {formatInt(meus.length)}
               </h2>
               {meus.length === 0 ? (
                 <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                  Você ainda não administra nenhum clube.
+                  Você ainda não administra nenhum club.
                 </p>
               ) : (
                 <div className="grid grid-cols-1 gap-[var(--spacing-5)] lg:grid-cols-2">
@@ -178,13 +162,13 @@ export function HubClubes({
               )}
             </section>
 
-            <section aria-label="Clubes parceiros" className="flex flex-col gap-[var(--spacing-4)]">
+            <section aria-label="Clubs parceiros" className="flex flex-col gap-[var(--spacing-4)]">
               <h2 className="text-[length:var(--font-size-sm)] uppercase tracking-[var(--table-header-spacing)] text-[var(--text-tertiary)]">
-                Clubes parceiros · {formatInt(parceiros.length)}
+                Clubs parceiros · {formatInt(parceiros.length)}
               </h2>
               {parceiros.length > 0 ? (
                 <SearchInput
-                  aria-label="Buscar clube parceiro"
+                  aria-label="Buscar club parceiro"
                   placeholder="Buscar por nome, categoria ou localização"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -194,12 +178,12 @@ export function HubClubes({
               ) : null}
               {parceiros.length === 0 ? (
                 <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                  Nenhum clube parceiro ainda.
+                  Nenhum club parceiro ainda.
                 </p>
               ) : parceirosFiltrados.length === 0 ? (
                 <EmptyState
-                  title="Nenhum clube encontrado"
-                  description="Nenhum clube parceiro casa com a sua busca."
+                  title="Nenhum club encontrado"
+                  description="Nenhum club parceiro casa com a sua busca."
                 />
               ) : (
                 <div className="grid grid-cols-1 gap-[var(--spacing-5)] lg:grid-cols-2">

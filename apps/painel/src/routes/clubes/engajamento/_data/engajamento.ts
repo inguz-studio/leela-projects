@@ -19,10 +19,11 @@
 // =============================================================================
 
 import { useQueries, useQuery } from '@tanstack/react-query';
-import type { Clube, Desafio, Membro } from '@leela/core';
+import type { Clube, Desafio, Evento, Membro } from '@leela/core';
 import {
   clubesDoTenantQuery,
   desafiosDoClubeQuery,
+  eventosDoOrganizadorQuery,
   membrosDoClubeQuery,
 } from '../../../../lib/query/queries';
 import { useTenantSession } from '../../../../lib/session/tenantSession';
@@ -37,16 +38,29 @@ export interface EstadoAsync<T> {
   error: Error | null;
 }
 
+/** Estado assíncrono que a tela pode pedir para recarregar. */
+export interface EstadoAsyncRecarregavel<T> extends EstadoAsync<T> {
+  refetch: () => void;
+}
+
 /** Clubes do tenant — a mesma chave do hub de clubs. */
-export function useClubesDoTenant(): EstadoAsync<Clube[]> {
+export function useClubesDoTenant(): EstadoAsyncRecarregavel<Clube[]> {
   const session = useTenantSession();
   const enabled = session.status === 'authenticated' && !!session.tenantId;
   const query = useQuery({ ...clubesDoTenantQuery(session.tenantId ?? ''), enabled });
+  const refetch = (): void => {
+    void query.refetch();
+  };
 
   if (session.status !== 'loading' && !enabled) {
-    return { data: null, loading: false, error: new Error('Sessão não autenticada.') };
+    return { data: null, loading: false, error: new Error('Sessão não autenticada.'), refetch };
   }
-  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
+  return {
+    data: query.data ?? null,
+    loading: query.isPending,
+    error: query.error ?? null,
+    refetch,
+  };
 }
 
 /** Os clubes dentro do recorte atual do filtro. @pure */
@@ -75,7 +89,7 @@ export interface DadosDoEngajamento {
  */
 export function useDadosDoEngajamento(
   clubes: readonly Clube[]
-): EstadoAsync<DadosDoEngajamento> {
+): EstadoAsyncRecarregavel<DadosDoEngajamento> {
   const membrosQueries = useQueries({
     queries: clubes.map((c) => ({ ...membrosDoClubeQuery(c.id) })),
   });
@@ -84,10 +98,16 @@ export function useDadosDoEngajamento(
   });
 
   const todas = [...membrosQueries, ...desafiosQueries];
+  // UXW-FIX · MEL-01: o bloco de erro da tela ganhou "Tentar novamente", e a
+  // tentativa tem de alcançar TODAS as leituras do recorte — o erro exibido é
+  // o primeiro que apareceu, mas quem falhou pode ter sido mais de um club.
+  const refetch = (): void => {
+    for (const q of todas) void q.refetch();
+  };
   const erro = todas.find((q) => q.error)?.error ?? null;
-  if (erro) return { data: null, loading: false, error: erro as Error };
+  if (erro) return { data: null, loading: false, error: erro as Error, refetch };
 
-  if (todas.some((q) => q.isPending)) return { data: null, loading: true, error: null };
+  if (todas.some((q) => q.isPending)) return { data: null, loading: true, error: null, refetch };
 
   const membros = membrosQueries.flatMap((q) => (q.data as Membro[] | undefined) ?? []);
   const desafios = desafiosQueries.flatMap((q, i) =>
@@ -97,5 +117,37 @@ export function useDadosDoEngajamento(
     }))
   );
 
-  return { data: { membros, desafios }, loading: false, error: null };
+  return { data: { membros, desafios }, loading: false, error: null, refetch };
+}
+
+/**
+ * Eventos do organizador — a fonte do bloco "Ocupação dos últimos 5 eventos"
+ * (banda Eventos do estudo · D-1008-R15). A chave é a MESMA da Visão Geral e
+ * do hub de eventos (`queryKeys.eventos.doOrganizador`): quem passou por
+ * qualquer uma das três telas reidrata do cache — nenhuma leitura nova entra
+ * por causa desta banda, o mesmo argumento das queries por club acima.
+ *
+ * O erro fica CONTIDO no bloco (o card de ocupação tem estado de erro e
+ * retry próprios): eventos que falham não podem derrubar a análise da
+ * comunidade, que vem de outra fonte.
+ */
+export function useEventosDoOrganizador(): EstadoAsyncRecarregavel<Evento[]> {
+  const session = useTenantSession();
+  const enabled =
+    session.status === 'authenticated' && !!session.uid && !!session.tenantId;
+  const query = useQuery({
+    ...eventosDoOrganizadorQuery({
+      tenantId: session.tenantId ?? '',
+      organizadorId: session.uid ?? '',
+    }),
+    enabled,
+  });
+  const refetch = () => {
+    void query.refetch();
+  };
+
+  if (session.status !== 'loading' && !enabled) {
+    return { data: null, loading: false, error: new Error('Sessão não autenticada.'), refetch };
+  }
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null, refetch };
 }

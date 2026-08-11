@@ -9,9 +9,14 @@
  *   3. Fallback obrigatório: sem `backdrop-filter`, o card cai para a
  *      superfície opaca do tema.
  *
- * Este arquivo prova o MECANISMO (tokens + CSS gerado), não o pixel — nenhum
- * componente foi tocado por esta lane (nenhum lê `--card-blur` ainda; ver
- * handoff `.nirvana/handoffs/leela-redesign-ds-20260809-TOKENS.md`).
+ * Este arquivo prova o MECANISMO (tokens + CSS gerado), não o pixel.
+ *
+ * ATUALIZAÇÃO (REDESIGN-V2 · item 1): a frase "nenhum componente lê
+ * `--card-blur` ainda" era verdade quando a lane TOKENS escreveu este arquivo,
+ * e deixou de ser na micro-lane BLUR (`f98b2c0a`), que ligou os quatro cartões
+ * ao token. O consumo ficou sem gate nenhum por duas lanes — sem teste, um
+ * `cn()` reordenado apagava o vidro e a suíte seguia verde. O bloco
+ * "consumidores de --card-blur" no fim do arquivo fecha isso.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -224,4 +229,69 @@ describe('glass — texto sobre glass-surface-raised composto (regra não-negoci
       }
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// REDESIGN-V2 · item 1 — os cartões CONSOMEM --card-blur
+// ---------------------------------------------------------------------------
+
+describe('glass — consumidores de --card-blur (item 1: fecha o vetável 1 da lane TELA)', () => {
+  // A lane TOKENS entregou o token e a lane TELA registrou que nenhum
+  // componente o consumia: o modo vidro tinha superfície translúcida, glow e
+  // fio de luz, mas NÃO desfocava — "card meio transparente", não vidro. A
+  // micro-lane BLUR (f98b2c0a) ligou os quatro cartões e não deixou gate.
+  // Aqui a ligação vira contrato: ler o FONTE (e não renderizar) é de propósito
+  // — a classe arbitrária do Tailwind só vira CSS no build do consumidor, então
+  // renderizar em jsdom não provaria nada além de a string existir no atributo.
+  const COMPONENTES = [
+    ['Card', 'Card/Card.tsx'],
+    ['KpiCard', 'KpiCard/KpiCard.tsx'],
+    ['CardEvento', 'CardEvento/CardEvento.tsx'],
+    ['CardDesafio', 'CardDesafio/CardDesafio.tsx'],
+  ] as const;
+
+  for (const [nome, caminho] of COMPONENTES) {
+    it(`${nome} aplica backdrop-filter: var(--card-blur)`, () => {
+      const fonte = readFileSync(resolve(RAIZ_DS, 'src/components', caminho), 'utf8');
+      expect(
+        fonte,
+        `${nome} parou de consumir --card-blur: no modo vidro o cartão volta a ser translúcido SEM desfoque`,
+      ).toContain('[backdrop-filter:var(--card-blur)]');
+    });
+  }
+
+  it('fora do modo vidro o token é none — o consumo é inerte, não um custo de paint', () => {
+    // É o que torna a linha segura nos 4 componentes de uma vez: sem
+    // [data-glass="on"], --card-blur vale `none` em todo tema.
+    const brasaCSS = readFileSync(resolve(RAIZ_DS, 'themes/brasa.css'), 'utf8');
+    const ocorrencias = brasaCSS.match(/--card-blur: none;/g) ?? [];
+    expect(ocorrencias.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REDESIGN-V2 · item 4 — o glass do brasa é o ESCURO (vinho não lavado)
+// ---------------------------------------------------------------------------
+
+describe('glass — valores do brasa que o item 4 fixa (dark-wine e wine não mudam)', () => {
+  // Conferido antes de escrever: a lane TOKENS (b5e75f49) já tinha entregue os
+  // dois valores exatos que o estudo depois formalizou como item 4 — a
+  // verificação achou ZERO delta. O que faltava era o gate: nada no arquivo
+  // impedia alguém de clarear o vinho de volta. Este bloco é o item 4 inteiro.
+  it('surface-raised do brasa é o vinho escuro a 42% (não o lavado)', () => {
+    expect(glass.glass['surface-raised'].brasa).toBe('rgba(30, 11, 16, 0.42)');
+  });
+
+  it('page-glow do brasa tem as TRÊS radiais (a terceira fecha o canto inferior direito)', () => {
+    const glow = glass.glass['page-glow'].brasa!;
+    expect(glow.match(/radial-gradient/g) ?? []).toHaveLength(3);
+    expect(glow).toContain('radial-gradient(75% 55% at 22% -8%, rgba(92,16,26,.72), transparent 62%)');
+    expect(glow).toContain('radial-gradient(55% 45% at 96% 8%, rgba(255,69,12,.06), transparent 60%)');
+    expect(glow).toContain('radial-gradient(65% 55% at 108% 104%, rgba(70,12,20,.48), transparent 62%)');
+  });
+
+  it('o item 4 é do brasa e só dele — dark-wine e wine seguem nos valores próprios', () => {
+    expect(glass.glass['surface-raised']['dark-wine']).toBe('rgba(46, 18, 26, 0.34)');
+    expect(glass.glass['surface-raised'].wine).toBe('rgba(255, 255, 255, 0.62)');
+  });
 });

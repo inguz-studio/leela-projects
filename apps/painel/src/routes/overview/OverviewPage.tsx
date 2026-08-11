@@ -2,22 +2,23 @@
 // OverviewPage — container da Visão Geral. Liga sessão + hooks de dados às
 // derivações puras (_lib) e às telas presentacionais (shell + content).
 //
-// KPIs + alertas: `getOverview` (contrato único). Eventos ativos + countdown:
-// listagem do organizador. Inscrições recentes: fusão cross-evento (Onda 1).
-// Capacidade: `parseEvento` expõe a capacidade DIRETA do doc (S600-T2-fix);
-// null = desconhecida (a resolução Σkits é server-side, RN-210) e a UI
-// degrada sem ratio/badge de ocupação — com capacidade, exibe 453/500.
+// HIFI-REC (protótipo "Visao Geral v3"): as seções são as do protótipo —
+// Próximo evento, Clubs, Agenda, régua de indicadores, Ocupação e Alertas.
+// KPIs + alertas: `getOverview` (contrato único). Countdown, Agenda e
+// Ocupação: a MESMA listagem de eventos do organizador — nenhuma query nova
+// na primeira tela. "Eventos ativos"/"Últimas inscrições" saíram da tela (o
+// protótipo não os tem; o job vive no hub /eventos) — a busca de inscrições
+// recentes saiu junto, um round-trip a menos no LCP.
 // =============================================================================
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Evento } from '@leela/core';
+import { dataLocalISO, type Evento } from '@leela/core';
 import { OverviewShell } from './OverviewShell';
 import { OverviewContent } from './OverviewContent';
 import { useOverviewSession } from './_data/session';
-import { useEventosProdutor, useInscricoesRecentes, useOverview } from './_data/overview';
-import { derivarEventosAtivos } from './_lib/activeEvents';
-import { derivarInscricoesRecentes } from './_lib/recentRegistrations';
+import { useEventosProdutor, useOverview } from './_data/overview';
+import { derivarAgenda } from './_lib/agenda';
 import { derivarCountdown } from './_lib/countdown';
 import { derivarOcupacao } from './_lib/ocupacao';
 
@@ -33,7 +34,6 @@ function comCapacidade(evento: Evento): {
 } {
   // Capacidade direta do doc via parseEvento (S600-T2-fix); `?? null` cobre
   // literais legados sem o campo (opcional na entidade — padrão `percursos`).
-  // local + modalidades alimentam a meta e o thumb do EventRow (T5).
   return {
     nome: evento.nome,
     slug: evento.slug,
@@ -51,21 +51,20 @@ export function OverviewPage(): JSX.Element {
   const session = useOverviewSession();
   const overview = useOverview(session);
   const eventosState = useEventosProdutor(session);
-  // Erro dos eventos é propagado: quebra o skeleton eterno das inscrições (#39).
-  const inscricoesState = useInscricoesRecentes(eventosState.data, eventosState.error);
 
   const eventosInput = useMemo(
     () => (eventosState.data ?? []).map(comCapacidade),
     [eventosState.data]
   );
 
-  const eventosAtivos = useMemo(
-    () => (eventosState.data ? derivarEventosAtivos(eventosInput) : null),
+  const countdown = useMemo(
+    () => (eventosState.data ? derivarCountdown(eventosInput, new Date()) : null),
     [eventosState.data, eventosInput]
   );
 
-  const countdown = useMemo(
-    () => (eventosState.data ? derivarCountdown(eventosInput, new Date()) : null),
+  // Agenda (v3): mesma lista de eventos, dia civil no fuso do produto.
+  const agenda = useMemo(
+    () => (eventosState.data ? derivarAgenda(eventosInput) : null),
     [eventosState.data, eventosInput]
   );
 
@@ -76,10 +75,8 @@ export function OverviewPage(): JSX.Element {
     [eventosState.data, eventosInput]
   );
 
-  const inscricoes = useMemo(
-    () => (inscricoesState.data ? derivarInscricoesRecentes(inscricoesState.data, 5) : null),
-    [inscricoesState.data]
-  );
+  // Snapshot do dia civil de HOJE por montagem (âncora do calendário).
+  const [hojeISO] = useState(() => dataLocalISO(new Date()));
 
   return (
     <OverviewShell nome={session.nome}>
@@ -89,22 +86,16 @@ export function OverviewPage(): JSX.Element {
         kpisError={overview.error ? overview.errorKind : null}
         onRetryOverview={overview.refetch}
         alerts={overview.data?.alerts ?? null}
-        eventos={eventosAtivos}
+        agenda={agenda}
         eventosLoading={eventosState.loading}
         eventosError={eventosState.error !== null}
         onRetryEventos={eventosState.refetch}
-        inscricoes={inscricoes}
-        inscricoesLoading={inscricoesState.loading}
-        inscricoesError={inscricoesState.error !== null}
-        // Retry aponta para a raiz: se os eventos falharam, recarrega eventos
-        // (as inscrições re-derivam); senão recarrega só as inscrições.
-        onRetryInscricoes={eventosState.error ? eventosState.refetch : inscricoesState.refetch}
         countdown={countdown}
         countdownLoading={eventosState.loading}
         ocupacao={ocupacao}
+        hojeISO={hojeISO}
         papel={session.role}
         onNavigate={(href) => navigate(href)}
-        onNovoEvento={() => navigate('/eventos/novo')}
       />
     </OverviewShell>
   );

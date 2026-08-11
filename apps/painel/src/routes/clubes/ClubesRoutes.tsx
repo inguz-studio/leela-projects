@@ -7,21 +7,21 @@
 // ToastProvider é escopado a este módulo (feedback das telas de clube) para não
 // exigir edição de main.tsx/App.tsx compartilhados.
 //
-// As rotas de `:slug` (shell + overview + membros) entram nos commits seguintes
-// deste lote; as abas de desafios/parcerias/comunicação/configurações vêm dos
-// lotes L4/L5.
+// D-1008-R17: a área de clubs ficou com o que é COMUNIDADE (hub + engajamento).
+// Assessorias parceiras e afiliações/influenciadores migraram para a área
+// Parcerias ("faz mas sentido do que deixar em clubs" — dono). As rotas
+// antigas NÃO morrem (RN-234): viram redirects SPA, declarados AQUI porque
+// precisam de precedência sobre o coringa `:slug` — fora daqui, um link salvo
+// de `/clubes/assessorias` cairia no detalhe de club e renderizaria "Club não
+// encontrado" (a MESMA armadilha do fix #14).
 // =============================================================================
 
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useParams } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
+import { ClubesAreaLayout } from './ClubesAreaLayout';
 import { HubRoute } from './hub/HubRoute';
 import { NovoClubePage } from './novo/NovoClubePage';
-import { AssessoriasPage } from './assessorias/AssessoriasPage';
-import { CadastrarAssessoriaPage } from './assessorias/CadastrarAssessoriaPage';
-import { ParceriaDetailPage } from './assessorias/ParceriaDetailPage';
 import { EngajamentoPage } from './engajamento/EngajamentoPage';
-import { InfluenciadoresPage } from './influenciadores/InfluenciadoresPage';
-import { MinhasAfiliacoesPage } from './influenciadores/MinhasAfiliacoesPage';
 import { ClubeLayout } from './clube/ClubeLayout';
 import { OverviewPage } from './clube/overview/OverviewPage';
 import { MembrosPage } from './clube/membros/MembrosPage';
@@ -33,6 +33,20 @@ import { ComunicadoEditorPage } from './clube/comunicacao/ComunicadoEditorPage';
 import { ConfiguracoesPage } from './clube/configuracoes/ConfiguracoesPage';
 import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';
+import { RedirectLegado } from '../_system/RotasLegadas';
+
+/**
+ * Redirect legado do detalhe de assessoria (D-1008-R17): o destino depende do
+ * `:parceriaId` da URL, que só existe dentro desta subárvore — mesmo motivo do
+ * `/crm/:clienteKey` viver no CrmRoutes. Preserva querystring e fragmento
+ * (contrato do RedirectLegado, achado A-3).
+ */
+function RedirectParceriaLegada(): JSX.Element {
+  const { parceriaId } = useParams<{ parceriaId: string }>();
+  return (
+    <RedirectLegado para={`/parcerias/assessorias/${encodeURIComponent(parceriaId ?? '')}`} />
+  );
+}
 
 export function ClubesRoutes(): JSX.Element {
   return (
@@ -40,25 +54,37 @@ export function ClubesRoutes(): JSX.Element {
       {/* Boundary de segmento (mantém o RootShell) — 500 no shell. E07 · S502-T1. */}
       <AppErrorBoundary layout="shell">
       <Routes>
-        <Route index element={<HubRoute />} />
-        {/* Rota estática ANTES do coringa :slug (fix #14 — o CTA do hub caía
-            no :slug e renderizava "Club não encontrado"). */}
+        {/* MOLDURA da área (D-1008-R16): o layout route é o único dono do menu
+            secundário — toda aba da área o herda, com a ativa derivada do
+            pathname. Menu colado página a página foi a causa das abas órfãs. */}
+        <Route element={<ClubesAreaLayout />}>
+          <Route index element={<HubRoute />} />
+          {/* Engajamento (REDESIGN-DS): a análise da comunidade inteira,
+              cross-club. Vive na área Clubs porque a análise mora com o
+              assunto — a mesma razão que levou a análise de vendas para dentro
+              do CRM (RN-823). Rota ESTÁTICA antes do coringa `:slug`, senão
+              "engajamento" cairia no detalhe de club e renderizaria "Club não
+              encontrado". */}
+          <Route path="engajamento" element={<EngajamentoPage />} />
+        </Route>
+        {/* FORA da moldura por design (veredito R16, afirmado em teste): fluxo
+            de criação em tela cheia com retorno próprio — precedente
+            `/eventos/novo`. Rota estática ANTES do coringa :slug (fix #14). */}
         <Route path="novo" element={<NovoClubePage />} />
-        {/* Engajamento (REDESIGN-DS): a análise da comunidade inteira, cross-club.
-            Vive na área Clubs porque a análise mora com o assunto — a mesma
-            razão que levou a análise de vendas para dentro do CRM (RN-823).
-            Rota ESTÁTICA antes do coringa `:slug`, senão "engajamento" cairia
-            no detalhe de club e renderizaria "Club não encontrado". */}
-        <Route path="engajamento" element={<EngajamentoPage />} />
-        {/* Assessorias parceiras (E18) — rotas estáticas ANTES do coringa :slug. */}
-        <Route path="assessorias" element={<AssessoriasPage />} />
-        <Route path="assessorias/nova" element={<CadastrarAssessoriaPage />} />
-        <Route path="assessorias/:parceriaId" element={<ParceriaDetailPage />} />
-        {/* Aba Clubs, DOIS lados (R9-E · S-R9-11-T8 · RN-319): organizador vê
-            os influenciadores do tenant; clube/influenciador vê SÓ as
-            próprias conversões (RN-318). Rotas estáticas ANTES do :slug. */}
-        <Route path="influenciadores" element={<InfluenciadoresPage />} />
-        <Route path="minhas-afiliacoes" element={<MinhasAfiliacoesPage />} />
+        {/* Redirects legados da migração para Parcerias (D-1008-R17 · RN-234):
+            estáticos ANTES do :slug, senão o link salvo cai em "Club não
+            encontrado". `replace` — o Voltar não devolve à URL morta. */}
+        <Route path="assessorias" element={<RedirectLegado para="/parcerias/assessorias" />} />
+        <Route
+          path="assessorias/nova"
+          element={<RedirectLegado para="/parcerias/assessorias/nova" />}
+        />
+        <Route path="assessorias/:parceriaId" element={<RedirectParceriaLegada />} />
+        <Route path="influenciadores" element={<RedirectLegado para="/parcerias/afiliacoes" />} />
+        <Route
+          path="minhas-afiliacoes"
+          element={<RedirectLegado para="/parcerias/afiliacoes/minhas" />}
+        />
         <Route path=":slug" element={<ClubeLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="membros" element={<MembrosPage />} />

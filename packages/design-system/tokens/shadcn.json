@@ -3,7 +3,7 @@
   "foreground": "{text.primary}",
   "card": "{surface.raised}",
   "card-foreground": "{text.primary}",
-  "popover": "{surface.overlay}",
+  "popover": "{surface.overlay-opaque}",
   "popover-foreground": "{text.primary}",
   "primary": "{action.primary}",
   "primary-foreground": "{action.primary-fg}",

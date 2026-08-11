@@ -22,7 +22,7 @@ describe('superficieDaRota · onde a pessoa está', () => {
     ['/clubes', 'o hub de clubs'],
     ['/clubes/engajamento', 'a análise de engajamento'],
     ['/crm', 'a visão geral do CRM'],
-    ['/marcas', 'o módulo de marcas'],
+    ['/parcerias', 'a área de parcerias'],
     ['/conta', 'as configurações da conta'],
     ['/entrar', 'a porta de entrada (sem shell)'],
     ['/cadastrar', 'o cadastro (sem shell)'],

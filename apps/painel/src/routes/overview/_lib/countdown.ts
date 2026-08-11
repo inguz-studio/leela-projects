@@ -7,6 +7,7 @@
 
 import {
   diasCivisAte,
+  ocupacaoDoEvento,
   vagasRestantesDoEvento,
   type StatusEvento,
   type Timestamp,
@@ -43,6 +44,12 @@ export interface CountdownView {
   quando: string | null;
   qtdInscritos: number;
   vagasRestantes: number | null;
+  /**
+   * % da capacidade preenchida, arredondado (protótipo v3: stat "ocupado").
+   * null quando a capacidade é desconhecida — a UI mostra "—", nunca 0 falso.
+   * Pode passar de 100 em overbooking: o número não mente.
+   */
+  ocupacaoPct: number | null;
   /** /eventos/:slug (quick-action "Gerenciar") */
   gerenciarHref: string;
   /** /eventos/:slug/credenciamento — balcão de credenciamento (E03 · RN-399) */
@@ -89,6 +96,17 @@ export function numeroUnidade(dias: number): { numero: string; unidade: string |
 }
 
 /**
+ * % de ocupação arredondado do stat do protótipo v3. Reusa a razão canônica
+ * do core (fonte única); null = capacidade desconhecida. @pure
+ */
+export function ocupacaoPctDoEvento(
+  evento: Pick<EventoCountdownInput, 'qtdInscritos' | 'capacidade'>
+): number | null {
+  const razao = ocupacaoDoEvento(evento);
+  return razao === null ? null : Math.round(razao * 100);
+}
+
+/**
  * Próximo evento (não encerrado, data >= agora, o mais próximo). null quando
  * não há evento futuro. @pure
  */
@@ -121,6 +139,7 @@ export function derivarCountdown(
     quando: quandoDoEvento(evento.data, evento.local),
     qtdInscritos: evento.qtdInscritos,
     vagasRestantes: vagasRestantesDoEvento(evento),
+    ocupacaoPct: ocupacaoPctDoEvento(evento),
     gerenciarHref: `/eventos/${evento.slug}`,
     checkinHref: `/eventos/${evento.slug}/credenciamento`,
     inscritosHref: `/eventos/${evento.slug}/inscritos`,

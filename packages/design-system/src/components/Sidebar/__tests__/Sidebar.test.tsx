@@ -3,7 +3,7 @@ import type * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CalendarDays, LayoutDashboard, Settings } from 'lucide-react';
-import { Sidebar, DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon } from '../Sidebar';
+import { Sidebar, DEFAULT_SIDEBAR_SECTIONS, DEFAULT_SIDEBAR_NAV_ICONS, sidebarNavIcon } from '../Sidebar';
 import { SidebarBrand } from '../SidebarBrand';
 import type { SidebarSection } from '../Sidebar';
 
@@ -255,7 +255,7 @@ describe('Sidebar', () => {
         ['eventos', 'Eventos'],
         ['clubs', 'Clubs'],
         ['crm', 'CRM'],
-        ['marcas', 'Marcas'],
+        ['parcerias', 'Parcerias'],
       ],
       [['configuracoes', 'Configurações']],
     ]);
@@ -356,5 +356,49 @@ describe('Sidebar (T2 — métricas exatas do mockup)', () => {
     render(<Sidebar sections={sections} />);
     const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
     expect(nav.className).toContain('border-r-[var(--border-subtle)]');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REDESIGN-V2 · item 3 — ícones oficiais e catálogo com dono único
+// ---------------------------------------------------------------------------
+
+describe('REDESIGN-V2 item 3: catálogo de ícones da nav', () => {
+  it('os quatro itens que mudaram de significado usam o ícone novo', () => {
+    // Ticket/Heart/User/Megaphone descrevem o que o organizador vende ou
+    // cuida; CalendarDays/UsersRound/Bell/Briefcase descreviam o dado guardado.
+    const porId = Object.fromEntries(DEFAULT_SIDEBAR_NAV_ICONS.map((e) => [e.id, e.iconName]));
+    expect(porId).toMatchObject({
+      'visao-geral': 'LayoutDashboard',
+      eventos: 'Ticket',
+      clubs: 'Heart',
+      crm: 'User',
+      parcerias: 'Megaphone',
+      configuracoes: 'Settings',
+    });
+  });
+
+  it('Ticket é exclusivo do item de menu — nenhum outro item o reusa', () => {
+    // Agenda e campos de data seguem em CalendarDays/CalendarCheck: confundir
+    // "quando acontece" com "o que se vende" é o erro que o item 3 corrige.
+    const comTicket = DEFAULT_SIDEBAR_NAV_ICONS.filter((e) => e.iconName === 'Ticket');
+    expect(comTicket).toHaveLength(1);
+    expect(comTicket[0]!.id).toBe('eventos');
+  });
+
+  it('iconName bate com o componente Lucide de verdade (nome não mente)', () => {
+    for (const entrada of DEFAULT_SIDEBAR_NAV_ICONS) {
+      const nomeReal = (entrada.Icon as unknown as { displayName?: string }).displayName;
+      expect(nomeReal, `entrada "${entrada.id}"`).toBe(entrada.iconName);
+    }
+  });
+
+  it('as seções default são DERIVADAS do catálogo — nenhuma lista paralela', () => {
+    // É a regressão do item 3: a página de ícones do showcase mantinha uma
+    // segunda lista escrita à mão e derivou até citar Financeiro e Analytics,
+    // itens que a rodada IA-MENU tinha removido. Com uma fonte só, some.
+    const idsDasSecoes = DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items.map((i) => i.id));
+    const idsDoCatalogo = DEFAULT_SIDEBAR_NAV_ICONS.map((e) => e.id);
+    expect(idsDasSecoes).toEqual(idsDoCatalogo);
   });
 });

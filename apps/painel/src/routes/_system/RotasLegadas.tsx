@@ -54,6 +54,11 @@ export const REDIRECTS_LEGADOS: readonly RedirectLegado[] = [
   // caminho do módulo morto cai no mesmo lugar: o 404 do módulo deixou de
   // existir junto com o módulo.
   { de: '/financeiro/*', para: '/crm' },
+  // D-1008-R17: o módulo Marcas virou a raiz da área Parcerias (aba Marcas).
+  // `/marcas/*` também casa `/marcas` (splat vazio) — módulo de rota única.
+  // Os redirects das entradas que MIGRARAM de clubs (assessorias, afiliações)
+  // vivem em ClubesRoutes: precisam de precedência sobre o `:slug` de lá.
+  { de: '/marcas/*', para: '/parcerias' },
 ];
 
 /**

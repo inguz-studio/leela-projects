@@ -1,0 +1,92 @@
+{
+  "$description": "Tema DARK WINE — vinho escuro + acento lime da marca. Escalas derivadas do estudo Engajamento (Claude). Mesma forma de primitives.brasa.json.",
+  "primary": {
+    "50": "#FBE9EB",
+    "100": "#F4C3C8",
+    "200": "#EC8E97",
+    "300": "#E85662",
+    "400": "#C42C3A",
+    "500": "#7A1520",
+    "600": "#651019",
+    "700": "#4E0B12",
+    "800": "#38070E",
+    "900": "#1A0407"
+  },
+  "accent": {
+    "50": "#F4FBDE",
+    "100": "#E9F7BC",
+    "200": "#DDF594",
+    "300": "#D5F065",
+    "400": "#C8E84A",
+    "500": "#B3D424",
+    "600": "#95B117",
+    "700": "#748A10",
+    "800": "#52620B",
+    "900": "#333D06",
+    "$description": "Lime da marca (wordmark). É o acento de ação do tema."
+  },
+  "danger": {
+    "300": "#FF8888",
+    "400": "#FF7472",
+    "500": "#FF5E5C",
+    "600": "#DE1F1D",
+    "700": "#B51413"
+  },
+  "success": {
+    "300": "#C8E84A",
+    "400": "#A3D93B",
+    "500": "#7FBF2A",
+    "600": "#5E9418",
+    "700": "#41690F"
+  },
+  "warning": {
+    "300": "#FCD34D",
+    "400": "#F2BE1B",
+    "500": "#E8B100",
+    "600": "#C39400",
+    "700": "#9C7600"
+  },
+  "heroico": {
+    "300": "#F9619A",
+    "400": "#F14890",
+    "500": "#ED3585",
+    "600": "#C9246D",
+    "700": "#A11955"
+  },
+  "neutral": {
+    "0": "#FFFFFF",
+    "50": "#F7F2F3",
+    "100": "#E6DADC",
+    "200": "#C9B6BA",
+    "300": "#C9B6BA",
+    "400": "#9A8388",
+    "500": "#7A666A",
+    "600": "#6A585C",
+    "700": "#48252C",
+    "750": "#2C161C",
+    "800": "#1F0F14",
+    "850": "#1C0C11",
+    "900": "#12070A",
+    "950": "#080306",
+    "975": "#050103",
+    "$description": "Neutros com leve tinta de vinho — o fundo nunca é cinza puro."
+  },
+  "font": {
+    "family": {
+      "display": "Geist, sans-serif",
+      "ui": "Geist, sans-serif",
+      "mono": "\"JetBrains Mono\", monospace"
+    }
+  },
+  "elevation": {
+    "0": "none",
+    "1": "0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.05)",
+    "2": "0 4px 16px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06)",
+    "3": "0 8px 32px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06)",
+    "brand": "0 0 0 1px rgba(200,232,74,0.25), 0 0 22px 2px rgba(200,232,74,0.38)"
+  },
+  "brand": {
+    "wordmark": "#C8E84A",
+    "wordmark-box": "#2A1018"
+  }
+}

@@ -252,12 +252,59 @@ describe('SubNav', () => {
     expect(screen.getByRole('button', { name: 'B' })).toHaveFocus();
   });
 
-  it('container é plano (bg-surface-base + px token, SEM border-b) — Vitor 2026-07-11', () => {
+  it('container é TRANSPARENTE (D-1008-R18) + px token, SEM border-b', () => {
     render(<SubNav tabs={tabs} />);
     const nav = screen.getByRole('navigation');
-    expect(nav.className).toContain('bg-[var(--surface-base)]');
+    // D-1008-R18: itens + indicador direto sobre a página. O fundo opaco
+    // (`--surface-base`) NÃO pode voltar — sobre o page-glow do vidro ele
+    // desenhava a faixa sólida que o dono mandou remover. Transparência
+    // explícita, não ausência de classe.
+    expect(nav.className).toContain('bg-transparent');
+    expect(nav.className).not.toContain('bg-[var(--surface-base)]');
     expect(nav.className).toContain('px-[var(--subnav-px)]');
-    // Plano: sem divisor inferior; o sublinhado da aba ativa é o único indicador.
+    // Plano (Vitor 2026-07-11): sem divisor inferior por default; o sublinhado
+    // da aba ativa é o único indicador.
     expect(nav.className).not.toContain('border-b');
+  });
+
+  // -------------------------------------------------------------------------
+  // Indicador DESLIZANTE (D-1008-R14): o sublinhado da ativa é UM elemento só
+  // que viaja entre as posições — não mais um ::after por aba. jsdom não faz
+  // layout (offsets = 0), então o contrato aqui é de ANATOMIA e ESTILO; o
+  // movimento real é conferência renderizada.
+  // -------------------------------------------------------------------------
+  describe('indicador deslizante (D-1008-R14)', () => {
+    it('existe UM indicador, decorativo, com o sublinhado brasa por token', () => {
+      const { container } = render(<SubNav tabs={tabs} />);
+      const indicadores = container.querySelectorAll('[data-subnav-indicador]');
+      expect(indicadores.length).toBe(1);
+      const ind = indicadores[0] as HTMLElement;
+      expect(ind.getAttribute('aria-hidden')).toBe('true');
+      expect(ind.className).toContain('h-[var(--subnav-underline)]');
+      expect(ind.className).toContain('bg-[var(--border-brand)]');
+      expect(ind.className).toContain('pointer-events-none');
+    });
+
+    it('desliza pelos tokens de motion e honra motion-reduce', () => {
+      const { container } = render(<SubNav tabs={tabs} />);
+      const ind = container.querySelector('[data-subnav-indicador]') as HTMLElement;
+      expect(ind.className).toContain('transition-[transform,width]');
+      expect(ind.className).toContain('duration-[var(--motion-duration-normal)]');
+      expect(ind.className).toContain('ease-[var(--motion-easing-default)]');
+      expect(ind.className).toContain('motion-reduce:transition-none');
+    });
+
+    it('a aba ativa NÃO desenha mais sublinhado próprio (::after morreu com a decisão)', () => {
+      render(<SubNav tabs={tabs} />);
+      const ativa = screen.getByRole('button', { name: /Visão Geral/i });
+      expect(ativa.className).not.toContain('after:bg-[var(--border-brand)]');
+    });
+
+    it('sem aba ativa, não há indicador', () => {
+      const { container } = render(
+        <SubNav tabs={[{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]} />,
+      );
+      expect(container.querySelector('[data-subnav-indicador]')).toBeNull();
+    });
   });
 });

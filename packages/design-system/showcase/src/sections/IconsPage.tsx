@@ -1,17 +1,18 @@
 /**
- * Ícones — os 8 da navegação default (fonte: Sidebar.tsx do DS) e uma amostra
+ * Ícones — os da navegação default (fonte: Sidebar.tsx do DS) e uma amostra
  * da biblioteca Lucide no padrão do DS: 24px (--icon-size), traço 1.75
  * (--icon-stroke), currentColor.
+ *
+ * REDESIGN-V2 · item 3: a lista da nav era escrita à mão aqui e tinha derivado
+ * — anunciava 8 itens e citava "Financeiro" e "Analytics", removidos pela
+ * rodada IA-MENU. Agora ela é IMPORTADA de `DEFAULT_SIDEBAR_NAV_ICONS`. Não há
+ * mais lista para dessincronizar: o catálogo tem um dono só.
  */
 
-import { cn } from '@leela/design-system';
+import { cn, DEFAULT_SIDEBAR_NAV_ICONS } from '@leela/design-system';
 import {
   ArrowRight,
-  BarChart3,
-  Bell,
-  Briefcase,
   Calendar,
-  CalendarDays,
   Check,
   ChevronDown,
   ChevronRight,
@@ -21,7 +22,6 @@ import {
   Filter,
   Flame,
   Heart,
-  LayoutDashboard,
   Lock,
   Mail,
   MapPin,
@@ -30,32 +30,19 @@ import {
   Pencil,
   Plus,
   Search,
-  Settings,
   Share2,
   Star,
   Ticket,
   Trash2,
-  TrendingUp,
   Trophy,
   User,
   Users,
-  UsersRound,
   X,
   type LucideIcon,
 } from 'lucide-react';
 import { Section } from '../ui';
 
-// 8 ícones da nav default — nomes extraídos de DEFAULT_SIDEBAR_SECTIONS
-const NAV_ICONS: Array<{ icon: LucideIcon; name: string; item: string }> = [
-  { icon: LayoutDashboard, name: 'LayoutDashboard', item: 'Visão Geral' },
-  { icon: CalendarDays, name: 'CalendarDays', item: 'Eventos' },
-  { icon: UsersRound, name: 'UsersRound', item: 'Clubs' },
-  { icon: BarChart3, name: 'BarChart3', item: 'Financeiro' },
-  { icon: Bell, name: 'Bell', item: 'Comunicação' },
-  { icon: Briefcase, name: 'Briefcase', item: 'Marcas' },
-  { icon: TrendingUp, name: 'TrendingUp', item: 'Analytics' },
-  { icon: Settings, name: 'Settings', item: 'Configurações' },
-];
+// Ícones da nav default — DERIVADOS do catálogo do DS, nunca reescritos aqui.
 
 const LIBRARY_ICONS: Array<{ icon: LucideIcon; name: string }> = [
   { icon: Search, name: 'Search' },
@@ -118,11 +105,11 @@ export function IconsPage(): JSX.Element {
     <>
       <Section
         title="Navegação default"
-        description="Os 8 ícones de DEFAULT_SIDEBAR_SECTIONS, na ordem da Sidebar do painel Be Hero."
+        description={`Os ${DEFAULT_SIDEBAR_NAV_ICONS.length} ícones de DEFAULT_SIDEBAR_NAV_ICONS, na ordem da Sidebar do painel Be Hero.`}
       >
-        <div className="grid grid-cols-2 gap-[var(--spacing-3)] md:grid-cols-4 xl:grid-cols-8">
-          {NAV_ICONS.map((entry) => (
-            <IconTile key={entry.name} icon={entry.icon} name={entry.name} caption={entry.item} />
+        <div className="grid grid-cols-2 gap-[var(--spacing-3)] md:grid-cols-4 xl:grid-cols-6">
+          {DEFAULT_SIDEBAR_NAV_ICONS.map((entry) => (
+            <IconTile key={entry.id} icon={entry.Icon} name={entry.iconName} caption={entry.label} />
           ))}
         </div>
       </Section>

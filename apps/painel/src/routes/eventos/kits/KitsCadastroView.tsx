@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { Link } from 'react-router-dom';
-import { Badge, Button, EmptyState, KpiCard, Skeleton, Thumb } from '@leela/design-system';
+import { Badge, Button, Card, EmptyState, KpiCard, Skeleton, Thumb } from '@leela/design-system';
 import type { ItemKit, Kit } from '@leela/core';
 import { siglaDe } from '@/lib/sigla';
 import {
@@ -120,7 +120,11 @@ export function KitsCadastroView({
 
 function KitCard({ kit, slug }: { kit: Kit; slug: string }): JSX.Element {
   return (
-    <article className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-4)]">
+    // Card CANÔNICO do DS, não <article> cru com bg (D-1008-R11): sob o vidro
+    // ([data-glass="on"]) --surface-raised vira FILME translúcido que só lê
+    // como cartão com a receita completa (blur + borda + elevação) — e a
+    // receita mora no Card. role="article" preserva a semântica anterior.
+    <Card role="article" className="flex flex-col gap-[var(--spacing-3)] p-[var(--spacing-4)]">
       {/* Miniatura 1:1 da imagem do kit (RN-227 · RN-236) ANTES do nome: quem
           varre a grade reconhece o kit de vista, sem abrir para descobrir qual
           é. Decorativa de propósito (alt='') — o nome está ao lado e já é o
@@ -157,7 +161,7 @@ function KitCard({ kit, slug }: { kit: Kit; slug: string }): JSX.Element {
           <Link to={`/eventos/${slug}/kits/editar/${kit.id}`}>Editar</Link>
         </Button>
       </div>
-    </article>
+    </Card>
   );
 }
 
@@ -165,7 +169,8 @@ function ItemCard({ item, onEditar }: { item: ItemKit; onEditar?: () => void }):
   const tipo = itemTipoBadge(item.tamanhado);
   const origem = itemOrigemBadge(item.origem);
   return (
-    <article className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-4)]">
+    // Mesmo motivo do KitCard (D-1008-R11): Card canônico, nunca bg cru.
+    <Card role="article" className="flex flex-col gap-[var(--spacing-3)] p-[var(--spacing-4)]">
       <header className="flex items-start justify-between gap-[var(--spacing-2)]">
         <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
           {item.nome}
@@ -190,7 +195,7 @@ function ItemCard({ item, onEditar }: { item: ItemKit; onEditar?: () => void }):
         <p className="text-[length:var(--font-size-xs)] text-[var(--text-success)]">Logo exibido ao atleta</p>
       )}
       <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">{usadoEmTexto(item)}</p>
-    </article>
+    </Card>
   );
 }
 

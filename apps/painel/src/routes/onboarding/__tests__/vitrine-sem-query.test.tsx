@@ -120,7 +120,7 @@ const ROTAS_DA_VITRINE: readonly string[] = [
   '/eventos',
   '/clubes',
   '/crm',
-  '/marcas',
+  '/parcerias',
   '/plataforma',
   '/conta',
   '/conta/perfil-publico',
@@ -159,7 +159,7 @@ describe('vitrine · nenhuma query tenant-scoped sai do painel (RN-510)', () => 
   });
 
   it('enquanto o crachá é lido, a rota real NÃO monta (a janela que vazava)', () => {
-    // Sem este estado, `/crm` disparava `getOverview` e `/marcas` disparava
+    // Sem este estado, `/crm` disparava `getOverview` e `/parcerias` disparava
     // `listarMarcas` antes de o crachá voltar — as duas telas guardam o
     // `enabled` por `uid`/`eventoId`, nunca por `tenantId`.
     abrir('/crm');

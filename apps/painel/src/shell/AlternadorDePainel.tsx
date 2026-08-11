@@ -15,7 +15,7 @@
 //      leva a um 403 é pior que botão nenhum: ele promete e o produto nega.
 //      O `platform_admin` legado, que não tem tenant, não vê o alternador —
 //      não há painel de organizador para onde ir.
-//   2. ROTULA O DESTINO, não o estado. "Ir para o Painel Master" diz para onde
+//   2. ROTULA O DESTINO, não o estado. "Acessar painel master" diz para onde
 //      o clique leva. Um rótulo de estado ("Painel do Organizador") num
 //      controle clicável é a ambiguidade clássica do toggle: metade das
 //      pessoas lê como "você está aqui" e a outra metade como "clique para ir
@@ -42,16 +42,31 @@ export function estaNoPainelMaster(pathname: string): boolean {
   return pathname === ROTA_PLATAFORMA || pathname.startsWith(`${ROTA_PLATAFORMA}/`);
 }
 
-/** O nome do painel em que a conta está agora (rótulo de contexto do shell). */
+/**
+ * O nome do painel em que a conta está agora (rótulo de contexto do shell).
+ *
+ * UXW-FIX · BLQ-19: devolvia "Painel do Organizador" enquanto o alternador, a
+ * um clique de distância no MESMO rail, oferecia "Acessar painel profissional"
+ * — o mesmo painel com dois nomes visíveis ao mesmo tempo. A RN-468 nomeia
+ * "Painel Profissional", e é ela que manda. "Painel Master" fica do outro lado.
+ */
 export function nomeDoPainelAtual(pathname: string): string {
-  return estaNoPainelMaster(pathname) ? 'Painel Master' : 'Painel do Organizador';
+  return estaNoPainelMaster(pathname) ? 'Painel Master' : 'Painel Profissional';
 }
 
-/** Para onde o alternador leva, e como ele se chama lá. @pure */
+/**
+ * Para onde o alternador leva, e como ele se chama lá. @pure
+ *
+ * Rótulos NOVOS (D-1008-R6, na íntegra do dono: "o botão ir para o painel
+ * master e ir para o painel do organizador pode mudar para Acessar painel
+ * master e Acessar painel profissional"). "Profissional" é consistente com a
+ * RN-468 ("Painel Profissional"). A regra 2 do componente segue: o rótulo é
+ * o DESTINO, nunca o estado.
+ */
 export function travessia(pathname: string): { destino: string; rotulo: string } {
   return estaNoPainelMaster(pathname)
-    ? { destino: ROTA_VISAO_GERAL, rotulo: 'Ir para o Painel do Organizador' }
-    : { destino: ROTA_PLATAFORMA, rotulo: 'Ir para o Painel Master' };
+    ? { destino: ROTA_VISAO_GERAL, rotulo: 'Acessar painel profissional' }
+    : { destino: ROTA_PLATAFORMA, rotulo: 'Acessar painel master' };
 }
 
 export interface AlternadorDePainelProps {

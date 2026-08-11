@@ -1,20 +1,16 @@
 // =============================================================================
-// OcupacaoEventos — os quatro estados do bloco (§2.12) e a prova de que ele não
-// promete o que não mede.
+// OcupacaoEventos — a lista-régua do protótipo v3 (HIFI-REC) e a prova de que
+// ela não promete o que não mede.
 //
-// O caso que vale mais é o do evento sem capacidade: a tela precisa DIZER que
-// alguém ficou de fora. Um bloco que simplesmente omite eventos silenciosamente
-// ensina o organizador a confiar numa lista incompleta.
-//
-// A leitura sem enxergar cor vem da tabela equivalente que o BarChart do DS
-// renderiza em sr-only — por isso as asserções procuram linha de tabela, e não
-// pixel de barra (jsdom não faz layout).
+// O caso que vale mais segue o mesmo: evento sem capacidade fica de fora E a
+// tela DIZE que ficou. A leitura sem enxergar cor vem do `aria-label` da barra
+// (nome + x de y + %), que carrega o mesmo conteúdo que a cor pinta.
 // =============================================================================
 
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { OcupacaoEventos, alturaDoPlot } from '../OcupacaoEventos';
+import { LIMIAR_ATENCAO_PCT, OcupacaoEventos, pctDaBarra } from '../OcupacaoEventos';
 import type { OcupacaoDosEventos } from '../../_lib/ocupacao';
 
 const cheio: OcupacaoDosEventos = {
@@ -45,32 +41,49 @@ describe('OcupacaoEventos · estados', () => {
   });
 
   it('sem eventos → estado vazio que orienta, sem culpar o dado', () => {
-    render(
-      <OcupacaoEventos ocupacao={{ linhas: [], semCapacidade: 0 }} loading={false} />
-    );
+    render(<OcupacaoEventos ocupacao={{ linhas: [], semCapacidade: 0 }} loading={false} />);
     expect(screen.getByText('Sem ocupação para mostrar')).toBeInTheDocument();
     expect(screen.getByText(/Assim que um evento com vagas definidas/)).toBeInTheDocument();
   });
 
   it('todos sem capacidade → o vazio explica a CAUSA e o conserto', () => {
-    render(
-      <OcupacaoEventos ocupacao={{ linhas: [], semCapacidade: 3 }} loading={false} />
-    );
-    expect(screen.getByText(/Sem o total de vagas não existe taxa de ocupação/)).toBeInTheDocument();
+    render(<OcupacaoEventos ocupacao={{ linhas: [], semCapacidade: 3 }} loading={false} />);
+    expect(
+      screen.getByText(/Sem o total de vagas não existe taxa de ocupação/)
+    ).toBeInTheDocument();
   });
 });
 
-describe('OcupacaoEventos · com dado', () => {
-  it('cada evento vira uma linha legível com inscritos sobre vagas', () => {
+describe('OcupacaoEventos · com dado (anatomia do protótipo)', () => {
+  it('cada evento vira uma linha nome · barra · "x/y" com % no nome acessível', () => {
     render(<OcupacaoEventos ocupacao={cheio} loading={false} />);
-    const linha = screen.getByRole('rowheader', { name: 'Meia Maratona Floripa' }).closest('tr');
-    expect(linha).toHaveTextContent('453 / 500');
-    expect(linha).toHaveTextContent('91%');
+    expect(screen.getByText('Meia Maratona Floripa')).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Meia Maratona Floripa: 453 de 500 vagas (91%)' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('453')).toBeInTheDocument();
+    expect(screen.getByText('/500')).toBeInTheDocument();
   });
 
   it('não perde nenhum evento da derivação', () => {
     render(<OcupacaoEventos ocupacao={cheio} loading={false} />);
-    expect(screen.getByRole('rowheader', { name: 'Desafio Serra do Mar' })).toBeInTheDocument();
+    expect(screen.getByText('Desafio Serra do Mar')).toBeInTheDocument();
+  });
+
+  it('barra ≥ 85% acende o âmbar de atenção; abaixo fica no acento (protótipo)', () => {
+    render(<OcupacaoEventos ocupacao={cheio} loading={false} />);
+    const quente = screen
+      .getByRole('img', { name: /Meia Maratona Floripa/ })
+      .querySelector('i');
+    const fria = screen.getByRole('img', { name: /Desafio Serra do Mar/ }).querySelector('i');
+    expect(quente?.className).toContain('--feedback-warning');
+    expect(fria?.className).toContain('--chart-accent');
+  });
+
+  it('limiar e razão são puros e testáveis', () => {
+    expect(LIMIAR_ATENCAO_PCT).toBe(85);
+    expect(pctDaBarra(0.906)).toBe(91);
+    expect(pctDaBarra(0.52)).toBe(52);
   });
 
   it('conta em voz alta os eventos que ficaram de fora', () => {
@@ -87,20 +100,8 @@ describe('OcupacaoEventos · com dado', () => {
     ).toBeInTheDocument();
   });
 
-  it('o link do cabeçalho leva ao hub de eventos', async () => {
-    const onVerEventos = vi.fn();
-    render(<OcupacaoEventos ocupacao={cheio} loading={false} onVerEventos={onVerEventos} />);
-    await userEvent.click(screen.getByRole('button', { name: /Ver todos os eventos/ }));
-    expect(onVerEventos).toHaveBeenCalled();
-  });
-});
-
-describe('alturaDoPlot', () => {
-  it('cresce com o número de barras', () => {
-    expect(alturaDoPlot(5)).toBeGreaterThan(alturaDoPlot(2));
-  });
-
-  it('nunca colapsa a zero (lista vazia ainda tem caixa)', () => {
-    expect(alturaDoPlot(0)).toBeGreaterThan(0);
+  it('a seção nomeia os "últimos 5 eventos" (recorte real da derivação)', () => {
+    render(<OcupacaoEventos ocupacao={cheio} loading={false} />);
+    expect(screen.getByText('Ocupação dos últimos 5 eventos')).toBeInTheDocument();
   });
 });

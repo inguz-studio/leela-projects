@@ -9,9 +9,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   RANKING_MAX_DESAFIOS,
+  pilarComMaiorMedia,
   ranquearDesafios,
   resumirComunidade,
   resumirEntrada,
+  resumirModalidades,
   resumirPilares,
   resumirPonteComEventos,
   resumirSituacao,
@@ -174,7 +176,7 @@ describe('resumirSituacao · RN-102', () => {
       // Rótulo honesto (D-2): nenhuma Function grava `ultimaAtividadeEm` em
       // produção, então "inativo" aqui não é "sem atividade" — é "sem
       // registro". Ver ROTULO_SITUACAO para a prova completa.
-      { id: 'inativo', rotulo: 'Sem registro (30 dias+)', total: 1 },
+      { id: 'inativo', rotulo: 'Parados há 30 dias ou mais', total: 1 },
     ]);
   });
 
@@ -198,6 +200,36 @@ describe('resumirEntrada · a porta de cada membro', () => {
 
   it('sem membros devolve lista vazia (a tela mostra vazio, não três zeros)', () => {
     expect(resumirEntrada([])).toEqual([]);
+  });
+});
+
+describe('pilarComMaiorMedia · onde a comunidade pesa (item 12)', () => {
+  const linha = (pilar: 'fisico' | 'mental' | 'espiritual', atual: number) => ({
+    pilar,
+    rotulo: pilar,
+    atual,
+    meta: 100,
+  });
+
+  it('aponta o pilar de maior média por participante', () => {
+    const r = pilarComMaiorMedia([linha('fisico', 75), linha('mental', 30), linha('espiritual', 10)]);
+    expect(r?.pilar).toBe('fisico');
+  });
+
+  it('empate não elege líder — escolher no empate é o computador decidindo por fato', () => {
+    expect(
+      pilarComMaiorMedia([linha('fisico', 30), linha('mental', 30), linha('espiritual', 10)])
+    ).toBeNull();
+  });
+
+  it('tudo em zero não é "equilíbrio perfeito", é ausência de acúmulo', () => {
+    expect(
+      pilarComMaiorMedia([linha('fisico', 0), linha('mental', 0), linha('espiritual', 0)])
+    ).toBeNull();
+  });
+
+  it('sem linha nenhuma, não há frase para dizer', () => {
+    expect(pilarComMaiorMedia([])).toBeNull();
   });
 });
 
@@ -231,11 +263,18 @@ describe('ranquearDesafios · quem move a comunidade', () => {
     expect(r.map((d) => d.nome)).toEqual(['Abelha', 'Zebra']);
   });
 
-  it('corta no teto do ranking', () => {
+  it('devolve a lista inteira: o corte é recorte de card, não de derivação (item 9)', () => {
     const muitos = Array.from({ length: 12 }, (_, i) =>
       doClube(mkDesafio({ nome: `D${i}`, qtdParticipantes: i + 1 }))
     );
-    expect(ranquearDesafios(muitos)).toHaveLength(RANKING_MAX_DESAFIOS);
+    expect(ranquearDesafios(muitos)).toHaveLength(12);
+  });
+
+  it('ainda aceita um teto explícito para quem precisar dele', () => {
+    const muitos = Array.from({ length: 12 }, (_, i) =>
+      doClube(mkDesafio({ nome: `D${i}`, qtdParticipantes: i + 1 }))
+    );
+    expect(ranquearDesafios(muitos, RANKING_MAX_DESAFIOS)).toHaveLength(RANKING_MAX_DESAFIOS);
   });
 
   it('leva o club de origem junto (o fan-out perde o pai)', () => {
@@ -270,5 +309,55 @@ describe('resumirPonteComEventos · intenção declarada, não conversão', () =
 
   it('sem desafio em andamento devolve vazio (a tela diz isso em português)', () => {
     expect(resumirPonteComEventos([doClube(mkDesafio({ status: 'rascunho' }))])).toEqual([]);
+  });
+});
+
+describe('resumirModalidades · para onde a comunidade pende (estudo · bloco 4, versão honesta)', () => {
+  const clube = (modalidade: string, qtdMembrosAtivos: number) => ({
+    modalidade,
+    qtdMembrosAtivos,
+  });
+
+  it('soma os contadores fechados por Function por modalidade do club, do maior para o menor', () => {
+    const r = resumirModalidades([
+      clube('Corrida de rua', 60),
+      clube('Ciclismo', 44),
+      clube('Corrida de rua', 30),
+    ]);
+    expect(r).toEqual([
+      { id: 'Corrida de rua', rotulo: 'Corrida de rua', membros: 90 },
+      { id: 'Ciclismo', rotulo: 'Ciclismo', membros: 44 },
+    ]);
+  });
+
+  it('club na janela pré-Function (sem o agregado) não vira NaN (D-7, mesmo guarda do KPI)', () => {
+    const semAgregado = { modalidade: 'Trail' } as unknown as {
+      modalidade: string;
+      qtdMembrosAtivos: number;
+    };
+    const r = resumirModalidades([semAgregado, clube('Trail', 5)]);
+    expect(r).toEqual([{ id: 'Trail', rotulo: 'Trail', membros: 5 }]);
+  });
+
+  it('modalidade sem ninguém sai da lista — barra zerada não informa', () => {
+    expect(resumirModalidades([clube('Natação', 0), clube('Funcional', 3)])).toEqual([
+      { id: 'Funcional', rotulo: 'Funcional', membros: 3 },
+    ]);
+  });
+
+  it('empate desempata por nome — a ordem não pode oscilar entre renders', () => {
+    const r = resumirModalidades([clube('Trail', 7), clube('Caminhada', 7)]);
+    expect(r.map((m) => m.rotulo)).toEqual(['Caminhada', 'Trail']);
+  });
+
+  it('devolve a lista inteira: o corte "Top 5" é recorte de card, não de derivação (item 9)', () => {
+    const seis = ['Corrida de rua', 'Trail', 'Ciclismo', 'MTB', 'Caminhada', 'Triatlo'].map(
+      (m, i) => clube(m, 10 - i)
+    );
+    expect(resumirModalidades(seis)).toHaveLength(6);
+  });
+
+  it('sem club devolve vazio — a tela mostra o convite, não zeros', () => {
+    expect(resumirModalidades([])).toEqual([]);
   });
 });

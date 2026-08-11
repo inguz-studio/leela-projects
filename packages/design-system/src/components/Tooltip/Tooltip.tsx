@@ -15,7 +15,8 @@
  * As classes de ALIAS (bg-popover, text-popover-foreground, rounded-md, border)
  * ficam stock de propósito: são a prova de que a ponte shadcn→brasa funciona.
  *
- * AA: par popover-foreground/popover = text-primary/surface-overlay — coberto
+ * AA: par popover-foreground/popover = text-primary/surface-overlay-opaque
+ * (DELTA-UX/D-1008-R4: painel flutuante nunca pinta o filme do vidro) — coberto
  * pela matriz de contraste (contrast.test.ts) e re-provado no nível de alias
  * (shadcn-aliases.test.ts). Nenhum par novo introduzido.
  *

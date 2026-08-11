@@ -39,6 +39,17 @@ export interface AppShellProps {
   menuLabel?: string;
   /** Nome acessível do drawer de navegação (mobile). Default: 'Menu de navegação'. */
   drawerLabel?: string;
+  /**
+   * Rail flutuante (HIFI-REC): o wrapper desktop perde o `overflow-hidden`
+   * para o toggle do SidebarRail vazar a borda direita (o rail traz margem e
+   * altura próprias). Default false = anatomia clássica intocada.
+   */
+  sidebarFlutuante?: boolean;
+  /**
+   * Conteúdo do Drawer < lg quando diferente do rail desktop (ex.: a Sidebar
+   * clássica, que é a anatomia certa para off-canvas). Default: `sidebar`.
+   */
+  drawerSidebar?: React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,6 +62,8 @@ function AppShell({
   className,
   menuLabel = 'Abrir menu de navegação',
   drawerLabel = 'Menu de navegação',
+  sidebarFlutuante = false,
+  drawerSidebar,
 }: AppShellProps): JSX.Element {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -63,16 +76,24 @@ function AppShell({
       )}
     >
       {/* Rail fixo da Sidebar — só a partir de lg (desktop 1440 intocado).
-          Abaixo de lg some do fluxo: o <main> recupera a largura total. */}
-      <div className="hidden lg:block shrink-0 h-full overflow-hidden">
+          Abaixo de lg some do fluxo: o <main> recupera a largura total.
+          Rail FLUTUANTE (HIFI-REC): sem clip — o toggle do SidebarRail fica
+          meio para fora da borda direita, por desenho do protótipo. */}
+      <div
+        className={cn(
+          'hidden lg:block shrink-0 h-full',
+          !sidebarFlutuante && 'overflow-hidden',
+        )}
+      >
         {sidebar}
       </div>
 
-      {/* Drawer mobile (< lg): a MESMA Sidebar off-canvas. Fecha ao navegar
-          (clique borbulha do item para o wrapper) e nas vias do Radix. */}
+      {/* Drawer mobile (< lg): a MESMA Sidebar off-canvas (ou a variante que
+          o consumidor mandar — o rail flutuante não é anatomia de drawer).
+          Fecha ao navegar (clique borbulha) e nas vias do Radix. */}
       <Drawer open={menuOpen} onOpenChange={setMenuOpen} title={drawerLabel}>
         <div className="contents" onClick={() => setMenuOpen(false)}>
-          {sidebar}
+          {drawerSidebar ?? sidebar}
         </div>
       </Drawer>
 
@@ -108,7 +129,23 @@ function AppShell({
             'border-b border-b-[var(--border-subtle)]',
           )}
         >
-          <IconButton aria-label={menuLabel} onClick={() => setMenuOpen(true)}>
+          {/* REDESIGN-V2 · item 5. `aria-expanded` fecha uma pendência que três
+              lanes registraram e nenhuma pôde tocar: sem ele, o leitor de tela
+              anuncia "Abrir menu de navegação, botão" com o drawer JÁ aberto —
+              o nome acessível é imperativo e não carrega estado, então o
+              usuário de AT não tem como saber que o menu está aberto sem varrer
+              a página. É a única mudança desta lane no shell.
+
+              Sem `aria-controls` de propósito: o painel do Drawer não expõe id
+              estável (o `useId` interno nomeia só o título), e plumbar um id
+              para fora mexeria no Drawer — superfície que o incidente de tela
+              preta de 10/08 pede para não alargar sem necessidade.
+              `aria-expanded` sozinho é válido e entrega o estado. */}
+          <IconButton
+            aria-label={menuLabel}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+          >
             <Menu aria-hidden />
           </IconButton>
         </div>

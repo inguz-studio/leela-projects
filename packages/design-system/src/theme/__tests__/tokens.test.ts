@@ -3,6 +3,7 @@ import primitivesBrasa from '../../../tokens/primitives.brasa.json';
 import primitivesWine from '../../../tokens/primitives.wine.json';
 import primitivesDarkWine from '../../../tokens/primitives.dark-wine.json';
 import semantic from '../../../tokens/semantic.json';
+import semanticBrasaOverrides from '../../../tokens/semantic.brasa.json';
 import semanticWineOverrides from '../../../tokens/semantic.wine.json';
 import semanticDarkWineOverrides from '../../../tokens/semantic.dark-wine.json';
 import component from '../../../tokens/component.json';
@@ -23,13 +24,20 @@ const brasa = primitivesBrasa as TokenRecord;
 const wine = primitivesWine as TokenRecord;
 const darkWine = primitivesDarkWine as TokenRecord;
 const sem   = semantic as TokenRecord;
-// Semantic efetiva por tema = base + overrides (mesmo pipeline do gerador)
+// Semantic efetiva por tema = base + overrides (mesmo pipeline do gerador).
+// brasa entrou nesta lista em REDESIGN-V2 · item 2: até aqui o brasa era
+// validado contra a BASE crua, porque semantic.brasa.json nasceu (lane BLUR)
+// com um único valor literal e nenhuma {ref}. Era um buraco de gate real — um
+// `{accent.400}` no brasa (rampa que só existe em wine/dark-wine) passaria
+// limpo aqui e viraria `var(--accent-400)` inexistente no CSS e string crua no
+// RN. Validar o MERGE, e não a base, é o que fecha esse buraco para os três.
+const semBrasa = mergeTokens(sem, semanticBrasaOverrides as TokenRecord);
 const semWine = mergeTokens(sem, semanticWineOverrides as TokenRecord);
 const semDarkWine = mergeTokens(sem, semanticDarkWineOverrides as TokenRecord);
 const comp  = component as TokenRecord;
 
 const componentRefs = collectRefs(comp);
-const brasaRefs = [...collectRefs(sem), ...componentRefs];
+const brasaRefs = [...collectRefs(semBrasa), ...componentRefs];
 const wineRefs = [...collectRefs(semWine), ...componentRefs];
 const darkWineRefs = [...collectRefs(semDarkWine), ...componentRefs];
 
@@ -169,7 +177,10 @@ describe('generateCSS', () => {
 
 describe('generateRNTheme', () => {
   it('brasa RN theme has no unresolved {refs}', () => {
-    const tokens = generateRNTheme(brasa, sem, comp);
+    // semBrasa (merge), não `sem` (base): é o mesmo insumo que
+    // generate-tokens.ts usa. Com a base crua, uma {ref} quebrada vinda de
+    // semantic.brasa.json escapava desta rede — ver nota no topo do arquivo.
+    const tokens = generateRNTheme(brasa, semBrasa, comp);
     for (const [, value] of Object.entries(tokens)) {
       expect(value).not.toMatch(/^\{.+\}$/);
     }
@@ -244,6 +255,59 @@ describe('generateRNTheme', () => {
     const darkWineTokens = generateRNTheme(darkWine, semDarkWine, comp);
     expect(wineTokens['peso-display']).toBeUndefined();
     expect(darkWineTokens['peso-display']).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REDESIGN-V2 · item 2 — rampa contínua chart.accent/accent-2 nos TRÊS temas
+// ---------------------------------------------------------------------------
+
+describe('REDESIGN-V2 item 2: rampa de dataviz existe nos três temas', () => {
+  // A medição da lane TELA: --chart-accent e --chart-accent-2 só existiam em
+  // dark-wine.css. Como o painel do organizador roda em brasa, a rampa nunca
+  // aparecia em produção e os rankings caíam na paleta categórica. Este bloco
+  // é o gate que impede a regressão nos três temas de uma vez.
+  const casos = [
+    // FLIP-ACCENT: chart.accent brasa = #FF450C ({primary.500}) — decisão do dono 10/08 (antes #FF6520/{primary.400}).
+    { tema: 'brasa', prims: brasa, semantic: semBrasa, accent: '#FF450C', accent2: '#C8E84A' },
+    { tema: 'wine', prims: wine, semantic: semWine, accent: '#7A1520', accent2: '#7E9B12' },
+    { tema: 'dark-wine', prims: darkWine, semantic: semDarkWine, accent: '#C8E84A' },
+  ] as const;
+
+  for (const caso of casos) {
+    it(`${caso.tema}: chart-accent e chart-accent-2 existem e não são iguais`, () => {
+      const tokens = generateRNTheme(caso.prims as TokenRecord, caso.semantic, comp);
+      expect(tokens['chart-accent'], `${caso.tema} sem chart-accent`).toBeDefined();
+      expect(tokens['chart-accent-2'], `${caso.tema} sem chart-accent-2`).toBeDefined();
+      // Uma rampa precisa de dois extremos DISTINTOS para interpolar.
+      expect(tokens['chart-accent']).not.toBe(tokens['chart-accent-2']);
+    });
+
+    it(`${caso.tema}: os extremos da rampa resolvem a cor final (nada de {ref} cru)`, () => {
+      const tokens = generateRNTheme(caso.prims as TokenRecord, caso.semantic, comp);
+      expect(tokens['chart-accent']).toBe(caso.accent);
+      if ('accent2' in caso) expect(tokens['chart-accent-2']).toBe(caso.accent2);
+      expect(tokens['chart-accent-2']).not.toMatch(/^\{.+\}$/);
+    });
+  }
+
+  it('a rampa não invade a paleta categórica (cat-1..5 seguem intactos no brasa)', () => {
+    // "O que NÃO tocar": nenhum valor pré-existente de brasa muda além do item 2.
+    const tokens = generateRNTheme(brasa, semBrasa, comp);
+    const base = generateRNTheme(brasa, sem, comp);
+    for (const chave of ['chart-cat-1', 'chart-cat-2', 'chart-cat-3', 'chart-cat-4', 'chart-cat-5', 'chart-track', 'chart-grid']) {
+      expect(tokens[chave], `${chave} mudou`).toBe(base[chave]);
+    }
+  });
+
+  it('o CSS do brasa emite as duas pontas como var/valor, nunca como var(--accent-*) inexistente', () => {
+    // brasa não tem rampa `accent` em primitives — a ponta lime é literal de
+    // propósito. Se alguém a trocar por {accent.400}, este teste cai.
+    const css = generateCSS('brasa', brasa, semBrasa, comp, { rootFallback: true });
+    // FLIP-ACCENT: var(--primary-500) = #FF450C — decisão do dono 10/08.
+    expect(css).toContain('--chart-accent: var(--primary-500);');
+    expect(css).toContain('--chart-accent-2: #C8E84A;');
+    expect(css).not.toContain('var(--accent-400)');
   });
 });
 

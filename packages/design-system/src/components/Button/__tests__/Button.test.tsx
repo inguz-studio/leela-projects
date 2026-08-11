@@ -37,6 +37,48 @@ describe('Button', () => {
     expect(screen.getByRole('button')).toBeInTheDocument();
   });
 
+  // ── Forma CTA do protótipo v3 (L-021 · HIFI-REC-FIX) ────────────────────
+  // O CtaV3 do painel consome ESTA forma em vez de re-implementar <button>
+  // cru. ALTURA CANÔNICA (D-1008-R7): as alturas 48/44 do protótipo (pin
+  // l.281, tokens --v3-cta-h/-sm) foram REVERTIDAS por decisão do dono —
+  // "altura de botão é a do padrão canônico do Button". Os dois sizes pinam
+  // --btn-height-md; o resto da forma (largura cheia, raio, gap, tipografia)
+  // segue o protótipo.
+  it('size cta: largura cheia, altura canônica do Button (D-1008-R7), raio md e tipografia do protótipo', () => {
+    render(<Button size="cta">Gerenciar evento</Button>);
+    const btn = screen.getByRole('button', { name: 'Gerenciar evento' });
+    expect(btn).toHaveClass(
+      'h-[var(--btn-height-md)]',
+      'w-full',
+      'rounded-[var(--radius-md)]',
+      'gap-[var(--spacing-2-5)]',
+      'text-[length:var(--font-size-base-plus)]',
+      'font-[var(--font-weight-bold)]',
+    );
+  });
+
+  it('size cta-sm: altura canônica do Button (D-1008-R7), mesma forma de largura cheia', () => {
+    render(<Button size="cta-sm">Gerenciar clubs</Button>);
+    const btn = screen.getByRole('button', { name: 'Gerenciar clubs' });
+    expect(btn).toHaveClass(
+      'h-[var(--btn-height-md)]',
+      'w-full',
+      'rounded-[var(--radius-md)]',
+      'gap-[var(--spacing-2-5)]',
+      'text-[length:var(--font-size-base)]',
+    );
+  });
+
+  it('variant neutral: superfície alta com hover de ação secundária, por token', () => {
+    render(<Button variant="neutral">Neutro</Button>);
+    const btn = screen.getByRole('button', { name: 'Neutro' });
+    expect(btn).toHaveClass(
+      'bg-[var(--surface-high)]',
+      'text-[var(--text-primary)]',
+      'hover:bg-[var(--action-secondary-hover)]',
+    );
+  });
+
   // ── type="button" padrão ────────────────────────────────────────────────
   it('has type="button" by default to avoid accidental form submit', () => {
     render(<Button>OK</Button>);

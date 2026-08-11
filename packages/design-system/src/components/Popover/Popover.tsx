@@ -10,9 +10,10 @@
  * NÃO confundir com o antigo `Popover` do E01 (menu de ações), que virou
  * `DropdownMenu`. Este é o primitivo de âncora genérico.
  *
- * Painel: tokens shadcn→brasa (bg-popover = surface-overlay, text-popover-
- * foreground, border-border, shadow-elev-2, rounded-md), focus ring de 2px
- * herdado dos filhos. Animações animate-in stock.
+ * Painel: tokens shadcn→brasa (bg-popover = surface-overlay-opaque desde a
+ * DELTA-UX/D-1008-R4 — painel flutuante nunca pinta o filme translúcido do
+ * vidro; text-popover-foreground, border-border, shadow-elev-2, rounded-md),
+ * focus ring de 2px herdado dos filhos. Animações animate-in stock.
  */
 
 import * as React from 'react';

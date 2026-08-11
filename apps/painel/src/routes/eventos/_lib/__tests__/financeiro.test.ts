@@ -31,10 +31,13 @@ import {
 } from '@leela/core';
 import {
   breakdownFinanceiro,
+  contarPagantes,
   contextoDaCaixa,
   derivarRepasse,
   gerarCsvFinanceiro,
   SEM_VALOR,
+  STATUS_PAGANTE,
+  ticketMedioPorPagante,
 } from '../financeiro';
 import type { FinanceiroEvento } from '@leela/api-client';
 
@@ -463,5 +466,135 @@ describe('contextoDaCaixa · o que entra na conta de dinheiro', () => {
     const rep = derivarRepasse(mkFin(), null, ctx);
     expect(rep.disponivelDoEvento).toBe(7000);
     expect(rep.disponivel).toBe(4025);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-1008-R19 — o denominador de dinheiro é CLIENTE PAGANTE
+// ---------------------------------------------------------------------------
+
+/**
+ * O defeito que o dono nomeou, nas palavras dele: *"ticket médio é só por
+ * clientes que pagaram, e nao pagamentos emitidos(pendentes + pagos)"*. O
+ * `OverviewKpis` dividia `receitaConfirmada` por `qtdInscritos`, que soma
+ * pendente e cancelado ao denominador — quanto mais emissão parada, menor o
+ * ticket, e o número descia sozinho sem ninguém deixar de comprar.
+ *
+ * Os testes abaixo FALSIFICAM o denominador antigo: em cada cenário, a conta
+ * por inscritos dá um número diferente do esperado, e é esse número que a
+ * asserção proíbe. Um `porStatus` que não mexe no total não muda o ticket —
+ * essa é a propriedade que sobrevive a refactor.
+ */
+describe('D-1008-R19 · ticket médio conta cliente PAGANTE', () => {
+  it('ignora os não-pagos: pendente e cancelado ficam fora do denominador', () => {
+    // 100.000 de receita · 400 pagantes · 100 pendentes · 100 canceladas.
+    const fin = mkFin({
+      receitaBruta: 100_000,
+      inscritos: {
+        total: 600,
+        porStatus: { confirmado: 400, pendente: 100, cancelado: 100, estornado: 0 },
+        porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 600 },
+        porModalidade: { '10k': 600 },
+      },
+    });
+
+    expect(contarPagantes(fin)).toBe(400);
+    expect(ticketMedioPorPagante(fin)).toBe(250); // 100.000 ÷ 400
+
+    // O denominador ANTIGO (todo mundo que se inscreveu) daria 166,67 — um
+    // terço a menos por causa de gente que nunca pagou. É o número proibido.
+    expect(ticketMedioPorPagante(fin)).not.toBe(
+      Math.round((100_000 / fin.inscritos.total) * 100) / 100,
+    );
+  });
+
+  it('emissão pendente que chega depois não mexe no ticket de quem já pagou', () => {
+    const base = {
+      receitaBruta: 100_000,
+      porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 },
+      porModalidade: { '10k': 400 },
+    };
+    const semPendentes = mkFin({
+      receitaBruta: base.receitaBruta,
+      inscritos: {
+        total: 400,
+        porStatus: { confirmado: 400, pendente: 0, cancelado: 0, estornado: 0 },
+        porKit: base.porKit,
+        porModalidade: base.porModalidade,
+      },
+    });
+    // MESMOS pagantes, MESMA receita — só entraram 300 boletos em aberto.
+    const comPendentes = mkFin({
+      receitaBruta: base.receitaBruta,
+      inscritos: {
+        total: 700,
+        porStatus: { confirmado: 400, pendente: 300, cancelado: 0, estornado: 0 },
+        porKit: base.porKit,
+        porModalidade: base.porModalidade,
+      },
+    });
+
+    expect(ticketMedioPorPagante(semPendentes)).toBe(250);
+    expect(ticketMedioPorPagante(comPendentes)).toBe(250);
+    // A prova do defeito: pela conta antiga o ticket teria caído de 250 para
+    // ~142,86 sem uma única venda a menos.
+    expect(base.receitaBruta / comPendentes.inscritos.total).toBeLessThan(150);
+  });
+
+  it('estornado fica FORA do denominador — o dinheiro dele já saiu da receita', () => {
+    // 10 pagaram 250 (= 2.500); 2 estornaram e o face voltou (receita já
+    // líquida disso). Contar os 2 daria 208,33 e o ticket cairia a cada
+    // reembolso — a mesma classe de mentira que a R19 mata.
+    const fin = mkFin({
+      receitaBruta: 2_500,
+      inscritos: {
+        total: 12,
+        porStatus: { confirmado: 10, pendente: 0, cancelado: 0, estornado: 2 },
+        porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 12 },
+        porModalidade: { '5k': 12 },
+      },
+    });
+    expect(contarPagantes(fin)).toBe(10);
+    expect(ticketMedioPorPagante(fin)).toBe(250);
+  });
+
+  it('sem agregado, ou sem nenhum pagante, o ticket é indeterminado — nunca R$ 0,00', () => {
+    expect(ticketMedioPorPagante(null)).toBeNull();
+    expect(ticketMedioPorPagante(undefined)).toBeNull();
+    expect(contarPagantes(null)).toBeNull();
+
+    const soPendentes = mkFin({
+      receitaBruta: 0,
+      inscritos: {
+        total: 30,
+        porStatus: { confirmado: 0, pendente: 30, cancelado: 0, estornado: 0 },
+        porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 30 },
+        porModalidade: { '5k': 30 },
+      },
+    });
+    expect(ticketMedioPorPagante(soPendentes)).toBeNull();
+  });
+
+  it('contagem ausente no doc é indeterminada, não zero de conveniência', () => {
+    // `parseContagem` só grava as chaves presentes no documento: um agregado
+    // antigo pode chegar sem `confirmado`. Aqui "não sei" precisa continuar
+    // "não sei" até a tela — inventar 0 pagante viraria um ticket falso.
+    const semChave = mkFin({
+      receitaBruta: 9_000,
+      inscritos: {
+        total: 40,
+        porStatus: {} as FinanceiroEvento['inscritos']['porStatus'],
+        porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 40 },
+        porModalidade: { '5k': 40 },
+      },
+    });
+    expect(contarPagantes(semChave)).toBeNull();
+    expect(ticketMedioPorPagante(semChave)).toBeNull();
+  });
+
+  it('o denominador é o status pagante, não a constante de VAGA DE LOTE', () => {
+    // `STATUS_QUE_CONTAM_VENDA` (virarLote) = confirmado + estornado: conta
+    // lugar consumido no lote, não caixa. Dinheiro tem outra régua.
+    expect(STATUS_PAGANTE).toBe('confirmado');
   });
 });

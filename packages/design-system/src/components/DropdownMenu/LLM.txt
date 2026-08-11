@@ -16,12 +16,15 @@ Menu de ações flutuante ancorado a um trigger (padrão: ações por linha de T
 Não use para dicas de texto (Tooltip) nem para formulários flutuantes (Modal). Popover é apenas um alias @deprecated deste componente — em código novo use sempre DropdownMenu.
 
 ## Props válidas
-- actions: DropdownMenuAction[]   (obrigatório) — DropdownMenuAction = { id: string; label: string; onClick: () => void; destructive?: boolean; disabled?: boolean }
+- actions: DropdownMenuAction[]   (obrigatório) — DropdownMenuAction = { id: string; label: string; onClick: () => void; destructive?: boolean; disabled?: boolean; checked?: boolean; count?: number }
 - open: boolean   (obrigatório) — controlado pelo consumidor
 - onOpenChange: (open: boolean) => void   (obrigatório)
 - trigger: React.ReactElement   (obrigatório) — elemento único (ex.: <Button/>); recebe onClick/aria-haspopup/aria-expanded/aria-controls via Radix Slot
 - align: 'left' | 'right'   (default: 'right')
-- className: string   (default: undefined) — aplicada no wrapper do trigger, NÃO no painel do menu
+- side: 'bottom' | 'top'   (default: 'bottom') — borda vertical de ancoragem; 'top' abre ACIMA do trigger (caso: trigger colado na borda inferior do viewport, ex.: rodapé de perfil do SidebarRail)
+- menuLabel: string   (default: 'Ações') — nome acessível do menu (role="menu")
+- className: string   (default: undefined) — aplicada no PAINEL do menu (o popover em portal), NÃO no trigger
+- containerClassName: string   (default: undefined) — aplicada no wrapper de ancoragem do trigger (inline-flex); use p/ o trigger ocupar a largura do pai (ex.: w-full)
 
 ## Tokens consumidos (nenhum valor cru permitido)
 - --spacing-1 / --spacing-3
@@ -36,7 +39,7 @@ Aliases shadcn->brasa usados: bg-popover (= surface-overlay), text-popover-foreg
 ## Proibido (do/don't)
 DON'T: subcomponentes DropdownMenuTrigger/DropdownMenuContent/DropdownMenuItem do shadcn stock — NÃO existem; a API é declarativa via actions.
 DON'T: uso não controlado (sem open/onOpenChange) — não há defaultOpen.
-DON'T: align="center", side="top" — align só aceita left|right; o menu sempre abre abaixo do trigger.
+DON'T: align="center" — align só aceita left|right. Eixo vertical é side (bottom default; top só quando abrir para baixo sairia da tela).
 DON'T: hex, rgb, px, rem em style inline.
 DO: para "só um menu aberto por vez" em Table, guarde no pai um único id aberto; marque ações destrutivas com destructive: true.
 

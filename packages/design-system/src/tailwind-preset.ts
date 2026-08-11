@@ -56,7 +56,26 @@ const leelaPreset: Partial<Config> = {
     // por hambúrguer (alvo mobile real 390×844). Escolhido lg porque com o rail
     // de 240px um viewport <1024px deixa <784px de conteúdo — abaixo do
     // min-width 1280 do mockup, portanto fora da faixa de fidelidade desktop.
+    //
+    // `xs` (480px) entrou em REDESIGN-V2 · item 6 e é o ÚNICO acréscimo à
+    // escala: sm/md/lg/xl/2xl seguem nos mesmos valores, e `lg` segue sendo o
+    // colapso do shell. Ele existe porque a faixa 390–430 (iPhone real, medida
+    // em 390 e 430) quebra layouts que ficam aceitáveis em 480+:
+    //
+    //   • bloco de 4 KPIs em 2×2 — abaixo de 480 o rótulo corta, então vira
+    //     coluna única, e as divisórias verticais entre KPIs saem junto (sem
+    //     coluna vizinha elas não separam nada, viram risco solto);
+    //   • legenda de donut com 4 itens — "Crédito 7 a 12x" trunca em 2 colunas.
+    //
+    // Como o Tailwind é mobile-first, a leitura correta do par é: o estado
+    // ESTREITO é o default (1 coluna, sem divisória) e `xs:` é que RESTAURA o
+    // 2×2. Escrever `max-xs:` para o caso estreito inverte o sentido do sistema
+    // e some com o layout em quem não suporta a variante.
+    //
+    // Onde os grids ficam é território das TELAS (apps/painel), não do DS —
+    // este preset entrega o degrau; a Conversa 2 do REDESIGN-V2 o consome.
     screens: {
+      xs: '480px',
       sm: '640px',
       md: '768px',
       lg: '1024px',
