@@ -13,7 +13,6 @@
 // =============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Badge,
   Button,
@@ -37,6 +36,7 @@ import {
 import { REGUA_PONTO_E_VIRGULA } from '../../../lib/textosDeCampo';
 import { avaliarRepasse, textoInicialRepasse } from './_lib/repasseForm';
 import { ExtratoRepasses } from './_components/ExtratoRepasses';
+import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 
 function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -61,7 +61,6 @@ function mensagemErroRepasse(err: unknown): string {
 }
 
 export function InfluenciadoresPage(): JSX.Element {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [afiliados, setAfiliados] = useState<AfiliadoDoTenant[] | null>(null);
   const [erro, setErro] = useState<Error | null>(null);
@@ -232,12 +231,10 @@ export function InfluenciadoresPage(): JSX.Element {
       <PageHeader
         title="Influenciadores"
         subtitle="Conversões e comissão de clubes-influenciadores e pessoas físicas por evento"
-        actions={
-          <Button variant="secondary" onClick={() => navigate('/clubes')}>
-            Voltar para Clubes
-          </Button>
-        }
       />
+      {/* D-1008-R9: o menu secundário da área substitui o botão solto "Voltar
+          para Clubes" — a entrada "Clubes" do menu é o caminho de volta. */}
+      <ClubesAreaNav ativa="influenciadores" />
       <div className="flex flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)]">
         {afiliados === null && erro === null ? (
           <div role="status" aria-label="Carregando influenciadores" className="flex flex-col gap-[var(--spacing-4)]">

@@ -26,6 +26,7 @@ import {
   type MinhaAfiliacao,
 } from '@leela/api-client';
 import { ExtratoRepasses } from './_components/ExtratoRepasses';
+import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 
 function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -223,6 +224,8 @@ export function MinhasAfiliacoesPage(): JSX.Element {
         title="Minhas afiliações"
         subtitle="Seu negócio como divulgador — quanto você trouxe, quanto vai receber e qual link usar. Só o seu."
       />
+      {/* D-1008-R9: menu secundário canônico da área de clubs. */}
+      <ClubesAreaNav ativa="minhas-afiliacoes" />
       <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">
         {temAfiliacoes ? (
           <section

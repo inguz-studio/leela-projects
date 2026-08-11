@@ -5,6 +5,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { HubClubes } from './HubClubes';
+import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 import { useClubes } from '../_data/clubes';
 import { useTenantSession } from '../../../lib/session/tenantSession';
 
@@ -21,10 +22,8 @@ export function HubRoute(): JSX.Element {
       ownUserId={session.uid}
       onCriarClube={() => navigate('/clubes/novo')}
       onAbrirClube={(slug) => navigate(`/clubes/${slug}`)}
-      onAbrirAssessorias={() => navigate('/clubes/assessorias')}
-      onAbrirInfluenciadores={() => navigate('/clubes/influenciadores')}
-      onAbrirMinhasAfiliacoes={() => navigate('/clubes/minhas-afiliacoes')}
-      onAbrirEngajamento={() => navigate('/clubes/engajamento')}
+      // D-1008-R9: os acessos secundários da área agora são o menu canônico.
+      areaNav={<ClubesAreaNav ativa="clubes" />}
     />
   );
 }

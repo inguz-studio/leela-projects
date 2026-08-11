@@ -7,6 +7,7 @@
 // =============================================================================
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { MinhasAfiliacoesPage } from '../MinhasAfiliacoesPage';
 import type { MinhaAfiliacao } from '@leela/api-client';
@@ -46,10 +47,14 @@ function afiliacao(over: Partial<MinhaAfiliacao> = {}): MinhaAfiliacao {
 const writeText = vi.fn<(s: string) => Promise<void>>();
 
 function renderPage(): void {
+  // MemoryRouter: desde a D-1008-R9 a página monta o menu secundário da área
+  // (ClubesAreaNav → useNavigate) — harness de montagem, asserções intactas.
   render(
-    <ToastProvider>
-      <MinhasAfiliacoesPage />
-    </ToastProvider>,
+    <MemoryRouter initialEntries={['/clubes/minhas-afiliacoes']}>
+      <ToastProvider>
+        <MinhasAfiliacoesPage />
+      </ToastProvider>
+    </MemoryRouter>,
   );
 }
 

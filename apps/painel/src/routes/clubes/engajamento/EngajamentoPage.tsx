@@ -13,6 +13,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EngajamentoView } from './EngajamentoView';
+import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 import {
   TODOS_OS_CLUBS,
   clubesNoRecorte,
@@ -76,6 +77,7 @@ export function EngajamentoPage(): JSX.Element {
       error={error}
       semClubes={semClubes}
       onCriarClube={() => navigate('/clubes/novo')}
+      areaNav={<ClubesAreaNav ativa="engajamento" />}
     />
   );
 }

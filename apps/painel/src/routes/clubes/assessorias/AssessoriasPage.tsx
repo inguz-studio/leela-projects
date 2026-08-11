@@ -27,6 +27,7 @@ import { encerrarParceriaAssessoria } from '@leela/api-client';
 import type { ParceriaAssessoria } from '@leela/core';
 import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useParceriasAssessoria } from './_data/assessorias';
+import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 import {
   formatarDocumentoValor,
   statusParceriaBadge,
@@ -119,6 +120,9 @@ export function AssessoriasPage(): JSX.Element {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
+      {/* D-1008-R9: menu secundário canônico da área de clubs. O px próprio do
+          SubNav sai (px-0) porque esta página já carrega o padding do wrapper. */}
+      <ClubesAreaNav ativa="assessorias" className="px-0" />
       <header className="flex flex-wrap items-start justify-between gap-[var(--spacing-3)]">
         <div className="flex flex-col gap-[var(--spacing-1)]">
           <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">

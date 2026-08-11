@@ -5,7 +5,7 @@
 // erro no fail (§2.12). Popover exclusivo (C3): um único aberto por vez.
 // =============================================================================
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { KpiCard, Button, EmptyState, SearchInput, PageHeader, Skeleton } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
@@ -20,14 +20,13 @@ export interface HubClubesProps {
   ownUserId: string | null;
   onCriarClube: () => void;
   onAbrirClube: (slug: string) => void;
-  /** Abre a gestão de assessorias parceiras (E18). */
-  onAbrirAssessorias?: () => void;
-  /** Abre os influenciadores do tenant (R9-E · RN-319 — lado organizador). */
-  onAbrirInfluenciadores?: () => void;
-  /** Abre "minhas afiliações" (R9-E · RN-318/319 — lado clube/influenciador). */
-  onAbrirMinhasAfiliacoes?: () => void;
-  /** Abre a análise de engajamento da comunidade (REDESIGN-DS · lane TELA). */
-  onAbrirEngajamento?: () => void;
+  /**
+   * Menu secundário da área (D-1008-R9): os acessos Engajamento · Minhas
+   * afiliações · Influenciadores · Assessorias parceiras saíram de botões
+   * soltos no header e viraram a SubNav canônica (ClubesAreaNav, injetada
+   * pela rota — esta view segue presentational, sem Router).
+   */
+  areaNav?: ReactNode;
 }
 
 interface KpisGlobais {
@@ -69,11 +68,8 @@ export function HubClubes({
   error,
   ownUserId,
   onCriarClube,
-  onAbrirAssessorias,
-  onAbrirInfluenciadores,
-  onAbrirMinhasAfiliacoes,
-  onAbrirEngajamento,
   onAbrirClube,
+  areaNav,
 }: HubClubesProps): JSX.Element {
   const [busca, setBusca] = useState('');
   // C3 — popover exclusivo: um único card com popover aberto por vez.
@@ -104,27 +100,15 @@ export function HubClubes({
         title="Clubes"
         subtitle="Comunidades em torno dos seus eventos"
         actions={
-          <div className="flex items-center gap-[var(--spacing-2)]">
-            {/* Engajamento primeiro entre as secundárias: é a leitura de TODA a
-                lista abaixo, não mais um destino lateral. */}
-            <Button variant="secondary" onClick={() => onAbrirEngajamento?.()}>
-              Engajamento
-            </Button>
-            <Button variant="secondary" onClick={() => onAbrirMinhasAfiliacoes?.()}>
-              Minhas afiliações
-            </Button>
-            <Button variant="secondary" onClick={() => onAbrirInfluenciadores?.()}>
-              Influenciadores
-            </Button>
-            <Button variant="secondary" onClick={() => onAbrirAssessorias?.()}>
-              Assessorias parceiras
-            </Button>
-            <Button variant="primary" onClick={onCriarClube}>
-              + Criar clube
-            </Button>
-          </div>
+          // D-1008-R9: os 4 acessos secundários saíram daqui (viraram o menu
+          // secundário da área — `areaNav`); fica só a AÇÃO primária.
+          <Button variant="primary" onClick={onCriarClube}>
+            + Criar clube
+          </Button>
         }
       />
+
+      {areaNav}
 
       <div className="flex flex-col gap-[var(--spacing-8)] px-[var(--spacing-6)]">
         {loading ? (
