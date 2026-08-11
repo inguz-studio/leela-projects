@@ -238,6 +238,87 @@ describe('lotes — leitura e fronteira de venda (∑ só-Function)', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// RN-559 — a venda PAGA tem face mínima de R$ 10,00 (SERV-2 · 2026-08-11)
+// ---------------------------------------------------------------------------
+//
+// A FECHADURA. O core valida e a tela avisa, mas quem escreve no lote é o
+// cliente direto contra as Rules — se a regra não estiver aqui, ela não existe:
+// basta um `setDoc` fora do formulário para nascer uma venda de R$ 2,00.
+//
+// Os três números do aceite estão neste bloco: 9,99 recusa, 10,00 passa,
+// 0,00 passa. E o quarto caso é o que separa "regra" de "armadilha": o lote
+// LEGADO de face R$ 5,00 continua editável no que não é preço.
+
+describe('lotes — face mínima da venda paga (RN-559)', () => {
+  /** Lote legado (face abaixo do mínimo) semeado por Admin SDK, que bypassa Rules. */
+  const LOTE_LEGADO = 'rn559-legado-5reais';
+
+  beforeAll(async () => {
+    await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/lotes/${LOTE_LEGADO}`).set({
+      id: LOTE_LEGADO,
+      tenantId: CASTELO_ID,
+      modalidade: '5k',
+      ordem: 41,
+      nome: 'Lote legado barato',
+      inicioEm: jan(),
+      fimEm: fev(),
+      quantidadeLimite: 100,
+      preco: 5,
+      vendidos: 0,
+      criadoEm: FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+  });
+
+  it('create de face R$ 9,99 é NEGADO — é a venda paga barata que a regra mata', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(lote(db, 'rn559-999'), lotePayload({ preco: 9.99, ordem: 31 })));
+  });
+
+  it('create de face R$ 10,00 PASSA — a fronteira é inclusiva', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertSucceeds(setDoc(lote(db, 'rn559-1000'), lotePayload({ preco: 10, ordem: 32 })));
+  });
+
+  it('create de face R$ 0,00 PASSA — gratuidade não é venda', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertSucceeds(setDoc(lote(db, 'rn559-zero'), lotePayload({ preco: 0, ordem: 33 })));
+  });
+
+  it('o centavo acima de zero já é venda paga, e já é negado', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(lote(db, 'rn559-1centavo'), lotePayload({ preco: 0.01, ordem: 34 })));
+  });
+
+  it('R$ 5,00 e R$ 3,00 são negados — falsifica o mínimo trocado pelo piso do Serviço', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(lote(db, 'rn559-5reais'), lotePayload({ preco: 5, ordem: 35 })));
+    await assertFails(setDoc(lote(db, 'rn559-3reais'), lotePayload({ preco: 3, ordem: 36 })));
+  });
+
+  it('update que BAIXA o preço para dentro da faixa proibida é negado', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertSucceeds(setDoc(lote(db, 'rn559-baixar'), lotePayload({ preco: 80, ordem: 37 })));
+    await assertFails(updateDoc(lote(db, 'rn559-baixar'), { preco: 9.99 }));
+    await assertSucceeds(updateDoc(lote(db, 'rn559-baixar'), { preco: 10 }));
+  });
+
+  it('lote LEGADO de R$ 5,00 é editável no que NÃO é preço — a regra não retroage', async () => {
+    // Sem esta passagem a RN-559 trancaria o documento: a RN-200 congela o
+    // preço de um lote vendido, e exigir o mínimo em toda escrita deixaria o
+    // doc sem nenhuma escrita possível. Duas regras se trancando é defeito.
+    const db = dbAs(MARINA_UID, marina);
+    await assertSucceeds(updateDoc(lote(db, LOTE_LEGADO), { nome: 'Lote legado renomeado' }));
+  });
+
+  it('mas TOCAR o preço do legado exige o mínimo — barra na próxima edição do preço', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(updateDoc(lote(db, LOTE_LEGADO), { preco: 6 }));
+    await assertSucceeds(updateDoc(lote(db, LOTE_LEGADO), { preco: 12 }));
+  });
+});
+
 describe('cupons — leitura SÓ writer (catch-all NÃO vaza — lição A-T2)', () => {
   it('organizador (writer) lê; promoter (membro) e cross-tenant NÃO leem', async () => {
     await assertSucceeds(getDoc(cupom(dbAs(MARINA_UID, marina), 'HEROI10')));

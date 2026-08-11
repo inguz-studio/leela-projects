@@ -1096,6 +1096,41 @@ service cloud.firestore {
         }
 
         /**
+         * RN-559 — a venda PAGA tem face mínima de R$ 10,00 (decisão do dono
+         * em 2026-08-11, item SERV-2). Espelho de `faceMinimaVendaPagaValida`
+         * do core (`packages/core/src/eventos/faceMinimaVenda.ts`).
+         *
+         * Zero PASSA: inscrição gratuita continua permitida — a frase do dono
+         * fala de "venda", e gratuidade não é venda. O mínimo vale para
+         * qualquer face > 0. Com o piso do Serviço em R$ 3,00 (RN-491), a face
+         * de R$ 10,00 mantém o líquido do organizador em R$ 7,00 no pior caso,
+         * e a venda de R$ 2,00 — que deixaria o líquido NEGATIVO — deixa de
+         * existir na origem. A RN-494 (Serviço nunca ultrapassa a face) segue
+         * uma camada acima como cinto de segurança, não como substituto.
+         */
+        function faceMinimaVendaPagaOk() {
+          return request.resource.data.preco == 0
+            || request.resource.data.preco >= 10;
+        }
+
+        /**
+         * O `preco` está sendo ESCRITO neste update? (`diff` é por VALOR —
+         * re-enviar o mesmo preço não conta como toque).
+         *
+         * Por que o mínimo da RN-559 só morde quando o preço é tocado: o
+         * default do dono é "sem migração — a validação barra na PRÓXIMA
+         * edição, não retroage". Exigir o mínimo em TODA escrita travaria um
+         * lote legado VENDIDO de face R$ 5,00 para sempre, porque a RN-200
+         * congela o preço dele: o documento ficaria sem nenhuma escrita
+         * possível, nem o rename que a RN-200 explicitamente autoriza. Duas
+         * regras se trancando uma na outra é defeito, não rigor.
+         */
+        function precoTocadoNoUpdate() {
+          return request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['preco']);
+        }
+
+        /**
          * ADR-012 (re-review S300 #4-rules): o lote referencia uma modalidade
          * EXISTENTE de `evento.modalidades` — sem isto o cliente criaria um
          * degrau de preço para modalidade fantasma ('99k') que nenhum
@@ -1162,6 +1197,7 @@ service cloud.firestore {
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
                           && shapeLoteValido()
+                          && faceMinimaVendaPagaOk()
                           && modalidadeExisteNoEventoPai()
                           && vendidosZeradoNoCreate()
                           && viradaZeradaNoCreate())
@@ -1170,6 +1206,7 @@ service cloud.firestore {
                           && request.resource.data.tenantId == resource.data.tenantId
                           && tenantAtivo(resource.data.tenantId)
                           && shapeLoteValido()
+                          && (!precoTocadoNoUpdate() || faceMinimaVendaPagaOk())
                           && modalidadeExisteNoEventoPai()
                           && vendidosIntocado()
                           && viradaIntocada()
