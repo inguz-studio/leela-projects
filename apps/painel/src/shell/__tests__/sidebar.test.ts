@@ -157,12 +157,17 @@ describe('shellSidebarSections', () => {
   // cobrava, mas caía depois desta linha e nunca chegava a ser avaliada.
   // LEELA-ESTORNO-T4 (decisão 43-b): `estornos` entra DEPOIS de repasses — a
   // fila cross-tenant de estornos e a ação direta do admin, com ícone próprio.
-  it('/plataforma: nav própria com 9 itens, ícones e ativo por sub-rota', () => {
+  // ADMIN-VISAO onda 4 (S1614-T4): `eventos` e `clubs` entram COLADOS em
+  // tenants — as duas listas globais respondem "o que existe na plataforma",
+  // que é a pergunta vizinha de "quem opera nela".
+  it('/plataforma: nav própria com 11 itens, ícones e ativo por sub-rota', () => {
     const sections = shellSidebarSections('/plataforma/macro', vi.fn());
     expect(sections).toHaveLength(1);
     const items = sections[0]?.items ?? [];
     expect(items.map((i) => i.id)).toEqual([
       'tenants',
+      'eventos',
+      'clubs',
       'termos',
       'planos',
       // S1608-T2 · RN-413: os códigos de convite de organizador.
@@ -176,6 +181,37 @@ describe('shellSidebarSections', () => {
     expect(items.every((i) => i.icon)).toBe(true);
     expect(items.find((i) => i.id === 'macro')?.active).toBe(true);
     expect(items.find((i) => i.id === 'billing')?.badge).toBe('em breve');
+  });
+
+  it('/plataforma/eventos: Eventos ativo, com ícone e SPA — e só ele aceso', () => {
+    const navigate = vi.fn();
+    const items = shellSidebarSections('/plataforma/eventos', navigate)[0]?.items ?? [];
+    const eventos = items.find((i) => i.id === 'eventos');
+    expect(eventos?.active).toBe(true);
+    expect(eventos?.icon).toBeDefined();
+    expect(eventos?.href).toBe('/plataforma/eventos');
+    const evento = chamarOnClick(eventos?.onClick);
+    expect(evento.defaultPrevented).toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/plataforma/eventos', { replace: true });
+    // A lista global NÃO acende Tenants junto — são perguntas diferentes.
+    expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['eventos']);
+  });
+
+  it('/plataforma/clubs: Clubs ativo e navegável, sem acender Tenants', () => {
+    const navigate = vi.fn();
+    const items = shellSidebarSections('/plataforma/clubs', navigate)[0]?.items ?? [];
+    const clubs = items.find((i) => i.id === 'clubs');
+    expect(clubs?.active).toBe(true);
+    expect(clubs?.icon).toBeDefined();
+    expect(clubs?.href).toBe('/plataforma/clubs');
+    chamarOnClick(clubs?.onClick);
+    expect(navigate).toHaveBeenCalledWith('/plataforma/clubs', { replace: true });
+    expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['clubs']);
+  });
+
+  it('/plataforma/tenants segue acendendo Tenants, não as listas globais', () => {
+    const items = shellSidebarSections('/plataforma/tenants', vi.fn())[0]?.items ?? [];
+    expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['tenants']);
   });
 
   it('/plataforma/taxa: item Taxa ativo, com ícone e navegável (TAXAFLEX)', () => {

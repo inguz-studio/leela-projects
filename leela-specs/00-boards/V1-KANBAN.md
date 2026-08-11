@@ -173,11 +173,12 @@ tags:
         - [ ] S1613-T4 o faturamento da produtora, com a idade do número à mostra ⚔ — 🔎 **11/08**: o número que essa tela vai mostrar **passou a existir** (S1613-T3b); o que falta aqui é a idade dele à mostra e a decisão **V-1** (qual dos três dinheiros "faturamento" nomeia)
         - [ ] S1613-T5 repasses e saldo da produtora dentro da ficha
         - [ ] S1613-T6 o plano aplicado aparece, e a tela avisa quando o termo já não é ele
-    - [ ] **S1614 · Todos os eventos e todos os clubs do sistema** — duas listas, sem regra nova
+    - [x] **S1614 · Todos os eventos e todos os clubs do sistema** — duas listas, sem regra nova ✅ **FECHADA em 11/08** (onda 4 · lane ADMINVISAO-ONDA4)
         - [x] S1614-T1 leitura global paginada, com contagem que não mente · `e80ab899`
-        - [ ] S1614-T2 a lista de todos os eventos, com a produtora em cada linha
-        - [ ] S1614-T3 a lista de todos os clubs
-        - [ ] S1614-T4 os dois endereços entram no menu do painel master
+        - [x] S1614-T2 a lista de todos os eventos, com a produtora em cada linha · `efd3912d` — contador diz "mostrando" enquanto houver página e só vira total quando o cursor acaba; sem coluna de dinheiro (cifra do master é a ficha do tenant, onda 2)
+        - [x] S1614-T3 a lista de todos os clubs · `7e3ad3c2` — `pago_em_breve` aparece como "Pago (em breve)": nenhuma linha sugere receita de clube (RN-104)
+        - [x] S1614-T4 os dois endereços entram no menu do painel master · `e3546450` — colados em Tenants, com o mesmo glifo que o painel do produtor usa para evento e clube
+        - ⚠️ **Um recorte por vez** na lista de eventos: tenant OU status. O reader global da onda 1 não aceita os dois (decisão escrita lá), e peneirar status no cliente faria o contador mentir. A tela declara isso quando o tenant está escolhido
     - [ ] **S1615 · O diretório de contas no painel master** — uma tela, dois modos, e o mais fechado é o padrão
         - [ ] S1615-T1 a leitura do diretório, com os campos mínimos
         - [ ] S1615-T2 a tela de contas: fila de quem espera, diretório de quem existe
