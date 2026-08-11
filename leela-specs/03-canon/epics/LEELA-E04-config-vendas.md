@@ -2439,3 +2439,83 @@ entre modalidade, lote, kit e campanha. Três fatos que a apuração devolveu:
 
 **Também aberto, se ele quiser:** hoje o menu do evento é visão geral, inscritos, kits, lotes e
 configurações. Se modalidades ganharem lugar próprio, entram entre kits e lotes.
+
+## Delta a venda paga tem chão (SERV1-BUILD · 2026-08-11 · decisão do dono SERV-2)
+
+O dono fechou o **SERV-2** na manhã de 11/08, na íntegra: *"venda minima é de 10 reais"*. É a
+opção que o próprio item do painel chamava de "preço mínimo de venda acima do piso, que resolve na
+origem", e ela fecha uma conta que estava aberta desde 05/08: com o piso do Serviço ratificado em
+R$ 3,00 (RN-491) e face mínima de R$ 10,00, o líquido do organizador nunca é negativo — o mínimo
+é R$ 7,00 —, e a venda de R$ 2,00 que a RN-494 precisava aparar deixa de existir antes de nascer.
+Registro da decisão em `02-rodadas/2026-08-11-decisoes-dono/01-decisoes-dono.md`; delta desta lane
+em `02-rodadas/2026-08-11-decisoes-dono/02-rns-delta.md`.
+
+Uma regra nova (RN-559) e uma história nova (S324), **construída na mesma aterrissagem** — o
+escopo é uma constante, um validador puro e três pontos de aplicação, e segurá-la em backlog
+custaria mais do que fazê-la.
+
+### RN-559 (nova, dona · 2026-08-11) · a venda PAGA tem face mínima de R$ 10,00
+
+Um lote com `preco` entre **R$ 0,01 e R$ 9,99 não existe**. A validação vive na **origem** — a
+criação e a edição de preço de lote —, e não no checkout: barrar a venda barata na hora da compra
+puniria o comprador por uma configuração do organizador, e o organizador só descobriria o
+problema quando alguém tentasse comprar. **R$ 0,00 continua permitido**: a frase do dono fala de
+"venda", e gratuidade não é venda — o mínimo vale para qualquer face maior que zero (default do
+maestro, registrado e **vetável**; virar o gratuito proibido é uma linha).
+
+A regra mora em **três camadas**, e nenhuma delas é decorativa. O enunciado e o número vivem uma
+vez só, no core (`packages/core/src/eventos/faceMinimaVenda.ts` — `FACE_MINIMA_VENDA_PAGA_REAIS`,
+`faceMinimaVendaPagaValida`, `validarFaceMinimaVendaPaga`). A **fechadura** é a Security Rule
+(`firestore.rules`, `faceMinimaVendaPagaOk()` no `match /lotes`), porque o lote é escrita DIRETA
+do cliente: sem a Rule, um `setDoc` fora do formulário faria nascer a venda de R$ 2,00. O **guard
+de Function** (`assertFaceMinimaVendaPaga`) fecha a porta do Admin SDK, que bypassa Rules por
+construção. E a **tela** (`validarFormLote`) recusa antes de enviar, para o organizador descobrir
+no campo de preço e não num toast de servidor.
+
+**A recusa é NOMEADA, não genérica.** O motivo distingue `face_abaixo_da_minima` de
+`face_nao_e_numero_valido`, que têm conserto diferente — preço barato demais e número inválido não
+são o mesmo problema. O texto que o organizador lê é *"A venda paga mínima é R$ 10,00. Para não
+cobrar nada, deixe R$ 0,00 — a inscrição gratuita continua permitida."*
+
+**A RN-494 PERMANECE.** O clamp "o Serviço nunca ultrapassa a face" continua uma camada acima como
+defesa em profundidade. A RN-559 resolve na origem e a RN-494 segue sendo o cinto de segurança que
+pega o que escapar por dado legado ou por caminho ainda não previsto — ela deixa de ser a única
+resposta, não deixa de existir.
+
+**Sem migração, e a fronteira do "sem migração".** Nenhum lote de produção nasceu na faixa
+proibida (a purga de 10/08 deixou um evento, face 10), então a regra nasce sem retroagir. Por isso
+ela **não** entra em `parseLote` nem em `loteShapeValido`, que são leitura e shape: um documento
+legado com face de R$ 5,00 tem de continuar legível. E, no update, o mínimo só morde quando o
+`preco` entra no diff — **decisão de desenho registrada**: exigir o mínimo em toda escrita
+trancaria um lote legado VENDIDO de face R$ 5,00 para sempre, porque a RN-200 congela o preço
+dele e nem o rename que ela autoriza passaria. Duas regras se trancando uma na outra é defeito,
+não rigor. Quem tocar o preço de um legado paga o mínimo na hora; quem só renomear, não.
+
+**Fronteira declarada:** `percursos[].preco` (o preço legado, consumido apenas por modalidade SEM
+lotes) **não recebe tarefa**, porque não é superfície editável — `EventoForm.tsx` cria todo
+percurso com `preco: 0` e o próprio arquivo registra que "preços/lotes ficam na aba Lotes".
+Nenhuma tela do painel edita esse campo. Se algum dia editar, a RN-559 vale lá também.
+
+**Falsificação:** um lote de face R$ 9,99 é recusado na tela, na Rule e no guard; R$ 10,00 e
+R$ 0,00 passam nos três; a recusa de R$ 9,99 carrega o motivo nomeado e não uma negativa genérica;
+e trocar o número no core sem trocá-lo na Rule quebra o teste de espelho.
+
+**Condição de reabertura:** mudança do valor mínimo pelo dono.
+
+### História nova · S324
+
+**S324 · a venda paga tem chão** — 4 tarefas, todas construídas nesta aterrissagem.
+
+| Tarefa | O que faz | Estado |
+|---|---|---|
+| `S324-T1` | a constante e o validador puro com recusa nomeada, no core | ✅ `1621414a` |
+| `S324-T2` | a fechadura na Rule do lote, no create e no update que toca o preço | ✅ `4d674ce2` |
+| `S324-T3` | o guard de Function, que o Admin SDK não contorna, com recusa nomeada | ✅ `4d674ce2` |
+| `S324-T4` | a recusa na tela, no campo de preço, antes de enviar | ✅ (esta lane) |
+
+**Limite declarado desta entrega:** a suíte de ataque às Rules (9,99 recusa · 10,00 passa · 0,00
+passa · legado renomeável) está **escrita** em `functions/src/__tests__/vendasRules.integration.test.ts`
+e **não pôde ser executada** nesta máquina: o `firebase-tools` 15 exige JDK 21 ou acima, e o
+ambiente tem o 17. O que roda em qualquer máquina, e roda verde, é o teste de espelho que amarra o
+número da Rule ao número do core. **Nada foi para o ar** — a RN-559 entra no próximo pacote de
+deploy.
