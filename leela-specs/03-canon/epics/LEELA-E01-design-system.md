@@ -570,7 +570,7 @@ teria produzido um conserto que não conserta.
 | S005-T2 · o inventário das telas que ainda usam superfície crua | ✅ | `02-rodadas/2026-08-11-roadmap-componentes/02-inventario-componentes.md` — 223 divergências e 106 instâncias de layout sem cânone, com arquivo e linha; a medição **derrubou** o número que esta linha carregava (ver delta abaixo) |
 | S005-T3 · o mapa padrão para componente canônico, com o que falta proposto | ✅ | `03-canon/canone-de-componentes.md`, promovido a canônico; as quatro lacunas viraram a decisão CANONE-1 no painel do dono |
 | S005-T4 · as ondas de revisão, cada uma com o número de passos até o trabalho antes e depois | ✅ | `02-rodadas/2026-08-11-roadmap-componentes/04-ondas-roadmap.md` — seis ondas por JTBD, com os passos medidos em seis telas |
-| S005-T5 · a trava que reprova controle cru fora do design system | 📋 | spec pronta em `02-rodadas/2026-08-11-roadmap-componentes/05-gate-leela-canon.md`; o código é o primeiro item da Onda 0 |
+| S005-T5 · a trava que reprova controle cru fora do design system | ✅ | `2ceb9fd4` — `packages/design-system/lint/leela-canon-plugin.mjs` (duas regras, 17 casos de `RuleTester`) + `scripts/gate-canon.mjs` com `gate-canon.baseline.json` versionado e catraca; `pnpm gate:canon`. Baseline inicial e as três decisões de implementação em `.nirvana/handoffs/leela-canon-onda0-20260811.md` |
 
 **Por que uma história e não uma rodada solta:** o dono já disse que respeitar componente é
 critério de aceite de interface, e a mesma família de defeito apareceu três vezes em duas
@@ -664,3 +664,45 @@ sintático, script com baseline versionado para o agregado ambíguo. A regra nas
 **Onde vive:** `03-canon/canone-de-componentes.md` (a fonte), `04-engenharia/governanca-design.md`
 §8 (a regra em prosa), `04-engenharia/definition-of-done.md` (DoD de Tela ganha a linha geral de
 procedência, além da linha de seleção que já existe), e todo brief de UI a partir de agora.
+
+## Delta a Onda 0 paga a fundação, e o gate encontra o que a medição não tinha (2026-08-11 · lane `canon-onda-0`)
+
+A Parte A da Onda 0 fecha inteira. Quatro commits de código, um de documento, nenhum deploy.
+
+| Item | Prova |
+|---|---|
+| `ConfirmModal` compõe `Textarea` e `Checkbox` canônicos | `e173b63a` — a violação mais grave do inventário §3: o DS duplicava o próprio motor, e as ~26 telas consumidoras herdavam estados fora do AA por estado. API pública intacta; quatro testes provam a composição por **identidade de assinatura de classe** (reinlinar o engine quebra a suíte) |
+| As dez lacunas de catálogo ganham story | `b63e968e` — **50 de 50 com story**; onze arquivos (`charts` entra por dois) |
+| `Command` ganha teste | `37751b4b` — **50 de 50 com teste**; doze casos sobre o contrato do WAI-APG |
+| Gate `leela-canon` vira código (S005-T5) | `2ceb9fd4` — duas regras ESLint + `scripts/gate-canon.mjs` com baseline versionado e catraca |
+| Cânone ganha as três linhas que faltavam | `3029022d` — `CardFooter`, `SidebarBrand`, `SidebarFooter`, reprovados pela camada A do gate no primeiro dia |
+
+**Zero controle cru dentro do DS.** Era 2 (inventário §8); é 0.
+
+**Baseline inicial da catraca:** `superficie-crua` 107 painel / 27 landing · `botao-cru-estilizado`
+6 / 5 · `receita-de-grid` 23 / 9 · `padrao-orfao` 0 / 0 · regra 1 = **4** · regra 2 = **2**. As 23
+receitas de grid do painel batem com as 23 assinaturas distintas que o inventário §7.1 contou por
+leitura dirigida — duas medições independentes no mesmo número.
+
+**O que o gate achou que a varredura não tinha.** Duas re-implementações **batizadas**: `Painel` (=
+`Card`) em `clubes/engajamento/EngajamentoView.tsx:119` e `Vazio` (= `EmptyState`) em
+`eventos/kits/DistribuicaoView.tsx:110`. A medição contou superfície reconstruída em
+`<div>`/`<article>` e não procurou declaração com nome de canônico — é o segundo mecanismo da L-021,
+e o mais caro, porque a duplicata batizada é a que a próxima pessoa importa achando que importou o
+cânone. Distribuídas às Ondas 4 e 2.
+
+**Correção de leitura: F4 e F5 já estavam pagos antes da medição.** Saíram em `55ea0d42`
+(`DELTA-UX-T4`), ancestral de `b0f979e5`, com teste pinando os dois no `SidebarRail`. A fila do
+handoff `leela-redesign-hifi-rec-FIX.md` foi copiada para a onda sem reconferir o código — o mesmo
+modo de falha da entrada do BarChart, corrigida pelo maestro em `25da1ad8`. Só **F6** segue aberto,
+na Onda 5. Regra de processo que fica: item herdado de handoff se reconfere no código antes de virar
+linha de onda.
+
+**A régua que a §9 da spec não tinha.** A spec manda o gate nascer `warn` para não barrar ninguém, e
+`warn` não faz isso neste repositório: `--max-warnings 0` é o contrato do CI, e warning barra igual
+a erro. O instrumento do rollout virou a lista de dívida herdada no `eslint.config.mjs`, com o
+arquivo e a onda que o paga, e a camada A provando que cada entrada ainda é verdade — entrada morta
+reprova. O número real, medido sem as listas, vive no baseline versionado.
+
+Detalhe completo, com as falsificações feitas e as três pendências nomeadas, em
+`.nirvana/handoffs/leela-canon-onda0-20260811.md`.
