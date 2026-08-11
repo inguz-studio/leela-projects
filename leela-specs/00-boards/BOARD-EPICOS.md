@@ -22,14 +22,24 @@ decisões da leva 3, 4 e 5 (D-1008-R4 a R19) estão em
 
 | Épico | História nova | O que ela resolve | Estado |
 |---|---|---|---|
-| [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | 🔄 construído, fora do ar |
-| [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | 📋 dispara depois do merge |
-| [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | 🔄 lane em voo |
-| [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | 🔄 construído, fora do ar |
+| [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | 🔄 construído, mergeado, aguardando deploy |
+| [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | 📋 destravada — o merge saiu em 11/08, o inventário mede a main |
+| [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | 🔄 construído, mergeado, aguardando deploy |
+| [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | 🔄 construído, mergeado, aguardando deploy |
 | [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 |
-| [[LEELA-E10-marcas]] | **S813** | Marcas vira Parcerias e reúne marcas, assessorias e afiliações | 🔄 lane em voo |
+| [[LEELA-E10-marcas]] | **S813** | Marcas vira Parcerias e reúne marcas, assessorias e afiliações | 🔄 construído, mergeado, aguardando deploy |
 | [[LEELA-E11-analytics]] | **S825** | a forma de pagamento vira número na análise e no engajamento | 📋 |
 | [[LEELA-E19-crm]] | **S1904** | o membro do club e o comprador viram a mesma pessoa | 📋 |
+
+**+2026-08-11: a branch `redesign-engajamento-v2` entrou na main.** Commit de merge `b51cdcd9`,
+`--no-ff`, intervalo `e64b8c47..f815c5ae` — 26 commits, 10 lanes, zero conflito (`merge-tree`
+re-rodado antes: interseção de arquivos vazia). O portão foi a REV-FINAL antagonista, que liberou
+com ressalvas e teve a única ressalva de código paga pela lane R3-MICROFIX. Gates pós-merge rodados
+na main mergeada: painel **235 arquivos · 2583 testes · 0 falhas**, DS **75 arquivos · 1809 testes ·
+0 falhas**, `tsc` 0 nos dois, `eslint --max-warnings 0` 0 nos dois, `generate-tokens` idêntico em
+duas rodadas e gate de frescor verde nos três apps. **Nada disso está no ar** — onde este bloco
+disser "construído, mergeado, aguardando deploy", o que falta é o deploy com conferência visual.
+Handoff `.nirvana/handoffs/leela-redesign-merge.md`.
 
 O resto da rodada caiu em história que já existia: a tabela de lotes em três colunas virou tarefa
 da **S315**, a lista de modalidades alcançável a partir de lotes é a **S316** inteira, e a métrica

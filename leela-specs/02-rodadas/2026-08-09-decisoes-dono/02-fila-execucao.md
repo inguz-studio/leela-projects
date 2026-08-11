@@ -86,7 +86,7 @@ tarefa que importa agora.**
 dupla continuam valendo para ela, se ela sobreviver ao gate. Nada nesta cadeia pega carona em deploy
 pronto.
 
-### CLUBES-CTA · a aba deixa de só informar que está vazia
+### CLUBES-CTA · a aba deixa de só informar que está vazia — ✅ destravado, fila (11/08)
 
 **Território.** `apps/landing` (`PainelClubes.tsx`) e `functions/src/cliente/meusClubes.ts`.
 **No ar hoje:** sim, a aba subiu no deploy de 05/08 e a tela vazia já é o que a pessoa vê.
@@ -100,9 +100,11 @@ destino é o que a spec do card decidir entre as duas leituras registradas no bl
 convite escrito); a tela continua sem prometer um mecanismo de entrada que não existe; nenhuma Rule
 é afrouxada e nenhuma porta nova é aberta.
 
-**Ordem.** Tarefa pequena sobre tela servida. Sonnet, sem review antagonista.
+**Ordem.** Tarefa pequena sobre tela servida. Sonnet, sem review antagonista. ✅ **Destravado — fila
+(11/08):** o merge do redesign saiu (`b51cdcd9`) e a retenção caiu. O território é `apps/landing` e
+`functions/`, que o merge não encostou, então nada aqui precisa ser re-endereçado.
 
-### SERV-3-RENOME · "Serviço" para fora, "Serviço da plataforma" para dentro
+### SERV-3-RENOME · "Serviço" para fora, "Serviço da plataforma" para dentro — ✅ destravado, fila (11/08)
 
 **Território.** 34 strings em três aplicações; RN-495 em [[LEELA-E12-landing]]; tarefas 4a, 4b e 4c
 de `02-rodadas/2026-08-05-metricas-e-servico/04-fila-codigo.md`. **No ar hoje:** sim, o comprador já
@@ -117,7 +119,11 @@ super-admin distingue esta cobrança das demais sem ambiguidade; as 34 ocorrênc
 vez, porque trocá-las duas vezes é o desperdício que a pergunta ao dono evitou; nenhum identificador
 técnico, campo de documento ou nome de variável muda junto, pela mesma disciplina da QUALIF-3.
 
-**Ordem.** Sai da retenção com esta rodada. Sonnet.
+**Ordem.** Sai da retenção com esta rodada. Sonnet. ✅ **Destravado — fila (11/08):** o merge do
+redesign saiu (`b51cdcd9`). ⚠️ Antes de varrer as 34 strings, refazer o inventário na main mergeada:
+as telas de marcas, assessorias e afiliações mudaram de endereço (`routes/marcas/*` e as entradas de
+clubs foram para `routes/parcerias/*`), então a contagem de 09/08 aponta para caminhos que não
+existem mais.
 
 ### JUROS-ALINHAMENTO · **CANCELADO pela correção do dono de 09/08** — era exemplo, não decisão
 
@@ -199,12 +205,14 @@ nascer, e o card diz explicitamente se as substitui ou convive com elas.
 **Ordem.** Build pequeno, gate de reconciliação na frente. Sonnet, com a reconciliação em opus se a
 resposta for "dois campos".
 
-### PATROCINADOR-TOGGLE · apagar marca vira desativar marca
+### PATROCINADOR-TOGGLE · apagar marca vira desativar marca — ✅ destravado, fila (11/08)
 
-**Território.** `apps/painel/src/routes/marcas/MarcasPage.tsx` (botão Excluir em `:188-189`, chamada
-em `:133`) e `MarcaFormModal.tsx`; `packages/api-client` no lugar de `excluirMarcaDoProfissional`;
-RN-171 em [[LEELA-E10-marcas]]. **No ar hoje:** sim, a tela de marcas funciona e o botão Excluir
-destrói o registro.
+**Território.** `apps/painel/src/routes/parcerias/marcas/MarcasPage.tsx` (botão Excluir em
+`:188-189`, chamada em `:133`) e `MarcaFormModal.tsx`; `packages/api-client` no lugar de
+`excluirMarcaDoProfissional`; RN-171 em [[LEELA-E10-marcas]]. **No ar hoje:** sim, a tela de marcas
+funciona e o botão Excluir destrói o registro. ⚠️ **O caminho mudou:** o merge de 11/08 (`b51cdcd9`)
+moveu a tela de `routes/marcas/` para `routes/parcerias/marcas/` — rename puro, conteúdo intacto, as
+duas linhas citadas continuam válidas (conferidas na main mergeada).
 
 **Metade já existe.** `StatusMarca = 'ativa' | 'inativa'` está no modelo
 (`packages/core/src/brands/marca.ts:31`), validado no core (`:143`, `:165`) e aceito pela Rule, que já
