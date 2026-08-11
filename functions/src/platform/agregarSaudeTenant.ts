@@ -99,6 +99,14 @@ function asMoney(value: unknown): number {
  * inteiro. Query equality-only em `tenantId` — índice single-field automático,
  * o mesmo que `lerInputsSaldoRepasse` já usa (nenhum índice novo).
  *
+ * SNAPSHOT-CONSISTENTE: leitura do tenant, varredura dos eventos e escrita
+ * rodam numa ÚNICA transação. Sem isso, dois writes de eventos do MESMO tenant
+ * em corrida podiam persistir o agregado do snapshot MAIS VELHO — e ele
+ * ficaria de pé até o próximo write do tenant. É exatamente o defeito que a
+ * review Onda1 #07 achou em `agregarFinanceiro` (as counts fora de transação
+ * misturando estados de writes concorrentes); a casa já pagou por essa lição
+ * uma vez, e este agregado nasce do lado certo dela.
+ *
  * @returns null quando o tenant não existe (evento com `tenantId` órfão —
  *          nada a manter; nunca cria doc de tenant por efeito colateral).
  */
@@ -109,46 +117,49 @@ export async function recomputarSaudeTenant(
   if (tenantId.length === 0) return null;
 
   const tenantRef = db.collection('tenants').doc(tenantId);
-  const [tenantSnap, eventosSnap] = await Promise.all([
-    tenantRef.get(),
-    db
-      .collection('eventos')
-      .where('tenantId', '==', tenantId)
-      .select('receitaConfirmada', 'status')
-      .get(),
-  ]);
 
-  if (!tenantSnap.exists) return null;
+  return db.runTransaction(async (tx) => {
+    // Leituras ANTES de qualquer escrita (exigência da transação).
+    const tenantSnap = await tx.get(tenantRef);
+    if (!tenantSnap.exists) return null;
 
-  let gmvAcumulado = 0;
-  let eventosAtivos = 0;
-  for (const doc of eventosSnap.docs) {
-    // Soma em centavos-equivalentes via roundMoney a cada passo: a mesma
-    // disciplina cent-exata de `receitaConfirmada` (nunca deixa o erro de
-    // ponto flutuante acumular ao longo da varredura).
-    gmvAcumulado = roundMoney(gmvAcumulado + asMoney(doc.get('receitaConfirmada')));
-    const status = doc.get('status') as unknown;
-    if (isStatusEvento(status) && eventoPublico(status)) eventosAtivos += 1;
-  }
+    const eventosSnap = await tx.get(
+      db
+        .collection('eventos')
+        .where('tenantId', '==', tenantId)
+        .select('receitaConfirmada', 'status')
+    );
 
-  const escreveu =
-    tenantSnap.get('gmvAcumulado') !== gmvAcumulado ||
-    tenantSnap.get('eventosAtivos') !== eventosAtivos;
+    let gmvAcumulado = 0;
+    let eventosAtivos = 0;
+    for (const doc of eventosSnap.docs) {
+      // roundMoney a cada passo: a mesma disciplina cent-exata de
+      // `receitaConfirmada` (o erro de ponto flutuante não acumula ao longo
+      // da varredura).
+      gmvAcumulado = roundMoney(gmvAcumulado + asMoney(doc.get('receitaConfirmada')));
+      const status = doc.get('status') as unknown;
+      if (isStatusEvento(status) && eventoPublico(status)) eventosAtivos += 1;
+    }
 
-  if (escreveu) {
-    await tenantRef.update({
+    const escreveu =
+      tenantSnap.get('gmvAcumulado') !== gmvAcumulado ||
+      tenantSnap.get('eventosAtivos') !== eventosAtivos;
+
+    if (escreveu) {
+      tx.update(tenantRef, {
+        gmvAcumulado,
+        eventosAtivos,
+        atualizadoEm: FieldValue.serverTimestamp(),
+      });
+    }
+
+    return {
       gmvAcumulado,
       eventosAtivos,
-      atualizadoEm: FieldValue.serverTimestamp(),
-    });
-  }
-
-  return {
-    gmvAcumulado,
-    eventosAtivos,
-    eventosVarridos: eventosSnap.size,
-    escreveu,
-  };
+      eventosVarridos: eventosSnap.size,
+      escreveu,
+    };
+  });
 }
 
 /**
