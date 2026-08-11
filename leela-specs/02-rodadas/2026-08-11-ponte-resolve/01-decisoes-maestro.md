@@ -44,7 +44,13 @@ Os três itens vinham da review antagonista de 08/08 (`.nirvana/handoffs/leela-r
 
 **O pré-preenchimento não é invenção da tela.** Ele mostra o default que já existia em silêncio — o nome da pessoa é justamente o que o resgate usaria. A tela só devolve a caneta para a dona. E quando o token não traz nome, o campo nasce **vazio**: repetir ali o degrau seguinte do servidor (o pedaço do e-mail antes do arroba) daria cara de escolha a um palpite que ninguém fez.
 
-**Nome inválido é recusa, não descarte.** Um nome digitado e jogado fora em silêncio é o próprio defeito que este item existe para matar — a pessoa só descobriria no dia em que o endereço já estivesse cunhado. A régua tem três partes: comprimento entre 2 e 80 (os mesmos do formulário de cadastro, para as duas portas não aceitarem coisas diferentes) e, além dele, o endereço derivado precisa sobrar. `"!!"` tem dois caracteres e não vira endereço nenhum.
+**⚠️ Correção de 11/08 (lane PONTE-FIX, bloqueador B2 da review antagonista).** A frase acima — *"quem não tocar nele cai exatamente no comportamento de antes"* — era **falsa para uma classe de nomes**, e a falha vinha justamente do pré-preenchimento. O campo nascia com o nome do token e a travessia mandava esse valor **sem a pessoa tocar em nada**; o servidor recusa nome que não vira endereço; e nome escrito fora do alfabeto latino não vira endereço nenhum. Uma participante chamada `Анна`, `李` ou `ゆき` tem conta válida, via o próprio nome no campo, não mexia nele, clicava — e era recusada por um nome que nunca digitou. Antes desta rodada ela atravessava. **O conserto:** a regra que já valia para o token sem nome passou a valer também quando o nome existe e não vira endereço — o campo nasce vazio, e "não tocar" volta a ser o comportamento de antes, como esta página promete. Quem **digita** um nome que não vira endereço continua sendo recusado, e tem de ser: o endereço é cunhado uma vez.
+
+**Nome inválido é recusa, não descarte.** Um nome digitado e jogado fora em silêncio é o próprio defeito que este item existe para matar — a pessoa só descobriria no dia em que o endereço já estivesse cunhado. A régua tem três partes: comprimento entre 2 e 80 e, além dele, o endereço derivado precisa sobrar. `"!!"` tem dois caracteres e não vira endereço nenhum.
+
+**⚠️ Correção de 11/08 (ressalva R2 da review antagonista).** A frase anterior dizia que o comprimento eram *"os mesmos do formulário de cadastro, para as duas portas não aceitarem coisas diferentes"*. A primeira metade é verdade e a segunda não: `ORGANIZACAO_MIN/MAX` são a **mesma constante** nas duas portas, importada do core, mas o `/cadastrar` **não** checa se o endereço derivado sobra. Na prática o `/cadastrar` **aceita** `"!!"` e a porta o **recusa**. A divergência é *fail-safe* — a porta é a mais estrita, e o que ela barra é exatamente o que produziria endereço vazio —, então ela fica e passa a estar **declarada** em vez de virar promessa falsa de paridade. Unificar a régua no core, ao lado de `validarCadastroOrganizador`, é **card próprio**: mexe no `/cadastrar`, que não é território de uma lane de conserto.
+
+**⚠️ Correção de 11/08 (bloqueador B2, segunda parte).** A frase da recusa mentia. Ela dizia *"pelo menos duas letras ou números"* para uma pessoa cujo nome **tem** duas letras — `ゆき` tem duas e é recusado, porque o endereço só é escrito com letras de A a Z e números. A régua real tem dois eixos: **dois caracteres no total** e **ao menos um caractere de A a Z ou um número**. É isso que a pessoa lê agora, nas duas superfícies (tela e servidor).
 
 **A prova.** Contra Firestore + Auth de verdade: com o nome escolhido, a produtora nasce `castelo-producoes`; **sem** ele, nasce `ana-paula`. O segundo caso ficou no arquivo de propósito, como controle — é o desfecho de quem atravessar sem escolher, e é ele que a condição de reabertura descreve.
 
@@ -59,3 +65,21 @@ Os três itens vinham da review antagonista de 08/08 (`.nirvana/handoffs/leela-r
 Nenhum deploy nesta rodada. Os três itens estão **construídos e selados**, e sobem na fase de deploy com os gates dela — as functions e a landing precisam subir **juntas** ou em ordem: as functions primeiro (o campo novo é opcional e o cliente velho continua atravessando), a landing depois.
 
 Detalhe de execução, provas e vetores para a review antagonista: `.nirvana/handoffs/leela-ponte-resolve-20260811.md`.
+
+---
+
+## A review antagonista aconteceu, e a rodada ganhou uma terceira lane (11/08)
+
+A review foi feita em contexto fresco e está em `.nirvana/handoffs/leela-ponte-REV-20260811.md`. Ela liberou a construção dos três itens — re-executou as quatro suítes sozinha e os quatro números bateram, e o gate de lote da landing, que a lane anterior tinha deixado como bloqueio, **fechou verde numa máquina livre**, confirmando que o vermelho da noite era contenção. Mas ela achou **dois bloqueadores** e três ressalvas, e nenhum deles podia ir a deploy. A lane **PONTE-FIX** os pagou; o detalhe está em `.nirvana/handoffs/leela-ponte-FIX-20260811.md`.
+
+O que mudou de decisão, e não só de código:
+
+1. **A ordem do deploy é necessária e não é suficiente.** O defeito não precisa de functions velhas para acontecer: o `dist/` compilado do `api-client` estava 42 horas atrás da fonte, e é ele que o bundle da landing lê — `tsc` lê a fonte, a suíte lê um dublê, e só o bundle lê o `dist/`. Um `next build` naquele estado produzia uma landing que **nunca mandava** os dois campos, com os três gates verdes. Agora existe um gate de frescor no build da landing que recusa dist defasado, e ele **já pagou na primeira execução**: pegou o design system 21 horas atrás da fonte, um segundo caso vivo do mesmo defeito.
+
+2. **A resposta da callable passou a ecoar o que ela aceitou.** Antes, "o servidor gravou o meu nome" e "o servidor ignorou o meu nome em silêncio" eram a mesma resposta na rede. Com o eco, a tela e qualquer sonda de fumaça distinguem os dois — e é isso, e não disciplina de deploy, que impede o defeito de voltar.
+
+3. **O descarte silencioso sobrevivia em dois ramos, e a tela descartava o retorno.** Quem já tinha produtora digitava um nome, o servidor não o aplicava e a pessoa lia "Pronto. O painel profissional já é seu" como quem tinha escolhido. Agora a tela diz o que aconteceu.
+
+4. **A recusa do nome ganhou endereço no campo.** Ela saía num alerta solto no fim do cartão, e quem usa leitor de tela ouvia o erro sem saber qual campo o produziu.
+
+**Continua devendo, e é gate:** a conferência visual no navegador. O cartão mudou de forma duas vezes (dois botões, um campo, e agora o erro dentro do campo) e jsdom não desenha.
