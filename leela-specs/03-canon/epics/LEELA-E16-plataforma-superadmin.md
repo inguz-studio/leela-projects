@@ -1927,7 +1927,7 @@ números no termo e grava `planoAplicadoId`, sem vínculo.
 |---|---|---|
 | **LEELA-S1612** · A ficha do tenant: o que ele produz e para quem | SubNav na rota que já existe + abas Eventos, Clubs e Clientes (esta por callable) | V-2, V-3 |
 | **LEELA-S1613** · A ficha do tenant: a economia dele | abas Vendas e Financeiro (faturamento, saldo, repasses) + plano aplicado com divergência | V-1 |
-| **LEELA-S1614** · Todos os eventos e todos os clubs do sistema | duas listas globais, coleção raiz, sem Rule nova e sem collection group | — |
+| **LEELA-S1614** · Todos os eventos e todos os clubs do sistema ✅ **construída em 11/08** | duas listas globais, coleção raiz, sem Rule nova e sem collection group | — |
 | **LEELA-S1615** · O diretório de contas no painel master | uma rota com dois modos: Fila (aguardando liberação) e Diretório (leitura) | V-4, V-5 |
 
 **O desenho que evita sete rotas.** O drill-down é **uma** rota — `/plataforma/tenants/:tenantId` —
@@ -1948,6 +1948,26 @@ A tensão com a **RN-510** continua onde estava e **não foi reaberta por esta l
 alguma ação" é qualquer gesto (ratificando a regra em vigor) ou é ação **bloqueada** (mudando P11 e
 P14) é pergunta do dono, registrada como **V-5** com as duas leituras e o custo de cada uma, como o
 registro de 09/08 já havia determinado.
+
+### O que a onda 4 construiu (2026-08-11 · lane ADMINVISAO-ONDA4)
+
+A **S1614** fechou inteira: `/plataforma/eventos` e `/plataforma/clubs` no ar como rota, com os dois
+itens no menu do super-admin. Três decisões da lane que passam a valer para quem construir as ondas
+vizinhas:
+
+- **O contador tem duas formas, e a segunda é a única que declara total.** Enquanto o `proxCursor`
+  não é nulo, a tela diz "Mostrando N"; quando a paginação acaba, N vira o total do recorte. Nenhum
+  "de N" aparece antes disso, porque a query nunca computou um total. O puro vive em
+  `apps/painel/src/routes/plataforma/_lib/listasGlobais.ts` e é reusável pelas abas da ficha.
+- **Um recorte por vez na lista de eventos: tenant OU status.** O reader global da onda 1 decidiu
+  por escrito que o recorte por tenant reusa `listarEventosDoTenantPaginado`, e não existe reader que
+  aceite os dois filtros. Peneirar status no cliente sobre a página do tenant faria o contador mentir
+  — a tela declara a restrição em vez de fingir que filtra.
+- **Nenhuma cifra na lista global.** `Evento.receitaConfirmada` existe e tem escritor, mas dinheiro no
+  painel master é a ficha do tenant (RN-537, mode-aware da RN-182, rota com review antagonista). A
+  varredura global responde "o que existe"; "quanto rendeu" é a onda 2.
+
+Nenhum vetável foi tocado: a onda 4 é a única das quatro de tela que não espera V-1 a V-5.
 
 ### Dependências declaradas
 
