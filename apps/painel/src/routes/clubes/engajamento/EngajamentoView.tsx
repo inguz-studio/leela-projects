@@ -196,7 +196,10 @@ function LinhaDoPilarLider({ pilares }: { pilares: ResumoDosPilares }): JSX.Elem
   if (!lider) return null;
   return (
     <p className="mt-[var(--spacing-3)] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-      {lider.rotulo} é o pilar com a maior média por participante.
+      {/* UXW-MELHORIAS · MEL-14: a frase antiga só nomeava o pilar que a barra
+          mais alta já mostrava — texto restatando desenho. O número (que já
+          era calculado, `lider.atual`) é o que a barra não diz em palavras. */}
+      {lider.rotulo} lidera, com {formatDecimal1(lider.atual)} pontos por participante.
     </p>
   );
 }
@@ -288,13 +291,13 @@ function RankingDeDesafios({
         // para o menor" enquanto a tela mostra cinco de nove é meia verdade.
         ajuda={
           excedeTop && recorte === 'top'
-            ? `Os ${RANKING_MAX_DESAFIOS} desafios em andamento com mais participantes, de ${lista.length} no total. Troque o recorte para ver todos.`
-            : 'Participantes por desafio em andamento, do maior para o menor. Só entram os ativos: um desafio encerrado teve o ciclo inteiro, e comparar os dois não compara coisas comparáveis.'
+            ? `Os ${RANKING_MAX_DESAFIOS} desafios em andamento com mais participantes, de ${lista.length} no total. Troque para "Todos" para ver a lista inteira.`
+            : 'Participantes por desafio em andamento, do maior para o menor. Só entram os ativos: um desafio encerrado já teve o ciclo inteiro, e o que está em andamento está no meio dele.'
         }
         controle={
           excedeTop ? (
             <Select
-              aria-label="Recorte do ranking de desafios"
+              aria-label="Quantos desafios mostrar"
               options={[
                 { value: 'top', label: `Top ${RANKING_MAX_DESAFIOS}` },
                 { value: 'todos', label: `Todos (${lista.length})` },
@@ -311,7 +314,7 @@ function RankingDeDesafios({
         <Painel>
           <EmptyState
             title="Nenhum desafio em andamento"
-            description="Um desafio ativo é o que dá à comunidade uma razão para aparecer entre um evento e outro."
+            description="Crie um desafio para a comunidade ter o que fazer entre um evento e outro."
           />
         </Painel>
       ) : (
@@ -371,13 +374,13 @@ function ModalidadesDaComunidade({
         titulo="Modalidades da comunidade"
         ajuda={
           excedeTop && recorte === 'top'
-            ? `As ${RANKING_MAX_MODALIDADES} modalidades com mais membros ativos, de ${lista.length} com gente. Troque o recorte para ver todas.`
+            ? `As ${RANKING_MAX_MODALIDADES} modalidades com mais membros ativos, de ${lista.length} com gente. Troque para "Todas" para ver a lista inteira.`
             : 'Membros ativos somados por modalidade dos seus clubs. A modalidade é a do club, não um interesse que o membro declarou: esse campo não existe. Uma pessoa ativa em dois clubs conta nos dois. Modalidade sem ninguém sai da lista.'
         }
         controle={
           excedeTop ? (
             <Select
-              aria-label="Recorte das modalidades"
+              aria-label="Quantas modalidades mostrar"
               options={[
                 { value: 'top', label: `Top ${RANKING_MAX_MODALIDADES}` },
                 { value: 'todas', label: `Todas (${lista.length})` },
@@ -605,7 +608,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             <section aria-label="Como a comunidade entra" className="flex flex-col">
               <SecaoHead
                 titulo="Como a comunidade entra"
-                ajuda="A porta por onde cada membro chegou ao club. Canal sem ninguém sai da lista: barra zerada ocupa espaço e não informa."
+                ajuda="A porta por onde cada membro chegou ao club. Canais sem ninguém não aparecem."
               />
               {loading || entrada === null ? (
                 <Skeleton variant="rect" className="h-32" />
@@ -651,19 +654,23 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             <CardEmBreve
               titulo="Check-ins realizados"
               icon={<ListOrdered aria-hidden />}
-              causa="O bloco do estudo mostra o total de check-ins do período, a divisão entre os três pilares e o ranking de ações com o Top 10. Tudo depende da contagem de registros por ação — quilômetros, sessões, páginas, noites —, que fica no registro pessoal de quem fez a atividade, e o organizador não tem acesso a esse registro. O que o desafio guarda é a média de pontos por pilar, nunca a contagem de ações."
+              // UXW-MELHORIAS · MEL-03: a causa tinha 3 frases — a primeira
+              // descrevia o que o bloco VAI mostrar quando existir (conteúdo
+              // de roadmap, não de tela). Corta para a causa em si, no padrão
+              // dos irmãos.
+              causa="Cada check-in fica no registro pessoal de quem fez a atividade, e o organizador não tem acesso a esse registro. O que o desafio guarda é a média de pontos por pilar, nunca a contagem de ações."
             />
             </Cascata>
 
             <Cascata i={6}>
             <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2">
               <CardEmBreve
-                titulo="Mapa de Check-ins"
+                titulo="Mapa de check-ins"
                 icon={<CalendarClock aria-hidden />}
                 causa="O club não registra presença: o único check-in que existe é o do QR na largada de um evento, e os registros de atividade de cada participante não ficam disponíveis para o organizador. Sem essa fonte, não há hora nem dia para pintar."
               />
               <CardEmBreve
-                titulo="Volume de Check-ins"
+                titulo="Volume de check-ins"
                 icon={<Activity aria-hidden />}
                 causa="Mesma origem do mapa. O progresso dos desafios existe, mas é um acumulado por participante: ele diz o quanto a comunidade andou, nunca em que faixa de hora ou em que semana ela apareceu."
               />

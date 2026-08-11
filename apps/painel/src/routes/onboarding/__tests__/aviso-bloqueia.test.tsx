@@ -158,7 +158,7 @@ function nomes(nos: readonly HTMLElement[]): string[] {
  */
 const CONTROLES_DO_FUNDO: readonly string[] = [
   'BUTTON:Abrir menu',
-  'A:Visão Geral',
+  'A:Visão geral',
   'A:Eventos',
   'A:Clubs',
   'A:CRM',

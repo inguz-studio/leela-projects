@@ -132,7 +132,7 @@ export function AssessoriasPage(): JSX.Element {
           // D-1008-R8: "(E18)" era jargão interno vazando para o usuário —
           // cortado; a distinção sem comissão/split fica (é o que separa
           // assessoria de influenciador).
-          'Clubs parceiros com condição de desconto exclusiva — sem comissão, sem split.'
+          'Clubs parceiros com condição de desconto exclusiva, sem comissão e sem divisão de receita.'
         }
         actions={
           <Button variant="primary" onClick={() => navigate('/parcerias/assessorias/nova')}>

@@ -15,6 +15,7 @@ import { Badge, Button, Checkbox, Chip, Input, Radio, RadioGroup, Select, Textar
 import type { Clube, ModeloEntradaClube, VisibilidadeClube } from '@leela/core';
 import type { AtualizarClubeInput } from '@leela/api-client';
 import { ImageUploadField } from '@/components/upload';
+import { linkClubePublico } from '@/lib/linkPublico';
 import {
   CATEGORIA_OPCOES,
   COMPORTAMENTOS,
@@ -301,7 +302,7 @@ export function ConfiguracoesView({
               aria-describedby="slug-hint"
             />
             <span id="slug-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-              be-hero.com.br/c/{clube.slug} — o endereço público é definido na criação do clube e não pode ser alterado.
+              {linkClubePublico(clube.slug)} — o endereço público é definido na criação do clube e não pode ser alterado.
             </span>
           </div>
           <div className="flex flex-col gap-[var(--spacing-2)]">

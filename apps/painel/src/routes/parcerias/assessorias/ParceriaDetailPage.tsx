@@ -48,7 +48,7 @@ export function mensagemErro(err: unknown): string {
   const code = (err as { code?: string })?.code ?? '';
   const msg = (err as { message?: string })?.message ?? '';
   if (code.includes('already-exists')) {
-    return 'Já existe um cupom com esse código neste evento (outro escopo/parceria). Use outro código.';
+    return 'Já existe um cupom com esse código neste evento. Use outro código.';
   }
   if (code.includes('failed-precondition')) {
     // RN-364: só parceria ATIVA aceita condição de desconto.

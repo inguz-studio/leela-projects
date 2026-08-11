@@ -14,6 +14,7 @@ import { Button, Modal, Tabs, Textarea, useToast } from '@leela/design-system';
 import type { TabItem } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { parseEmails, validarConvite } from '@leela/core';
+import { linkClubePublico } from '@/lib/linkPublico';
 
 export interface ConviteModalProps {
   open: boolean;
@@ -44,7 +45,7 @@ export function ConviteModal({ open, onOpenChange, clube, onEnviar }: ConviteMod
   const [aba, setAba] = useState<AbaConvite>('link');
   const [rawEmails, setRawEmails] = useState('');
 
-  const link = `be-hero.com.br/c/${clube.slug}/convite/${clube.codigoConvite}`;
+  const link = `${linkClubePublico(clube.slug)}/convite/${clube.codigoConvite}`;
   const emails = useMemo(() => parseEmails(rawEmails), [rawEmails]);
   const resultado = useMemo(() => validarConvite(emails), [emails]);
 

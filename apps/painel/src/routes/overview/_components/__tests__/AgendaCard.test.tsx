@@ -98,4 +98,58 @@ describe('AgendaCard', () => {
     await userEvent.click(screen.getByRole('button', { name: /Ver agenda completa/ }));
     expect(onNavigate).toHaveBeenCalledWith('/eventos');
   });
+
+  // F6 (UXW-MELHORIAS) · a grade era só `role="grid"`: sem row/gridcell, sem
+  // navegação por setas. WAI-APG grid pattern — anatomia visual intacta (as
+  // 7 asserções acima continuam verdes), só a árvore de acessibilidade ganhou
+  // estrutura + teclado.
+  describe('F6 · grade ARIA do calendário (WAI-APG grid)', () => {
+    it('a grade tem role="grid" com linhas role="row" e células role="gridcell"', () => {
+      montar();
+      const grade = screen.getByRole('grid', { name: 'Agosto 2026' });
+      const linhas = within(grade).getAllByRole('row');
+      expect(linhas.length).toBeGreaterThan(0);
+      // As células vazias (dias do mês anterior) ficam aria-hidden de propósito
+      // (mesmo comportamento de antes do F6) — só os 31 dias reais de agosto
+      // entram na árvore de acessibilidade como gridcell.
+      const celulas = within(grade).getAllByRole('gridcell');
+      expect(celulas.length).toBe(31);
+    });
+
+    it('roving tabindex: só o dia selecionado (hoje, ao abrir) é tabável', () => {
+      montar();
+      const hoje = screen.getByRole('button', { name: '6 de Agosto 2026' });
+      expect(hoje).toHaveAttribute('tabindex', '0');
+      const outroDia = screen.getByRole('button', { name: '21 de Agosto 2026' });
+      expect(outroDia).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('ArrowRight move seleção e foco para o dia seguinte', async () => {
+      montar();
+      const hoje = screen.getByRole('button', { name: '6 de Agosto 2026' });
+      hoje.focus();
+      await userEvent.keyboard('{ArrowRight}');
+      const dia7 = screen.getByRole('button', { name: '7 de Agosto 2026' });
+      expect(dia7).toHaveFocus();
+      expect(dia7).toHaveAttribute('tabindex', '0');
+      expect(dia7).toHaveAttribute('aria-pressed', 'true');
+      expect(hoje).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('ArrowDown move seleção e foco 7 dias à frente (semana seguinte)', async () => {
+      montar();
+      screen.getByRole('button', { name: '6 de Agosto 2026' }).focus();
+      await userEvent.keyboard('{ArrowDown}');
+      expect(screen.getByRole('button', { name: '13 de Agosto 2026' })).toHaveFocus();
+    });
+
+    it('ArrowLeft no dia 1 não atravessa para o mês anterior (clamp)', async () => {
+      montar();
+      const dia1 = screen.getByRole('button', { name: '1 de Agosto 2026' });
+      dia1.focus();
+      await userEvent.keyboard('{ArrowLeft}');
+      expect(dia1).toHaveFocus();
+      expect(screen.getByText('Agosto 2026')).toBeInTheDocument();
+    });
+  });
 });

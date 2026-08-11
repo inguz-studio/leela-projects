@@ -70,7 +70,7 @@ async function abrirRail(): Promise<void> {
 describe('RootShell (Lote B3 — shell raiz)', () => {
   it('monta a sidebar do produtor na Visão Geral com o item ativo', () => {
     renderAt('/');
-    const ativo = within(nav()).getByRole('link', { name: 'Visão Geral' });
+    const ativo = within(nav()).getByRole('link', { name: 'Visão geral' });
     expect(ativo).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('main')).toContainElement(screen.getByTestId('path'));
   });
@@ -100,7 +100,7 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     // Badge é anatomia do rail ABERTO (protótipo: display none fechado).
     await abrirRail();
     expect(within(nav()).getByText('em breve')).toBeInTheDocument();
-    expect(within(nav()).queryByRole('link', { name: 'Visão Geral' })).not.toBeInTheDocument();
+    expect(within(nav()).queryByRole('link', { name: 'Visão geral' })).not.toBeInTheDocument();
   });
 
   it('navegar pela sidebar troca só o conteúdo — a sidebar permanece', async () => {
@@ -383,6 +383,6 @@ describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
       'aria-current',
       'page',
     );
-    expect(within(drawerNav).queryByRole('link', { name: 'Visão Geral' })).toBeNull();
+    expect(within(drawerNav).queryByRole('link', { name: 'Visão geral' })).toBeNull();
   });
 });

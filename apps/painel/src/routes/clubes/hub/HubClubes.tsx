@@ -52,7 +52,13 @@ function Kpis({ kpis }: { kpis: KpisGlobais }): JSX.Element {
       aria-label="Indicadores globais"
       className="grid grid-cols-2 gap-[var(--spacing-4)] md:grid-cols-4"
     >
-      <KpiCard label="Clubs ativos" value={formatInt(kpis.totalClubes)} hint={`${formatInt(kpis.meusClubes)} seu(s)`} />
+      <KpiCard
+        label="Clubs ativos"
+        value={formatInt(kpis.totalClubes)}
+        // UXW-MELHORIAS · MEL-09: "seu(s)" com plural entre parênteses era
+        // solução de programador para concordância, visível na tela.
+        hint={`${formatInt(kpis.meusClubes)} ${kpis.meusClubes === 1 ? 'é seu' : 'são seus'}`}
+      />
       {/* UXW-FIX · BLQ-01: "Atletas" era o nome que a PLATAFORMA dava às
           pessoas da comunidade — a categoria, não a instância (D-0802-1). Num
           club de bem-estar a palavra é falsa por construção. O campo interno
