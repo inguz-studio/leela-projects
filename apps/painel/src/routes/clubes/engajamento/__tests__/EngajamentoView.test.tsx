@@ -220,10 +220,15 @@ describe('EngajamentoView · o que não tem fonte', () => {
     expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('o top de ações por pilar não vira aba nem overlay sem contagem por ação', () => {
+  it('o bloco "Check-ins realizados" nomeia TUDO que o estudo desenha nele — e não vira aba nem overlay sem contagem por ação', () => {
     render(<EngajamentoView {...props()} />);
-    const secao = screen.getByRole('region', { name: 'Ações mais registradas por pilar' });
+    const secao = screen.getByRole('region', { name: 'Check-ins realizados' });
     expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+    // A causa cita as três partes do bloco do estudo (D-1008-R15)…
+    expect(within(secao).getByText(/total de check-ins do período/i)).toBeInTheDocument();
+    expect(within(secao).getByText(/divisão entre os três pilares/i)).toBeInTheDocument();
+    expect(within(secao).getByText(/ranking de ações com o Top 10/i)).toBeInTheDocument();
+    // …e a fonte que destrava tudo.
     expect(within(secao).getByText(/as Rules não abrem esse caminho/i)).toBeInTheDocument();
     expect(within(secao).queryByRole('tab')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Ver top 10/i })).not.toBeInTheDocument();

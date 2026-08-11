@@ -621,12 +621,22 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </section>
             </Cascata>
 
-            {/* Frequência e presença — as métricas ficam NOMEADAS uma a uma
-                (REFACTOR itens 7, 11 e 13). Uma caixa só, genérica, escondia
-                quantas análises estão previstas e qual delas destrava com qual
-                fonte. Todas dependem do mesmo registro que não existe. */}
+            {/* Frequência e presença — as métricas ficam NOMEADAS uma a uma,
+                no ESQUELETO do estudo (D-1008-R15: bloco 1 full-width, mapa e
+                volume lado a lado — REFACTOR itens 7, 11 e 13). Uma caixa só,
+                genérica, escondia quantas análises estão previstas e qual
+                delas destrava com qual fonte. Todas dependem do mesmo registro
+                que não existe. */}
             <Cascata i={5}>
-            <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-3">
+            <CardEmBreve
+              titulo="Check-ins realizados"
+              icon={<ListOrdered aria-hidden />}
+              causa="O bloco do estudo mostra o total de check-ins do período, a divisão entre os três pilares e o ranking de ações com o Top 10. Tudo depende da contagem de registros por ação — quilômetros, sessões, páginas, noites —, que vive no registro de cada atleta, e as Rules não abrem esse caminho para o organizador. O agregado do desafio guarda pontos médios por pilar, nunca a contagem nem a ação que a formou."
+            />
+            </Cascata>
+
+            <Cascata i={6}>
+            <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2">
               <CardEmBreve
                 titulo="Mapa de Check-ins"
                 icon={<CalendarClock aria-hidden />}
@@ -637,16 +647,11 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 icon={<Activity aria-hidden />}
                 causa="Mesma origem do mapa. O progresso dos desafios existe, mas é um acumulado por participante: ele diz o quanto a comunidade andou, nunca em que faixa de hora ou em que semana ela apareceu."
               />
-              <CardEmBreve
-                titulo="Ações mais registradas por pilar"
-                icon={<ListOrdered aria-hidden />}
-                causa="A contagem por ação — quilômetros, sessões, páginas, noites — vive no registro de cada atleta, e as Rules não abrem esse caminho para o organizador. O agregado do desafio guarda o total por pilar, nunca a ação que o formou."
-              />
             </div>
             </Cascata>
 
             {/* Bloco 4 do estudo — a versão que o dado sustenta. */}
-            <Cascata i={6}>
+            <Cascata i={7}>
             <section aria-label="Modalidades da comunidade" className="flex flex-col">
               <ModalidadesDaComunidade
                 modalidades={modalidades}
@@ -662,7 +667,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               legenda="A ponte: quanto da comunidade vira participação em evento."
             />
 
-            <Cascata i={7}>
+            <Cascata i={8}>
             <section aria-label="Desafios ligados a um evento" className="flex flex-col">
               <SecaoHead
                 titulo="Desafios ligados a um evento"
@@ -692,7 +697,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </section>
             </Cascata>
 
-            <Cascata i={8}>
+            <Cascata i={9}>
             <section aria-label="Conversão da base" className="flex flex-col">
               <SecaoHead titulo="Conversão da base" />
               <Painel>
@@ -716,7 +721,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                   query partilhada — o cache reidrata entre as telas). O card
                   carrega estado de erro e retry PRÓPRIOS: eventos que falham
                   não derrubam a análise da comunidade. */}
-              <Cascata i={9} className="flex [&>*]:flex-1">
+              <Cascata i={10} className="flex [&>*]:flex-1">
                 <OcupacaoEventos
                   ocupacao={ocupacao}
                   loading={eventosLoading}
@@ -726,7 +731,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               </Cascata>
               {/* Sem fonte (impedimento HIFI-REC): nenhum agregado por forma
                   de pagamento chega ao cliente — nada de donut fabricado. */}
-              <Cascata i={10} className="flex [&>*]:flex-1">
+              <Cascata i={11} className="flex [&>*]:flex-1">
                 <EmBreveV3
                   titulo="Formas de pagamento"
                   icon={<CreditCard aria-hidden />}
