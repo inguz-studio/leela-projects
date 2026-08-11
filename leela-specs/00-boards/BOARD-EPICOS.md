@@ -22,12 +22,12 @@ decisões da leva 3, 4 e 5 (D-1008-R4 a R19) estão em
 
 | Épico | História nova | O que ela resolve | Estado |
 |---|---|---|---|
-| [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | 🔄 construído, mergeado, aguardando deploy |
+| [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | 📋 destravada — o merge saiu em 11/08, o inventário mede a main |
-| [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | 🔄 construído, mergeado, aguardando deploy |
-| [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | 🔄 construído, mergeado, aguardando deploy |
+| [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
+| [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 |
-| [[LEELA-E10-marcas]] | **S813** | Marcas vira Parcerias e reúne marcas, assessorias e afiliações | 🔄 construído, mergeado, aguardando deploy |
+| [[LEELA-E10-marcas]] | **S813** | Marcas vira Parcerias e reúne marcas, assessorias e afiliações | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E11-analytics]] | **S825** | a forma de pagamento vira número na análise e no engajamento | 📋 |
 | [[LEELA-E19-crm]] | **S1904** | o membro do club e o comprador viram a mesma pessoa | 📋 |
 
