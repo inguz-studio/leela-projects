@@ -1,11 +1,12 @@
 ---
 trace: leela-redesign-v2-20260810
 lane: METRICAS-PAGANTES-BACKEND (leva 5 · D-1008-R19 · E03·S221 + E09·S908-T4)
-alvo: repo main (`C:\dev\LEELA`), branch main · base 5a952bc1 → 30084e5a
+alvo: repo main (`C:\dev\LEELA`), branch main · base 5a952bc1 → c0245e68
 data: 2026-08-11
-estado: CONCLUÍDA — 2 consertos pagos e PUSHED; varredura completa de
-  functions/src + packages/core/src; ZERO deploy; backfill do GMV DECLARADO e
-  NÃO executado
+estado: CONCLUÍDA — 2 consertos pagos (+1 hardening) em 4 commits; varredura de
+  41 derivações em functions/src + packages/core/src; suíte completa 4367
+  verdes com só os 18 vermelhos AMBIENTAIS conhecidos; ZERO deploy; backfill do
+  GMV DECLARADO e NÃO executado
 ---
 
 # METRICAS-PAGANTES-BACKEND · handoff vivo
@@ -205,6 +206,13 @@ admin discordar da tela do produtor sobre o mesmo dinheiro.
   (`eventos where tenantId == …` com `select()` projetando dois campos), grava
   **só quando difere** — o no-op deixa `atualizadoEm` intocado, que é como a
   idempotência se prova de fora. Rodar N vezes = mesmo doc.
+- **Snapshot-consistente:** leitura do tenant, varredura dos eventos e escrita
+  numa **única transação**. Sem isso, dois writes de eventos do mesmo tenant em
+  corrida podiam persistir o agregado do snapshot mais VELHO, e ele ficaria de
+  pé até o próximo write. É literalmente o defeito que a review Onda1 #07 achou
+  em `agregarFinanceiro` — a casa já pagou por essa lição uma vez, e este
+  agregado nasce do lado certo dela. Mesmo formato do
+  `lerInputsSaldoRepasse`, que já lê essa mesma query dentro de transação.
 - **Migração de tenant:** recomputa `before ∪ after` do `tenantId` — o GMV não
   fica preso no tenant errado.
 - **Sem loop:** `tenants/{tid}` não tem gatilho algum (verificado: zero
@@ -292,7 +300,8 @@ lote diz 100 vendidos e o kit diz 98. A resposta está aqui.
 | `eslint src --max-warnings 0` functions | exit 0 ✔ |
 | `tsc --noEmit` core | exit 0 ✔ |
 | `eslint src --max-warnings 0` core | exit 0 ✔ |
-| Suíte COMPLETA de functions | (registrada abaixo) |
+| **Suíte COMPLETA de functions** (246 arquivos · 21min12s) | **4367 passaram · 142 pulados · 18 vermelhos** — **exatamente os 18 AMBIENTAIS conhecidos** que o brief declarou (portas dedicadas que não sobem em `vitest run` cru; a amostra visível é toda de `revContasMotor.antagonista`, classe auth/pepper). **Zero vermelho novo**; os 4 arquivos do território rodaram verdes isolados antes e depois |
+| Re-gate do território após a transação | **139/139** ✔ em 10 arquivos |
 
 ---
 
@@ -300,8 +309,14 @@ lote diz 100 vendidos e o kit diz 98. A resposta está aqui.
 
 - `e1191818` — C1 · o funil fecha em cliente pagante (6 arquivos, +292/−25)
 - `30084e5a` — C2 · escritor de `gmvAcumulado` + `eventosAtivos` (3 arquivos, +485)
+- `480d7681` — aterrissagem nos boards (E11·S824-T2 paga, E03·S221-T2 fechada,
+  E09·S908-T4 com a resposta do `Not-tested`, E16·S1605-T2 com o elo que
+  faltava, card novo S1613-T3b) + este handoff (6 arquivos, +432/−10)
+- `c0245e68` — C2b · o recompute da saúde do tenant fica snapshot-consistente
+  (1 arquivo, +47/−36)
 
-Ambos PUSHED em `main` (`5a952bc1..30084e5a`). **NENHUM deploy.**
+PUSHED em `main` (`5a952bc1..480d7681`; `c0245e68` a empurrar no fecho).
+**NENHUM deploy.**
 
 ---
 
