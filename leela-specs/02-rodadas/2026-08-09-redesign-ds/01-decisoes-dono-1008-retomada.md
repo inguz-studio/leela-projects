@@ -99,6 +99,18 @@ depois**. Ler as specs existentes de modalidades/kit antes de mexer (JTBD primei
 correção for reestrutura pesada de IA, a lane devolve proposta em vez de código
 (escalate_if).
 
+## D-1008-R15 · REGISTRO DO DONO: dashboard do estudo de Engajamento NÃO implementado
+Na íntegra (ao embarcar, 10/08): "para fins de registro, voce nao implementou o dashboard da
+visao geral que estava no claude design na página engajamento estudo."
+→ O dashboard desenhado na página "Engajamento estudo" do claude design (hoje
+`handoff-v2/design/engajamento-referencia.dc.html` — heatmap min-max + monocromático do
+item 7 etc.) **não chegou ao código**: a tela de Engajamento recebeu só o restyle no vidro
+(HIFI-REC T3; `EngajamentoView.tsx` = styling/Cascata, testes C2 intocados — confirmado
+pela REV). Coerente com a raiz da leitura errada que a D-1008-R2 fecha: a lane implementou
+a VG v3 no lugar do estudo de Engajamento. **Vira lane ENGAJAMENTO-DASH na retomada**
+(sequência do maestro: antes do re-gate REV, para uma review só cobrir tudo; guardrails do
+handoff-v2 valem — "se você se pegar editando routes/overview/, pare").
+
 ## D-1008-R14 · Animação de seleção deslizante no menu
 Na íntegra: "ao trocar também o menu, quero uma animação do select, como se ele estivesse
 deslizando na barra. para dar maior dinamismo ao sistema."
