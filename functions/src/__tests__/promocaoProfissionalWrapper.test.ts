@@ -12,7 +12,8 @@
  *      existe no core. Das cinco recusas nomeadas, era a ÚNICA sem um caso de
  *      teste em lugar nenhum do repositório;
  *
- *      (PONTE-ELEGIVEL-1 · 09/08) as cinco viraram SEIS: `conta_inelegivel`
+ *      (PONTE-ELEGIVEL-1 · 09/08) as cinco viraram SEIS: `conta_inelegivel`;
+ *      (PONTE-NOME-1 · 11/08) a sétima é `nome_profissional_invalido`
  *      entrou pela mesma porta e é exercitada aqui pelo transporte, junto das
  *      outras. A recusa nova depende de uma claim que a tradução do token
  *      passou a ler — `demotedFromRole` —, e o transporte é o único lugar onde
@@ -205,7 +206,7 @@ describe('⚔ vetor 12 · o wrapper https.onCall, pela primeira vez', () => {
     expect(estado.escritas).toHaveLength(0);
   });
 
-  it('⚔ o `details.motivo` sobrevive à serialização nas SEIS recusas', async () => {
+  it('⚔ o `details.motivo` sobrevive à serialização nas SETE recusas', async () => {
     // Se a HttpsError do módulo não fosse a mesma classe do runtime, todas
     // estas viriam com status INTERNAL e sem `details` — o DEF-B de novo.
     const casos: {
@@ -268,6 +269,17 @@ describe('⚔ vetor 12 · o wrapper https.onCall, pela primeira vez', () => {
         corpo: { data: { aceiteTermo: true, aceitoEm: '2020-01-01' } },
         token: TOKEN_PARTICIPANTE,
         motivo: 'aceite_datado_pelo_cliente',
+        status: 'INVALID_ARGUMENT',
+      },
+      {
+        // PONTE-NOME-1 · a sétima. `"!!"` tem o comprimento mínimo e mesmo
+        // assim não vira endereço nenhum — se ela viajasse como sucesso, a
+        // pessoa levaria o nome pessoal cunhado para sempre achando que tinha
+        // escolhido outro.
+        nome: 'nome de produtora que não vira slug',
+        corpo: { data: { aceiteTermo: true, nomeProfissional: '!!' } },
+        token: TOKEN_PARTICIPANTE,
+        motivo: 'nome_profissional_invalido',
         status: 'INVALID_ARGUMENT',
       },
     ];

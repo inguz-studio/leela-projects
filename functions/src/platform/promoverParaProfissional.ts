@@ -5,8 +5,48 @@
 // (E12 · S1234-T1 · RN-512, com destino na RN-514).
 //
 // Contrato:
-//   promoverParaProfissional({ aceiteTermo: true })
+//   promoverParaProfissional({ aceiteTermo: true, intencao?, nomeProfissional? })
 //     -> { statusOnboarding: 'aguardando_convite', jaExistia: boolean }
+//
+// -----------------------------------------------------------------------------
+// A INTENÇÃO É CARIMBADA AQUI, E É POR ISSO QUE OS DOIS CTAs PODEM SUBIR
+// (PONTE-CTA-1)
+// -----------------------------------------------------------------------------
+// O dono pediu dois CTAs por intenção — "Criar Club" e "Organizar eventos". A
+// lane de 08/08 entregou um só, e a razão escrita foi honesta: a landing não
+// tem uma linha de telemetria, então dois botões disparando a MESMA promoção
+// não diriam qual converteu. A razão era de calendário, não de impossibilidade
+// — a review de 08/08 mediu que esta callable já loga por conta própria, e um
+// campo aqui mede o clique E a conversão, porque o resgate do código também
+// loga e o `uid` junta os dois.
+//
+// `intencao` é TELEMETRIA, e telemetria não recusa ninguém: valor ausente vira
+// `nao_declarada` (é o cliente velho, que não conhece o campo) e valor
+// desconhecido vira `invalida` — nunca `nao_declarada`. Fundir o typo do
+// cliente novo com o silêncio do cliente velho corromperia em silêncio a única
+// medição que este campo existe para produzir; separados, um pico de
+// `invalida` no Cloud Logging aparece.
+//
+// -----------------------------------------------------------------------------
+// O NOME DA PRODUTORA É PERGUNTADO NA PORTA, PORQUE DEPOIS NÃO EXISTE
+// (PONTE-NOME-1)
+// -----------------------------------------------------------------------------
+// `organizacao` nascia SEMPRE vazio aqui, e o resgate do código (`sementeDoSlug`)
+// caía no nome da pessoa e, na falta dele, no local-part do e-mail. O slug é
+// cunhado UMA vez e é definitivo: `profissionais/{uid}` só admite `create` pelo
+// cliente (Rules), não existe callable que atualize o doc a pedido da dona, e
+// renomear tenant é exclusivo de platform_admin. O comentário que dizia "a
+// pessoa preenche o perfil dela no painel" descrevia algo que não existe.
+//
+// O conserto é na ORIGEM e cabe no contrato que já existe: a porta pergunta o
+// nome, pré-preenchido com o nome da pessoa e editável, e o campo desce até
+// `organizacao`. Nada de provisionamento de tenant muda — o resgate continua
+// lendo o mesmo campo, do mesmo jeito. Só que agora ele foi ESCOLHIDO.
+//
+// Nome declarado e inválido é RECUSA nomeada, não descarte silencioso: quem
+// digitou um nome e recebeu sucesso com o nome jogado fora está exatamente no
+// defeito que este item existe para matar. Nome ausente segue o caminho de
+// antes (`''`), e é o que mantém o cliente velho vivo.
 //
 // -----------------------------------------------------------------------------
 // POR QUE ESTA FUNCTION EXISTE
@@ -92,16 +132,42 @@ import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
-import { TERMO_LGPD_FINALIDADE, TERMO_LGPD_VERSAO } from '@leela/core';
+import {
+  ORGANIZACAO_MAX,
+  ORGANIZACAO_MIN,
+  TERMO_LGPD_FINALIDADE,
+  TERMO_LGPD_VERSAO,
+  derivarSlugOrganizacao,
+} from '@leela/core';
 import { contaElegivelParaPapelDeOrganizador } from './elegibilidadeOrganizador';
 
 // ---------------------------------------------------------------------------
 // Contratos
 // ---------------------------------------------------------------------------
 
+/**
+ * Qual dos dois CTAs por intenção foi apertado (PONTE-CTA-1).
+ *
+ * As duas intenções são SIMÉTRICAS no produto: `/clubes/novo` e a criação de
+ * evento estão atrás do mesmo tenant, e o mesmo código Leela abre as duas.
+ * Por isso os dois botões disparam a MESMA promoção e só se distinguem aqui.
+ */
+export type IntencaoDaTravessia = 'eventos' | 'clube';
+
+/** O que o log carimba: as duas intenções, mais os dois estados de ausência. */
+export type IntencaoRegistrada = IntencaoDaTravessia | 'nao_declarada' | 'invalida';
+
 export interface PromoverParaProfissionalInput {
   /** Aceite do termo do profissional, colhido na tela (RN-466). */
   aceiteTermo: boolean;
+  /** Qual CTA foi apertado (PONTE-CTA-1). Telemetria — nunca recusa. */
+  intencao?: IntencaoDaTravessia;
+  /**
+   * O nome da produtora, escolhido na porta (PONTE-NOME-1). Ausente mantém o
+   * comportamento anterior: `organizacao` nasce vazio e o resgate semeia o
+   * slug com o nome da pessoa.
+   */
+  nomeProfissional?: string;
 }
 
 export interface PromoverParaProfissionalResult {
@@ -122,7 +188,8 @@ export type MotivoRecusaPromocao =
   | 'conta_de_plataforma'
   | 'conta_inelegivel'
   | 'aceite_ausente'
-  | 'aceite_datado_pelo_cliente';
+  | 'aceite_datado_pelo_cliente'
+  | 'nome_profissional_invalido';
 
 /** O chamador, já destrinchado do token. */
 export interface CallerPromocao {
@@ -168,6 +235,62 @@ function recusa(
  * quem data é o servidor, e aceite datado pelo titular não vale como prova.
  */
 const CAMPOS_DE_CARIMBO = ['aceitoEm', 'aceitoem', 'versao', 'consentimentoLgpd', 'criadoEm'];
+
+/** As duas intenções que a porta sabe carimbar. Fonte única do `includes`. */
+const INTENCOES: readonly IntencaoDaTravessia[] = ['eventos', 'clube'];
+
+/**
+ * Lê a intenção do payload SEM nunca recusar (PONTE-CTA-1).
+ *
+ * Os dois estados de ausência são separados de propósito, e a separação é a
+ * regra e não capricho: `nao_declarada` é o cliente que não conhece o campo (a
+ * landing hoje no ar), e `invalida` é o cliente que conhece e mandou outra
+ * coisa. Fundir os dois faria um typo de deploy novo desaparecer dentro do
+ * volume do deploy velho, e a medição diria que ninguém clicou.
+ */
+export function normalizarIntencao(bruta: unknown): IntencaoRegistrada {
+  if (bruta === undefined || bruta === null) return 'nao_declarada';
+  if (typeof bruta === 'string' && (INTENCOES as readonly string[]).includes(bruta)) {
+    return bruta as IntencaoDaTravessia;
+  }
+  return 'invalida';
+}
+
+/**
+ * Lê o nome da produtora do payload (PONTE-NOME-1).
+ *
+ * Devolve `null` quando não foi declarado — o caminho de antes, e o que
+ * mantém o cliente velho funcionando. Lança a recusa nomeada quando foi
+ * declarado e não serve: descartar em silêncio um nome digitado é o defeito
+ * que este item existe para matar, e é pior que a recusa porque a pessoa só
+ * descobre no dia em que o slug já está cunhado.
+ *
+ * A régua tem TRÊS partes, e a terceira é a que quase escapa: o comprimento
+ * (`ORGANIZACAO_MIN`/`MAX`, os mesmos do `/cadastrar`, para que a porta e o
+ * formulário não aceitem coisas diferentes) e, além dele, o slug DERIVADO
+ * precisa sobrar. `"!!"` tem dois caracteres e `derivarSlugOrganizacao` o
+ * reduz a `''` — aceitá-lo devolveria à pessoa a semente do nome pessoal com
+ * cara de escolha feita.
+ */
+export function nomeProfissionalDoPayload(bruto: unknown): string | null {
+  if (bruto === undefined || bruto === null) return null;
+  const recusaDoNome = (): never => {
+    throw recusa(
+      'invalid-argument',
+      'nome_profissional_invalido',
+      'Escolha um nome com pelo menos duas letras ou números para a sua produtora.'
+    );
+  };
+  if (typeof bruto !== 'string') return recusaDoNome();
+  const nome = bruto.trim();
+  // String vazia é o campo que a pessoa deixou em branco depois de apagar o
+  // pré-preenchido. Não é erro dela: é a escolha de não escolher, e ela cai
+  // no caminho de antes.
+  if (nome.length === 0) return null;
+  if (nome.length < ORGANIZACAO_MIN || nome.length > ORGANIZACAO_MAX) return recusaDoNome();
+  if (derivarSlugOrganizacao(nome).length === 0) return recusaDoNome();
+  return nome;
+}
 
 /**
  * Traduz o token de um callable para o contrato do chamador. Isolado do
@@ -232,6 +355,15 @@ export async function promoverParaProfissionalCore(
     );
   }
 
+  // ── 1b. O resto do payload (PONTE-CTA-1 · PONTE-NOME-1) ────────────────
+  // Os dois entram AQUI, junto do aceite, porque são payload e não estado da
+  // conta: a pessoa que digitou um nome impossível merece ouvir isso antes de
+  // qualquer outra coisa, e a intenção precisa estar em mãos para carimbar o
+  // log dos DOIS desfechos de sucesso — inclusive o `jaExistia` do passo 4,
+  // que retorna cedo.
+  const intencao = normalizarIntencao(input['intencao']);
+  const nomeProfissional = nomeProfissionalDoPayload(input['nomeProfissional']);
+
   // ── 2. A sessão precisa ser NOMEADA ────────────────────────────────────
   // Sem e-mail cai aqui pelo mesmo motivo do anônimo: promover uma conta sem
   // endereço criaria um profissional que o time Leela não tem como alcançar.
@@ -257,7 +389,13 @@ export async function promoverParaProfissionalCore(
   // A conta com tenant tem o doc desde o `provisionTenant`; escrever
   // `aguardando_convite` por cima rebaixaria quem já está ativo.
   if (caller.tenantId !== null && caller.tenantId.length > 0) {
-    logger.info('promocao_profissional', { uid: caller.uid, jaExistia: true, viaTenant: true });
+    logger.info('promocao_profissional', {
+      uid: caller.uid,
+      jaExistia: true,
+      viaTenant: true,
+      intencao,
+      nomeDeclarado: nomeProfissional !== null,
+    });
     return { statusOnboarding: 'aguardando_convite', jaExistia: true };
   }
 
@@ -291,11 +429,18 @@ export async function promoverParaProfissionalCore(
       id: caller.uid,
       nome: caller.nome?.trim() ?? '',
       email,
-      // A ponte não tem formulário. Os dois campos ficam vazios de propósito e
-      // o resgate do código já sabe cair no nome e depois no e-mail
-      // (`sementeDoSlug`) — a pessoa preenche o perfil dela no painel.
+      // O telefone continua vazio de propósito: a porta não é formulário de
+      // cadastro, e ninguém precisa dele para circular na vitrine. ⛔ A frase
+      // que morava aqui — "a pessoa preenche o perfil dela no painel" — era
+      // FALSA e a review de 08/08 mediu: `profissionais/{uid}` só admite
+      // `create` pelo cliente, não existe callable de edição a pedido da dona
+      // e renomear tenant é exclusivo de platform_admin. Não existe o depois.
       telefone: '',
-      organizacao: '',
+      // PONTE-NOME-1 · o campo que era SEMPRE vazio. Quando a pessoa escolhe
+      // o nome na porta, ele desce até aqui e o resgate do código o usa como
+      // semente do slug — que é cunhado uma vez e não se renomeia. Vazio
+      // continua sendo estado válido, e é o que o cliente velho produz.
+      organizacao: nomeProfissional ?? '',
       statusOnboarding: 'aguardando_convite',
       consentimentoLgpd: {
         versao: TERMO_LGPD_VERSAO,
@@ -308,7 +453,16 @@ export async function promoverParaProfissionalCore(
     return false;
   });
 
-  logger.info('promocao_profissional', { uid: caller.uid, jaExistia, viaTenant: false });
+  // Zero PII: a intenção é um de quatro rótulos fechados e o nome entra como
+  // BOOLEANO. O nome da produtora é dado de titular — ele vai para o
+  // documento, nunca para o log.
+  logger.info('promocao_profissional', {
+    uid: caller.uid,
+    jaExistia,
+    viaTenant: false,
+    intencao,
+    nomeDeclarado: nomeProfissional !== null,
+  });
   return { statusOnboarding: 'aguardando_convite', jaExistia };
 }
 

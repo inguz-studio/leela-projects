@@ -791,6 +791,10 @@ export type { PerfilOrganizadorInput } from './platform/profissionais';
 export { promoverParaProfissional, motivoDaRecusaDaPromocao } from './platform/profissionais';
 export type {
   PromocaoProfissionalResult,
+  // O que a porta manda além do aceite: a intenção do CTA apertado
+  // (PONTE-CTA-1) e o nome da produtora escolhido ali (PONTE-NOME-1).
+  PromocaoProfissionalInput,
+  IntencaoDaTravessia,
   MotivoRecusaPromocao,
 } from './platform/profissionais';
 

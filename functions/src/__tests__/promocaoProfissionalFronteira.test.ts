@@ -21,8 +21,11 @@ import { resolve } from 'path';
 vi.mock('firebase-admin', () => ({ firestore: vi.fn() }));
 vi.mock('firebase-functions/logger', () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }));
 
+import * as logger from 'firebase-functions/logger';
 import {
   callerDaPromocao,
+  normalizarIntencao,
+  nomeProfissionalDoPayload,
   promoverParaProfissionalCore,
   type CallerPromocao,
 } from '../platform/promoverParaProfissional';
@@ -336,5 +339,161 @@ describe('S1234-T1 · o token lido sem inferência', () => {
     });
     expect(c.role).toBeNull();
     expect(c.tenantId).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PONTE-CTA-1 · a intenção é carimbada, e ela NUNCA recusa ninguém
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-CTA-1 · o campo `intencao` mede sem cobrar', () => {
+  it('as duas intenções atravessam e chegam ao log com o próprio nome', async () => {
+    for (const intencao of ['eventos', 'clube'] as const) {
+      expect(normalizarIntencao(intencao)).toBe(intencao);
+      const { db, escritas } = dbFake();
+      const r = await promoverParaProfissionalCore(db, CLIENTE, { ...ACEITE, intencao });
+      expect(r.jaExistia).toBe(false);
+      expect(escritas).toHaveLength(1);
+      const log = vi.mocked(logger.info).mock.calls.at(-1);
+      expect(log?.[0]).toBe('promocao_profissional');
+      expect((log?.[1] as { intencao?: string })?.intencao).toBe(intencao);
+      vi.clearAllMocks();
+    }
+  });
+
+  it('⚔ o cliente VELHO — que não conhece o campo — atravessa igual, como `nao_declarada`', async () => {
+    // A landing no ar hoje manda só `{ aceiteTermo: true }`. Se o campo novo
+    // recusasse a ausência, o deploy das functions derrubaria a ponte antes de
+    // o deploy da landing subir.
+    const { db, escritas } = dbFake();
+    await promoverParaProfissionalCore(db, CLIENTE, ACEITE);
+    expect(escritas).toHaveLength(1);
+    expect(
+      (vi.mocked(logger.info).mock.calls.at(-1)?.[1] as { intencao?: string })?.intencao
+    ).toBe('nao_declarada');
+  });
+
+  it('⚔ o typo do cliente NOVO vira `invalida`, e não se funde com o silêncio do velho', async () => {
+    // Esta é a regra, e não detalhe: fundir os dois faria um erro de deploy
+    // novo desaparecer dentro do volume do deploy velho, e a medição diria
+    // que ninguém clicou. A pessoa, essa, atravessa do mesmo jeito.
+    expect(normalizarIntencao('clubes')).toBe('invalida');
+    expect(normalizarIntencao(42)).toBe('invalida');
+    expect(normalizarIntencao(undefined)).toBe('nao_declarada');
+    expect(normalizarIntencao(null)).toBe('nao_declarada');
+
+    const { db, escritas } = dbFake();
+    await promoverParaProfissionalCore(db, CLIENTE, { ...ACEITE, intencao: 'painel' });
+    expect(escritas).toHaveLength(1);
+    expect(
+      (vi.mocked(logger.info).mock.calls.at(-1)?.[1] as { intencao?: string })?.intencao
+    ).toBe('invalida');
+  });
+
+  it('⚔ quem JÁ tem tenant também carimba a intenção — o retorno cedo não perde a medição', async () => {
+    // O passo do tenant retorna antes da transação. Um log sem `intencao` aí
+    // faria a conversão de quem já atravessou sumir da conta.
+    const { db, escritas } = dbFake();
+    const r = await promoverParaProfissionalCore(
+      db,
+      { ...CLIENTE, role: 'tenant_owner', tenantId: 'castelo' },
+      { ...ACEITE, intencao: 'clube' }
+    );
+    expect(r.jaExistia).toBe(true);
+    expect(escritas).toHaveLength(0);
+    const dados = vi.mocked(logger.info).mock.calls.at(-1)?.[1] as {
+      intencao?: string;
+      viaTenant?: boolean;
+    };
+    expect(dados?.viaTenant).toBe(true);
+    expect(dados?.intencao).toBe('clube');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PONTE-NOME-1 · o nome da produtora escolhido na porta
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-NOME-1 · `organizacao` deixa de nascer sempre vazia', () => {
+  it('o nome escolhido desce até `organizacao`, aparado', async () => {
+    const { db, escritas } = dbFake();
+    await promoverParaProfissionalCore(db, CLIENTE, {
+      ...ACEITE,
+      nomeProfissional: '  Castelo Produções  ',
+    });
+    expect(escritas[0]?.dados['organizacao']).toBe('Castelo Produções');
+  });
+
+  it('⚔ sem nome declarado, `organizacao` continua vazia — o cliente velho não muda', async () => {
+    const { db, escritas } = dbFake();
+    await promoverParaProfissionalCore(db, CLIENTE, ACEITE);
+    expect(escritas[0]?.dados['organizacao']).toBe('');
+  });
+
+  it('campo apagado pela pessoa (string vazia) é escolha de não escolher, não erro', async () => {
+    const { db, escritas } = dbFake();
+    await promoverParaProfissionalCore(db, CLIENTE, { ...ACEITE, nomeProfissional: '   ' });
+    expect(escritas).toHaveLength(1);
+    expect(escritas[0]?.dados['organizacao']).toBe('');
+  });
+
+  it('⚔ nome que não vira slug é RECUSADO, não descartado em silêncio', async () => {
+    // `"!!"` tem dois caracteres e passa no comprimento; o slug derivado dele
+    // é vazio. Aceitá-lo devolveria à pessoa a semente do nome pessoal com
+    // cara de escolha feita — e o slug é cunhado uma vez.
+    for (const ruim of ['!', '!!', '   ---   ', 'x'.repeat(81), 42, { nome: 'x' }]) {
+      const { db, escritas } = dbFake();
+      const erro = await promoverParaProfissionalCore(db, CLIENTE, {
+        ...ACEITE,
+        nomeProfissional: ruim,
+      }).then(
+        () => null,
+        (e: unknown) => e as { code?: string; details?: { motivo?: string } }
+      );
+      expect(erro).not.toBeNull();
+      expect(erro?.code).toBe('invalid-argument');
+      expect(erro?.details?.motivo).toBe('nome_profissional_invalido');
+      expect(escritas).toHaveLength(0);
+    }
+  });
+
+  it('a régua pura, isolada: o que passa, o que vira null e o que estoura', () => {
+    expect(nomeProfissionalDoPayload('Castelo')).toBe('Castelo');
+    expect(nomeProfissionalDoPayload('Zé')).toBe('Zé');
+    expect(nomeProfissionalDoPayload(undefined)).toBeNull();
+    expect(nomeProfissionalDoPayload(null)).toBeNull();
+    expect(nomeProfissionalDoPayload('')).toBeNull();
+    expect(() => nomeProfissionalDoPayload('a')).toThrow();
+    expect(() => nomeProfissionalDoPayload('%%')).toThrow();
+  });
+
+  it('⚔ o nome NÃO vai para o log — o log leva um booleano', async () => {
+    // `organizacao` é dado de titular. Ele vai para o documento; o Cloud
+    // Logging fica com "declarou ou não".
+    const { db } = dbFake();
+    await promoverParaProfissionalCore(db, CLIENTE, {
+      ...ACEITE,
+      nomeProfissional: 'Castelo Produções',
+    });
+    const dados = vi.mocked(logger.info).mock.calls.at(-1)?.[1] as Record<string, unknown>;
+    expect(dados['nomeDeclarado']).toBe(true);
+    expect(JSON.stringify(dados)).not.toContain('Castelo');
+  });
+
+  it('⚔ o nome não abre porta nenhuma: a recusa de conta inelegível vem ANTES da escrita', async () => {
+    // O divulgador que mandasse um nome bonito continua parando na porta, e o
+    // Firestore continua intacto (PONTE-ELEGIVEL-1 não é afrouxado por este
+    // campo novo).
+    const { db, escritas } = dbFake();
+    const erro = await promoverParaProfissionalCore(
+      db,
+      { ...CLIENTE, role: 'promoter' },
+      { ...ACEITE, nomeProfissional: 'Produtora do Téo', intencao: 'eventos' }
+    ).then(
+      () => null,
+      (e: unknown) => e as { details?: { motivo?: string } }
+    );
+    expect(erro?.details?.motivo).toBe('conta_inelegivel');
+    expect(escritas).toHaveLength(0);
   });
 });

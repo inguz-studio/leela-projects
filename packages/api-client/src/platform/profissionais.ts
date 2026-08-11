@@ -152,6 +152,12 @@ const MOTIVOS_NOMEADOS = [
   'conta_inelegivel',
   'aceite_ausente',
   'aceite_datado_pelo_cliente',
+  /**
+   * PONTE-NOME-1: a pessoa declarou um nome de produtora que não vira slug.
+   * Recusa em vez de descarte silencioso — o slug é cunhado uma vez, e um nome
+   * jogado fora aqui vira identificador permanente errado lá adiante.
+   */
+  'nome_profissional_invalido',
 ] as const;
 
 /**
@@ -170,6 +176,28 @@ export interface PromocaoProfissionalResult {
 }
 
 /**
+ * Qual dos dois CTAs por intenção foi apertado (PONTE-CTA-1). Espelha
+ * `IntencaoDaTravessia` de `functions/src/platform/promoverParaProfissional.ts`.
+ *
+ * Os dois botões disparam a MESMA promoção — o que muda é o carimbo no log do
+ * servidor, e é ele que mede clique e conversão sem uma linha de telemetria na
+ * landing (o resgate do código também loga, e o `uid` junta os dois).
+ */
+export type IntencaoDaTravessia = 'eventos' | 'clube';
+
+/** O que a porta manda além do aceite. Tudo opcional, e ausente é válido. */
+export interface PromocaoProfissionalInput {
+  /** Qual CTA foi apertado (PONTE-CTA-1). */
+  intencao?: IntencaoDaTravessia;
+  /**
+   * Nome da produtora escolhido na porta (PONTE-NOME-1). Vazio ou ausente
+   * mantém o comportamento anterior — o resgate semeia o slug com o nome da
+   * pessoa.
+   */
+  nomeProfissional?: string;
+}
+
+/**
  * Promove a conta LOGADA a profissional (RN-512).
  *
  * A conta já existe — este é o gesto que a área do cliente precisava em vez de
@@ -181,12 +209,23 @@ export interface PromocaoProfissionalResult {
  * VERSÃO e o INSTANTE são carimbados pelo servidor (RN-446/RN-466), e mandar
  * qualquer um dos dois daqui é recusado de propósito.
  */
-export async function promoverParaProfissional(): Promise<PromocaoProfissionalResult> {
-  const fn = httpsCallable<{ aceiteTermo: true }, PromocaoProfissionalResult>(
-    getLeelaFunctions(),
-    'promoverParaProfissional'
-  );
-  const { data } = await fn({ aceiteTermo: true });
+export async function promoverParaProfissional(
+  opcoes?: PromocaoProfissionalInput
+): Promise<PromocaoProfissionalResult> {
+  const fn = httpsCallable<
+    { aceiteTermo: true; intencao?: IntencaoDaTravessia; nomeProfissional?: string },
+    PromocaoProfissionalResult
+  >(getLeelaFunctions(), 'promoverParaProfissional');
+  // Os dois campos entram por SPREAD condicional, e não como `undefined`: o
+  // transporte do callable serializa em JSON e um `undefined` explícito some
+  // no caminho de qualquer forma — mas construir o payload assim mantém o
+  // contrato honesto para quem lê o objeto, e o `aceiteTermo` continua sendo
+  // o único campo sempre presente.
+  const { data } = await fn({
+    aceiteTermo: true,
+    ...(opcoes?.intencao ? { intencao: opcoes.intencao } : {}),
+    ...(opcoes?.nomeProfissional ? { nomeProfissional: opcoes.nomeProfissional } : {}),
+  });
   return data;
 }
 
