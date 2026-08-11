@@ -1,6 +1,7 @@
 'use client';
 
 import { UserPlus } from 'lucide-react';
+import { Card } from '@leela/design-system/server';
 import { Button } from '@/app/_ds/ds';
 
 // =============================================================================
@@ -49,18 +50,22 @@ export function MolduraFormulario({
   className?: string | undefined;
 }): React.JSX.Element {
   return (
-    <div
+    // Onda 1 do cânone: a anatomia era o `Card` do DS reescrita à mão. Entra
+    // pelo subpath server-safe (ADR-017 — a landing é Radix-free). O tom da
+    // borda (`subtle`, não o `default` do Card) é preservado de propósito:
+    // esta lane paga PROCEDÊNCIA, não redesenha a superfície do dinheiro.
+    <Card
       id={id}
       className={[
-        'scroll-mt-[var(--spacing-6)] rounded-ds-lg border border-border-subtle',
-        'bg-surface-raised p-4 sm:p-5',
+        'scroll-mt-[var(--spacing-6)] border-border-subtle',
+        'p-4 sm:p-5',
         className ?? '',
       ]
         .filter(Boolean)
         .join(' ')}
     >
       {children}
-    </div>
+    </Card>
   );
 }
 

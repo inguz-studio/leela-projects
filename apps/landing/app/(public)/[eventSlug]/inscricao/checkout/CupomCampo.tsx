@@ -1,5 +1,6 @@
 'use client';
 
+import { Card } from '@leela/design-system/server';
 import { Button, Input } from '@/app/_ds/ds';
 
 // =============================================================================
@@ -55,7 +56,7 @@ export function CupomCampo({
       {apoio ? <p className="text-xs text-text-tertiary">{apoio}</p> : null}
 
       {codigoAplicado !== null ? (
-        <div className="flex items-center justify-between gap-3 rounded-ds-md border border-border-subtle bg-feedback-success-surface px-4 py-3">
+        <Card className="flex items-center justify-between gap-3 rounded-ds-md border-border-subtle bg-feedback-success-surface px-4 py-3">
           <p className="text-sm font-medium text-feedback-success-fg">
             Cupom {codigoAplicado} aplicado
             {descontoLabel.length > 0 ? ` — ${descontoLabel}` : ''}
@@ -63,7 +64,7 @@ export function CupomCampo({
           <Button variant="ghost" size="sm" onClick={onRemover}>
             Remover
           </Button>
-        </div>
+        </Card>
       ) : (
         <div className="flex items-end gap-2">
           <div className="flex-1">

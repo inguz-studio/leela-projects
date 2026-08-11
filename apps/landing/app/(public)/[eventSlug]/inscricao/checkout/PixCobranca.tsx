@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import QRCode from 'qrcode';
+import { Card } from '@leela/design-system/server';
 import { Button, useToast } from '@/app/_ds/ds';
 
 // =============================================================================
@@ -258,9 +259,9 @@ export function PixCobranca({
 
   if (expirado) {
     return (
-      <div
+      <Card
         role="status"
-        className="flex flex-col gap-3 rounded-ds-lg border border-border-default bg-feedback-warning-surface p-4 sm:p-5"
+        className="flex flex-col gap-3 bg-feedback-warning-surface p-4 sm:p-5"
       >
         <p className="text-sm font-semibold text-feedback-warning-fg">Código PIX expirado</p>
         <p className="text-sm text-text-primary">
@@ -274,7 +275,7 @@ export function PixCobranca({
             </Button>
           </div>
         ) : null}
-      </div>
+      </Card>
     );
   }
 
@@ -283,9 +284,9 @@ export function PixCobranca({
   // cobrança JAMAIS ocupa esse lugar (era o que o fallback antigo fazia).
   if (codigo.length === 0) {
     return (
-      <div
+      <Card
         role="status"
-        className="flex flex-col gap-3 rounded-ds-lg border border-border-default bg-feedback-warning-surface p-4 sm:p-5"
+        className="flex flex-col gap-3 bg-feedback-warning-surface p-4 sm:p-5"
       >
         <p className="text-sm font-semibold text-feedback-warning-fg">Código PIX indisponível</p>
         <p className="text-sm text-text-primary">
@@ -299,12 +300,12 @@ export function PixCobranca({
             </Button>
           </div>
         ) : null}
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">
+    <Card className="flex flex-col gap-3 border-border-subtle p-4 sm:p-5">
       <p className="text-sm font-medium text-text-primary">Escaneie o QR ou use o copia e cola</p>
 
       <PixQrCode payload={codigo} />
@@ -338,6 +339,6 @@ export function PixCobranca({
       </div>
 
       {nota}
-    </div>
+    </Card>
   );
 }
