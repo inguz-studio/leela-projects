@@ -32,9 +32,10 @@ import {
   dependenciasDeWorkspace,
   mapearPacotes,
   reprovados,
-  // @ts-expect-error — módulo .mjs sem tipos: é script de build, e tipá-lo
-  // exigiria um segundo artefato para o mesmo arquivo. O contrato dele são
-  // estes testes.
+  // O script é `.mjs` sem tipos de propósito: ele roda no `build` por `node`,
+  // antes de qualquer compilação, e um segundo artefato tipado para o mesmo
+  // arquivo seria a segunda cópia da regra. O contrato dele são estes testes,
+  // e o `allowJs` do tsconfig da landing infere o suficiente.
 } from '../../../scripts/verificar-frescor-do-workspace.mjs';
 
 const RAIZ_REAL = resolve(__dirname, '../../..');

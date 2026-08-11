@@ -87,6 +87,31 @@
 // não quiser escolher não faz nada e cai no comportamento de antes; quem quiser,
 // escolhe antes de o nome virar permanente. Nenhum formulário nasce: é um campo,
 // e ele é opcional.
+//
+// -----------------------------------------------------------------------------
+// O QUE A REVIEW ANTAGONISTA DERRUBOU AQUI (PONTE-FIX · B2 · R1 · R3)
+// -----------------------------------------------------------------------------
+// Três coisas, e a primeira era bloqueadora.
+//
+// B2 — "quem não tocar cai no comportamento de antes" era FALSO para uma
+// classe de nomes. O pré-preenchimento mandava o nome do token ao servidor sem
+// a pessoa tocar em nada, e o servidor recusa nome que não deriva endereço.
+// `Анна`, `李` e `ゆき` são contas válidas cujo nome vira endereço vazio, então
+// elas viam o próprio nome no campo, não mexiam nele, clicavam e levavam uma
+// recusa por um nome que nunca digitaram. A regra do conserto já existia nesta
+// tela, escrita para o token sem `name`; ela só passou a valer também quando o
+// `name` existe e não serve (`nomeInicialDaProdutora`).
+//
+// R1 — o retorno da callable era DESCARTADO (`await promoverParaProfissional(…)`
+// sem atribuição). O `jaExistia` que o servidor manda de propósito nunca era
+// lido, e nos dois ramos idempotentes o nome digitado era jogado fora sem uma
+// palavra. Agora o retorno é lido e o eco novo do servidor (`nomeAplicado`) vira
+// frase na tela de sucesso.
+//
+// R3 — a recusa do campo saía num `<p role="alert">` solto no fim do cartão, e
+// o `Input` nunca ficava `aria-invalid`. Quem usa leitor de tela ouvia um alerta
+// sem saber qual campo recusou. A frase passou para o `errorMessage` do DS, que
+// já faz a associação sozinho.
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -97,6 +122,10 @@ import {
   type IntencaoDaTravessia,
   type MotivoRecusaPromocao,
 } from '@leela/api-client';
+// A MESMA função que o servidor usa para derivar o endereço, importada e não
+// recopiada (PONTE-FIX · B2). Uma segunda cópia da régua aqui é exatamente o
+// que o PONTE-ELEGIVEL-1 existe para impedir, agora em validação de nome.
+import { derivarSlugOrganizacao } from '@leela/core';
 import { Button, Checkbox, Input } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 import { painelUrl } from '@/lib/painel';
@@ -156,12 +185,45 @@ const FRASE_DA_RECUSA: Record<MotivoRecusaPromocao, string> = {
   // PONTE-NOME-1 · a pessoa apagou o pré-preenchido e digitou algo que não
   // vira endereço. A frase diz a régua, e não o erro: o que ela precisa saber
   // é o que serve, porque o nome dela vira o endereço da produtora.
+  //
+  // ⛔ A FRASE ANTERIOR MENTIA (PONTE-FIX · B2). "Pelo menos duas letras ou
+  // números" é falso para quem escreve fora do alfabeto latino: `Анна` tem
+  // quatro letras, `ゆき` tem duas, e as duas viram endereço vazio porque
+  // `derivarSlugOrganizacao` só preserva `[a-z0-9]` depois do NFD. Uma pessoa
+  // lendo a frase antiga contava as próprias letras, via que a régua estava
+  // cumprida e não tinha o que fazer. A régua real tem dois eixos e os dois
+  // precisam estar na frase.
   nome_profissional_invalido:
-    'Escolha um nome com pelo menos duas letras ou números para a sua produtora.',
+    'Escolha um nome com dois caracteres ou mais e pelo menos uma letra de A a Z ou um número. O endereço da sua produtora é escrito só com esses caracteres.',
   indisponivel: 'Não conseguimos abrir o painel profissional agora. Tente de novo em instantes.',
 };
 
 type FasePromocao = 'convite' | 'promovendo' | 'pronta' | 'recusada';
+
+/**
+ * O valor com que o campo NASCE (PONTE-FIX · B2).
+ *
+ * O pré-preenchimento tinha um buraco medido pela review antagonista: ele
+ * mandava o nome do token ao servidor SEM A PESSOA TOCAR EM NADA, e o servidor
+ * recusa nome que não deriva endereço. Uma participante chamada `Анна`, `李` ou
+ * `ゆき` tem conta válida, via o próprio nome no campo, não mexia nele, clicava
+ * e levava a sétima recusa por um nome que nunca digitou. O registro do maestro
+ * promete o contrário, em letras: *"quem não tocar nele cai exatamente no
+ * comportamento de antes"*.
+ *
+ * A regra que conserta já existia na própria lane, escrita para o token sem
+ * `name`: se o default não serve, o campo nasce vazio, e a pessoa decide. Aqui
+ * ela só passa a valer também quando o `name` EXISTE e não vira endereço — que
+ * é o mesmo fato, por outro caminho.
+ *
+ * ⚠️ Isto NÃO afrouxa a régua de quem digita. Quem apagar o campo e escrever
+ * `李` continua ouvindo a recusa, e tem de ouvir: o endereço é cunhado uma vez,
+ * e descartar em silêncio um nome digitado é o defeito que o item inteiro
+ * existe para matar.
+ */
+function nomeInicialDaProdutora(nomeDaPessoa: string): string {
+  return derivarSlugOrganizacao(nomeDaPessoa).length > 0 ? nomeDaPessoa : '';
+}
 
 /**
  * Fluxo A — a conta já alcança os dois lados (RN-513). Nada de servidor aqui:
@@ -198,10 +260,25 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
   const [aceito, setAceito] = useState(false);
   // PONTE-NOME-1 · pré-preenchido com o nome da pessoa, que é EXATAMENTE o que
   // o resgate usaria em silêncio. O campo não inventa um default novo: ele
-  // mostra o default que já existia e devolve a caneta para a dona.
-  const [nomeProfissional, setNomeProfissional] = useState(nomeDaPessoa);
+  // mostra o default que já existia e devolve a caneta para a dona. E quando o
+  // default não vira endereço, ele nasce vazio (PONTE-FIX · B2) — ver
+  // `nomeInicialDaProdutora`.
+  const [nomeProfissional, setNomeProfissional] = useState(() =>
+    nomeInicialDaProdutora(nomeDaPessoa)
+  );
   const [fase, setFase] = useState<FasePromocao>('convite');
   const [recusa, setRecusa] = useState<MotivoRecusaPromocao>('indisponivel');
+  /**
+   * O servidor aceitou a travessia e NÃO aplicou o nome (PONTE-FIX · R1).
+   *
+   * Acontece nos dois ramos idempotentes — conta que já tem tenant e doc de
+   * profissional pré-existente. Antes deste conserto a tela DESCARTAVA o
+   * retorno da callable (`await promoverParaProfissional({…})` sem atribuição),
+   * então o `jaExistia` que o servidor manda de propósito nunca era lido e a
+   * pessoa via "Pronto. O painel profissional já é seu" como quem escolheu o
+   * nome. O nome dela tinha sido jogado fora sem uma palavra.
+   */
+  const [nomeNaoAplicado, setNomeNaoAplicado] = useState(false);
   /** Qual dos dois botões está em voo — só ele vira "Abrindo…". */
   const [emVooDe, setEmVooDe] = useState<IntencaoDaTravessia | null>(null);
   const emVoo = useRef(false);
@@ -227,8 +304,21 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
       setFase('promovendo');
       try {
         ensureLeela();
-        await promoverParaProfissional({ intencao, nomeProfissional: nomeProfissional.trim() });
-        if (vivo.current) setFase('pronta');
+        const nomeEnviado = nomeProfissional.trim();
+        // O RETORNO NÃO É MAIS DESCARTADO (PONTE-FIX · R1). Ele carrega o eco
+        // que o servidor passou a mandar: `nomeAplicado: false` com nome
+        // declarado é o descarte idempotente, e a tela tem de dizer isso.
+        // `=== false` e não `!resultado.nomeAplicado`: contra um servidor
+        // anterior ao eco o campo chega `undefined`, e inferir descarte a
+        // partir de ausência de informação seria inventar um fato.
+        const resultado = await promoverParaProfissional({
+          intencao,
+          nomeProfissional: nomeEnviado,
+        });
+        if (vivo.current) {
+          setNomeNaoAplicado(nomeEnviado.length > 0 && resultado.nomeAplicado === false);
+          setFase('pronta');
+        }
       } catch (erro) {
         if (vivo.current) {
           setRecusa(motivoDaRecusaDaPromocao(erro));
@@ -253,6 +343,19 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
             vitrine, e a vitrine acompanha o menu: dizer "Eventos e Clubs" é
             dizer onde ela vai encontrar o que veio buscar, e no mesmo fôlego
             dizer que o código é o que abre as duas. */}
+        {/* PONTE-FIX · R1 · o descarte deixou de ser silencioso.
+            A pessoa digitou um nome e o servidor não o aplicou porque a
+            produtora dela já existia. Calar aqui era o mesmo defeito que o
+            PONTE-NOME-1 existe para matar, só que num ramo menor: ela iria
+            embora achando que tinha escolhido o endereço. A frase diz o que
+            aconteceu e para onde ir, porque renomear produtora é operação de
+            administração da plataforma e não tem botão nesta tela. */}
+        {nomeNaoAplicado ? (
+          <p className={ERRO} role="status" data-slot="ponte-nome-nao-aplicado">
+            O nome que você digitou não entrou: a sua produtora já tinha um, e ele não muda por
+            aqui. Para trocar, fale com o time Leela.
+          </p>
+        ) : null}
         <p className={APOIO} role="status">
           Entre com esta mesma conta para conhecer as áreas por dentro — Eventos e Clubs estão lá.
           Para trabalhar com os seus dados, o time Leela libera seu código. {AVISO_SEGUNDO_LOGIN}
@@ -277,12 +380,24 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
       <p className={APOIO}>{AVISO_SEGUNDO_LOGIN}</p>
 
       {/* PONTE-NOME-1 · o único campo do cartão. Ele é opcional e já vem
-          preenchido — quem não quiser escolher segue sem tocar em nada. */}
+          preenchido — quem não quiser escolher segue sem tocar em nada.
+
+          PONTE-FIX · R3 · a recusa DO CAMPO viaja no campo. Ela saía num
+          `<p role="alert">` solto no fim do cartão, depois do checkbox: o
+          `Input` nunca ficava `aria-invalid`, o erro não era associado a ele e
+          quem usa leitor de tela ouvia um alerta sem saber QUAL campo recusou.
+          O DS já faz `aria-invalid` e `aria-describedby` sozinho a partir de
+          `errorMessage` — a tela só não estava usando. E a frase sai de UM
+          lugar só: repeti-la no rodapé faria o leitor de tela anunciar duas
+          vezes o mesmo erro. */}
       <div className="mt-4">
         <Input
           id="ponte-nome-profissional"
           label="Nome da sua produtora"
           hint="É como o seu trabalho aparece na plataforma, e vira o endereço da sua produtora. Depois do código Leela, ele não muda."
+          {...(fase === 'recusada' && recusa === 'nome_profissional_invalido'
+            ? { errorMessage: FRASE_DA_RECUSA[recusa] }
+            : {})}
           value={nomeProfissional}
           maxLength={80}
           autoComplete="organization"
@@ -312,7 +427,11 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
         </label>
       </div>
 
-      {fase === 'recusada' ? (
+      {/* As demais recusas continuam aqui: elas falam da CONTA (sessão, papel,
+          aceite, indisponibilidade) e não de um campo, então não têm campo a
+          que se associar. A do nome saiu deste bloco de propósito — ela ganhou
+          endereço no `Input` acima (PONTE-FIX · R3). */}
+      {fase === 'recusada' && recusa !== 'nome_profissional_invalido' ? (
         <p role="alert" className={ERRO} data-slot="ponte-recusa">
           {FRASE_DA_RECUSA[recusa]}
         </p>

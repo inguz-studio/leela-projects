@@ -356,10 +356,11 @@ describe('S1234-T2 · as recusas viram frase, nunca erro cru', () => {
     { motivo: 'conta_inelegivel', trecho: /fale com o time leela/i },
     { motivo: 'aceite_ausente', trecho: /aceite o termo/i },
     { motivo: 'aceite_datado_pelo_cliente', trecho: /recarregue a p[áa]gina/i },
-    // PONTE-NOME-1 · a sétima. A pessoa apagou o pré-preenchido e digitou algo
-    // que não vira endereço; a frase diz a régua, não o erro.
-    { motivo: 'nome_profissional_invalido', trecho: /duas letras ou n[úu]meros/i },
     { motivo: 'indisponivel', trecho: /tente de novo/i },
+    // ⛔ `nome_profissional_invalido` NÃO está nesta lista, e a ausência é o
+    // conserto: ela é a única recusa que fala de um CAMPO, e por isso saiu do
+    // `<p role="alert">` solto para o `errorMessage` do `Input` (PONTE-FIX ·
+    // R3). Ela tem bloco próprio no fim deste arquivo.
   ];
 
   for (const caso of casos) {
@@ -456,11 +457,11 @@ describe('⚔ PONTE-NOME-1 · a porta pergunta o nome, e ele viaja', () => {
     await act(async () => {
       fireEvent.click(botaoConhecer());
     });
-    await waitFor(() =>
-      expect(document.querySelector('[data-slot="ponte-recusa"]')).not.toBeNull()
-    );
+    // A recusa mora NO CAMPO agora (PONTE-FIX · R3), então é o campo que se
+    // limpa quando a pessoa corrige.
+    await waitFor(() => expect(campoDoNome().getAttribute('aria-invalid')).toBe('true'));
     fireEvent.change(campoDoNome(), { target: { value: 'Castelo' } });
-    expect(document.querySelector('[data-slot="ponte-recusa"]')).toBeNull();
+    expect(campoDoNome().getAttribute('aria-invalid')).toBeNull();
   });
 
   it('⚔ o campo é OPCIONAL: não bloqueia o botão nem substitui o aceite', async () => {
@@ -518,5 +519,265 @@ describe('⚔ RN-512 · a máscara anti-enumeração do painel não é mais exer
     await montar({ role: 'platform_admin' });
     expect(document.querySelectorAll('a[href]')).toHaveLength(0);
     expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ PONTE-FIX · B2 — o campo não recusa quem nunca digitou
+// ---------------------------------------------------------------------------
+// A review antagonista mediu a cadeia inteira: o campo nascia com o `name` do
+// token e o `conhecer` mandava esse valor SEM A PESSOA TOCAR EM NADA; o
+// servidor recusa nome cujo `derivarSlugOrganizacao` é vazio; e `Анна`, `李` e
+// `ゆき` derivam vazio porque o regex só preserva `[a-z0-9]` depois do NFD.
+// Resultado: conta válida, nome próprio no campo, zero toque, clique — sétima
+// recusa. O registro do maestro promete o oposto, em letras.
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-FIX · B2 · nome não latino no token não vira recusa', () => {
+  /** Os três nomes da evidência da review. Gente real, contas válidas. */
+  const NAO_LATINOS = ['Анна', '李', 'ゆき'];
+
+  for (const nome of NAO_LATINOS) {
+    it(`⚔ \`${nome}\` no token: o campo nasce VAZIO — não é palpite que a pessoa não fez`, async () => {
+      await montar({ role: 'athlete', name: nome });
+      expect(campoDoNome().value).toBe('');
+    });
+
+    it(`⚔ \`${nome}\` sem tocar em nada ATRAVESSA — o comportamento de antes da lane`, async () => {
+      // Este é o caso que a lane quebrou e que o registro promete. Sem o
+      // conserto, o payload levava o nome e o servidor devolvia a sétima
+      // recusa para quem nunca digitou.
+      promoverParaProfissional.mockResolvedValue({
+        statusOnboarding: 'aguardando_convite',
+        jaExistia: false,
+        intencaoRegistrada: 'eventos',
+        nomeAplicado: false,
+      });
+      await montar({ role: 'athlete', name: nome });
+      // Antes do clique: o campo está limpo, sem erro. É o estado de quem
+      // chegou e não mexeu em nada.
+      expect(campoDoNome().getAttribute('aria-invalid')).toBeNull();
+      marcarTermo();
+      await act(async () => {
+        fireEvent.click(botaoConhecer());
+      });
+      await waitFor(() => expect(promoverParaProfissional).toHaveBeenCalledTimes(1));
+      // Campo vazio ⇒ string vazia no payload ⇒ o servidor lê como AUSENTE e
+      // cai no caminho de antes. Nenhuma recusa aparece.
+      expect(promoverParaProfissional.mock.calls[0]?.[0]).toMatchObject({
+        nomeProfissional: '',
+      });
+      expect(document.querySelector('[data-slot="ponte-recusa"]')).toBeNull();
+      await screen.findByRole('link', { name: /ir para o painel profissional/i });
+    });
+  }
+
+  it('nome latino no token continua pré-preenchido — o conserto não apaga o default bom', async () => {
+    // A régua é derivabilidade, e não "só ASCII": um caractere latino no meio
+    // do não latino já basta, e o campo tem de mostrar o nome inteiro.
+    for (const [nome, esperado] of [
+      ['Ana Paula', 'Ana Paula'],
+      ['José', 'José'],
+      ['Анна2', 'Анна2'],
+      ['李 Produções', '李 Produções'],
+    ] as const) {
+      await montar({ role: 'athlete', name: nome });
+      expect(campoDoNome().value, nome).toBe(esperado);
+      cleanup();
+    }
+  });
+
+  it('⚔ quem DIGITA um nome que não vira endereço continua sendo recusado', async () => {
+    // O conserto do B2 é sobre quem NÃO tocou. Quem apagou o campo e escreveu
+    // `李` fez uma escolha, e descartá-la em silêncio é o defeito que o item
+    // inteiro existe para matar — o endereço é cunhado uma vez.
+    promoverParaProfissional.mockRejectedValue(new Error('qualquer coisa'));
+    motivoDaRecusaDaPromocao.mockReturnValue('nome_profissional_invalido');
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: '李' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await waitFor(() => expect(campoDoNome().getAttribute('aria-invalid')).toBe('true'));
+    expect(promoverParaProfissional.mock.calls[0]?.[0]).toMatchObject({ nomeProfissional: '李' });
+  });
+
+  it('⚔ a FRASE da recusa não mente mais sobre a régua', async () => {
+    // `ゆき` tem duas letras. A frase antiga — "pelo menos duas letras ou
+    // números" — mandava a pessoa contar letras que ela já tinha.
+    promoverParaProfissional.mockRejectedValue(new Error('qualquer coisa'));
+    motivoDaRecusaDaPromocao.mockReturnValue('nome_profissional_invalido');
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: 'ゆき' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    const frase = await waitFor(() => {
+      const el = document.getElementById('ponte-nome-profissional-error');
+      expect(el).not.toBeNull();
+      return el?.textContent ?? '';
+    });
+    expect(frase).not.toMatch(/duas letras ou n[úu]meros/i);
+    expect(frase).toMatch(/a a z/i);
+    expect(frase).toMatch(/n[úu]mero/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ PONTE-FIX · R3 — o erro do campo é do CAMPO
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-FIX · R3 · a recusa do nome é associada ao campo', () => {
+  async function recusarONome(): Promise<void> {
+    promoverParaProfissional.mockRejectedValue(new Error('qualquer coisa'));
+    motivoDaRecusaDaPromocao.mockReturnValue('nome_profissional_invalido');
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: '!!' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+  }
+
+  it('⚔ o campo ganha `aria-invalid` de verdade', async () => {
+    await recusarONome();
+    await waitFor(() => expect(campoDoNome().getAttribute('aria-invalid')).toBe('true'));
+  });
+
+  it('⚔ o `aria-describedby` do campo aponta para a frase da recusa', async () => {
+    // Sem isto, quem usa leitor de tela ouve um alerta e não sabe QUAL campo
+    // recusou — era o estado anterior, com a frase solta no fim do cartão.
+    await recusarONome();
+    await waitFor(() => expect(campoDoNome().getAttribute('aria-invalid')).toBe('true'));
+    const descritores = (campoDoNome().getAttribute('aria-describedby') ?? '').split(/\s+/);
+    expect(descritores).toContain('ponte-nome-profissional-error');
+    const alvo = document.getElementById('ponte-nome-profissional-error');
+    expect(alvo?.textContent ?? '').toMatch(/endere[çc]o da sua produtora/i);
+    // A régua permanente continua descrita, e ela não se move quando o erro
+    // aparece: os dois convivem no `aria-describedby`.
+    expect(descritores).toContain('ponte-nome-profissional-hint');
+  });
+
+  it('⚔ a frase sai de UM lugar só — nada de leitor de tela anunciando em dobro', async () => {
+    await recusarONome();
+    await waitFor(() => expect(campoDoNome().getAttribute('aria-invalid')).toBe('true'));
+    expect(document.querySelector('[data-slot="ponte-recusa"]')).toBeNull();
+    const cartao = document.querySelector('[data-slot="porta-conhecer-painel"]');
+    const ocorrencias = (cartao?.textContent ?? '').split('O endereço da sua produtora é escrito')
+      .length - 1;
+    expect(ocorrencias).toBe(1);
+  });
+
+  it('as recusas que falam da CONTA continuam no alerta do cartão — elas não têm campo', async () => {
+    promoverParaProfissional.mockRejectedValue(new Error('qualquer coisa'));
+    motivoDaRecusaDaPromocao.mockReturnValue('conta_inelegivel');
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="ponte-recusa"]')).not.toBeNull()
+    );
+    expect(campoDoNome().getAttribute('aria-invalid')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ PONTE-FIX · R1 — o retorno da callable deixou de ser descartado
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-FIX · R1 · o descarte silencioso no ramo idempotente', () => {
+  /** O que o servidor devolve quando aceitou a travessia e NÃO gravou o nome. */
+  const NAO_APLICOU = {
+    statusOnboarding: 'aguardando_convite' as const,
+    jaExistia: true,
+    intencaoRegistrada: 'eventos' as const,
+    nomeAplicado: false,
+  };
+
+  it('⚔ nome digitado + `nomeAplicado: false` → a tela DIZ que o nome não entrou', async () => {
+    promoverParaProfissional.mockResolvedValue(NAO_APLICOU);
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: 'Castelo Produções' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    const aviso = await waitFor(() => {
+      const el = document.querySelector('[data-slot="ponte-nome-nao-aplicado"]');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(aviso.textContent ?? '').toMatch(/j[áa] tinha um/i);
+    // E a travessia continua sendo oferecida: o aviso não vira obstáculo.
+    await screen.findByRole('link', { name: /ir para o painel profissional/i });
+  });
+
+  it('⚔ SEM nome digitado, `nomeAplicado: false` não vira aviso nenhum', async () => {
+    // Quem não escolheu nada não perdeu nada. Avisar aqui seria inventar uma
+    // perda e assustar a pessoa no exato momento em que ela atravessou.
+    promoverParaProfissional.mockResolvedValue(NAO_APLICOU);
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: '' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await screen.findByRole('link', { name: /ir para o painel profissional/i });
+    expect(document.querySelector('[data-slot="ponte-nome-nao-aplicado"]')).toBeNull();
+  });
+
+  it('nome digitado e APLICADO não vira aviso — o caminho feliz segue mudo', async () => {
+    promoverParaProfissional.mockResolvedValue({
+      statusOnboarding: 'aguardando_convite',
+      jaExistia: false,
+      intencaoRegistrada: 'eventos',
+      nomeAplicado: true,
+    });
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: 'Castelo Produções' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await screen.findByRole('link', { name: /ir para o painel profissional/i });
+    expect(document.querySelector('[data-slot="ponte-nome-nao-aplicado"]')).toBeNull();
+  });
+
+  it('⚔ servidor SEM o eco (deploy anterior) não produz aviso — ausência não é fato', async () => {
+    // `nomeAplicado: undefined` é "não sei", e não "não aplicou". Inferir
+    // descarte a partir de silêncio inventaria uma perda que pode não existir.
+    promoverParaProfissional.mockResolvedValue({
+      statusOnboarding: 'aguardando_convite',
+      jaExistia: true,
+    });
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: 'Castelo Produções' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await screen.findByRole('link', { name: /ir para o painel profissional/i });
+    expect(document.querySelector('[data-slot="ponte-nome-nao-aplicado"]')).toBeNull();
+  });
+
+  it('⚔ a tela LÊ o retorno: `PortasDaConta.tsx` não descarta mais a promessa', async () => {
+    // A prova estrutural do R1. O defeito era literal — `await
+    // promoverParaProfissional({…})` sem atribuição — e um refactor
+    // desatento o traz de volta sem quebrar nenhum caso de comportamento.
+    const fonte = readFileSync(
+      resolve(__dirname, '../app/(public)/minha-conta/PortasDaConta.tsx'),
+      'utf8'
+    );
+    const semComentarios = fonte
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/^\s*\/\/.*$/gm, ' ')
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ');
+    expect(semComentarios).not.toMatch(/^\s*await promoverParaProfissional\(/m);
+    expect(semComentarios).toMatch(/=\s*await promoverParaProfissional\(/);
+    expect(semComentarios).toContain('nomeAplicado');
   });
 });
