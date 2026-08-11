@@ -706,3 +706,56 @@ reprova. O número real, medido sem as listas, vive no baseline versionado.
 
 Detalhe completo, com as falsificações feitas e as três pendências nomeadas, em
 `.nirvana/handoffs/leela-canon-onda0-20260811.md`.
+
+## Delta a Onda 1 paga o caminho do dinheiro, e a catraca desce pela primeira vez (2026-08-11 · lane `canon-onda-1`)
+
+A onda do checkout — primeira da fila por JTBD (`§04.1` *"Descubro evento → me inscrever em poucos
+cliques"*) e por carga (16 dos 20 passos de arquitetura do produto estão nesta superfície). Três
+commits de código, nenhum deploy.
+
+| Item | Prova |
+|---|---|
+| Checkout: 12 superfícies reconstruídas à mão → `Card` | `2d5bfc5f` — entrada por `@leela/design-system/server` (Radix-free, ADR-017); tom de borda e tintas de feedback preservados, zero string tocada |
+| Landing pública: 15 superfícies, 6 CTAs e o último controle cru da landing | `f8a75d32` — `ShareBlock` paga três divergências numa tela só (superfície, `<input readOnly>` → `Input`, botão → `buttonVariants`) |
+| Opção única deixa de cobrar clique (passo de arquitetura nº 2) | `64be6b70` — `StepModalidadeKit` auto-seleciona modalidade e kit quando a lista tem um item; 5 casos, um deles contando os patches para provar que o efeito estabiliza |
+
+**A catraca desceu, e é a primeira vez.** `superficie-crua.landing` **27 → 6**;
+`botao-cru-estilizado.landing` **5 → 0**; `controle-cru-fora-do-ds` **4 → 3**. O baseline foi
+regravado no mesmo commit, como a spec do gate manda. O painel não foi tocado — as contagens dele
+seguem intactas para as ondas 2 a 5.
+
+**O ciclo completo da dívida herdada rodou sozinho.** A camada A do `gate-canon` acusou a entrada
+**MORTA** de `ShareBlock.tsx` no `eslint.config.mjs` no minuto seguinte à conversão do
+`<input readOnly>` — *"já foi paga, tire a linha"* —, e a linha caiu no mesmo commit. É o mecanismo
+que a Onda 0 construiu funcionando sem ninguém lembrar de conferir. A lista da Regra 1 fica com um
+arquivo, do painel, que a Onda 3 paga.
+
+**A carga caiu de 16 para 14 passos, e o alvo publicado estava otimista.** O `04-ondas-roadmap.md`
+prometia 13 contando só a auto-seleção; os cliques que somem são **dois** (modalidade + kit), não
+três. 14 é o número certo, e vai a 12 se a decisão do endereço liberar.
+
+**Trinta das 64 instâncias não viraram `Card` nem `Button`, e isso está nomeado, não silenciado.**
+A leitura dirigida do inventário classificou como "superfície reconstruída" seis **placas recuadas**
+(`surface-base`/`sunken`/`overlay`: o QR do PIX, o QR do ingresso, o código do ingresso, o painel do
+kit, o bloco de totais, a placa do compartilhar) — e o `Card` carrega `shadow-elev-1` + `card-blur`,
+isto é, **elevação**: pôr sombra de elevação em superfície recuada é mentir sobre a profundidade na
+tela do dinheiro. E classificou como "CTA replicando variante" cinco **pílulas informativas de
+contorno** que são `<span>`, não botão — o `Badge` do brasa é 10px UPPERCASE preenchido e **não
+publica variante `outline`** (a esteira shadcn→brasa dropou a do stock). Cada grupo virou candidato
+nomeado à **CANONE-1**, com arquivo e linha no handoff. A variante `outline` do `Badge` é o item
+mais bem definido que esta onda manda para lá: uma variante resolve as cinco de uma vez.
+
+**Dois furos do próprio gate, achados por quem o usou.** A catraca varre
+`div|section|article|li|aside` e **não vê `<p>`** — duas superfícies com anatomia de cartão viviam
+em `<p>` (`minha-conta/PainelIngressos.tsx`) e foram convertidas mesmo assim. E anatomia guardada em
+`const CARTAO = '…'` escapa, porque o detector lê o texto do atributo (`PainelIngressos`,
+`PortasDaConta`). Acrescentar `p` à lista de tags **sobe** a contagem do painel, então entra junto
+com a onda que paga o que ele achar, nunca sozinho.
+
+**O que subiu para o dono:** os outros dois passos de arquitetura, escritos no formato do painel em
+`02-rodadas/2026-08-11-roadmap-componentes/06-decisoes-checkout-onda1.md` — **CKENDERECO-1** (o
+checkout cobra endereço completo de quem retira o kit no balcão) e **CKPIX-1** (quem paga o PIX pelo
+app do banco não descobre que pagou, RN-470). Nenhum comportamento dos dois foi tocado.
+
+Detalhe completo, com o delta visual item a item para a conferência renderizada, em
+`.nirvana/handoffs/leela-canon-onda1-20260811.md`.

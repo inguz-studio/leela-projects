@@ -3,11 +3,11 @@
   "contagens": {
     "superficie-crua": {
       "painel": 107,
-      "landing": 27
+      "landing": 6
     },
     "botao-cru-estilizado": {
       "painel": 6,
-      "landing": 5
+      "landing": 0
     },
     "receita-de-grid": {
       "painel": 23,
@@ -18,7 +18,7 @@
       "landing": 0
     },
     "controle-cru-fora-do-ds": {
-      "total": 4
+      "total": 3
     },
     "padrao-reimplementado-fora-do-ds": {
       "total": 2
