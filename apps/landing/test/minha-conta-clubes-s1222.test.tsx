@@ -98,6 +98,42 @@ describe('S1222-T4 · Meus Clubes na tela', () => {
     expect(screen.queryByRole('button', { name: /entrar|criar/i })).toBeNull();
     expect(screen.queryByRole('link', { name: /entrar|criar/i })).toBeNull();
   });
+
+  // ── CLUBES-CTA (decisão do dono de 09/08 §12) ───────────────────────────
+  // O job: sair da tela vazia sabendo o que fazer, em vez de só saber que
+  // ela está vazia.
+  describe('o vazio aponta um caminho (CLUBES-CTA)', () => {
+    it('o CTA tem destino real, e o destino é a vitrine que está no ar', () => {
+      montar({ clubes: [] });
+      const cta = screen.getByRole('link', { name: 'Ver experiências' });
+      // Destino verificável, não `#` nem `javascript:` nem rota inventada:
+      // `/` é a home que lista as experiências publicadas, e é dela que sai a
+      // trilha até a página do organizador, onde os clubes públicos aparecem.
+      expect(cta.getAttribute('href')).toBe('/');
+    });
+
+    it('o rótulo corresponde ao que a tela seguinte entrega', () => {
+      montar({ clubes: [] });
+      // A vitrine entrega experiências. Um CTA dizendo "entrar num clube"
+      // prometeria um mecanismo que o produto não tem — e é isso que o aceite
+      // do card proíbe.
+      const cta = screen.getByRole('link', { name: 'Ver experiências' });
+      expect(cta.textContent).not.toMatch(/entrar|inscrever|participar/i);
+    });
+
+    it('a frase continua dizendo quem inclui participante em clube', () => {
+      montar({ clubes: [] });
+      const secao = document.querySelector('[data-slot="secao-clubes"]');
+      expect(secao?.textContent).toMatch(/quem administra o clube é quem inclui os participantes/i);
+      // E onde os clubes ficam, que é a metade que faltava.
+      expect(secao?.textContent).toMatch(/na página de cada organizador/i);
+    });
+
+    it('quem JÁ está num clube não leva CTA de descoberta no meio da lista', () => {
+      montar({ clubes: [clube()] });
+      expect(screen.queryByRole('link', { name: 'Ver experiências' })).toBeNull();
+    });
+  });
 });
 
 describe('S1222-T4 · a caixa de convites, das DUAS máquinas', () => {
@@ -120,11 +156,18 @@ describe('S1222-T4 · a caixa de convites, das DUAS máquinas', () => {
         convite({ chave: 'b', tipo: 'promotor' }),
       ],
     });
-    // O aceite continua sendo o link com token do e-mail. Se a tela ganhar um
+    // O aceite continua sendo o link com token do e-mail. Se a CAIXA ganhar um
     // caminho próprio, ela vira a segunda superfície de credencial que a fila
     // proíbe — e este caso morre.
-    expect(screen.queryAllByRole('link')).toHaveLength(0);
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    //
+    // O escopo é a seção de convites, e não o documento: o CLUBES-CTA pôs um
+    // link de descoberta no vazio de CLUBES, que não é credencial de nada. Uma
+    // asserção global aqui reprovaria por vizinhança e ensinaria a afrouxar a
+    // guarda — que é o oposto do que ela existe para fazer.
+    const caixa = document.querySelector('[data-slot="secao-convites"]') as HTMLElement;
+    expect(caixa).not.toBeNull();
+    expect(within(caixa).queryAllByRole('link')).toHaveLength(0);
+    expect(within(caixa).queryAllByRole('button')).toHaveLength(0);
     expect(document.querySelectorAll('a[href*="convite"]')).toHaveLength(0);
   });
 

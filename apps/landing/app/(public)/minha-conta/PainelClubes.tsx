@@ -19,15 +19,41 @@
 // O VAZIO É UMA TELA, NÃO UM BRANCO — e é o caso NORMAL aqui. Não existe hoje
 // nenhum caminho pelo qual um participante entre num clube pela Leela (não há
 // `entrarNoClube`; os únicos escritores de `membros` são o painel do
-// organizador, a Function de agregado e o seed). Então o estado vazio não pode
-// prometer um botão de entrar que o produto não tem: ele diz o que é verdade
-// hoje, e nada além.
+// organizador, a Function de agregado e o seed).
+//
+// O CTA DO VAZIO, E POR QUE ELE APONTA PARA A VITRINE (CLUBES-CTA · decisão do
+// dono de 09/08, `02-rodadas/2026-08-09-decisoes-dono/01-decisoes-dono.md` §12:
+// *"mEUS CLUBES - deixa cta para se isncrever em um"*).
+//
+// O registro deixou duas leituras para a spec do card escolher, e a diferença
+// entre elas é onde o botão aterrissa. A primeira, proposta pela esteira, é a
+// DESCOBERTA: "uma lista dos clubes que existem, com a página pública de cada
+// um". A medição de 11/08 na main mergeada diz que essa lista não existe, e a
+// página do clube também não: os clubes públicos aparecem só dentro da aba
+// "Clubs" da página do organizador (`_perfil/PerfilView.tsx` §SecaoClubs), e
+// ali os cartões nem clique têm (D-ACH-20). Construir a lista seria rota nova
+// mais leitor público novo sobre `clubes` atravessando produtoras — que é
+// exatamente o "nenhuma porta nova é aberta" que o aceite do card proíbe, numa
+// tarefa que a fila dimensionou como pequena sobre tela servida.
+//
+// Então vale a segunda leitura registrada, a ESPERA DECLARADA com o caminho
+// escrito. O CTA aponta para a vitrine (`/`), que está no ar e é o começo real
+// da trilha: a experiência leva à página do organizador
+// (`[eventSlug]/sections/OrganizadorSection.tsx` linka `/@handle`), e é lá que
+// os clubes públicos dele aparecem. Nenhum botão inerte, nenhum destino
+// inventado, e a frase continua dizendo a verdade que a tela sempre disse —
+// quem inclui participante é quem administra o clube.
+//
+// O campo de resgate que o registro cogitava "se o código de convite for
+// destravado" NÃO entra: o código de convite de clube continua sem ser
+// consumido em lugar nenhum fora do seed.
 //
 // VOCABULÁRIO D-0802-1: experiência e participante; clube é clube.
 // =============================================================================
 
+import Link from 'next/link';
 import type { ClubeDaConta, ConviteDaConta } from '@leela/api-client';
-import { Badge, EmptyState } from '@/app/_ds/ds';
+import { Badge, Button, EmptyState } from '@/app/_ds/ds';
 
 const FUSO = 'America/Sao_Paulo';
 const fmtDia = new Intl.DateTimeFormat('pt-BR', {
@@ -172,7 +198,7 @@ export function PainelClubes({
 }: PainelClubesProps): React.JSX.Element {
   return (
     <div className="flex flex-col gap-10" data-slot="painel-clubes">
-      <section>
+      <section data-slot="secao-clubes">
         <h2 className={TITULO_SECAO}>Meus clubes</h2>
 
         {!clubesCompletos ? (
@@ -188,7 +214,14 @@ export function PainelClubes({
           <div className="mt-3">
             <EmptyState
               title="Você ainda não faz parte de nenhum clube"
-              description="Quem administra um clube na Leela é quem inclui os participantes. Quando você entrar em um, ele aparece aqui."
+              description="Quem administra o clube é quem inclui os participantes. Os clubes públicos aparecem na página de cada organizador, e você chega nela pela experiência que ele publica."
+              action={
+                <Button asChild variant="secondary">
+                  <Link href="/" data-slot="clubes-vazio-cta">
+                    Ver experiências
+                  </Link>
+                </Button>
+              }
             />
           </div>
         ) : (
@@ -200,7 +233,12 @@ export function PainelClubes({
         )}
       </section>
 
-      <section>
+      {/* A caixa de convites é território de credencial: nada aqui dentro pode
+          virar caminho de aceite (o token só existe no e-mail). O `data-slot`
+          dá ao teste ⚔ um escopo próprio — antes ele varria o documento
+          inteiro, e o CTA do vazio de clubes, que não tem nada com convite,
+          derrubaria a guarda por tabela. */}
+      <section data-slot="secao-convites">
         <h2 className={TITULO_SECAO}>Convites</h2>
 
         {!convitesCompletos ? (
