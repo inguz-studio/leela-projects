@@ -19,7 +19,7 @@ export function ParceriasAreaNav({ ativa }: { ativa: ParceriasAreaId }): JSX.Ele
   const { pathname } = useLocation();
   return (
     <SubNav
-      aria-label="Seções de Parcerias"
+      aria-label="Seções de parcerias"
       tabs={tabsComNavSpa(parceriasAreaNavTabs(ativa), navigate, pathname)}
     />
   );

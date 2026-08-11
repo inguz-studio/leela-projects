@@ -38,7 +38,7 @@ function mensagemErro(err: unknown): string {
     return msg || 'Não foi possível concluir: verifique o e-mail/documento e tente de novo.';
   }
   if (code.includes('permission-denied')) {
-    return 'Você não tem permissão para cadastrar assessorias neste organizador.';
+    return 'Você não tem permissão para cadastrar assessorias nesta conta de organizador.';
   }
   if (code.includes('invalid-argument')) {
     return msg || 'Dados inválidos — revise nome, documento e e-mail.';

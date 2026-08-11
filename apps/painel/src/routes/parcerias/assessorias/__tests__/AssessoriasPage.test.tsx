@@ -74,7 +74,7 @@ beforeEach(() => {
 describe('AssessoriasPage · anatomia da área (D-1008-R16)', () => {
   it('NÃO desenha menu de área — o menu é da moldura (ParceriasAreaLayout)', () => {
     renderPage();
-    expect(screen.queryByRole('navigation', { name: 'Seções de Parcerias' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Seções de parcerias' })).toBeNull();
   });
 
   it('abre com o PageHeader canônico, como as abas irmãs', () => {
@@ -83,7 +83,7 @@ describe('AssessoriasPage · anatomia da área (D-1008-R16)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Assessorias parceiras' })).toBeInTheDocument();
     // Subtítulo (D-1008-R8: sem o jargão "(E18)") e ação primária no slot.
     expect(
-      screen.getByText('Clubs parceiros com condição de desconto exclusiva — sem comissão, sem split.'),
+      screen.getByText('Clubs parceiros com condição de desconto exclusiva, sem comissão e sem divisão de receita.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cadastrar assessoria' })).toBeInTheDocument();
   });

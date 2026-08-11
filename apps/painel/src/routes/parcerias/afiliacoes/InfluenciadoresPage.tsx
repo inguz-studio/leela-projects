@@ -316,7 +316,7 @@ export function InfluenciadoresPage(): JSX.Element {
         title="Registrar repasse de comissão"
         // UXW-FIX · BLQ-14: "idempotente" é termo de engenharia num modal de
         // dinheiro. A garantia é a mesma; quem lê agora entende qual é.
-        description="Registra que você PAGOU a comissão fora da plataforma (nenhum dinheiro é movido aqui). Pode ser o saldo inteiro ou parte dele — o resto continua a receber. Se você reenviar, o valor não é debitado duas vezes."
+        description="Registra que você já pagou a comissão fora da plataforma (nenhum dinheiro é movido aqui). Pode ser o saldo inteiro ou parte dele — o resto continua a receber. Se você reenviar, o valor não é debitado duas vezes."
         target={
           alvoRepasse ? (
             <div className="flex flex-col gap-[var(--spacing-3)]">

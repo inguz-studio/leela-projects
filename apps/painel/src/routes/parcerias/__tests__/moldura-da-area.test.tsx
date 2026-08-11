@@ -40,7 +40,7 @@ vi.mock('../afiliacoes/MinhasAfiliacoesPage', () => ({
 
 const { ParceriasRoutes } = await import('../ParceriasRoutes');
 
-const MENU = 'Seções de Parcerias';
+const MENU = 'Seções de parcerias';
 const TERCIARIA = 'Seções de afiliações';
 
 /** Monta o módulo no MESMO ponto do App.tsx (`/parcerias/*`). */
