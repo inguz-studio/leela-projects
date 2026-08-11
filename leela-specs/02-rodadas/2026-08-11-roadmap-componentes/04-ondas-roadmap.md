@@ -336,10 +336,12 @@ importado** por `OverviewContent.tsx` — o comentário em `OverviewContent.tsx:
 bloco saiu da tela. O componente só é referenciado pelo próprio teste. Código órfão sustentando
 suíte verde: entra na onda como remoção ou como reintegração declarada, nunca como está.
 
-**Fica fora, e precisa de lane própria:** `packages/design-system/src/components/charts/BarChart.tsx:130`
-passa `tickFormatter={truncarRotulo}`, e o Recharts chama a função com `(valor, índice)` — o índice
-vira o limite de caracteres e trunca todo rótulo do eixo para um caractere. Introduzido em
-`a826dc3a`. É defeito de dado exibido, não de procedência, e misturá-lo aqui esconderia o custo dele.
+**Fica fora — e JÁ FOI PAGO (correção do maestro, 11/08):** o defeito de aridade do
+`tickFormatter` do BarChart (Recharts passa o índice como limite → rótulos de 1 caractere,
+introduzido em `a826dc3a`) foi consertado pela lane BARCHART-FIX na mesma noite, ANTES do
+merge: commit `89537700`, wrapper `formatarTickEixoY` + teste de aridade, presente na main
+mergeada (`BarChart.tsx:142`). A leitura desta rodada capturou o estado pré-merge. Nenhuma
+lane futura deve ser aberta para isto — conferir `formatarTickEixoY` antes de qualquer ação.
 
 ## Critério de aceite comum a todas as ondas
 

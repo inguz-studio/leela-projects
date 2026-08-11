@@ -256,11 +256,12 @@ ocorrências estão todas no painel, e são **seis**, não duas:
 `lib/linkPublico.ts:22` (fallback) · `clubes/clube/desafios/DesafiosPage.tsx:34` ·
 `ConviteModal.tsx:47` · `clubes/clube/configuracoes/ConfiguracoesView.tsx:304`.
 
-Achado de prioridade alta que não é desta família, registrado para não se perder:
-`packages/design-system/src/components/charts/BarChart.tsx:130` passa `tickFormatter={truncarRotulo}`,
-e o Recharts chama essa função com `(valor, índice)` — o índice vira o limite de caracteres e
-trunca todo rótulo do eixo para um caractere. Pré-existente, introduzido em `a826dc3a`. É defeito
-de dado exibido, não de cânone, e precisa de lane própria.
+Achado de prioridade alta que não é desta família — **JÁ PAGO na mesma noite (correção do
+maestro, 11/08):** a aridade do `tickFormatter` do BarChart (índice do Recharts virando
+limite → rótulos de 1 caractere, introduzido em `a826dc3a`) foi consertada pela lane
+BARCHART-FIX ANTES do merge (commit `89537700`, `formatarTickEixoY` + teste de aridade;
+na main mergeada em `BarChart.tsx:142`). Esta medição capturou o estado pré-merge.
+Nenhuma lane futura para isto.
 
 ## 10. O que a medição diz, em três frases
 

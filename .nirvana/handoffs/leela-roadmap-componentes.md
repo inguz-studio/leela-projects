@@ -46,9 +46,10 @@ Mais: `…/01-ordem-do-dono.md` (ata), **RN-558** no `LEELA-E01-design-system.md
 
 ## Achados fora desta família, precisam de lane própria
 
-- `packages/design-system/src/components/charts/BarChart.tsx:130` — `tickFormatter={truncarRotulo}`
-  recebe `(valor, índice)` do Recharts e o índice vira o limite de caracteres: todo rótulo do eixo
-  trunca para **um caractere**. Pré-existente (`a826dc3a`). Defeito de dado exibido, alta prioridade.
+- ~~BarChart tickFormatter aridade~~ — **JÁ PAGO (correção do maestro 11/08):** a lane
+  BARCHART-FIX consertou na mesma noite, antes do merge (`89537700`, `formatarTickEixoY` +
+  teste de aridade; na main em `BarChart.tsx:142`). Leitura desta lane era pré-merge.
+  NÃO abrir lane para isto.
 - `apps/painel/src/routes/overview/_components/ActiveEvents.tsx` — **não é importado** por
   `OverviewContent.tsx` (o comentário em `:14-16` confirma que saiu da tela). Órfão sustentando
   suíte verde.
