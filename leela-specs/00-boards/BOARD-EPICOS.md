@@ -1,7 +1,7 @@
 ---
 tags: [leela, kanban, epicos, visao-alto-nivel]
 aliases: [Board de épicos, Visão de épicos, Onde o produto está]
-atualizado: 2026-08-06
+atualizado: 2026-08-11
 ---
 
 # 🗺️ Visão de épicos — onde o produto está
@@ -9,6 +9,32 @@ atualizado: 2026-08-06
 > A altura mais alta de zoom: **uma linha por épico**, com o estado e o link para o detalhe. Para o board de histórias (o trabalho em andamento) veja [[V1-KANBAN]]; para a hierarquia dos nomes, [[MODELO-ROADMAP]]; para a convenção de card, [[CONVENCAO-BOARDS]].
 
 **Estados:** ✅ feito · 🔄 em execução · 📋 planejado · 🧊 gelado (adiado de propósito)
+
+> **Para a leitura de projeto inteira — épico pendente, história, tarefa, o que está travado em
+> quem e as três próximas entregas de cada frente — veja [[VISAO-DE-PROJETO]].** Este board
+> continua sendo o mapa de uma linha por épico; aquele é a visão que o dono pediu em 11/08.
+
+## O que a rodada do redesign acrescentou (2026-08-10/11)
+
+Sete histórias novas entraram em épicos que já existiam, e nenhum épico novo precisou nascer. As
+decisões da leva 3, 4 e 5 (D-1008-R4 a R19) estão em
+`02-rodadas/2026-08-09-redesign-ds/01-decisoes-dono-1008-retomada.md`.
+
+| Épico | História nova | O que ela resolve | Estado |
+|---|---|---|---|
+| [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | 🔄 construído, fora do ar |
+| [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | 📋 dispara depois do merge |
+| [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | 🔄 lane em voo |
+| [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | 🔄 construído, fora do ar |
+| [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 |
+| [[LEELA-E10-marcas]] | **S813** | Marcas vira Parcerias e reúne marcas, assessorias e afiliações | 🔄 lane em voo |
+| [[LEELA-E11-analytics]] | **S825** | a forma de pagamento vira número na análise e no engajamento | 📋 |
+| [[LEELA-E19-crm]] | **S1904** | o membro do club e o comprador viram a mesma pessoa | 📋 |
+
+O resto da rodada caiu em história que já existia: a tabela de lotes em três colunas virou tarefa
+da **S315**, a lista de modalidades alcançável a partir de lotes é a **S316** inteira, e a métrica
+que conta cliente pagante é a **S221** com a **S908**, que esta rodada consolidou nos épicos —
+elas viviam só na pasta da rodada de 05/08 e no kanban.
 
 ## Onde estamos, em quatro linhas
 
