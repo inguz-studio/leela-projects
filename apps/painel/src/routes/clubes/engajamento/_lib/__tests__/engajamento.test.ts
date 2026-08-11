@@ -13,6 +13,7 @@ import {
   ranquearDesafios,
   resumirComunidade,
   resumirEntrada,
+  resumirModalidades,
   resumirPilares,
   resumirPonteComEventos,
   resumirSituacao,
@@ -308,5 +309,55 @@ describe('resumirPonteComEventos · intenção declarada, não conversão', () =
 
   it('sem desafio em andamento devolve vazio (a tela diz isso em português)', () => {
     expect(resumirPonteComEventos([doClube(mkDesafio({ status: 'rascunho' }))])).toEqual([]);
+  });
+});
+
+describe('resumirModalidades · para onde a comunidade pende (estudo · bloco 4, versão honesta)', () => {
+  const clube = (modalidade: string, qtdMembrosAtivos: number) => ({
+    modalidade,
+    qtdMembrosAtivos,
+  });
+
+  it('soma os contadores fechados por Function por modalidade do club, do maior para o menor', () => {
+    const r = resumirModalidades([
+      clube('Corrida de rua', 60),
+      clube('Ciclismo', 44),
+      clube('Corrida de rua', 30),
+    ]);
+    expect(r).toEqual([
+      { id: 'Corrida de rua', rotulo: 'Corrida de rua', membros: 90 },
+      { id: 'Ciclismo', rotulo: 'Ciclismo', membros: 44 },
+    ]);
+  });
+
+  it('club na janela pré-Function (sem o agregado) não vira NaN (D-7, mesmo guarda do KPI)', () => {
+    const semAgregado = { modalidade: 'Trail' } as unknown as {
+      modalidade: string;
+      qtdMembrosAtivos: number;
+    };
+    const r = resumirModalidades([semAgregado, clube('Trail', 5)]);
+    expect(r).toEqual([{ id: 'Trail', rotulo: 'Trail', membros: 5 }]);
+  });
+
+  it('modalidade sem ninguém sai da lista — barra zerada não informa', () => {
+    expect(resumirModalidades([clube('Natação', 0), clube('Funcional', 3)])).toEqual([
+      { id: 'Funcional', rotulo: 'Funcional', membros: 3 },
+    ]);
+  });
+
+  it('empate desempata por nome — a ordem não pode oscilar entre renders', () => {
+    const r = resumirModalidades([clube('Trail', 7), clube('Caminhada', 7)]);
+    expect(r.map((m) => m.rotulo)).toEqual(['Caminhada', 'Trail']);
+  });
+
+  it('devolve a lista inteira: o corte "Top 5" é recorte de card, não de derivação (item 9)', () => {
+    const seis = ['Corrida de rua', 'Trail', 'Ciclismo', 'MTB', 'Caminhada', 'Triatlo'].map(
+      (m, i) => clube(m, 10 - i)
+    );
+    expect(resumirModalidades(seis)).toHaveLength(6);
+  });
+
+  it('sem club devolve vazio — a tela mostra o convite, não zeros', () => {
+    expect(resumirModalidades([])).toEqual([]);
   });
 });

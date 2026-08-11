@@ -29,6 +29,7 @@ import {
   ranquearDesafios,
   resumirComunidade,
   resumirEntrada,
+  resumirModalidades,
   resumirPilares,
   resumirPonteComEventos,
   resumirSituacao,
@@ -85,6 +86,7 @@ export function EngajamentoPage(): JSX.Element {
       entrada: resumirEntrada(dados.data.membros),
       desafios: ranquearDesafios(dados.data.desafios),
       ponte: resumirPonteComEventos(dados.data.desafios),
+      modalidades: resumirModalidades(recorte),
     };
   }, [dados.data, recorte]);
 
@@ -99,6 +101,7 @@ export function EngajamentoPage(): JSX.Element {
       entrada={derivado?.entrada ?? null}
       desafios={derivado?.desafios ?? null}
       ponte={derivado?.ponte ?? null}
+      modalidades={derivado?.modalidades ?? null}
       ocupacao={ocupacao}
       eventosLoading={eventosState.loading}
       eventosError={eventosState.error !== null}

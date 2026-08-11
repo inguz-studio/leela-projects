@@ -22,7 +22,7 @@
 // a mesma operação que o hub de clubes já faz nos KPIs dele.
 // =============================================================================
 
-import { PILARES, type Desafio, type Membro, type Pilar } from '@leela/core';
+import { PILARES, type Clube, type Desafio, type Membro, type Pilar } from '@leela/core';
 
 // ---------------------------------------------------------------------------
 // Rótulos (vocabulário do produto, não string solta na tela)
@@ -276,6 +276,55 @@ export function resumirPonteComEventos(
     { id: 'sem-evento', rotulo: 'Sem evento vinculado', total: ativos.length - comEvento },
   ];
 }
+
+/**
+ * Membros ativos somados numa modalidade dos clubs — o bloco 4 do estudo
+ * (D-1008-R15), na versão que o dado sustenta.
+ */
+export interface ModalidadeDaComunidade {
+  /** A própria modalidade (vocabulário fechado do club — já é rótulo humano). */
+  id: string;
+  rotulo: string;
+  membros: number;
+}
+
+/**
+ * Para onde a comunidade pende, por modalidade dos clubs.
+ *
+ * O estudo rotula este bloco "modalidades de interesse" DECLARADAS pelos
+ * membros — e esse dado não existe: nenhum campo de atleta ou membro declara
+ * interesse. O que existe é o par `clube.modalidade` (vocabulário fechado,
+ * validado no core) + `clube.qtdMembrosAtivos` (∑ mantido por Function), e é
+ * ISSO que a função soma — a tela diz o que mede, nunca "interesse declarado".
+ *
+ * Mesmas regras dos vizinhos: `?? 0` cobre o club na janela pré-Function
+ * (D-7 — um club recém-criado não vira NaN); modalidade sem ninguém SAI da
+ * lista (barra zerada ocupa espaço e não informa); uma pessoa ativa em dois
+ * clubs conta em cada um — igual ao KPI de participações, e a ajuda do card
+ * diz isso. Devolve a lista INTEIRA ordenada: o corte "Top 5" é recorte de
+ * card (REFACTOR item 9), não de derivação. Empate desempata por nome, para a
+ * ordem não oscilar entre renders.
+ * @pure
+ */
+export function resumirModalidades(
+  clubes: ReadonlyArray<Pick<Clube, 'modalidade' | 'qtdMembrosAtivos'>>
+): ModalidadeDaComunidade[] {
+  const porModalidade = new Map<string, number>();
+  for (const clube of clubes) {
+    const atual = porModalidade.get(clube.modalidade) ?? 0;
+    porModalidade.set(clube.modalidade, atual + (clube.qtdMembrosAtivos ?? 0));
+  }
+  return [...porModalidade.entries()]
+    .filter(([, membros]) => membros > 0)
+    .map(([modalidade, membros]) => ({ id: modalidade, rotulo: modalidade, membros }))
+    .sort((a, b) => b.membros - a.membros || a.rotulo.localeCompare(b.rotulo, 'pt-BR'));
+}
+
+/**
+ * Tamanho do recorte "Top" das modalidades — decisão de TELA, como o dos
+ * desafios abaixo. O estudo desenha cinco barras.
+ */
+export const RANKING_MAX_MODALIDADES = 5;
 
 /**
  * Tamanho do recorte "Top" do ranking — é decisão de TELA (quantas barras cabem

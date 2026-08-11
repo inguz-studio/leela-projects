@@ -46,6 +46,10 @@ function props(over: Partial<EngajamentoViewProps> = {}): EngajamentoViewProps {
       { id: 'com-evento', rotulo: 'Ligados a um evento', total: 2 },
       { id: 'sem-evento', rotulo: 'Sem evento vinculado', total: 1 },
     ],
+    modalidades: [
+      { id: 'Corrida de rua', rotulo: 'Corrida de rua', membros: 90 },
+      { id: 'Ciclismo', rotulo: 'Ciclismo', membros: 44 },
+    ],
     ocupacao: {
       linhas: [
         { slug: 'corrida-da-ilha', nome: 'Corrida da Ilha', inscritos: 42, capacidade: 50, ocupacao: 0.84 },
@@ -252,6 +256,48 @@ describe('EngajamentoView · o que não tem fonte', () => {
     render(<EngajamentoView {...props({ entrada: [] })} />);
     const secao = screen.getByRole('region', { name: 'Como a comunidade entra' });
     expect(within(secao).getByText('Ninguém entrou ainda')).toBeInTheDocument();
+  });
+});
+
+describe('EngajamentoView · modalidades da comunidade (estudo · bloco 4, versão honesta)', () => {
+  it('mostra membros ativos por modalidade dos clubs — número real, não interesse declarado', () => {
+    render(<EngajamentoView {...props()} />);
+    expect(valorNaTabela('Corrida de rua')).toContain('90');
+    expect(valorNaTabela('Ciclismo')).toContain('44');
+  });
+
+  it('o "?" diz o que o bloco mede — e o que ele NÃO é (interesse declarado não existe)', async () => {
+    render(<EngajamentoView {...props()} />);
+    const ajuda = await abrirAjuda('Modalidades da comunidade');
+    expect(ajuda).toHaveTextContent(/a modalidade é a do club/i);
+    expect(ajuda).toHaveTextContent(/não é interesse declarado pelo atleta/i);
+    expect(ajuda).toHaveTextContent(/conta em cada um/i);
+  });
+
+  it('com mais de cinco modalidades, o card ganha o PRÓPRIO recorte (item 9)', async () => {
+    const seis = ['Corrida de rua', 'Trail', 'Ciclismo', 'MTB', 'Caminhada', 'Triatlo'].map(
+      (m, i) => ({ id: m, rotulo: m, membros: 60 - i })
+    );
+    render(<EngajamentoView {...props({ modalidades: seis })} />);
+    const recorte = screen.getByRole('combobox', { name: 'Recorte das modalidades' });
+    expect(recorte).toHaveValue('top');
+    expect(screen.queryByRole('rowheader', { name: 'Triatlo' })).not.toBeInTheDocument();
+    await userEvent.selectOptions(recorte, 'todas');
+    expect(screen.getByRole('rowheader', { name: 'Triatlo' })).toBeInTheDocument();
+  });
+
+  it('com cinco ou menos, o controle não existe — recorte que não recorta é ruído', () => {
+    render(<EngajamentoView {...props()} />);
+    expect(
+      screen.queryByRole('combobox', { name: 'Recorte das modalidades' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('sem membros ativos, o bloco explica a ausência em vez de desenhar barra', () => {
+    render(<EngajamentoView {...props({ modalidades: [] })} />);
+    const secao = screen.getByRole('region', { name: 'Modalidades da comunidade' });
+    expect(within(secao).getByText('Sem membros ativos ainda')).toBeInTheDocument();
+    expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 });
 

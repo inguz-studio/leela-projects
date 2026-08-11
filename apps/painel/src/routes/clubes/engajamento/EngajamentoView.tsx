@@ -54,9 +54,11 @@ import type { OcupacaoDosEventos } from '../../overview/_lib/ocupacao';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
   RANKING_MAX_DESAFIOS,
+  RANKING_MAX_MODALIDADES,
   pilarComMaiorMedia,
   type ContagemRotulada,
   type DesafioEngajado,
+  type ModalidadeDaComunidade,
   type ResumoDaComunidade,
   type ResumoDosPilares,
 } from './_lib/engajamento';
@@ -89,6 +91,12 @@ export interface EngajamentoViewProps {
   eventosLoading: boolean;
   eventosError: boolean;
   onRetryEventos?: (() => void) | undefined;
+  /**
+   * Bloco 4 do estudo, na versão que o dado sustenta: membros ativos por
+   * modalidade DOS CLUBS (o "interesse declarado" do estudo não existe como
+   * campo — a derivação e a ajuda do card dizem o que se mede).
+   */
+  modalidades: ModalidadeDaComunidade[] | null;
   loading: boolean;
   error: Error | null;
   /** Sem nenhum club no tenant — a tela inteira degrada para o convite. */
@@ -318,6 +326,88 @@ function RankingDeDesafios({
 }
 
 // ---------------------------------------------------------------------------
+// Modalidades da comunidade — bloco 4 do estudo, na versão honesta
+// ---------------------------------------------------------------------------
+
+/** Recorte do bloco de modalidades. Vocabulário do card, não da tela. */
+type RecorteDeModalidades = 'top' | 'todas';
+
+/**
+ * Para onde a comunidade pende, por modalidade dos clubs (estudo · bloco 4).
+ *
+ * O estudo desenha "Top 5 modalidades de interesse" com interesse DECLARADO
+ * pelos membros — campo que não existe. A versão real soma membros ativos por
+ * modalidade do club (derivação em `_lib`), e o "?" diz exatamente isso: o
+ * título não promete um dado que o sistema não guarda.
+ *
+ * Mesmo desenho estrutural do ranking de desafios: recorte PRÓPRIO do card
+ * (REFACTOR item 9), controle só quando há o que revelar, reanimação escopada
+ * pelos filtros que mexem NESTE card (item 10).
+ */
+function ModalidadesDaComunidade({
+  modalidades,
+  loading,
+  clubeSelecionado,
+}: {
+  modalidades: ModalidadeDaComunidade[] | null;
+  loading: boolean;
+  clubeSelecionado: string;
+}): JSX.Element {
+  const [recorte, setRecorte] = useState<RecorteDeModalidades>('top');
+  const lista = modalidades ?? [];
+  const excedeTop = lista.length > RANKING_MAX_MODALIDADES;
+  const visiveis =
+    excedeTop && recorte === 'top' ? lista.slice(0, RANKING_MAX_MODALIDADES) : lista;
+
+  return (
+    <>
+      <SecaoHead
+        titulo="Modalidades da comunidade"
+        ajuda={
+          excedeTop && recorte === 'top'
+            ? `As ${RANKING_MAX_MODALIDADES} modalidades com mais membros ativos, de ${lista.length} com gente. Troque o recorte para ver todas.`
+            : 'Membros ativos somados por modalidade dos seus clubs. A modalidade é a do club — não é interesse declarado pelo atleta, que o sistema não guarda — e uma pessoa ativa em dois clubs conta em cada um. Modalidade sem ninguém sai da lista.'
+        }
+        controle={
+          excedeTop ? (
+            <Select
+              aria-label="Recorte das modalidades"
+              options={[
+                { value: 'top', label: `Top ${RANKING_MAX_MODALIDADES}` },
+                { value: 'todas', label: `Todas (${lista.length})` },
+              ]}
+              value={recorte}
+              onChange={(e) => setRecorte(e.target.value as RecorteDeModalidades)}
+            />
+          ) : undefined
+        }
+      />
+      {loading || modalidades === null ? (
+        <Skeleton variant="rect" className="h-40" />
+      ) : lista.length === 0 ? (
+        <Painel>
+          <EmptyState
+            title="Sem membros ativos ainda"
+            description="Quando os clubs tiverem membros ativos, a distribuição por modalidade aparece aqui."
+          />
+        </Painel>
+      ) : (
+        <Painel>
+          <GraficoAnimado chave={`${clubeSelecionado}|${recorte}`}>
+            <BarChart
+              data={visiveis.map((m) => ({ label: m.rotulo, value: m.membros }))}
+              aria-label="Membros ativos por modalidade dos clubs"
+              height={alturaDeBarras(visiveis.length)}
+              formatValue={formatInt}
+            />
+          </GraficoAnimado>
+        </Painel>
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Tela
 // ---------------------------------------------------------------------------
 
@@ -336,6 +426,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
     eventosLoading,
     eventosError,
     onRetryEventos,
+    modalidades,
     loading,
     error,
     semClubes,
@@ -554,13 +645,24 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </div>
             </Cascata>
 
+            {/* Bloco 4 do estudo — a versão que o dado sustenta. */}
+            <Cascata i={6}>
+            <section aria-label="Modalidades da comunidade" className="flex flex-col">
+              <ModalidadesDaComunidade
+                modalidades={modalidades}
+                loading={loading}
+                clubeSelecionado={clubeSelecionado}
+              />
+            </section>
+            </Cascata>
+
             {/* ── Seção 2 · a ponte ──────────────────────────────────────── */}
             <SecaoTitulo
               titulo="Do club para o evento"
               legenda="A ponte: quanto da comunidade vira participação em evento."
             />
 
-            <Cascata i={6}>
+            <Cascata i={7}>
             <section aria-label="Desafios ligados a um evento" className="flex flex-col">
               <SecaoHead
                 titulo="Desafios ligados a um evento"
@@ -590,7 +692,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </section>
             </Cascata>
 
-            <Cascata i={7}>
+            <Cascata i={8}>
             <section aria-label="Conversão da base" className="flex flex-col">
               <SecaoHead titulo="Conversão da base" />
               <Painel>
@@ -614,7 +716,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                   query partilhada — o cache reidrata entre as telas). O card
                   carrega estado de erro e retry PRÓPRIOS: eventos que falham
                   não derrubam a análise da comunidade. */}
-              <Cascata i={8} className="flex [&>*]:flex-1">
+              <Cascata i={9} className="flex [&>*]:flex-1">
                 <OcupacaoEventos
                   ocupacao={ocupacao}
                   loading={eventosLoading}
@@ -624,7 +726,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               </Cascata>
               {/* Sem fonte (impedimento HIFI-REC): nenhum agregado por forma
                   de pagamento chega ao cliente — nada de donut fabricado. */}
-              <Cascata i={9} className="flex [&>*]:flex-1">
+              <Cascata i={10} className="flex [&>*]:flex-1">
                 <EmBreveV3
                   titulo="Formas de pagamento"
                   icon={<CreditCard aria-hidden />}
