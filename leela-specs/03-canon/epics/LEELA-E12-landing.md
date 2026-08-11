@@ -3712,6 +3712,23 @@ estado de conta de terceiro. Quem **já tem tenant** continua atravessando com s
 
 Mandar a pessoa ao `/cadastrar` do painel fica **proibido**, pela razão medida acima.
 
+**A sétima recusa, e o campo que a criou (PONTE-NOME-1 · 11/08).** A porta passou a aceitar o
+**nome da produtora** junto do aceite, e ele desce até `organizacao` — o campo que nascia sempre
+vazio e fazia o resgate batizar a produtora com o nome da pessoa. Nome ausente ou em branco mantém
+o comportamento de antes, e é isso que deixa o cliente velho atravessar. Nome **declarado e
+inválido** é recusa nomeada, `nome_profissional_invalido`, e não descarte silencioso: o endereço
+interno é cunhado uma vez, e um nome digitado que a esteira jogasse fora só apareceria para a
+pessoa quando já não houvesse conserto. A régua é a mesma do `/cadastrar` — de 2 a 80 caracteres —
+mais uma terceira parte que só existe aqui: o endereço derivado do nome precisa sobrar (`"!!"` tem
+o comprimento e não vira endereço nenhum).
+
+**A intenção é carimbada, e é ela que sustenta os dois CTAs (PONTE-CTA-1 · 11/08).** A promoção
+aceita `intencao` com os dois valores que os botões produzem — `clube` e `eventos` — e a escreve no
+log que ela já emitia. Como o resgate do código também loga, o identificador da conta junta os dois
+e a medição é de **conversão**, não de clique. O campo é telemetria e **nunca recusa**: ausente vira
+`nao_declarada`, desconhecido vira `invalida`, e os dois estados são distintos por regra — fundi-los
+faria um erro de cliente novo desaparecer dentro do volume do cliente velho.
+
 **Consequência de segurança, escrita para não se perder:** como a promoção não concede nada, ela
 não é elevação de privilégio. O que ela concede é a travessia da guarda de conta órfã até uma tela
 que, por construção da RN-510, não consulta nada de tenant. O pior desfecho de um abuso é alguém
@@ -3733,6 +3750,14 @@ proíbe em letra desde a spec do convite, e o ganho seria pular uma tela.
 O rótulo nomeia o **painel**, não a conta, e usa "profissional" pela RN-468. A copy no ar hoje
 diz *"Crie sua conta de organizador. Ela nasce separada desta"*, e a frase contradiz a RN-450: o
 que nasce separado é o documento de perfil, não a conta.
+
+**O cartão da travessia, na forma de 11/08 (PONTE-CTA-1).** O **título** nomeia o lugar — "Painel
+Profissional", a palavra do dono — e os **dois botões** nomeiam os dois trabalhos: "Criar Club" e
+"Organizar eventos". Eles disparam a **mesma** promoção de propósito, porque as duas áreas são
+simétricas e o mesmo código Leela abre as duas; o que os separa é a `intencao` que cada um carimba.
+Enquanto um corre, o outro não aceita clique — uma travessia carimba uma intenção só, e permitir
+duas estragaria a medição que os botões existem para produzir. Um terceiro botão, ou dois com a
+mesma intenção, **quebra o gate** de tela: é guarda deliberado, não coincidência.
 
 ### RN-514 (nova, dona) · quem chega pela ponte aterrissa em vitrine, e o código Leela continua sendo o mecanismo
 
