@@ -128,6 +128,39 @@ redirect SPA (link salvo não morre); "Parcerias" ocupa o slot que era de "Marca
 rail; dentro de Parcerias, menu secundário canônico com as três abas no mesmo padrão do
 R9.
 
+> **Leva 5 — 11/08 noite (ordem noturna de 8h, dono dormindo).** Registrada no mesmo ato.
+
+## D-1008-R19 · Métricas de dinheiro contam CLIENTE PAGANTE; funil nunca por inscritos
+Na íntegra: "nao faz sentido funil por inscritos, e ja te falei que ticket médio é só por
+clientes que pagaram, e nao pagamentos emitidos(pendentes + pagos). iss ja esta em vias
+dde correção também?"
+→ Regra transversal de métrica: **ticket médio = receita confirmada ÷ nº de clientes que
+PAGARAM** (status dentro de `STATUS_QUE_CONTAM_VENDA`), nunca por inscritos nem por
+emissões; **funil (quando ganhar fonte) fecha em pagante**, não em inscrito. Resposta
+honesta dada ao dono: NÃO estava em vias de correção; defeito real localizado na hora —
+`apps/painel/src/routes/eventos/evento/overview/OverviewKpis.tsx:66` divide
+`receitaConfirmada / qtdInscritos`. Auditoria de TODAS as superfícies (KPIs do painel na
+branch + rollups/functions na main) → lanes METRICAS-PAGANTES (painel e backend).
+
+## Ordem noturna 11/08 (processo — na íntegra)
+"Inclua uma revisao de ux writing e se precisar chame algum revisor de copy nosso
+/harness . No mais, cumpra com o máximo que puder de tarefas, nas próximas 8 horas. Pois
+irei dormir, siga por tudo e nao pare o trabalho, mantendo o orquestramento entre modelos
+fable, opus, sonnet. ersolve os pontos de 'ponte' no obsidian, revise o obsidian também
+quero ver quais epicos estao pendentes, qe suas respectivas histórias e tarefas. Todas as
+nossas tarefas novas devem entrar em epicos cadastrados e devem resolver histórias que ja
+existem, prioritariamente. Se nao, voce cria. com o desenvolvimento perdi essa visao de
+projeto, quero que vc me entregue ela também."
+→ **DAG da noite** (maestro=fable; lanes em opus/sonnet): **Track A** (worktree,
+sequencial): PARCERIAS-NAV (em voo) → METRICAS-PAGANTES-PAINEL → UXW-REVIEW (revisor de
+copy do registro + fixes) → REV antagonista delta (`e64b8c47..HEAD`) → MERGE → roadmap
+componentes + deploy c/ gate visual L-019 (**sem gate visual fechado, deploy NÃO sobe —
+fica armado**). **Track B** (main, paralela): VISAO-PROJETO (épicos→histórias→tarefas,
+re-ancoragem de todo o trabalho novo, entregável no Obsidian) ∥ PONTE-RESOLVE (defaults
+registrados + builds seguros + REV) → METRICAS-PAGANTES-BACKEND. Regra permanente
+reforçada: toda tarefa nova entra em épico cadastrado e resolve história existente
+prioritariamente; sem épico/história cabível → criar.
+
 ## D-1008-R18 · Barra de abas do menu secundário: fundo TRANSPARENTE
 Na íntegra: "o background dos menus secundários será alterado? Para ficar transparente."
 Desambiguado via pergunta curta (mesmo termo do R4, componentes diferentes): resposta do
