@@ -18,7 +18,9 @@ import {
   derivarTaxaConversao,
   derivarTrendPct,
   emEsgotamento,
+  isStatusPagante,
   ocupacaoDoEvento,
+  STATUS_PAGANTE,
   vagasRestantesDoEvento,
   type EventoKpiInput,
 } from '@leela/core';
@@ -32,6 +34,7 @@ const MEIA: EventoKpiInput = {
   slug: 'meia-floripa-2026',
   status: 'publicado',
   qtdInscritos: 453,
+  pagantes: 453,
   receitaConfirmada: 85617,
   capacidade: 500,
 };
@@ -40,6 +43,7 @@ const SERRA: EventoKpiInput = {
   slug: 'desafio-serra-do-mar',
   status: 'publicado',
   qtdInscritos: 519,
+  pagantes: 519,
   receitaConfirmada: 40000,
   capacidade: null, // capacidade desconhecida — fora de vagas/risco
 };
@@ -48,6 +52,7 @@ const RETIRO: EventoKpiInput = {
   slug: 'retiro-bem-estar',
   status: 'rascunho',
   qtdInscritos: 312,
+  pagantes: 312,
   receitaConfirmada: 16663,
   capacidade: 400, // rascunho não vende vaga — fora de vagas/risco
 };
@@ -124,6 +129,7 @@ describe('overview/kpis — derivarKpis (S600-T2)', () => {
       slug: 'noturna-10k',
       status: 'publicado',
       qtdInscritos: 99,
+      pagantes: 99,
       receitaConfirmada: 0,
       capacidade: 100, // 99% > 90,6% da Meia
     };
@@ -137,6 +143,7 @@ describe('overview/kpis — derivarKpis (S600-T2)', () => {
       slug: 'lotado',
       status: 'ao_vivo',
       qtdInscritos: 110,
+      pagantes: 110,
       receitaConfirmada: 0,
       capacidade: 100,
     };
@@ -165,6 +172,93 @@ describe('overview/kpis — derivarKpis (S600-T2)', () => {
   it('receitaTrendPct é null na Onda 1 (inscrito não carrega valor)', () => {
     const kpis = derivarKpis(EVENTOS, [], { atual: 120, anterior: 100 });
     expect(kpis.receitaTrendPct).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-1008-R19 — o funil fecha em PAGANTE (lane METRICAS-PAGANTES-BACKEND)
+//
+// Falsificação da correção: com o input antigo (`inscricoesTotais` no lugar
+// de `pagantesTotais`) TODOS os casos deste bloco cospem o número inflado
+// anotado em cada `it` — é o que prova que a conta mudou de verdade, e não
+// só o nome do parâmetro.
+// ---------------------------------------------------------------------------
+
+describe('overview/kpis — D-1008-R19 · conversão conta cliente PAGANTE', () => {
+  /** 400 pagaram; 300 boletos emitidos e parados; 100 desistiram. */
+  const COM_PENDENTES: EventoKpiInput = {
+    nome: 'Trail dos Cânions',
+    slug: 'trail-canions',
+    status: 'publicado',
+    qtdInscritos: 800,
+    pagantes: 400,
+    receitaConfirmada: 100000,
+    capacidade: 1000,
+  };
+
+  it('conversão = pagantes ÷ visitas — emissão pendente NÃO converte (antes: 40%)', () => {
+    // 400 pagantes / 2.000 visitas = 20,0%. Pelo denominador antigo
+    // (800 inscritos) o card diria 40,0% — o dobro da verdade.
+    const kpis = derivarKpis([COM_PENDENTES], [], null, 2000);
+    expect(kpis.taxaConversaoPct).toBe(20);
+  });
+
+  it('inscrição CANCELADA não vira conversão (antes: 25%)', () => {
+    // 100 pagantes de 500 inscritos (400 cancelaram) sobre 2.000 visitas:
+    // 5,0% pela régua nova; 25,0% pela antiga.
+    const kpis = derivarKpis(
+      [{ ...COM_PENDENTES, qtdInscritos: 500, pagantes: 100 }],
+      [],
+      null,
+      2000
+    );
+    expect(kpis.taxaConversaoPct).toBe(5);
+  });
+
+  it('evento SÓ com pendentes → conversão 0%, nunca o total de inscritos (antes: 15%)', () => {
+    // Nenhum real entrou: 0 pagantes de 300 emissões sobre 2.000 visitas.
+    // A régua antiga cospe 15,0% de conversão num evento que não vendeu nada.
+    const kpis = derivarKpis(
+      [{ ...COM_PENDENTES, qtdInscritos: 300, pagantes: 0, receitaConfirmada: 0 }],
+      [],
+      null,
+      2000
+    );
+    expect(kpis.taxaConversaoPct).toBe(0);
+  });
+
+  it('soma cross-evento usa SÓ os pagantes de cada evento (antes: 64,2%)', () => {
+    // 453 + 519 + 312 = 1.284 inscritos; pagantes 400 + 300 + 0 = 700.
+    // 700/2.000 = 35,0%; a régua antiga somaria 1.284 → 64,2%.
+    const kpis = derivarKpis(
+      [
+        { ...MEIA, pagantes: 400 },
+        { ...SERRA, pagantes: 300 },
+        { ...RETIRO, pagantes: 0 },
+      ],
+      CLUBES,
+      null,
+      2000
+    );
+    expect(kpis.taxaConversaoPct).toBe(35);
+    // …e as contagens de gente na lista seguem intactas: o conserto separa
+    // os dois números, não substitui um pelo outro.
+    expect(kpis.inscricoesTotais).toBe(1284);
+  });
+
+  it('sem visitas o resultado segue null ("—"), com ou sem pagante', () => {
+    expect(derivarKpis([COM_PENDENTES], []).taxaConversaoPct).toBeNull();
+    expect(derivarKpis([COM_PENDENTES], [], null, 0).taxaConversaoPct).toBeNull();
+  });
+
+  it('STATUS_PAGANTE é a régua única e hoje exclui estornado (⛔ vetável TICKET-1)', () => {
+    // Se o dono reabrir e mandar contar o estornado, ESTA linha muda — e este
+    // teste é o que pina a decisão vigente até lá.
+    expect([...STATUS_PAGANTE]).toEqual(['confirmado']);
+    expect(isStatusPagante('confirmado')).toBe(true);
+    expect(isStatusPagante('pendente')).toBe(false);
+    expect(isStatusPagante('cancelado')).toBe(false);
+    expect(isStatusPagante('estornado')).toBe(false);
   });
 });
 

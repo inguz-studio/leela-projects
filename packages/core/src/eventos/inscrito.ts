@@ -83,6 +83,38 @@ export function isStatusInscrito(value: unknown): value is StatusInscrito {
 }
 
 /**
+ * Status que caracterizam um CLIENTE PAGANTE (D-1008-R19 — FONTE ÚNICA da
+ * régua de métrica de dinheiro/venda: "ticket médio é só por clientes que
+ * pagaram, e nao pagamentos emitidos(pendentes + pagos)"; o funil fecha em
+ * pagante, nunca em inscrito).
+ *
+ * Distinto de `STATUS_QUE_CONTAM_VENDA` (`functions/src/eventos/virarLote.ts`
+ * = confirmado + estornado), que conta VAGA DE LOTE — estoque, não caixa:
+ * uma inscrição estornada consumiu um lugar do lote e por isso conta lá.
+ *
+ * ⛔ VETÁVEL DO DONO (TICKET-1) — `estornado` está FORA por aritmética, não
+ * por preferência: `estornarInscricao` devolve o face em
+ * `eventos/{id}.receitaConfirmada`, então a receita que serve de numerador já
+ * é LÍQUIDA de reembolso. Somar o estornado ao denominador dividiria receita
+ * líquida por gente que não está mais dentro dela — a MESMA classe de mentira
+ * (denominador inflado) que a R19 manda matar. O cânone de dinheiro da casa
+ * já decidiu igual uma vez: `computeCrmCliente` deixa a estornada no
+ * histórico e fora de `ltv`/`valorGasto`.
+ *
+ * Condição de reabertura: se o dono quiser o estornado dentro, a mudança é
+ * ESTA LINHA (mais os testes que a pinam) — nenhum consumidor re-deriva a
+ * régua por conta própria.
+ */
+export const STATUS_PAGANTE: readonly StatusInscrito[] = ['confirmado'];
+
+/** A inscrição conta como cliente PAGANTE? (D-1008-R19) @pure */
+export function isStatusPagante(value: unknown): boolean {
+  return (
+    typeof value === 'string' && (STATUS_PAGANTE as readonly string[]).includes(value)
+  );
+}
+
+/**
  * Matriz CANÔNICA de transição de status do inscrito (espelha o padrão de
  * TRANSICOES_STATUS_PEDIDO/PAGAMENTO — re-review A9):
  *   - `pendente` → confirmado (webhook de pagamento) | cancelado;

@@ -349,6 +349,10 @@ export {
   isKitInscrito,
   STATUS_INSCRITO,
   isStatusInscrito,
+  // D-1008-R19 — régua ÚNICA de "cliente pagante" (métrica de dinheiro/venda);
+  // vetável TICKET-1 do dono vive na constante, não nos consumidores
+  STATUS_PAGANTE,
+  isStatusPagante,
   // FABLE-B (RN-341) — máquina de transição do inscrito ('estornado' é
   // terminal; consultada por estornarInscricao, nunca re-derivada local)
   TRANSICOES_STATUS_INSCRITO,

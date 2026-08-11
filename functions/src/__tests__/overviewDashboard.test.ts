@@ -27,6 +27,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import {
   DASHBOARD_STALE_MS,
   recomputeProfessionalDashboard,
+  resolverPagantes,
 } from '../overview/aggregateProfessionalDashboard';
 import { getOverviewCore } from '../overview/getOverview';
 
@@ -363,5 +364,72 @@ describe.skipIf(!hasEmulator)('overview — agregado do dashboard (S600-T2)', ()
     const result = await getOverviewCore(adminDb, MARINA_UID, depois);
     expect(result.inscricoesTotais).toBe(1291); // 1284 − 453 + 460
     expect(result.atualizadoEm).toBe(depois.getTime());
+  });
+
+  // ── D-1008-R19 · o servidor reconta PAGANTE, não inscrito ────────────────
+  // (lane METRICAS-PAGANTES-BACKEND — `resolverPagantes` alimenta o numerador
+  // do funil; o defeito consertado passava `qtdInscritos` adiante.)
+
+  describe('resolverPagantes — recorte por status (D-1008-R19)', () => {
+    const EVENTO = 'meia-floripa-2026';
+
+    async function seedInscritos(
+      porStatus: Record<string, number>
+    ): Promise<void> {
+      const col = adminDb.collection('eventos').doc(EVENTO).collection('inscritos');
+      const batch = adminDb.batch();
+      let n = 0;
+      for (const [status, qtd] of Object.entries(porStatus)) {
+        for (let i = 0; i < qtd; i++) {
+          batch.set(col.doc(`insc-${status}-${i}`), {
+            tenantId: TENANT_ID,
+            eventoId: EVENTO,
+            atletaId: `atleta-${n++}`,
+            status,
+            criadoEm: diasAtras(3),
+            atualizadoEm: diasAtras(1),
+          });
+        }
+      }
+      await batch.commit();
+    }
+
+    it('conta SÓ confirmado — pendente, cancelado e estornado ficam fora', async () => {
+      await seedInscritos({
+        confirmado: 4,
+        pendente: 3,
+        cancelado: 2,
+        estornado: 1,
+      });
+
+      const eventoRef = adminDb.collection('eventos').doc(EVENTO);
+      // 10 inscritos na subcoleção; 4 pagaram. Contar a coleção inteira daria
+      // 10 — o número que inflava o funil.
+      expect((await eventoRef.collection('inscritos').count().get()).data().count).toBe(10);
+      expect(await resolverPagantes(eventoRef)).toBe(4);
+    });
+
+    it('evento só com emissões pendentes → ZERO pagantes (não o total)', async () => {
+      await seedInscritos({ pendente: 7 });
+
+      const eventoRef = adminDb.collection('eventos').doc(EVENTO);
+      expect(await resolverPagantes(eventoRef)).toBe(0);
+    });
+
+    it('evento sem subcoleção de inscritos → 0, sem lançar', async () => {
+      const eventoRef = adminDb.collection('eventos').doc('desafio-serra-do-mar');
+      expect(await resolverPagantes(eventoRef)).toBe(0);
+    });
+
+    it('o dashboard leva os PAGANTES ao funil, não o ∑ qtdInscritos', async () => {
+      await seedInscritos({ confirmado: 4, pendente: 3, cancelado: 2, estornado: 1 });
+
+      // `qtdInscritos` do doc do evento (453) segue intacto nos KPIs de
+      // contagem; o funil enxerga 4. Sem `visitas` (E12) a taxa é null — o
+      // que este caso pina é que os dois números NÃO se confundem mais.
+      const current = await recomputeProfessionalDashboard(adminDb, MARINA_UID, AGORA);
+      expect(current.inscricoesTotais).toBe(1284);
+      expect(current.taxaConversaoPct).toBeNull();
+    });
   });
 });

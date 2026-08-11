@@ -16,6 +16,13 @@
 // `taxaConversaoPct` = null até existir dado de visitas (E12/analytics) —
 // decisão nº 7 da Onda 1 (onda1-decisoes.md): a UI trata null como "—",
 // nunca inventa número. Trends idem: sem janela anterior, null (não 0).
+//
+// D-1008-R19 (métrica de dinheiro/venda conta CLIENTE PAGANTE): o numerador
+// da conversão é `pagantes`, recontado da fonte pelo servidor com a régua
+// única `STATUS_PAGANTE` — nunca `qtdInscritos` (que soma pendente e
+// cancelada). Contagem de gente na lista e contagem de gente que pagou são
+// campos SEPARADOS deste contrato justamente para não voltarem a se
+// confundir por descuido.
 // =============================================================================
 
 import type { StatusEvento } from '../eventos/evento';
@@ -42,6 +49,18 @@ export interface EventoKpiInput {
   status: StatusEvento;
   /** Agregado ∑ mantido por Function (E03) */
   qtdInscritos: number;
+  /**
+   * Clientes PAGANTES do evento (D-1008-R19): contagem de inscritos com
+   * status em `STATUS_PAGANTE` — recontada da fonte pelo servidor.
+   *
+   * Existe SEPARADA de `qtdInscritos` porque as duas respondem perguntas
+   * diferentes: `qtdInscritos` é gente na lista (pendente e cancelada
+   * inclusas — é contagem de verdade e alimenta vaga/ocupação); `pagantes`
+   * é gente que pagou, o único denominador legítimo de métrica de dinheiro
+   * e o único fecho legítimo do funil. Colapsar as duas é exatamente o
+   * defeito que a R19 mandou matar.
+   */
+  pagantes: number;
   /** Agregado ∑ mantido por Function (E03) */
   receitaConfirmada: number;
   /**
@@ -148,16 +167,24 @@ export function derivarTrendPct(atual: number, anterior: number): number | null 
 }
 
 /**
- * Taxa de conversão (%) — confirmadas / visitas.
- * null sem dado de visitas (E12 fora da Onda 1 — decisão nº 7).
+ * Taxa de conversão (%) — clientes PAGANTES / visitas (D-1008-R19).
+ *
+ * O nome do parâmetro é `pagantes` e não `confirmadas` de propósito: até este
+ * lote o docstring dizia "confirmadas" enquanto o `derivarKpis` passava
+ * `inscricoesTotais` — o funil fechava em INSCRITO (pendente e cancelada
+ * dentro), a mentira que a R19 proíbe. A régua de quem é pagante mora em
+ * `STATUS_PAGANTE` (core/eventos/inscrito), fonte única.
+ *
+ * null sem dado de visitas (E12 fora da Onda 1 — decisão nº 7): a UI mostra
+ * "—", nunca 0.
  * @pure
  */
 export function derivarTaxaConversao(
-  confirmadas: number,
+  pagantes: number,
   visitas: number | null
 ): number | null {
   if (visitas === null || visitas <= 0) return null;
-  return Math.round((confirmadas / visitas) * 1000) / 10;
+  return Math.round((pagantes / visitas) * 1000) / 10;
 }
 
 /**
@@ -179,6 +206,7 @@ export function derivarKpis(
   visitas: number | null = null
 ): OverviewKPIs {
   let inscricoesTotais = 0;
+  let pagantesTotais = 0;
   let receitaConfirmada = 0;
   let vagasRestantes = 0;
   let emRisco: { nome: string; slug: string } | null = null;
@@ -186,6 +214,7 @@ export function derivarKpis(
 
   for (const evento of eventos) {
     inscricoesTotais += evento.qtdInscritos;
+    pagantesTotais += evento.pagantes;
     receitaConfirmada += evento.receitaConfirmada;
 
     if (!eventoPublico(evento.status)) continue;
@@ -222,7 +251,11 @@ export function derivarKpis(
     receitaTrendPct: null,
     vagasRestantes,
     eventoEmRisco: emRisco,
-    taxaConversaoPct: derivarTaxaConversao(inscricoesTotais, visitas),
+    // D-1008-R19: o funil fecha em PAGANTE. Passava `inscricoesTotais` aqui —
+    // pendente e cancelada contavam como conversão. Hoje é latente (visitas
+    // sempre null ⇒ "—"), mas o dia em que E12 entregar visitas a conta já
+    // nasce certa em vez de mentir na estreia.
+    taxaConversaoPct: derivarTaxaConversao(pagantesTotais, visitas),
     conversaoSparkline: [],
     membrosAtivosTotais,
     desafiosAtivosTotais,

@@ -40,6 +40,7 @@ import {
   type OverviewKPIs,
   type StatusEvento,
   isStatusEvento,
+  STATUS_PAGANTE,
 } from '@leela/core';
 
 // ---------------------------------------------------------------------------
@@ -104,6 +105,30 @@ async function resolverCapacidade(
   return total > 0 ? total : null;
 }
 
+/**
+ * Clientes PAGANTES do evento (D-1008-R19) — `count()` sobre `inscritos`
+ * filtrado pela régua ÚNICA `STATUS_PAGANTE` (@leela/core). Contagem da
+ * FONTE, no MESMO índice single-field de `status` que a query de pendentes já
+ * usa: nenhum índice novo, nenhuma leitura de espelho.
+ *
+ * Existe separada de `qtdInscritos` porque as duas respondem perguntas
+ * diferentes: quem está na lista × quem pagou. O funil e toda métrica de
+ * dinheiro fecham nesta, nunca naquela.
+ *
+ * Exportada para o teste de integração pinar a exclusão de
+ * pendente/cancelado/estornado com dado real no Emulator.
+ */
+export async function resolverPagantes(
+  eventoRef: FirebaseFirestore.DocumentReference
+): Promise<number> {
+  const agg = await eventoRef
+    .collection('inscritos')
+    .where('status', 'in', [...STATUS_PAGANTE])
+    .count()
+    .get();
+  return agg.data().count;
+}
+
 // ---------------------------------------------------------------------------
 // Recomputação (núcleo testável no Emulator via Admin SDK — padrão triggers v1)
 // ---------------------------------------------------------------------------
@@ -142,25 +167,28 @@ export async function recomputeProfessionalDashboard(
     const qtdInscritos = asNumber(eventoDoc.get('qtdInscritos'));
     const receitaConfirmada = asNumber(eventoDoc.get('receitaConfirmada'));
 
-    const [capacidade, pendentesSnap, countAtual, countAnterior] = await Promise.all([
-      resolverCapacidade(eventoDoc),
-      // Pendências (RN-204): equality em `status` (índice single-field
-      // automático); corte de 24h filtrado em memória — volume de pendentes
-      // por evento é pequeno e dispensa índice composto.
-      eventoDoc.ref.collection('inscritos').where('status', '==', 'pendente').get(),
-      // Janelas de trend: range só em `criadoEm` (single-field automático).
-      eventoDoc.ref
-        .collection('inscritos')
-        .where('criadoEm', '>=', Timestamp.fromDate(inicioJanelaAtual))
-        .count()
-        .get(),
-      eventoDoc.ref
-        .collection('inscritos')
-        .where('criadoEm', '>=', Timestamp.fromDate(inicioJanelaAnterior))
-        .where('criadoEm', '<', Timestamp.fromDate(inicioJanelaAtual))
-        .count()
-        .get(),
-    ]);
+    const [capacidade, pendentesSnap, pagantes, countAtual, countAnterior] =
+      await Promise.all([
+        resolverCapacidade(eventoDoc),
+        // Pendências (RN-204): equality em `status` (índice single-field
+        // automático); corte de 24h filtrado em memória — volume de pendentes
+        // por evento é pequeno e dispensa índice composto.
+        eventoDoc.ref.collection('inscritos').where('status', '==', 'pendente').get(),
+        // D-1008-R19: clientes PAGANTES do evento (numerador do funil).
+        resolverPagantes(eventoDoc.ref),
+        // Janelas de trend: range só em `criadoEm` (single-field automático).
+        eventoDoc.ref
+          .collection('inscritos')
+          .where('criadoEm', '>=', Timestamp.fromDate(inicioJanelaAtual))
+          .count()
+          .get(),
+        eventoDoc.ref
+          .collection('inscritos')
+          .where('criadoEm', '>=', Timestamp.fromDate(inicioJanelaAnterior))
+          .where('criadoEm', '<', Timestamp.fromDate(inicioJanelaAtual))
+          .count()
+          .get(),
+      ]);
 
     for (const pendente of pendentesSnap.docs) {
       const criadoEm = toDateOrNull(pendente.get('criadoEm'));
@@ -175,7 +203,15 @@ export async function recomputeProfessionalDashboard(
     janelaAtual += countAtual.data().count;
     janelaAnterior += countAnterior.data().count;
 
-    kpiInputs.push({ nome, slug, status, qtdInscritos, receitaConfirmada, capacidade });
+    kpiInputs.push({
+      nome,
+      slug,
+      status,
+      qtdInscritos,
+      pagantes,
+      receitaConfirmada,
+      capacidade,
+    });
     alertaInputs.push({
       nome,
       slug,
