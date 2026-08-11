@@ -3,6 +3,34 @@
 **Trace:** `leela-redesign-v2-20260810` · lane **PONTE-RESOLVE** · **Employee:** `sf-frontend-lead`
 **Repo:** `C:\dev\LEELA` · branch `main` (árvore compartilhada — `commit --only` sempre)
 **Início:** 11/08 02:25 (-03) · **HEAD de partida:** `f9ed402b`
+**Fim:** 11/08 03:25 (-03) · **HEAD de chegada:** `7fb25825` (pushed)
+
+---
+
+## ✅ ESTADO AO FECHAR — a lane terminou o escopo
+
+Checkpoint do maestro respondido com a lane **fechada**, não em curso. Os três itens estão pagos.
+
+| Item | Estado | Commits |
+|---|---|---|
+| PONTE-ELEGIVEL-1 | **selado** — já estava construído em 09/08; re-provado aqui, nada a construir | (09/08: `2271fd78` `38420cb6` `9f75c286`) |
+| PONTE-CTA-1 | **selado** — construído, provado, falsificado | `e48032a8` `6cfb5fe2` |
+| PONTE-NOME-1 | **selado NA ORIGEM** — coube inteiro; nenhuma spec devolvida | `e48032a8` `6cfb5fe2` `8f447b12` |
+| Painel + rodada + RN + board | **selado** | `5973434b` |
+| Handoff + bloqueio do gate no board | **selado** | `7fb25825` |
+
+**Sobre o juízo de esforço do NOME-1:** não precisei devolver proposta. O batismo já lê
+`organizacao`, então preencher esse campo na porta **não toca em provisionamento de tenant** — o
+resgate continua lendo o mesmo campo, do mesmo jeito. O que ficou de fora, e continua card
+separado como o contrato previa, é **renomear depois**.
+
+**Nada rodou em background nesta lane** exceto a suíte cheia da landing, que é o item que eu
+**não** conto como pago (ver a seção do gate de lote). Todas as provas que sustentam os três itens
+rodaram em foreground, com número.
+
+**Próximo passo concreto, e não é meu:** a **review antagonista** dos três de uma vez — 11 vetores
+declarados abaixo, com o vetor 5 (ordem do deploy) e o vetor 11 (gate de lote da landing numa
+máquina livre) como os dois caros. Só depois dela o pacote pode ir à fase de deploy.
 
 ---
 
