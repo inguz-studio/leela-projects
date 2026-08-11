@@ -9,6 +9,7 @@
     "test": "turbo run test",
     "type-check": "turbo run type-check",
     "test:e2e": "playwright test",
+    "gate:canon": "node scripts/gate-canon.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\""
   },

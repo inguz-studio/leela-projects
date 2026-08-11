@@ -284,13 +284,21 @@ tags:
 
 ## 🔄 Em execução
 
-- [ ] **[E01] A revisão de componentes vira roadmap, cânone e trava** — sua ordem de 10/08: em vários lugares do sistema não estamos respeitando componente, e isso é critério de aceite de interface, não pedido. A medição está feita e corrigiu o próprio número que este card carregava: não são 40 telas com fundo cru, são 192 superfícies reescritas à mão com os tokens certos. O mapa de qual componente é o padrão já é canônico, as seis ondas estão ordenadas pelo trabalho que servem e a trava está especificada 🔄 falta o código da trava e a sua resposta sobre layout (CANONE-1) [[LEELA-E01-design-system]]
-    - [ ] **S005 · A revisão de componentes vira roadmap, cânone e trava**
+- [x] **[E01] A revisão de componentes vira roadmap, cânone e trava** — sua ordem de 10/08: em vários lugares do sistema não estamos respeitando componente, e isso é critério de aceite de interface, não pedido. A medição está feita e corrigiu o próprio número que este card carregava: não são 40 telas com fundo cru, são 192 superfícies reescritas à mão com os tokens certos. O mapa de qual componente é o padrão já é canônico, as seis ondas estão ordenadas pelo trabalho que servem, **e a trava agora é código que roda** ✅ falta só a sua resposta sobre layout (CANONE-1), que destrava a Parte B [[LEELA-E01-design-system]]
+    - [x] **S005 · A revisão de componentes vira roadmap, cânone e trava**
         - [x] S005-T1 o cartão volta a existir onde a informação estava solta
         - [x] S005-T2 o inventário do que reconstruiu à mão o que já existia pronto
         - [x] S005-T3 o mapa padrão para componente canônico, com o que falta proposto
         - [x] S005-T4 as ondas de revisão, cada uma com o número de passos até o trabalho antes e depois
-        - [ ] S005-T5 a trava que reprova controle cru fora do design system
+        - [x] S005-T5 a trava que reprova controle cru fora do design system — duas regras de lint + a contagem com catraca (`2ceb9fd4`); o número de partida está registrado e só pode cair
+- [x] **[E01] A primeira onda: o design system para de duplicar o próprio motor** — a peça de confirmar ação, que 26 telas usam, montava o campo de texto e a caixa de marcar à mão por dentro. Quem usava herdava estados que nunca passaram pela conferência de contraste. Agora ela compõe os componentes da casa, com teste que quebra se alguém desfizer. Junto: os dez componentes que faltavam na vitrine ganharam página, e o último sem teste ganhou o dele — 50 de 50 nos dois ✅ **construído, aguardando deploy** · lane `canon-onda-0` [[LEELA-E01-design-system]]
+    - [x] **Onda 0 · Parte A — a fundação**
+        - [x] a peça de confirmar ação passa a usar o campo e a caixa de marcar da casa (`e173b63a`)
+        - [x] os dez componentes sem página na vitrine ganharam a sua (`b63e968e`)
+        - [x] o único componente sem teste ganhou o dele (`37751b4b`)
+        - [x] a trava de procedência entra em vigor sem barrar ninguém, com o custo à vista (`2ceb9fd4`)
+        - [x] os documentos corrigidos: três componentes que faltavam no mapa, e dois itens que já estavam prontos e a lista dizia que não (`3029022d`)
+        - [ ] Parte B — retida na sua decisão sobre layout (CANONE-1)
 - [ ] **[E01] O painel obedece ao tema novo em todo menu, botão e cartão** — você validou o `:4601` e apontou seis coisas fora do lugar: menu suspenso preto, menu de celular no desenho antigo, o alternador de painel solto no lado, botão de gerenciar evento fora da altura, seleção que pula em vez de deslizar e a barra de abas com fundo de pílula. As seis estão consertadas e mergeadas na main 🔄 D-1008-R4, R5, R6, R7, R14 e R18 · **construído, mergeado, aguardando deploy** (merge `b51cdcd9` em 11/08) [[LEELA-E01-design-system]]
     - [x] **S004 · Os menus, o perfil e a altura dos controles no tema novo**
         - [x] S004-T1 menu suspenso, filtro e dica voltam a ser opacos

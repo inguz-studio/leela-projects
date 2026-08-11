@@ -109,7 +109,9 @@ Esta §8 é de 2026-07-19 e é vinculante desde então. Mesmo assim, a varredura
 
 O que fecha: o mapa canônico em **`03-canon/canone-de-componentes.md`**, que é a fonte e cobre 13 famílias de padrão, não só controle; a **RN-558** no [[LEELA-E01-design-system]], que torna procedência regra de negócio e obriga padrão sem cânone a virar decisão do dono; e o gate **`leela-canon`** (spec em `02-rodadas/2026-08-11-roadmap-componentes/05-gate-leela-canon.md`), que torna a §8 verificável em vez de exortativa. Medição completa em `02-rodadas/2026-08-11-roadmap-componentes/02-inventario-componentes.md`.
 
-**Dívida do próprio DS, registrada aqui porque é a §8 violada dentro de casa:** o `ConfirmModal` monta `<textarea>` (`ConfirmModal.tsx:198`) e `<input type="checkbox">` (`:226-228`) crus em vez de compor o `Textarea` e o `Checkbox` que o pacote publica. Toda tela que usa `ConfirmModal` herda estados que não passaram pelo AA por estado. Primeiro item da Onda 0.
+**Dívida do próprio DS — PAGA na Onda 0 (2026-08-11):** o `ConfirmModal` montava `<textarea>` (`ConfirmModal.tsx:198`) e `<input type="checkbox">` (`:226-228`) crus em vez de compor o `Textarea` e o `Checkbox` que o pacote publica, e as ~26 telas que o consomem herdavam estados que nunca passaram pelo AA por estado. Hoje ele compõe os dois canônicos, com teste de identidade de assinatura — reinlinar o motor quebra a suíte. Zero controle cru dentro do DS.
+
+**Como rodar o gate:** `pnpm gate:canon` (verifica contra o baseline), `--relatorio` (arquivo:linha de cada contagem), `--atualizar` (regrava o baseline, e só aceita quando a contagem desceu). A lista `canone` do lint é derivada do barrel em tempo de execução; componente novo no DS sem linha neste cânone reprova a camada A.
 
 ### Primitivos no DS
 

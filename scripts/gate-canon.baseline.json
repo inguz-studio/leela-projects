@@ -1,0 +1,27 @@
+{
+  "medidoEm": "2026-08-11",
+  "contagens": {
+    "superficie-crua": {
+      "painel": 107,
+      "landing": 27
+    },
+    "botao-cru-estilizado": {
+      "painel": 6,
+      "landing": 5
+    },
+    "receita-de-grid": {
+      "painel": 23,
+      "landing": 9
+    },
+    "padrao-orfao": {
+      "painel": 0,
+      "landing": 0
+    },
+    "controle-cru-fora-do-ds": {
+      "total": 4
+    },
+    "padrao-reimplementado-fora-do-ds": {
+      "total": 2
+    }
+  }
+}
