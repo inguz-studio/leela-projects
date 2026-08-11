@@ -6,7 +6,24 @@
 //
 // Contrato:
 //   promoverParaProfissional({ aceiteTermo: true, intencao?, nomeProfissional? })
-//     -> { statusOnboarding: 'aguardando_convite', jaExistia: boolean }
+//     -> { statusOnboarding, jaExistia, intencaoRegistrada, nomeAplicado }
+//
+// -----------------------------------------------------------------------------
+// A RESPOSTA ECOA O QUE ELA ACEITOU (PONTE-FIX · B1 da PONTE-REV)
+// -----------------------------------------------------------------------------
+// O retorno era `{ statusOnboarding, jaExistia }` e não dizia UMA palavra sobre
+// os dois campos novos. Isso deixava um buraco caro: nem a tela nem uma sonda de
+// fumaça conseguiam distinguir "o servidor gravou o meu nome" de "o servidor
+// ignorou o meu nome em silêncio". E o segundo desfecho é alcançável de verdade
+// — basta a landing nova falar com um servidor velho, ou com um `dist/` do
+// api-client defasado, e o campo desconhecido atravessa sem uma linha de recusa
+// (o `onCall` do `firebase-functions/v1` não valida shape).
+//
+// Então a resposta passa a ECOAR: `intencaoRegistrada` devolve o rótulo que o
+// log carimbou e `nomeAplicado` diz se `organizacao` foi efetivada NESTA
+// chamada. Os dois são ADITIVOS e o cliente velho os ignora — ninguém quebra.
+// Com eles, "gravou" e "ignorou" viram dois valores diferentes, e a distinção
+// deixa de depender de disciplina de deploy.
 //
 // -----------------------------------------------------------------------------
 // A INTENÇÃO É CARIMBADA AQUI, E É POR ISSO QUE OS DOIS CTAs PODEM SUBIR
@@ -175,6 +192,21 @@ export interface PromoverParaProfissionalResult {
   statusOnboarding: 'aguardando_convite';
   /** true = a conta já alcançava o painel profissional; nada foi escrito. */
   jaExistia: boolean;
+  /**
+   * O ECO da intenção (PONTE-FIX · B1). É o rótulo que o log carimbou, e não o
+   * que o cliente mandou: um typo volta como `invalida` e o cliente velho volta
+   * como `nao_declarada`. Uma sonda de fumaça que receba `undefined` aqui está
+   * falando com um servidor ANTERIOR a este contrato — que é exatamente o
+   * desfecho que ninguém conseguia enxergar antes.
+   */
+  intencaoRegistrada: IntencaoRegistrada;
+  /**
+   * O ECO do nome (PONTE-FIX · B1/R1). `true` só quando `organizacao` foi
+   * efetivada NESTA chamada. Declarar um nome e receber `false` é o descarte
+   * silencioso ficando audível: acontece nos dois ramos idempotentes (conta com
+   * tenant e doc pré-existente), onde o nome digitado não tem para onde ir.
+   */
+  nomeAplicado: boolean;
 }
 
 /**
@@ -266,11 +298,27 @@ export function normalizarIntencao(bruta: unknown): IntencaoRegistrada {
  * descobre no dia em que o slug já está cunhado.
  *
  * A régua tem TRÊS partes, e a terceira é a que quase escapa: o comprimento
- * (`ORGANIZACAO_MIN`/`MAX`, os mesmos do `/cadastrar`, para que a porta e o
- * formulário não aceitem coisas diferentes) e, além dele, o slug DERIVADO
+ * (`ORGANIZACAO_MIN`/`MAX`, importados do core — a MESMA constante que o
+ * `/cadastrar` lê, e não uma segunda cópia) e, além dele, o slug DERIVADO
  * precisa sobrar. `"!!"` tem dois caracteres e `derivarSlugOrganizacao` o
  * reduz a `''` — aceitá-lo devolveria à pessoa a semente do nome pessoal com
  * cara de escolha feita.
+ *
+ * ⚠️ AS DUAS PORTAS NÃO ACEITAM O MESMO CONJUNTO, e a frase antiga afirmava que
+ * sim (PONTE-FIX · R2). O eixo do COMPRIMENTO é literalmente a mesma constante
+ * nas duas, mas `validarCadastroOrganizador` não checa derivabilidade: o
+ * `/cadastrar` ACEITA `"!!"` e esta porta o RECUSA. A divergência é fail-safe —
+ * a porta é a mais estrita, e o que ela barra é justamente o que produziria
+ * endereço vazio — então ela fica, declarada, em vez de virar promessa falsa de
+ * paridade. Unificar a régua no core é card próprio (a recomendação R2.1 da
+ * PONTE-REV), e mexe no `/cadastrar`, que não é território desta lane.
+ *
+ * A FRASE DA RECUSA DIZ A RÉGUA DE VERDADE (PONTE-FIX · B2). A anterior —
+ * "pelo menos duas letras ou números" — mentia para quem escrevia em alfabeto
+ * não latino: `Анна` tem quatro letras, `ゆき` tem duas, e as duas viram `''`
+ * porque `derivarSlugOrganizacao` só preserva `[a-z0-9]` depois do NFD. A régua
+ * real é "dois caracteres no total E pelo menos um caractere latino ou
+ * numérico", e é isso que a pessoa precisa ler.
  */
 export function nomeProfissionalDoPayload(bruto: unknown): string | null {
   if (bruto === undefined || bruto === null) return null;
@@ -278,7 +326,7 @@ export function nomeProfissionalDoPayload(bruto: unknown): string | null {
     throw recusa(
       'invalid-argument',
       'nome_profissional_invalido',
-      'Escolha um nome com pelo menos duas letras ou números para a sua produtora.'
+      'Escolha um nome com dois caracteres ou mais e pelo menos uma letra de A a Z ou um número. O endereço da sua produtora é escrito só com esses caracteres.'
     );
   };
   if (typeof bruto !== 'string') return recusaDoNome();
@@ -396,7 +444,16 @@ export async function promoverParaProfissionalCore(
       intencao,
       nomeDeclarado: nomeProfissional !== null,
     });
-    return { statusOnboarding: 'aguardando_convite', jaExistia: true };
+    // `nomeAplicado: false` cravado, e não calculado: este ramo NÃO escreve. A
+    // conta com tenant já tem `profissionais/{uid}` desde o `provisionTenant`, e
+    // um nome digitado aqui não tem para onde ir — dizer isso na resposta é o
+    // que permite à tela avisar em vez de fingir que a escolha valeu.
+    return {
+      statusOnboarding: 'aguardando_convite',
+      jaExistia: true,
+      intencaoRegistrada: intencao,
+      nomeAplicado: false,
+    };
   }
 
   // ── 5. PONTE-ELEGIVEL-1 — a porta recusa o que o portão recusaria ──────
@@ -463,7 +520,15 @@ export async function promoverParaProfissionalCore(
     intencao,
     nomeDeclarado: nomeProfissional !== null,
   });
-  return { statusOnboarding: 'aguardando_convite', jaExistia };
+  // O nome só foi APLICADO quando a transação escreveu. Se o doc já existia, o
+  // `tx.set` nunca rodou e o nome digitado morreu ali — o segundo ramo do
+  // descarte silencioso que a review nomeou (PONTE-FIX · R1).
+  return {
+    statusOnboarding: 'aguardando_convite',
+    jaExistia,
+    intencaoRegistrada: intencao,
+    nomeAplicado: nomeProfissional !== null && !jaExistia,
+  };
 }
 
 // ---------------------------------------------------------------------------

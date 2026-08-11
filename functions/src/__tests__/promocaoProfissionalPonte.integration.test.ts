@@ -119,7 +119,14 @@ describe('A4 · a travessia da ponte, contra o emulator', () => {
 
     const r = await promoverParaProfissionalCore(db, ana, { aceiteTermo: true });
 
-    expect(r).toEqual({ statusOnboarding: 'aguardando_convite', jaExistia: false });
+    expect(r).toEqual({
+      statusOnboarding: 'aguardando_convite',
+      jaExistia: false,
+      // PONTE-FIX · B1 — o eco também contra banco de verdade: sem intenção
+      // declarada e sem nome, os dois campos dizem exatamente isso.
+      intencaoRegistrada: 'nao_declarada',
+      nomeAplicado: false,
+    });
 
     const doc = await db.collection('profissionais').doc(ana.uid).get();
     expect(doc.exists).toBe(true);
@@ -405,5 +412,41 @@ describe('A4 · a travessia da ponte, contra o emulator', () => {
       'nome_profissional_invalido'
     );
     expect((await db.collection('profissionais').doc(ana.uid).get()).exists).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // PONTE-FIX · B1/R1 · o eco, contra o banco de verdade
+  // -------------------------------------------------------------------------
+
+  it('⚔ PONTE-FIX · R1 · a SEGUNDA travessia com nome novo devolve `nomeAplicado: false`, e o banco confirma', async () => {
+    // O ramo do doc pré-existente é onde o descarte silencioso sobrevivia. A
+    // prova precisa ser contra banco porque a afirmação é sobre o que ficou
+    // GRAVADO: a primeira escolha permanece, a segunda não entra, e agora a
+    // resposta diz isso em vez de devolver o mesmo sucesso das duas vezes.
+    const ana = await participanteLogada('t13');
+
+    const primeira = await promoverParaProfissionalCore(db, ana, {
+      aceiteTermo: true,
+      intencao: 'eventos',
+      nomeProfissional: 'Castelo Produções',
+    });
+    expect(primeira.nomeAplicado).toBe(true);
+    expect(primeira.intencaoRegistrada).toBe('eventos');
+
+    const segunda = await promoverParaProfissionalCore(db, ana, {
+      aceiteTermo: true,
+      intencao: 'clube',
+      nomeProfissional: 'Outro Nome Totalmente Diferente',
+    });
+    expect(segunda.jaExistia).toBe(true);
+    // ⚔ O nome NÃO foi aplicado, e a resposta diz. Antes deste conserto, as
+    // duas chamadas eram indistinguíveis para quem chamou.
+    expect(segunda.nomeAplicado).toBe(false);
+    // A intenção continua sendo carimbada, porque ela é telemetria de clique.
+    expect(segunda.intencaoRegistrada).toBe('clube');
+
+    // RN-467: o doc não foi reescrito.
+    const doc = await db.collection('profissionais').doc(ana.uid).get();
+    expect(doc.get('organizacao')).toBe('Castelo Produções');
   });
 });

@@ -167,7 +167,15 @@ describe('S1234-T1 · a promoção repetida não duplica nada (RN-512, fluxo C)'
   it('doc já existente devolve sucesso SEM escrever e sem recolher consentimento', async () => {
     const { db, escritas } = dbFake(true);
     const r = await promoverParaProfissionalCore(db, CLIENTE, ACEITE);
-    expect(r).toEqual({ statusOnboarding: 'aguardando_convite', jaExistia: true });
+    expect(r).toEqual({
+      statusOnboarding: 'aguardando_convite',
+      jaExistia: true,
+      // PONTE-FIX · B1 — o contrato cresceu dois campos, e o `toEqual` é
+      // EXATO de propósito: um campo que aparecesse sem passar por aqui seria
+      // contrato mudando sem ninguém olhar.
+      intencaoRegistrada: 'nao_declarada',
+      nomeAplicado: false,
+    });
     expect(escritas).toHaveLength(0);
   });
 
@@ -495,5 +503,140 @@ describe('⚔ PONTE-NOME-1 · `organizacao` deixa de nascer sempre vazia', () =>
     );
     expect(erro?.details?.motivo).toBe('conta_inelegivel');
     expect(escritas).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ PONTE-FIX · B1 — a resposta ECOA o que ela aceitou
+// ---------------------------------------------------------------------------
+// A review antagonista mediu o buraco: o retorno era `{ statusOnboarding,
+// jaExistia }` e não dizia nada sobre os dois campos novos. Uma landing nova
+// falando com um servidor velho (ou com um `dist/` do api-client defasado)
+// mandava `nomeProfissional` para um `onCall` que não valida shape, a pessoa
+// via sucesso e o doc nascia com `organizacao: ''`. "Gravou" e "ignorou em
+// silêncio" eram a MESMA resposta na rede — e nenhum gate consegue enxergar o
+// que a resposta não diz.
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-FIX · B1 · a callable devolve o que aceitou', () => {
+  it('⚔ a intenção volta ECOADA, e o eco é o rótulo REGISTRADO — não o que veio', async () => {
+    // O eco é do lado de dentro da régua: um typo volta `invalida` e o cliente
+    // velho volta `nao_declarada`. Ecoar o valor cru seria devolver o palpite
+    // do cliente com cara de confirmação do servidor.
+    for (const [mandado, esperado] of [
+      ['clube', 'clube'],
+      ['eventos', 'eventos'],
+      ['clubes', 'invalida'],
+      [undefined, 'nao_declarada'],
+    ] as const) {
+      const { db } = dbFake();
+      const r = await promoverParaProfissionalCore(db, CLIENTE, {
+        ...ACEITE,
+        ...(mandado === undefined ? {} : { intencao: mandado }),
+      });
+      expect(r.intencaoRegistrada).toBe(esperado);
+    }
+  });
+
+  it('⚔ `nomeAplicado` é TRUE só quando `organizacao` foi efetivada nesta chamada', async () => {
+    const { db, escritas } = dbFake();
+    const r = await promoverParaProfissionalCore(db, CLIENTE, {
+      ...ACEITE,
+      nomeProfissional: 'Castelo Produções',
+    });
+    expect(r.nomeAplicado).toBe(true);
+    expect(escritas[0]?.dados['organizacao']).toBe('Castelo Produções');
+    expect(r.jaExistia).toBe(false);
+  });
+
+  it('sem nome declarado, `nomeAplicado` é false mesmo escrevendo o doc', async () => {
+    // Escreveu o doc, sim; aplicou nome, não. Os dois fatos são diferentes e a
+    // resposta não pode fundi-los: fundir devolveria `true` para quem não
+    // escolheu nada, e a tela mentiria dizendo que a escolha valeu.
+    const { db, escritas } = dbFake();
+    const r = await promoverParaProfissionalCore(db, CLIENTE, ACEITE);
+    expect(escritas).toHaveLength(1);
+    expect(r.nomeAplicado).toBe(false);
+  });
+
+  it('⚔ R1 · ramo do DOC PRÉ-EXISTENTE: nome declarado volta `nomeAplicado: false`', async () => {
+    // `snap.exists` → `tx.set` nunca roda. O nome digitado morre ali, e antes
+    // deste conserto morria SEM UMA PALAVRA. Agora a resposta diz.
+    const { db, escritas } = dbFake(true);
+    const r = await promoverParaProfissionalCore(db, CLIENTE, {
+      ...ACEITE,
+      nomeProfissional: 'Castelo Produções',
+    });
+    expect(r.jaExistia).toBe(true);
+    expect(escritas).toHaveLength(0);
+    expect(r.nomeAplicado).toBe(false);
+  });
+
+  it('⚔ R1 · ramo do TENANT: nome declarado volta `nomeAplicado: false`, com a intenção', async () => {
+    // O retorno cedo do passo 4 é o segundo ramo do descarte silencioso. Ele
+    // continua não escrevendo (correto — não rebaixa quem já está ativo) e
+    // passa a DIZER que não escreveu.
+    const { db, escritas } = dbFake();
+    const r = await promoverParaProfissionalCore(
+      db,
+      { ...CLIENTE, tenantId: 'castelo' },
+      { ...ACEITE, nomeProfissional: 'Outro Nome', intencao: 'clube' }
+    );
+    expect(r.jaExistia).toBe(true);
+    expect(escritas).toHaveLength(0);
+    expect(r.nomeAplicado).toBe(false);
+    expect(r.intencaoRegistrada).toBe('clube');
+  });
+
+  it('o eco NÃO carrega o nome — ele é booleano aqui pelo mesmo motivo do log', async () => {
+    const { db } = dbFake();
+    const r = await promoverParaProfissionalCore(db, CLIENTE, {
+      ...ACEITE,
+      nomeProfissional: 'Castelo Produções',
+    });
+    expect(JSON.stringify(r)).not.toContain('Castelo');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ PONTE-FIX · B2 — a régua que a frase promete é a régua que existe
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-FIX · B2 · a recusa do nome não mente sobre a régua', () => {
+  /** Os três nomes reais da evidência da review. Contas válidas, gente real. */
+  const NAO_LATINOS = ['Анна', '李', 'ゆき'];
+
+  it('⚔ os três nomes não latinos continuam recusados pelo SERVIDOR — a régua não afrouxa', () => {
+    // O conserto do B2 é na TELA (o campo não nasce pré-preenchido com um nome
+    // que não vira endereço). O servidor continua estrito de propósito: quem
+    // DIGITOU algo que não vira endereço tem de ouvir isso, porque o endereço
+    // é cunhado uma vez. Afrouxar aqui recriaria o descarte silencioso.
+    for (const nome of NAO_LATINOS) {
+      expect(() => nomeProfissionalDoPayload(nome)).toThrow();
+    }
+  });
+
+  it('⚔ a FRASE diz a régua de verdade: nada de "duas letras" para quem tem duas', () => {
+    // `ゆき` tem duas letras e é recusado. A frase antiga — "pelo menos duas
+    // letras ou números" — mentia exatamente para ela. A régua real é
+    // comprimento ≥ 2 E ao menos um caractere de A-Z ou 0-9.
+    const erro = (() => {
+      try {
+        nomeProfissionalDoPayload('ゆき');
+        return null;
+      } catch (e) {
+        return e as { message?: string };
+      }
+    })();
+    const frase = erro?.message ?? '';
+    expect(frase).not.toMatch(/duas letras ou n[úu]meros/i);
+    expect(frase).toMatch(/a a z/i);
+    expect(frase).toMatch(/n[úu]mero/i);
+  });
+
+  it('um caractere latino no meio do não latino JÁ basta — a régua é derivabilidade', () => {
+    // A régua não é "só ASCII": é "sobra alguma coisa". `Анна2` deriva `2`.
+    expect(nomeProfissionalDoPayload('Анна2')).toBe('Анна2');
+    expect(nomeProfissionalDoPayload('李 Produções')).toBe('李 Produções');
   });
 });

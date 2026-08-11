@@ -169,10 +169,36 @@ const MOTIVOS_NOMEADOS = [
  */
 export type MotivoRecusaPromocao = (typeof MOTIVOS_NOMEADOS)[number] | 'indisponivel';
 
+/**
+ * O que o log do servidor carimbou como intenção. Espelha `IntencaoRegistrada`
+ * de `functions/src/platform/promoverParaProfissional.ts`: as duas intenções
+ * mais os DOIS estados de ausência, que são distintos de propósito
+ * (`nao_declarada` é o cliente que não conhece o campo; `invalida` é o cliente
+ * que conhece e mandou outra coisa).
+ */
+export type IntencaoRegistrada = IntencaoDaTravessia | 'nao_declarada' | 'invalida';
+
 export interface PromocaoProfissionalResult {
   statusOnboarding: 'aguardando_convite';
   /** true = a conta já alcançava o painel profissional; nada foi escrito. */
   jaExistia: boolean;
+  /**
+   * O ECO da intenção que o servidor registrou (PONTE-FIX · B1).
+   *
+   * OPCIONAL de propósito, e o `?` é o contrato honesto: um bundle novo pode
+   * legitimamente falar com um servidor que ainda não subiu este campo, e nesse
+   * caso ele chega `undefined`. Essa é a leitura que uma sonda de fumaça usa
+   * para saber COM QUEM está falando — antes dela, "o servidor gravou" e "o
+   * servidor ignorou em silêncio" eram a mesma resposta na rede.
+   */
+  intencaoRegistrada?: IntencaoRegistrada;
+  /**
+   * `true` quando `organizacao` foi efetivada NESTA chamada (PONTE-FIX · B1/R1).
+   * `false` com nome declarado significa que o nome não foi aplicado — é o
+   * caminho idempotente, e a tela deve dizer isso em vez de calar.
+   * `undefined` = servidor anterior a este contrato (ver acima).
+   */
+  nomeAplicado?: boolean;
 }
 
 /**

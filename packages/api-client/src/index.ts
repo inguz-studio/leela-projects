@@ -795,6 +795,10 @@ export type {
   // (PONTE-CTA-1) e o nome da produtora escolhido ali (PONTE-NOME-1).
   PromocaoProfissionalInput,
   IntencaoDaTravessia,
+  // O eco do servidor (PONTE-FIX · B1): o rótulo que ele registrou, com os
+  // dois estados de ausência. É o que deixa "gravou" e "ignorou" distinguíveis
+  // por quem chamou — tela ou sonda de fumaça.
+  IntencaoRegistrada,
   MotivoRecusaPromocao,
 } from './platform/profissionais';
 

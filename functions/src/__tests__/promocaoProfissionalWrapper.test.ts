@@ -189,7 +189,14 @@ describe('⚔ vetor 12 · o wrapper https.onCall, pela primeira vez', () => {
 
     expect(r.statusCode).toBe(200);
     expect(r.corpo).toEqual({
-      result: { statusOnboarding: 'aguardando_convite', jaExistia: false },
+      result: {
+        statusOnboarding: 'aguardando_convite',
+        jaExistia: false,
+        // PONTE-FIX · B1 — o eco entra no contrato de TRANSPORTE, não só no do
+        // core: é aqui que uma sonda de fumaça o lê.
+        intencaoRegistrada: 'nao_declarada',
+        nomeAplicado: false,
+      },
     });
     expect(estado.escritas).toHaveLength(1);
     expect(estado.escritas[0]?.colecao).toBe('profissionais');
@@ -350,8 +357,43 @@ describe('⚔ vetor 12 · o wrapper https.onCall, pela primeira vez', () => {
     const r = await chamar({ data: { aceiteTermo: true } }, TOKEN_PARTICIPANTE);
     expect(r.statusCode).toBe(200);
     expect(r.corpo).toEqual({
-      result: { statusOnboarding: 'aguardando_convite', jaExistia: true },
+      result: {
+        statusOnboarding: 'aguardando_convite',
+        jaExistia: true,
+        intencaoRegistrada: 'nao_declarada',
+        nomeAplicado: false,
+      },
     });
     expect(estado.escritas).toHaveLength(0);
+  });
+
+  it('⚔ PONTE-FIX · B1 · a SONDA DE FUMAÇA: o eco atravessa a serialização', async () => {
+    // Este é o caso que fecha o vetor 5 de verdade. Uma sonda que mande
+    // `intencao: 'clube'` e `nomeProfissional` e leia o corpo da resposta sabe,
+    // por número e não por fé, se o servidor do outro lado conhece os dois
+    // campos. Contra o contrato ANTERIOR, `intencaoRegistrada` chega
+    // `undefined` — que é a assinatura do deploy fora de ordem.
+    const r = await chamar(
+      { data: { aceiteTermo: true, intencao: 'clube', nomeProfissional: 'Castelo Produções' } },
+      TOKEN_PARTICIPANTE
+    );
+    expect(r.statusCode).toBe(200);
+    const resultado = (r.corpo as { result: Record<string, unknown> }).result;
+    expect(resultado['intencaoRegistrada']).toBe('clube');
+    expect(resultado['nomeAplicado']).toBe(true);
+    expect(estado.escritas[0]?.dados['organizacao']).toBe('Castelo Produções');
+    // E o nome NÃO volta na resposta: o eco é booleano, como o log.
+    expect(JSON.stringify(resultado)).not.toContain('Castelo');
+  });
+
+  it('⚔ PONTE-FIX · B1 · o typo do cliente novo volta ECOADO como `invalida`', async () => {
+    const r = await chamar(
+      { data: { aceiteTermo: true, intencao: 'clubes' } },
+      TOKEN_PARTICIPANTE
+    );
+    expect(r.statusCode).toBe(200);
+    expect((r.corpo as { result: Record<string, unknown> }).result['intencaoRegistrada']).toBe(
+      'invalida'
+    );
   });
 });
