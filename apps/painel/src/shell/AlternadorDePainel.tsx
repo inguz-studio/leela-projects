@@ -42,9 +42,16 @@ export function estaNoPainelMaster(pathname: string): boolean {
   return pathname === ROTA_PLATAFORMA || pathname.startsWith(`${ROTA_PLATAFORMA}/`);
 }
 
-/** O nome do painel em que a conta está agora (rótulo de contexto do shell). */
+/**
+ * O nome do painel em que a conta está agora (rótulo de contexto do shell).
+ *
+ * UXW-FIX · BLQ-19: devolvia "Painel do Organizador" enquanto o alternador, a
+ * um clique de distância no MESMO rail, oferecia "Acessar painel profissional"
+ * — o mesmo painel com dois nomes visíveis ao mesmo tempo. A RN-468 nomeia
+ * "Painel Profissional", e é ela que manda. "Painel Master" fica do outro lado.
+ */
 export function nomeDoPainelAtual(pathname: string): string {
-  return estaNoPainelMaster(pathname) ? 'Painel Master' : 'Painel do Organizador';
+  return estaNoPainelMaster(pathname) ? 'Painel Master' : 'Painel Profissional';
 }
 
 /**

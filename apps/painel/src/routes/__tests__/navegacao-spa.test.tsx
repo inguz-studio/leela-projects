@@ -171,10 +171,10 @@ const SUPERFICIES: SuperficieNav[] = [
   // leem dado nenhum. Clicar numa aba re-deriva a ativa — a sonda prova a ida.
   // ---------------------------------------------------------------------------
   {
-    nome: 'menu da área de clubes',
-    landmark: 'Seções de clubes',
+    nome: 'menu da área de clubs',
+    landmark: 'Seções de clubs',
     ancoras: 2,
-    atual: 'Clubes',
+    atual: 'Clubs',
     montar: () =>
       void render(
         <MemoryRouter initialEntries={['/clubes']}>
@@ -222,8 +222,8 @@ const SUPERFICIES: SuperficieNav[] = [
       ),
   },
   {
-    nome: 'abas do clube',
-    landmark: 'Seções do clube',
+    nome: 'abas do club',
+    landmark: 'Seções do club',
     ancoras: 6,
     atual: 'Overview',
     montar: () =>

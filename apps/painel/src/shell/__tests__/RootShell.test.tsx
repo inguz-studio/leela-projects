@@ -139,7 +139,7 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     expect(within(nav()).getByText('Ver perfil')).toBeInTheDocument();
   });
 
-  it('marca no rail: wordmark Leela + "Painel do Organizador" no rail aberto (T2)', async () => {
+  it('marca no rail: wordmark Leela + "Painel Profissional" no rail aberto (T2 · RN-468)', async () => {
     renderAt('/');
     // Fechado o wordmark está em crossfade oculto (aria-hidden) — a marca
     // acessível é a do rail ABERTO, junto com o rótulo de contexto
@@ -147,7 +147,10 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     await abrirRail();
     const logo = within(nav()).getByRole('img', { name: 'Leela' });
     expect(logo).toHaveAttribute('src', '/leela-logo-brasa.svg');
-    expect(within(nav()).getByText('Painel do Organizador')).toBeInTheDocument();
+    expect(within(nav()).getByText('Painel Profissional')).toBeInTheDocument();
+    // BLQ-19: o nome antigo não pode voltar por descuido — ele convivia com
+    // "Acessar painel profissional" no mesmo rail.
+    expect(within(nav()).queryByText('Painel do Organizador')).not.toBeInTheDocument();
   });
 
   it('nav-badge de Eventos com contagem REAL de ativos (2 de 3 — encerrado fora)', async () => {
@@ -354,7 +357,7 @@ describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
   it('o drawer NOMEIA o painel (papel-duplo vale no mobile também)', async () => {
     renderAt('/');
     await abrirDrawer();
-    expect(within(dialogo()).getByText('Painel do Organizador')).toBeInTheDocument();
+    expect(within(dialogo()).getByText('Painel Profissional')).toBeInTheDocument();
   });
 
   it('o popover do perfil também vive no drawer (trigger nomeado, F5 vale < lg)', async () => {

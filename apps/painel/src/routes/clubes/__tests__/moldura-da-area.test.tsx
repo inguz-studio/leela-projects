@@ -40,7 +40,7 @@ vi.mock('../clube/ClubeLayout', () => ({
 
 const { ClubesRoutes } = await import('../ClubesRoutes');
 
-const MENU = 'Seções de clubes';
+const MENU = 'Seções de clubs';
 
 /** Monta o módulo no MESMO ponto do App.tsx (`/clubes/*`). */
 function montarEm(rota: string): () => void {
@@ -58,7 +58,7 @@ function montarEm(rota: string): () => void {
 // auditoria R16 — cada linha nova da área entra aqui, porque a régua é
 // "toda aba da área".
 const DENTRO_DA_MOLDURA: ReadonlyArray<[string, string, string]> = [
-  ['/clubes', 'hub', 'Clubes'],
+  ['/clubes', 'hub', 'Clubs'],
   ['/clubes/engajamento', 'engajamento', 'Engajamento'],
 ];
 

@@ -194,7 +194,7 @@ describe('HubRoute (integração — a tela /clubes pinta os clubes de seed)', (
       await screen.findByRole('heading', { name: 'Corrida Perfeita Sul' }),
     ).toBeInTheDocument();
     // E não sobrou skeleton nem alerta de erro.
-    expect(screen.queryByRole('status', { name: 'Carregando clubes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Carregando clubs' })).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

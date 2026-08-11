@@ -81,11 +81,14 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
   );
 
   // D-1008-R10 ("os clubs eu posso acessar um painel, mas depois nao consigo
-  // retornar a aba geral"): trilha canônica "Clubes › {nome}" — o MESMO padrão
+  // retornar a aba geral"): trilha canônica "Clubs › {nome}" — o MESMO padrão
   // do EventoShell. Âncora SPA de verdade (href + preventDefault via
   // trilhaComNavSpa): ctrl+clique, clique do meio e copiar endereço vivem.
+  //
+  // UXW-FIX (BLQ-20): o degrau de volta dizia "Clubes" e levava a uma tela
+  // intitulada "Clubs". A anatomia estava certa; só a grafia mentia.
   const trilha = trilhaComNavSpa(
-    [{ label: 'Clubes', href: '/clubes' }, { label: clube.nome }],
+    [{ label: 'Clubs', href: '/clubes' }, { label: clube.nome }],
     navigate,
   );
 
@@ -103,7 +106,7 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
           <CodigoConvite codigo={clube.codigoConvite} slug={clube.slug} onCopiar={onCopiarCodigo} />
         }
       />
-      <SubNav tabs={tabs} aria-label="Seções do clube" divider />
+      <SubNav tabs={tabs} aria-label="Seções do club" divider />
       <div className="p-[var(--spacing-6)]">{children}</div>
     </div>
   );

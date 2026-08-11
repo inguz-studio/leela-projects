@@ -26,9 +26,9 @@ describe('ClubeShell', () => {
   });
 
   // D-1008-R10: dentro do painel de um club, a volta para a listagem geral é a
-  // trilha canônica "Clubes › {nome}" — âncora de VERDADE (href navegável, lei
+  // trilha canônica "Clubs › {nome}" — âncora de VERDADE (href navegável, lei
   // navegacao-spa) com clique simples interceptado para SPA.
-  it('trilha "Clubes › {nome}": âncora real para /clubes que navega por SPA (D-1008-R10)', () => {
+  it('trilha "Clubs › {nome}": âncora real para /clubes que navega por SPA (D-1008-R10)', () => {
     render(
       <MemoryRouter>
         <ClubeShell clube={mkClube()} ativa="overview" onCopiarCodigo={noop}>
@@ -36,7 +36,7 @@ describe('ClubeShell', () => {
         </ClubeShell>
       </MemoryRouter>,
     );
-    const volta = screen.getByRole('link', { name: 'Clubes' });
+    const volta = screen.getByRole('link', { name: 'Clubs' });
     expect(volta).toHaveAttribute('href', '/clubes');
     // Clique simples: preventDefault (SPA) — o documento não recarrega.
     expect(clicarNoDom(volta).defaultPrevented).toBe(true);
@@ -97,6 +97,6 @@ describe('ClubeShell', () => {
       </MemoryRouter>,
     );
     // Mesmo token/padrão (border-b em --border-subtle) das terciárias de eventos.
-    expect(screen.getByRole('navigation', { name: 'Seções do clube' })).toHaveClass('border-b');
+    expect(screen.getByRole('navigation', { name: 'Seções do club' })).toHaveClass('border-b');
   });
 });

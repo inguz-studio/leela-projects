@@ -7,8 +7,14 @@
 // área Parcerias ("faz mas sentido do que deixar em clubs" — dono); a área de
 // clubs ficou com o que é COMUNIDADE:
 //
-//   Clubes      (`/clubes` — a raiz, o hub)
+//   Clubs       (`/clubes` — a raiz, o hub)
 //   Engajamento (`/clubes/engajamento` — a análise da comunidade)
+//
+// UXW-FIX (BLQ-20): a entrada dizia "Clubes" enquanto o menu principal, a
+// vitrine e a própria faixa de Engajamento diziam "Clubs" — duas grafias a um
+// clique de distância, e dentro de Engajamento na MESMA dobra. A grafia da
+// casa é "Clubs" (default do maestro, vetável). A ROTA não muda: `/clubes` é
+// endereço, não copy, e trocá-la é outra decisão, com redirect e custo próprio.
 //
 // Este é o nível ACIMA do `_lib/subnav.ts` do clube (que navega DENTRO de um
 // clube). As rotas antigas das entradas migradas viram redirects SPA em
@@ -30,7 +36,7 @@ interface EntradaDef {
 }
 
 const ENTRADAS: readonly EntradaDef[] = [
-  { id: 'clubes', label: 'Clubes', segmento: '' },
+  { id: 'clubes', label: 'Clubs', segmento: '' },
   { id: 'engajamento', label: 'Engajamento', segmento: 'engajamento' },
 ];
 

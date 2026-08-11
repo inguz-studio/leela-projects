@@ -91,7 +91,7 @@ export function NovoClubePage(): JSX.Element {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
       <header className="flex items-center justify-between">
         <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Criar clube
+          Criar club
         </h1>
         <Button variant="ghost" onClick={() => navigate('/clubes')}>
           Cancelar
@@ -99,13 +99,13 @@ export function NovoClubePage(): JSX.Element {
       </header>
 
       <section
-        aria-label="Identidade do clube"
+        aria-label="Identidade do club"
         className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
       >
         <div className="flex flex-col gap-[var(--spacing-1)]">
           <Input
             id="clube-nome"
-            label="Nome do clube"
+            label="Nome do club"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
           />
@@ -125,7 +125,7 @@ export function NovoClubePage(): JSX.Element {
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
           <Select
             id="clube-categoria"
-            label="Tipo de clube"
+            label="Tipo de club"
             options={CATEGORIA_OPCOES}
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
@@ -179,7 +179,7 @@ export function NovoClubePage(): JSX.Element {
       </section>
 
       <section
-        aria-label="Regras do clube"
+        aria-label="Regras do club"
         className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
       >
         <div className="flex flex-col gap-[var(--spacing-2)]">
@@ -213,7 +213,7 @@ export function NovoClubePage(): JSX.Element {
 
       <div>
         <Button variant="primary" disabled={!podeCriar} onClick={() => void criar()}>
-          {criando ? 'Criando…' : 'Criar clube'}
+          {criando ? 'Criando…' : 'Criar club'}
         </Button>
       </div>
     </div>

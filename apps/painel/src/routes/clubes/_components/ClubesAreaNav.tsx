@@ -19,7 +19,7 @@ export function ClubesAreaNav({ ativa }: { ativa: ClubesAreaId }): JSX.Element {
   const { pathname } = useLocation();
   return (
     <SubNav
-      aria-label="Seções de clubes"
+      aria-label="Seções de clubs"
       tabs={tabsComNavSpa(clubesAreaNavTabs(ativa), navigate, pathname)}
     />
   );

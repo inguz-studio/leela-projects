@@ -1,13 +1,13 @@
 // areaNav — tabela das entradas da área de clubs (D-1008-R9, reconciliada pela
 // D-1008-R17: assessorias e afiliações migraram para Parcerias; a área ficou
-// com o que é comunidade). "Clubes" na frente, exatamente UMA ativa, href real
+// com o que é comunidade). "Clubs" na frente, exatamente UMA ativa, href real
 // em todas (âncora navegável).
 
 import { describe, it, expect } from 'vitest';
 import { clubesAreaAtiva, clubesAreaNavTabs, type ClubesAreaId } from '../areaNav';
 
 const ESPERADO: ReadonlyArray<[ClubesAreaId, string, string]> = [
-  ['clubes', 'Clubes', '/clubes'],
+  ['clubes', 'Clubs', '/clubes'],
   ['engajamento', 'Engajamento', '/clubes/engajamento'],
 ];
 
