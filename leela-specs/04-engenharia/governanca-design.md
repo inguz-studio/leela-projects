@@ -100,6 +100,17 @@ Nos **dois** casos a exceção exige **justificativa documentada**: um ADR ou no
 
 Todo lote de UI responde, por componente: "o controle é o primitivo do DS, não o nativo do SO nem um fork à mão?" — junto de "consultou e reusou o existente?" e "documentou no showroom?". Componente custom sem o ADR ou nota de exceção reprova o gate.
 
+### O cânone, e por que esta seção sozinha não bastou (2026-08-11 · RN-558)
+
+Esta §8 é de 2026-07-19 e é vinculante desde então. Mesmo assim, a varredura de 11/08 achou **223 divergências de procedência** — 192 delas superfícies que reescreveram a anatomia do `Card` à mão, com todos os tokens corretos. A regra em prosa não bastou por dois motivos, e os dois têm conserto declarado:
+
+1. **A regra citava "controle" e a lista de primitivos, então ela foi lida como regra de controle.** Cartão, superfície, layout e estado ficaram de fora da leitura. Cinco controles crus sobraram no repositório inteiro (a §8 pegou), contra 192 superfícies (a §8 não alcançou).
+2. **Não havia mapa padrão → componente**, então "usa o DS" era critério inchecável por construção: sem cânone declarado não há contra o quê reprovar, e onde o DS não publica componente — layout composto, até hoje — cada tela inventa a sua sem errar formalmente.
+
+O que fecha: o mapa canônico em **`03-canon/canone-de-componentes.md`**, que é a fonte e cobre 13 famílias de padrão, não só controle; a **RN-558** no [[LEELA-E01-design-system]], que torna procedência regra de negócio e obriga padrão sem cânone a virar decisão do dono; e o gate **`leela-canon`** (spec em `02-rodadas/2026-08-11-roadmap-componentes/05-gate-leela-canon.md`), que torna a §8 verificável em vez de exortativa. Medição completa em `02-rodadas/2026-08-11-roadmap-componentes/02-inventario-componentes.md`.
+
+**Dívida do próprio DS, registrada aqui porque é a §8 violada dentro de casa:** o `ConfirmModal` monta `<textarea>` (`ConfirmModal.tsx:198`) e `<input type="checkbox">` (`:226-228`) crus em vez de compor o `Textarea` e o `Checkbox` que o pacote publica. Toda tela que usa `ConfirmModal` herda estados que não passaram pelo AA por estado. Primeiro item da Onda 0.
+
 ### Primitivos no DS
 
 `Popover`/`DropdownMenu`, `Command`, `Combobox`, `Calendar`, `Checkbox`, `Radio`/`RadioGroup`, `Input`, `Textarea`, `SearchInput`, `Switch`, `Modal`/`Dialog`, `Tooltip`, `Tabs`, `Select`, `FilterMenu` já existem no DS (R9-A criou os de seleção rica e datas; GATE-DS-W1 confirmou 46 componentes publicados). Antes de escrever qualquer controle, confira o barrel `@leela/design-system` e o showroom (`packages/design-system` → `#/componentes`). Ver `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-05`.

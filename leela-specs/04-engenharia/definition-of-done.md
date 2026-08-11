@@ -29,6 +29,7 @@
 - [ ] Shell padrão (sidebar 8 itens, breadcrumb, header 96px §2.1) quando aplicável.
 - [ ] Sub-nav §2.14 (underline Brasa 2px na ativa + contador pill) quando aplicável.
 - [ ] Interativa, não estática (§2.12): navegação, toggles, filtros funcionais.
+- [ ] **Procedência (RN-558):** toda instância de padrão nomeado usa o componente do cânone (`03-canon/canone-de-componentes.md`), importado de `@leela/design-system` — cartão, superfície, formulário, seleção, tabela, lista, modal, estado, botão. Re-implementação local é violação **mesmo com todos os tokens corretos**. Componente custom exige o ADR de exceção (governança §8, padrão ADR-017). Padrão sem cânone: propor o cânone é a entrega, nunca bespoke em silêncio.
 - [ ] Seletor/filtro/calendário abre um painel DO DS (Combobox/Popover/Calendar), não a caixa do SO — `<select>` nativo só em formulário simples de baixa cardinalidade (governança §8 · S-R9-05).
 - [ ] Estado vazio em toda lista filtrável + contador "mostrando X de Y".
 - [ ] Estados de carregando (skeleton, nunca spinner solto em lista) e erro cobertos.
