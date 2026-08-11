@@ -162,7 +162,7 @@ describe('EngajamentoView · cabeçalhos e o fim do "ponto de equilíbrio" (REFA
 
     await userEvent.keyboard('{Escape}');
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' }),
+      screen.getByRole('combobox', { name: 'Quantos desafios mostrar' }),
       'todos'
     );
     const emTodos = await abrirAjuda('Desafios que mais movem a comunidade');
@@ -182,10 +182,10 @@ describe('EngajamentoView · cabeçalhos e o fim do "ponto de equilíbrio" (REFA
     expect(valorNaTabela('Físico')).toContain('75,4 / 150,9');
   });
 
-  it('o card diz qual pilar concentra a maior média — e só isso', () => {
+  it('o card diz qual pilar concentra a maior média — agora com o número (MEL-14)', () => {
     render(<EngajamentoView {...props()} />);
     expect(
-      screen.getByText('Físico é o pilar com a maior média por participante.')
+      screen.getByText('Físico lidera, com 75,4 pontos por participante.')
     ).toBeInTheDocument();
   });
 
@@ -204,40 +204,47 @@ describe('EngajamentoView · cabeçalhos e o fim do "ponto de equilíbrio" (REFA
         })}
       />
     );
-    expect(screen.queryByText(/é o pilar com a maior média/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/lidera, com/)).not.toBeInTheDocument();
   });
 });
 
 describe('EngajamentoView · o que não tem fonte', () => {
-  it('o Mapa de Check-ins se nomeia, diz a causa e escreve "Em breve" — sem forma de gráfico', () => {
+  it('o Mapa de check-ins se nomeia, diz a causa e escreve "Em breve" — sem forma de gráfico', () => {
     render(<EngajamentoView {...props()} />);
-    const secao = screen.getByRole('region', { name: 'Mapa de Check-ins' });
-    expect(within(secao).getByRole('heading', { name: 'Mapa de Check-ins' })).toBeInTheDocument();
+    // MEL-04: sentence case no heading — Title Case só sobrevivia aqui.
+    const secao = screen.getByRole('region', { name: 'Mapa de check-ins' });
+    expect(within(secao).getByRole('heading', { name: 'Mapa de check-ins' })).toBeInTheDocument();
     expect(within(secao).getByText('Em breve')).toBeInTheDocument();
     expect(within(secao).getByText(/QR na largada de um evento/i)).toBeInTheDocument();
     expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('o Volume de Check-ins também se nomeia, e não vira série com o progresso do desafio', () => {
+  it('o Volume de check-ins também se nomeia, e não vira série com o progresso do desafio', () => {
     render(<EngajamentoView {...props()} />);
-    const secao = screen.getByRole('region', { name: 'Volume de Check-ins' });
+    const secao = screen.getByRole('region', { name: 'Volume de check-ins' });
     expect(within(secao).getByText('Em breve')).toBeInTheDocument();
     expect(within(secao).getByText(/acumulado por participante/i)).toBeInTheDocument();
     expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('o bloco "Check-ins realizados" nomeia TUDO que o estudo desenha nele — e não vira aba nem overlay sem contagem por ação', () => {
+  /**
+   * MEL-03: a causa tinha 3 frases, e a primeira descrevia o que o bloco IA
+   * mostrar (total de check-ins, divisão por pilar, Top 10) — conteúdo de
+   * roadmap, não de tela. Cortada; sobra só a causa, no padrão da casa.
+   */
+  it('o bloco "Check-ins realizados" diz a causa em uma frase, sem o roadmap do que ele vai mostrar', () => {
     render(<EngajamentoView {...props()} />);
     const secao = screen.getByRole('region', { name: 'Check-ins realizados' });
     expect(within(secao).getByText('Em breve')).toBeInTheDocument();
-    // A causa cita as três partes do bloco do estudo (D-1008-R15)…
-    expect(within(secao).getByText(/total de check-ins do período/i)).toBeInTheDocument();
-    expect(within(secao).getByText(/divisão entre os três pilares/i)).toBeInTheDocument();
-    expect(within(secao).getByText(/ranking de ações com o Top 10/i)).toBeInTheDocument();
-    // …e a fonte que destrava tudo, sem jargão de engenharia (BLQ-15).
+    expect(
+      within(secao).getByText(/cada check-in fica no registro pessoal de quem fez a atividade/i)
+    ).toBeInTheDocument();
     expect(
       within(secao).getByText(/o organizador não tem acesso a esse registro/i)
     ).toBeInTheDocument();
+    expect(
+      within(secao).queryByText(/total de check-ins do período|Top 10|divisão entre os três pilares/i)
+    ).not.toBeInTheDocument();
     expect(within(secao).queryByText(/Rules|agregado|atleta/i)).not.toBeInTheDocument();
     expect(within(secao).queryByRole('tab')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Ver top 10/i })).not.toBeInTheDocument();
@@ -339,7 +346,7 @@ describe('EngajamentoView · modalidades da comunidade (estudo · bloco 4, vers�
       (m, i) => ({ id: m, rotulo: m, membros: 60 - i })
     );
     render(<EngajamentoView {...props({ modalidades: seis })} />);
-    const recorte = screen.getByRole('combobox', { name: 'Recorte das modalidades' });
+    const recorte = screen.getByRole('combobox', { name: 'Quantas modalidades mostrar' });
     expect(recorte).toHaveValue('top');
     expect(screen.queryByRole('rowheader', { name: 'Triatlo' })).not.toBeInTheDocument();
     await userEvent.selectOptions(recorte, 'todas');
@@ -349,7 +356,7 @@ describe('EngajamentoView · modalidades da comunidade (estudo · bloco 4, vers�
   it('com cinco ou menos, o controle não existe — recorte que não recorta é ruído', () => {
     render(<EngajamentoView {...props()} />);
     expect(
-      screen.queryByRole('combobox', { name: 'Recorte das modalidades' })
+      screen.queryByRole('combobox', { name: 'Quantas modalidades mostrar' })
     ).not.toBeInTheDocument();
   });
 
@@ -496,7 +503,7 @@ describe('EngajamentoView · recorte por card (REFACTOR item 9)', () => {
 
   it('com mais de cinco desafios, o card ganha o PRÓPRIO recorte e mostra o Top 5', () => {
     render(<EngajamentoView {...props({ desafios: muitos })} />);
-    const recorte = screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' });
+    const recorte = screen.getByRole('combobox', { name: 'Quantos desafios mostrar' });
     expect(recorte).toHaveValue('top');
     expect(screen.getByRole('rowheader', { name: 'Desafio E' })).toBeInTheDocument();
     expect(screen.queryByRole('rowheader', { name: 'Desafio F' })).not.toBeInTheDocument();
@@ -506,7 +513,7 @@ describe('EngajamentoView · recorte por card (REFACTOR item 9)', () => {
     const onSelecionarClube = vi.fn();
     render(<EngajamentoView {...props({ desafios: muitos, onSelecionarClube })} />);
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' }),
+      screen.getByRole('combobox', { name: 'Quantos desafios mostrar' }),
       'todos'
     );
     expect(screen.getByRole('rowheader', { name: 'Desafio H' })).toBeInTheDocument();
@@ -517,7 +524,7 @@ describe('EngajamentoView · recorte por card (REFACTOR item 9)', () => {
   it('com cinco ou menos, o controle não existe — recorte que não recorta é ruído', () => {
     render(<EngajamentoView {...props({ desafios: muitos.slice(0, 5) })} />);
     expect(
-      screen.queryByRole('combobox', { name: 'Recorte do ranking de desafios' })
+      screen.queryByRole('combobox', { name: 'Quantos desafios mostrar' })
     ).not.toBeInTheDocument();
   });
 });
@@ -546,7 +553,7 @@ describe('EngajamentoView · animação escopada por filtro (REFACTOR item 10)',
     const entradaAntes = faseDoGrafico('Membros por porta de entrada');
 
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Recorte do ranking de desafios' }),
+      screen.getByRole('combobox', { name: 'Quantos desafios mostrar' }),
       'todos'
     );
 
