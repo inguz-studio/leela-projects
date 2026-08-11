@@ -32,11 +32,14 @@ import {
   dependenciasDeWorkspace,
   mapearPacotes,
   reprovados,
-  // O script é `.mjs` sem tipos de propósito: ele roda no `build` por `node`,
+  // O módulo é `.mjs` sem tipos de propósito: ele roda no `build` por `node`,
   // antes de qualquer compilação, e um segundo artefato tipado para o mesmo
   // arquivo seria a segunda cópia da regra. O contrato dele são estes testes,
   // e o `allowJs` do tsconfig da landing infere o suficiente.
-} from '../../../scripts/verificar-frescor-do-workspace.mjs';
+  //
+  // ⚠️ Importa a LIB, e nunca o entrypoint. O entrypoint carrega shebang, e
+  // shebang é o que matou este arquivo na coleta (ver o caso da última seção).
+} from '../../../scripts/lib/frescor-do-workspace.mjs';
 
 const RAIZ_REAL = resolve(__dirname, '../../..');
 
@@ -220,6 +223,36 @@ describe('⚔ PONTE-FIX · B1 · o gate está ligado ao build da landing', () =>
 
   it('a raiz do repo é achada pelo `pnpm-workspace.yaml`, subindo a partir do app', () => {
     expect(acharRaizDoRepo(resolve(__dirname, '..'))).toBe(RAIZ_REAL);
+  });
+
+  it('⚔ a LIB não carrega shebang — é o que matou este arquivo na COLETA', () => {
+    // A lane ONDA-0 mediu, em 11/08, este arquivo falhando com `Error: Expected
+    // ident` e ZERO casos executados: a lógica morava no mesmo `.mjs` que abre
+    // com `#!/usr/bin/env node`, e o parser do `ssrTransform` do Vite aborta na
+    // linha 1. O Node importa sem reclamar, então o defeito só aparece por
+    // aqui — e some ou volta conforme a versão do parser que o `pnpm install`
+    // resolveu no dia. Um teste que pode se apagar sozinho não é guarda.
+    //
+    // A regra que este caso pina: o arquivo IMPORTÁVEL nunca tem shebang.
+    const lib = readFileSync(
+      resolve(__dirname, '../../../scripts/lib/frescor-do-workspace.mjs'),
+      'utf8'
+    );
+    expect(lib.startsWith('#!')).toBe(false);
+  });
+
+  it('⚔ o entrypoint tem o shebang, e delega — ninguém importa o executável', () => {
+    // O outro lado da mesma regra: o shebang continua existindo (o gate é um
+    // CLI), mas isolado num arquivo que só lê o argumento e chama a lib. Se
+    // alguém um dia mover a lógica de volta para cá, este caso cai.
+    const entry = readFileSync(
+      resolve(__dirname, '../../../scripts/verificar-frescor-do-workspace.mjs'),
+      'utf8'
+    );
+    expect(entry.startsWith('#!/usr/bin/env node')).toBe(true);
+    expect(entry).toContain('./lib/frescor-do-workspace.mjs');
+    // A lógica NÃO mora aqui: o entrypoint não exporta nada.
+    expect(entry).not.toContain('export function');
   });
 
   it('⚔ o REPO DE VERDADE está fresco agora — se este caso ficar vermelho, não builde', () => {

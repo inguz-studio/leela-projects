@@ -21,6 +21,8 @@
   "hosting": {
     "site": "leela-hub",
     "public": "apps/painel/dist",
+    "_comment_predeploy": "Gate de frescor do painel (lane INFRA-DEPLOY, 11/08). O painel sobe um `apps/painel/dist` ja construido, e o `vite build` que o produz resolve @leela/* pelo `exports` do package.json — le o dist/ dos pacotes de workspace, exatamente como o webpack do Next. Sem esta guarda, um dist/ defasado embarca no bundle do painel sem nenhum gate o ver: tsc le a fonte e a suite le dublê. Aqui o hook MORDE de verdade, ao contrario do alvo da landing: este hosting e `public` (estatico), nao `source`, entao nao passa pelo `prepareFrameworks()` que na landing roda antes dos hooks. Refuso provado por `--dry-run` com dist carimbado velho, exit 1, nada enviado. Forma `npm --prefix`: o firebase envelopa o comando em cross-env-shell, que no Windows quebra comando com multiplos argumentos (ENOENT medido nesta lane).",
+    "predeploy": ["npm --prefix apps/painel run verify:frescor"],
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
     "headers": [

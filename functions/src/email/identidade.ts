@@ -98,7 +98,15 @@ export const URL_LOGO_EMAIL =
 export const PALETA = {
   /** `--surface-sunken` → `--neutral-975`. Moldura fora do cartão. */
   canvas: '#0A0A0A',
-  /** `--surface-raised` → `--neutral-900`. O cartão da mensagem. */
+  /**
+   * `--surface-raised-opaque` → `--neutral-900`. O cartão da mensagem.
+   * NÃO `--surface-raised` puro: esse token virou switchável por
+   * `[data-glass="on"]` (brasa.css) — filme translúcido `rgba(30,11,16,.42)`
+   * no modo vidro opcional da UI. E-mail não compõe alfa de forma confiável
+   * (Word engine do Outlook, entre outros), então usa sempre o companheiro
+   * opaco — o mesmo que `--popover` já usa no design system pelo mesmo
+   * motivo. Ver comentário de `M1` em `emailIdentidade.test.ts`.
+   */
   superficie: '#161616',
   /** `--surface-base` → `--neutral-950`. Faixa da marca no topo. */
   faixaMarca: '#0C0C0C',
@@ -118,7 +126,12 @@ export const PALETA = {
   acaoFundo: '#D63500',
   /** `--action-primary-fg` → `--neutral-0`. */
   acaoTinta: '#FFFFFF',
-  /** `--surface-overlay` → `--neutral-850`. Bloco de destaque/código. */
+  /**
+   * `--surface-overlay-opaque` → `--neutral-850`. Bloco de destaque/código.
+   * Mesmo motivo do `superficie` acima: `--surface-overlay` puro vira filme
+   * translúcido sob `[data-glass="on"]`; o e-mail fica com o companheiro
+   * opaco.
+   */
   destaque: '#1C1C1C',
 } as const;
 

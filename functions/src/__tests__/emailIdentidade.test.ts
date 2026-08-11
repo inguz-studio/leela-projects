@@ -214,9 +214,24 @@ export const OITO_EMAILS = [
 // ---------------------------------------------------------------------------
 
 describe('M1 · toda cor do e-mail espelha um token do design system', () => {
+  // `superficie`/`destaque` espelham `-opaque`, não o token puro. Root cause
+  // (leela-redesign-v2-20260810, lane EMAIL-IDENTIDADE): o DELTA-UX T2 tornou
+  // `--surface-raised`/`--surface-overlay` SWITCHÁVEIS por `[data-glass="on"]`
+  // (brasa.css:546-552) — sob esse atributo os dois viram filme translúcido
+  // (`rgba(30,11,16,.42)` / `rgba(255,255,255,.045)`) para o modo vidro
+  // opcional da UI. Isso é uma mudança de PAPEL do token, não do valor base:
+  // o cartão continua opaco por padrão (`var(--neutral-900)` = #161616), só
+  // que agora existe um segundo cenário em que o mesmo nome resolve para
+  // outra coisa. Cliente de e-mail não tem `data-glass` e não compõe alfa de
+  // forma confiável (Word engine do Outlook, por exemplo), então o espelho
+  // correto é sempre a versão que NUNCA vira filme: `--surface-raised-opaque`
+  // / `--surface-overlay-opaque` — os mesmos companheiros que o design system
+  // já usa por este exato motivo em `--popover` (themes/index.css:
+  // `--popover: var(--surface-overlay-opaque)`). O valor numérico não mudou
+  // (#161616/#1C1C1C); só o nome do token que prova o espelho ficou preciso.
   const casos: ReadonlyArray<readonly [keyof typeof PALETA, string]> = [
     ['canvas', '--surface-sunken'],
-    ['superficie', '--surface-raised'],
+    ['superficie', '--surface-raised-opaque'],
     ['faixaMarca', '--surface-base'],
     ['fileteMarca', '--border-brand'],
     ['wordmark', '--email-wordmark-ink'],
@@ -226,7 +241,7 @@ describe('M1 · toda cor do e-mail espelha um token do design system', () => {
     ['borda', '--border-subtle'],
     ['acaoFundo', '--action-primary'],
     ['acaoTinta', '--action-primary-fg'],
-    ['destaque', '--surface-overlay'],
+    ['destaque', '--surface-overlay-opaque'],
   ];
 
   const mapa = tokensBrasa();

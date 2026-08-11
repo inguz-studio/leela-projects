@@ -44,6 +44,8 @@ import { readFileSync, writeFileSync, existsSync, copyFileSync, rmSync } from 'n
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { executarCli } from '../../../scripts/lib/frescor-do-workspace.mjs';
+
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const APP_DIR = join(AQUI, '..');
 const REPO_RAIZ = join(APP_DIR, '..', '..');
@@ -148,6 +150,28 @@ async function main() {
   }
   if (process.env['LEELA_CLOCK'] !== undefined) {
     throw new Error('LEELA_CLOCK definido — o seed de produção já está re-datado. Abortado.');
+  }
+
+  // -------------------------------------------------------------------------
+  // Gate de frescor — AQUI, e não no `predeploy` do firebase.landing.json
+  // -------------------------------------------------------------------------
+  // A lane DEPLOY-NOTURNO (11/08) mediu que a integração webframeworks ignora o
+  // script `build` do package.json e roda `next build` puro: a guarda que a
+  // PONTE-FIX fiou no `pnpm build` não existe no caminho que sobe.
+  //
+  // O `predeploy` do hosting parecia o conserto óbvio e NÃO é, para este alvo:
+  // em `firebase-tools/lib/deploy/index.js`, `prepareFrameworks()` — que roda o
+  // `next build` — é chamado na linha 80, antes de os hooks de predeploy serem
+  // coletados (108) e executados (122). Lá o hook barraria o envio depois de o
+  // bundle podre já existir. Aqui ele barra antes de existir, que é o ponto.
+  //
+  // Fail-closed e sem rede: só lê mtime de arquivo. Roda antes do patch de
+  // package.json de propósito — recusa não deixa árvore suja para reverter.
+  const frescor = executarCli(APP_DIR);
+  if (frescor !== 0) {
+    throw new Error(
+      'gate de frescor recusou: o bundle sairia com dist/ defasado. Reconstrua e repita.',
+    );
   }
 
   const movidas = aplicarPatch();
