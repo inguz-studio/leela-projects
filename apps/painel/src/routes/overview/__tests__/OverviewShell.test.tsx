@@ -11,7 +11,8 @@ describe('OverviewShell (HIFI-REC · cabeçalho do protótipo v3)', () => {
         <div>conteúdo</div>
       </OverviewShell>
     );
-    expect(screen.getByText('Visão Geral')).toBeInTheDocument();
+    // MEL-19: sentence case, a mesma palavra do menu e da vitrine.
+    expect(screen.getByText('Visão geral')).toBeInTheDocument();
     // "Olá, MARINA, aqui está o panorama do seu ecossistema." — o nome vem em
     // <strong> na cor da marca (protótipo v3).
     const nome = screen.getByText('MARINA');

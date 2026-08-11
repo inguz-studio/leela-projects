@@ -34,7 +34,11 @@ export function OverviewShell({ nome, children, agora }: OverviewShellProps): JS
         // Moldura horizontal do protótipo: 40px ≥ md (o padrão do PageHeader é
         // 24px); abaixo de md a moldura cai para 20px (README §4).
         className="px-[var(--spacing-5)] md:px-[var(--spacing-10)]"
-        title="Visão Geral"
+        // MEL-19 (esticado, declarado): o item do menu virou "Visão geral" e a
+        // vitrine já dizia isso; deixar o H1 em Title Case só mudava o lado da
+        // divergência — menu × página, a um clique. Sentence case em heading é
+        // o contrato de escrita da casa.
+        title="Visão geral"
         subtitle={
           <>
             Olá,{' '}

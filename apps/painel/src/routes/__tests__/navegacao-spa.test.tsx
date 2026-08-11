@@ -189,7 +189,7 @@ const SUPERFICIES: SuperficieNav[] = [
   },
   {
     nome: 'menu da área de Parcerias',
-    landmark: 'Seções de Parcerias',
+    landmark: 'Seções de parcerias',
     ancoras: 3,
     atual: 'Marcas',
     montar: () =>
@@ -289,7 +289,8 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'menu lateral do produtor',
     landmark: 'Navegação principal',
     ancoras: 6,
-    atual: 'Visão Geral',
+    // MEL-19: o item do menu principal é sentence case, igual à vitrine.
+    atual: 'Visão geral',
     // A moldura ≥ lg é o SidebarRail (HIFI-REC), e ele traz DOIS botões que
     // não são destino:
     //   · 'Abrir menu' — o toggle que abre/recolhe o rail. Ação pura.

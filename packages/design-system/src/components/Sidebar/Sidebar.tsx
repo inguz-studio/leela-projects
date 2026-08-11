@@ -151,7 +151,7 @@ export interface SidebarNavIconEntry {
  * deriva. As seções abaixo e o showcase leem os dois deste array.
  */
 export const DEFAULT_SIDEBAR_NAV_ICONS: readonly SidebarNavIconEntry[] = [
-  { id: 'visao-geral',   label: 'Visão Geral',   iconName: 'LayoutDashboard', Icon: LayoutDashboard },
+  { id: 'visao-geral',   label: 'Visão geral',   iconName: 'LayoutDashboard', Icon: LayoutDashboard },
   { id: 'eventos',       label: 'Eventos',       iconName: 'Ticket',          Icon: Ticket },
   { id: 'clubs',         label: 'Clubs',         iconName: 'Heart',           Icon: Heart },
   { id: 'crm',           label: 'CRM',           iconName: 'User',            Icon: User },

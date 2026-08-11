@@ -251,7 +251,7 @@ describe('Sidebar', () => {
     expect(DEFAULT_SIDEBAR_SECTIONS.map((s) => s.label)).toEqual(['OPERAÇÃO', 'CONTA']);
     expect(DEFAULT_SIDEBAR_SECTIONS.map((s) => s.items.map((i) => [i.id, i.label]))).toEqual([
       [
-        ['visao-geral', 'Visão Geral'],
+        ['visao-geral', 'Visão geral'],
         ['eventos', 'Eventos'],
         ['clubs', 'Clubs'],
         ['crm', 'CRM'],
