@@ -155,11 +155,22 @@ Cinco cards. Três deles são o redesign, construído e fora do ar.
    Está na lane em voo.
 2. **O painel passa a se chamar Painel Profissional** — S034: o banco já chama a coleção de
    profissionais desde o começo; foi a copy que ficou presa em organizador.
-3. **A revisão de componentes** — S005: sua ordem de 10/08 vira inventário medido, mapa de
-   cânone, ondas e trava. Dispara depois que o redesign entrar na linha principal.
+3. **A trava que reprova componente feito à mão** — S005-T5, o código do gate `leela-canon`. É a
+   única tarefa que sobrou da revisão de componentes: o inventário, o cânone e as ondas
+   aterrissaram em 11/08.
 
-**O que fica esperando você:** a lista das frases de apoio que foram cortadas, o H1 em itálico
-contra o peso 800, e se "flat" quer dizer item de menu ou variante de botão.
+**O que a revisão de componentes descobriu, e vale ler antes das ondas.** Sua ordem de 10/08 virou
+medição, e a medição corrigiu o número que este board carregava. Não são 40 telas com fundo cru:
+fundo cru literal não existe no produto, e todos os tokens estão certos. São **192 superfícies que
+reescreveram à mão o cartão que já existia pronto**, mais 17 botões, 8 estados vazios e 5 controles
+crus — 223 no total. Dois dos cinco controles crus estão dentro do próprio design system. E o
+design system não tem componente de layout nenhum, o que quer dizer que bento e slot, dois dos
+padrões que você citou, não podiam ser respeitados porque não existiam. Detalhe em
+`02-rodadas/2026-08-11-roadmap-componentes/`.
+
+**O que fica esperando você:** o **CANONE-1** — o design system ganha layout e cartão de domínio, ou
+isso continua receita de tela. Mais o que já estava: a lista das frases de apoio que foram cortadas,
+o H1 em itálico contra o peso 800, e se "flat" quer dizer item de menu ou variante de botão.
 
 ### E05 · Clubs e comunidade
 
@@ -289,9 +300,9 @@ funcionar sem rede, e de nove histórias sobram seis.
 
 ## O que está travado em você
 
-Vinte e cinco decisões estão no painel canônico [[DECISOES-ABERTAS]] esperando sua palavra. Elas
-não estão repetidas aqui de propósito — o painel é o lugar único delas. O que esta página
-acrescenta é **o custo de cada espera**:
+Vinte e quatro decisões estão no painel canônico [[DECISOES-ABERTAS]] esperando sua palavra, mais
+três ações que só você executa. Elas não estão repetidas aqui de propósito — o painel é o lugar
+único delas. O que esta página acrescenta é **o custo de cada espera**:
 
 | Decisão | O que ela segura |
 |---|---|
@@ -305,6 +316,7 @@ acrescenta é **o custo de cada espera**:
 | **CLUBES-1** | "Meus Clubes" deixar de nascer vazio |
 | **SEMKIT-1** | o reparo dos dois kits de produção |
 | **ADMIN-USUARIOS-2** | recusar e revogar acesso |
+| **CANONE-1** | a onda de fundação do design system: primitivos de layout e cartões de domínio. As ondas de tela que só convertem cartão e botão **não** dependem dela e podem começar antes |
 
 Além dessas, a rodada do redesign produziu decisões novas que ainda estão entrando no painel:
 

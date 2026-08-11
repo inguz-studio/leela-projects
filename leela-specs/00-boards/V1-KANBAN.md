@@ -10,13 +10,6 @@ tags:
 
 ## 📋 Backlog
 
-- [ ] **[E01] A revisão de componentes vira roadmap, cânone e trava** — sua ordem de 10/08: em vários lugares do sistema não estamos respeitando componente, e isso é critério de aceite de interface, não pedido. Nasce um inventário medido, o mapa de qual componente é o padrão para cada caso, as ondas de revisão e a trava que reprova controle feito à mão 📋 dispara depois que o redesign entrar na main — medir antes seria medir tela morta [[LEELA-E01-design-system]]
-    - [ ] **S005 · A revisão de componentes vira roadmap, cânone e trava**
-        - [x] S005-T1 o cartão volta a existir onde a informação estava solta
-        - [ ] S005-T2 o inventário das cerca de 40 telas que ainda usam superfície crua
-        - [ ] S005-T3 o mapa padrão para componente canônico, com o que falta proposto
-        - [ ] S005-T4 as ondas de revisão, cada uma com o número de passos até o trabalho antes e depois
-        - [ ] S005-T5 a trava que reprova controle cru fora do design system
 - [ ] **[E05] O organizador passa a poder contar os check-ins da comunidade** — três blocos do estudo de engajamento foram desenhados e estão em "em breve" por falta de um número só: quantos registros houve, por ação e por período. Hoje o registro do atleta só é legível pelo próprio atleta 📋 destrava o total do período, a divisão por pilar, o ranking de ações, o mapa de horários e o volume ao longo do tempo [[LEELA-E05-clubs]]
     - [ ] **S115 · O organizador passa a poder contar os check-ins da comunidade**
         - [ ] S115-T1 a contagem por ação e por período nasce como agregado
@@ -288,6 +281,13 @@ tags:
 
 ## 🔄 Em execução
 
+- [ ] **[E01] A revisão de componentes vira roadmap, cânone e trava** — sua ordem de 10/08: em vários lugares do sistema não estamos respeitando componente, e isso é critério de aceite de interface, não pedido. A medição está feita e corrigiu o próprio número que este card carregava: não são 40 telas com fundo cru, são 192 superfícies reescritas à mão com os tokens certos. O mapa de qual componente é o padrão já é canônico, as seis ondas estão ordenadas pelo trabalho que servem e a trava está especificada 🔄 falta o código da trava e a sua resposta sobre layout (CANONE-1) [[LEELA-E01-design-system]]
+    - [ ] **S005 · A revisão de componentes vira roadmap, cânone e trava**
+        - [x] S005-T1 o cartão volta a existir onde a informação estava solta
+        - [x] S005-T2 o inventário do que reconstruiu à mão o que já existia pronto
+        - [x] S005-T3 o mapa padrão para componente canônico, com o que falta proposto
+        - [x] S005-T4 as ondas de revisão, cada uma com o número de passos até o trabalho antes e depois
+        - [ ] S005-T5 a trava que reprova controle cru fora do design system
 - [ ] **[E01] O painel obedece ao tema novo em todo menu, botão e cartão** — você validou o `:4601` e apontou seis coisas fora do lugar: menu suspenso preto, menu de celular no desenho antigo, o alternador de painel solto no lado, botão de gerenciar evento fora da altura, seleção que pula em vez de deslizar e a barra de abas com fundo de pílula. As seis estão consertadas e mergeadas na main 🔄 D-1008-R4, R5, R6, R7, R14 e R18 · **construído, mergeado, aguardando deploy** (merge `b51cdcd9` em 11/08) [[LEELA-E01-design-system]]
     - [x] **S004 · Os menus, o perfil e a altura dos controles no tema novo**
         - [x] S004-T1 menu suspenso, filtro e dica voltam a ser opacos
