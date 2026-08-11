@@ -116,18 +116,31 @@ por dentro, o defeito que elas vão parar de cometer.
 
 ### Parte A — livre, começa agora
 
-| Item | O que é | Origem |
-|---|---|---|
-| `ConfirmModal` compõe `Textarea` e `Checkbox` | o DS duplica o próprio motor em `ConfirmModal.tsx:198` e `:226-228`; toda tela que usa `ConfirmModal` herda estados que não passaram pelo AA por estado do `Checkbox` | inventário §3 |
-| As dez lacunas de catálogo | `charts`, `Checkbox`, `Dialog`, `Field`, `InputSenha`, `Radio`, `Select`, `SidebarRail`, `Switch`, `Textarea` sem story — **sete são controle de formulário**; controle sem vitrine é controle que a próxima pessoa não encontra | inventário §8 |
-| `Command` ganha teste | único dos 50 componentes sem teste algum, e é a base do `Combobox` | inventário §8 |
-| **F4** · tooltip do rail visível por teclado | hover-only hoje (`group-hover/item:`); uma classe (`group-focus-visible/item:`) | `leela-redesign-hifi-rec-FIX.md` |
-| **F5** · rodapé do rail vira âncora e ganha nome acessível | hoje é `<button>` + `navigate`, a exceção que a tabela `navegacao-spa` existe para combater, e fechado fica sem nome acessível (avatar `aria-hidden`) | `leela-redesign-hifi-rec-FIX.md` |
-| Gate `leela-canon` nasce `warn` | com o relatório completo; ninguém é barrado, o custo fica visível | `05-gate-leela-canon.md §9` |
-| Cânone promovido a canônico | a tabela do `03` vira `03-canon/canone-de-componentes.md` | `03-canone-componentes.md` |
+| Item | O que é | Origem | Estado |
+|---|---|---|---|
+| `ConfirmModal` compõe `Textarea` e `Checkbox` | o DS duplicava o próprio motor em `ConfirmModal.tsx:198` e `:226-228`; toda tela que usa `ConfirmModal` herdava estados que não passaram pelo AA por estado do `Checkbox` | inventário §3 | ✅ **PAGO** `e173b63a` |
+| As dez lacunas de catálogo | `charts`, `Checkbox`, `Dialog`, `Field`, `InputSenha`, `Radio`, `Select`, `SidebarRail`, `Switch`, `Textarea` sem story — **sete são controle de formulário**; controle sem vitrine é controle que a próxima pessoa não encontra | inventário §8 | ✅ **PAGO** `b63e968e` (11 arquivos: `charts` entra por dois, um título de Storybook por arquivo) |
+| `Command` ganha teste | único dos 50 componentes sem teste algum, e é a base do `Combobox` | inventário §8 | ✅ **PAGO** `37751b4b` (12 casos) |
+| **F4** · tooltip do rail visível por teclado | hover-only (`group-hover/item:`); uma classe (`group-focus-visible/item:`) | `leela-redesign-hifi-rec-FIX.md` | ⚠️ **JÁ ESTAVA PAGO** — ver abaixo |
+| **F5** · rodapé do rail ganha nome acessível | `<button>` + `navigate` sem nome acessível fechado (avatar `aria-hidden`) | `leela-redesign-hifi-rec-FIX.md` | ⚠️ **JÁ ESTAVA PAGO** — ver abaixo |
+| Gate `leela-canon` vira código | duas regras ESLint + `scripts/gate-canon.mjs` com baseline e catraca | `05-gate-leela-canon.md §9` | ✅ **PAGO** `2ceb9fd4` |
+| Cânone promovido a canônico | a tabela do `03` vira `03-canon/canone-de-componentes.md` | `03-canone-componentes.md` | ✅ **PAGO** na própria rodada |
 
-Ao consertar F5, a entrada `''` do inventário de teste de nome acessível precisa ser atualizada no
-mesmo commit — as duas dívidas foram documentadas juntas e se pagam juntas.
+**Correção de leitura — F4 e F5 já estavam pagos ANTES da medição (verificado 11/08).** Os dois
+saíram no commit `55ea0d42` (`DELTA-UX-T4`, 10/08 19:59), que é **ancestral de `b0f979e5`** — ou
+seja, já estavam na árvore que a varredura mediu. A mensagem do commit é literal: *"F5 morta:
+trigger button com aria-label sempre (a entrada `''` do inventário navegacao-spa some). F4: tooltip
+do rail também por group-focus-visible"*. O código confirma: `SidebarRail.tsx` carrega
+`group-focus-visible/item:opacity-100` com o comentário nomeando a F4, o rodapé com `footerMenu` é
+`button` com `aria-label={footerName}` fechado e aberto, e o inventário de
+`navegacao-spa.test.tsx:302` já diz `['Abrir menu', 'Marina Castelo']` — a entrada `''` não existe
+mais. Há teste pinando os dois (`SidebarRail — F4: tooltip por focus-visible, não só hover` e
+`FECHADO: o rodapé é button com nome acessível + aria-haspopup/expanded (F5 morta)`).
+
+Os dois entraram nesta onda porque a fila do handoff `leela-redesign-hifi-rec-FIX.md` foi copiada
+sem reconferir contra o código — **o mesmo modo de falha da entrada do BarChart**, que o maestro já
+corrigiu em `25da1ad8`. Nenhuma lane futura para F4 ou F5. Fica a lição de processo: item herdado
+de handoff se reconfere no código antes de virar linha de onda.
 
 ### Parte B — retida em CANONE-1
 
@@ -138,6 +151,49 @@ estado, como qualquer componente — é essa a conta que a decisão pesa.
 **Critério de aceite da onda:** os 50 componentes com story e teste; zero controle cru dentro do
 DS; gate `leela-canon` rodando em `warn` com relatório publicado; prova renderizada nos dois temas
 pelo toggle do Storybook (L-019).
+
+**Fechamento da Parte A (11/08 · lane `canon-onda-0`).** Os cinco itens livres estão pagos. Os
+números: DS 77 arquivos de teste, 1842 casos; painel 235 arquivos, 2583 casos; 50 de 50 componentes
+com story e com teste; zero controle cru dentro do DS.
+
+Uma correção ao texto da spec do gate, que só apareceu na execução: **§9 manda o gate nascer `warn`
+para não barrar ninguém, e `warn` não faz isso neste repositório.** Os três `lint` rodam com
+`--max-warnings 0`, então warning barra igual a erro — a severidade não tem como ser o instrumento
+do rollout. O que faz o papel é a lista de dívida herdada no `eslint.config.mjs`, com o arquivo e a
+onda que o paga, e a camada A do script provando que cada entrada ainda é verdade (entrada morta
+reprova). O número real, medido SEM essas listas, é o que vive no baseline versionado e o que cada
+onda derruba. A intenção da §9 fica intacta; o mecanismo é outro.
+
+**Baseline inicial do gate (11/08):**
+
+| Contagem | painel | landing | total |
+|---|---|---|---|
+| `superficie-crua` | 107 | 27 | 134 |
+| `botao-cru-estilizado` | 6 | 5 | 11 |
+| `receita-de-grid` (assinaturas distintas) | 23 | 9 | — |
+| `padrao-orfao` | 0 | 0 | 0 |
+| `controle-cru-fora-do-ds` (regra 1) | — | — | **4** |
+| `padrao-reimplementado-fora-do-ds` (regra 2) | — | — | **2** |
+
+As 23 receitas de grid do painel batem com as 23 assinaturas distintas que o inventário §7.1 contou
+por leitura dirigida — duas medições independentes no mesmo número, e é isso que dá crédito às
+outras. `superficie-crua` (107/27) NÃO é o mesmo número da divergência de cartão do inventário
+(141/51): o script exige a assinatura completa (raio + fundo de superfície + espaçamento) nos dois
+dialetos de classe, e o inventário classificou por leitura. Os dois números medem a mesma dívida com
+réguas diferentes, e só o do script tem catraca.
+
+**Dois achados que a medição de 11/08 não tinha**, produzidos pelo gate no primeiro dia e já
+distribuídos às ondas: `Painel` em `clubes/engajamento/EngajamentoView.tsx:119` é o `Card` com
+outro nome (**Onda 4**), e `Vazio` em `eventos/kits/DistribuicaoView.tsx:110` é o `EmptyState` com
+outro nome (**Onda 2** — é o mesmo item que a onda já listava como "estado vazio artesanal"). A
+varredura contou superfície reconstruída em `<div>`/`<article>` e não procurou DECLARAÇÃO com nome
+de canônico; é o segundo mecanismo da L-021, e o mais caro.
+
+**Residual nomeado, para não virar silêncio:** as 12 instâncias de `rounded-ds-pill` da landing que
+o inventário §4 classificou como "CTA replicando variante" são, em boa parte, `<span>` — ou seja,
+`Badge`/`Chip` reescrito, não `Button`. Elas não entram em `botao-cru-estilizado` (a contagem
+existe para medir botão) e não têm bucket próprio na catraca. A Onda 1 as converte; enquanto isso,
+não há número que impeça uma décima terceira.
 
 ## Onda 1 · O caminho do dinheiro
 

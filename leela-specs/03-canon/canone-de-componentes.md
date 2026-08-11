@@ -84,7 +84,7 @@ trabalho do `Field`, e cada tela vinha refazendo à mão.
 
 | Padrão | Canônico |
 |---|---|
-| Bloco de conteúdo com elevação | `Card` + `CardHeader` / `CardTitle` / `CardDescription` / `CardContent` |
+| Bloco de conteúdo com elevação | `Card` + `CardHeader` / `CardTitle` / `CardDescription` / `CardContent` / `CardFooter` |
 | Indicador numérico com rótulo e variação | `KpiCard` |
 | Miniatura com proporção | `Thumb` |
 | Retrato de pessoa | `Avatar` |
@@ -150,7 +150,7 @@ quatro vias de fechamento do DoD de Tela: cancelar, X, overlay, Esc.
 | Padrão | Canônico |
 |---|---|
 | Moldura da aplicação | `AppShell` |
-| Menu lateral | `Sidebar` / `SidebarRail` |
+| Menu lateral | `Sidebar` / `SidebarRail` — marca e rodapé por `SidebarBrand` / `SidebarFooter` |
 | Trilha | `Breadcrumb` |
 | Cabeçalho de página | `PageHeader` |
 | Navegação de área | `SubNav` — ativa com sublinhado Brasa 2px e contador pill |

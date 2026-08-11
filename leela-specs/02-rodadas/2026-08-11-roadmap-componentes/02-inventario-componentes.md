@@ -221,13 +221,13 @@ tem.
 
 ## 8. O estado do próprio design system
 
-| Medida | Resultado |
-|---|---|
-| Componentes publicados | 50 diretórios em `src/components/`, **50 exports no barrel** — zero componente morto ou privado |
-| Componentes com story | **40 de 50**. Sem story: `charts`, `Checkbox`, `Dialog`, `Field`, `InputSenha`, `Radio`, `Select`, `SidebarRail`, `Switch`, `Textarea` |
-| Componentes com teste | **49 de 50**. Sem teste algum: `Command` |
-| Controle cru interno indevido | 2 (`ConfirmModal`, §3) |
-| Componente de layout | nenhum (§7.1) |
+| Medida | Resultado em `b0f979e5` | Depois da Onda 0 (11/08) |
+|---|---|---|
+| Componentes publicados | 50 diretórios em `src/components/`, **50 exports no barrel** — zero componente morto ou privado | igual |
+| Componentes com story | **40 de 50**. Sem story: `charts`, `Checkbox`, `Dialog`, `Field`, `InputSenha`, `Radio`, `Select`, `SidebarRail`, `Switch`, `Textarea` | **50 de 50** (`b63e968e`) |
+| Componentes com teste | **49 de 50**. Sem teste algum: `Command` | **50 de 50** (`37751b4b`) |
+| Controle cru interno indevido | 2 (`ConfirmModal`, §3) | **0** (`e173b63a`) |
+| Componente de layout | nenhum (§7.1) | igual — retido em CANONE-1 |
 
 As dez lacunas de story importam mais do que parecem, e a lista denuncia por si: **sete dos dez são
 controles de formulário** — `Checkbox`, `Field`, `InputSenha`, `Radio`, `Select`, `Switch`,
@@ -247,7 +247,7 @@ todas viram item de onda no documento `04`.
 | `leela-redesign-ajustes-dono.md` | "~40 telas com bg cru" | **medido e corrigido** — §2: são 192 superfícies reconstruídas à mão, e zero bg cru |
 | `leela-redesign-parcerias-nav.md` | `<article>` cru em MinhasAfiliações | confirmado em `MinhasAfiliacoesPage.tsx:65` (§5) |
 | `leela-redesign-engajamento-dash.md` | primeiro import cross-route do painel: `clubes/engajamento` consome `overview/_components/OcupacaoEventos`, `overview/_components/EmBreveV3` e `overview/_lib/ocupacao` (`EngajamentoPage.tsx:19`, `EngajamentoView.tsx:51-53`) | onda da comunidade — promover para `src/components/` exige tocar a VG ratificada (D-1008-R3) |
-| `leela-redesign-hifi-rec-FIX.md` | **F4** tooltip do rail é hover-only, teclado não vê · **F5** rodapé do rail navega por `<button>` + `navigate` em vez de âncora, e fica sem nome acessível · **F6** grade da Agenda usa `role="grid"` sem `row`/`gridcell` | os três não foram pagos; F4 e F5 são do shell, F6 é da Agenda |
+| `leela-redesign-hifi-rec-FIX.md` | **F4** tooltip do rail é hover-only, teclado não vê · **F5** rodapé do rail navega por `<button>` + `navigate` em vez de âncora, e fica sem nome acessível · **F6** grade da Agenda usa `role="grid"` sem `row`/`gridcell` | ⚠️ **corrigido 11/08:** F4 e F5 **já estavam pagos** por `55ea0d42` (DELTA-UX-T4), que é ancestral de `b0f979e5` — a fila do handoff foi copiada sem reconferir o código. Só **F6** segue aberto, na Agenda (Onda 5). Detalhe em `04-ondas-roadmap.md`, Onda 0 |
 | `leela-uxw-fix.md` | `be-hero.com.br` hardcoded · jargão `RN-141`/`RN-144`/"idempotente" visível ao usuário · 15 melhorias de copy | copy e domínio, não procedência — entram como carona das ondas que tocam as mesmas telas (§10) |
 
 Correção de escopo na fila do `leela-uxw-fix`: `be-hero.com.br` **não** aparece na landing. As
