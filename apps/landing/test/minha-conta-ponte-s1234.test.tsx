@@ -16,11 +16,18 @@
  *   - a máscara anti-enumeração continua INTACTA: a área não exercita mais o
  *     `/cadastrar` do painel, e sessão anônima não alcança este cartão.
  *
- * PONTE-RET-D1 (direção do dono de 07/08) acrescenta o que o rótulo passou a
- * dever: o botão diz "Painel Profissional" — o lugar, com o texto exato do dono
- * —, o cartão NOMEIA as duas intenções que ele pediu, e a porta continua UMA só
- * enquanto a landing não tiver medição. Um segundo botão disparando a mesma
- * promoção é um teste que não mede nada, e este arquivo falha se ele aparecer.
+ * PONTE-CTA-1 (11/08) trocou a porta única pelos DOIS CTAs por intenção que o
+ * dono pediu. O que mudou não foi o julgamento: foi o fato. A lane de 08/08
+ * entregou um botão só porque a landing não mede nada, e a review antagonista
+ * mostrou que a callable já loga por conta própria — um campo `intencao` nela
+ * mede clique e conversão sem uma linha de telemetria. Então o título nomeia o
+ * LUGAR (a palavra do dono) e os dois botões nomeiam os dois TRABALHOS, cada um
+ * carimbando a própria intenção.
+ *
+ * PONTE-NOME-1 (11/08) acrescenta o único campo do cartão: o nome da produtora,
+ * pré-preenchido com o nome da pessoa e editável. O slug do tenant é cunhado uma
+ * vez e não se renomeia, então este campo é a última hora em que a escolha
+ * existe. Ele é OPCIONAL — quem não tocar nele cai no comportamento de antes.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'fs';
@@ -35,7 +42,8 @@ const motivoDaRecusaDaPromocao = vi.fn();
 
 vi.mock('@leela/api-client', () => ({
   getClaims: () => getClaims(),
-  promoverParaProfissional: () => promoverParaProfissional(),
+  // O argumento IMPORTA agora: é por ele que a intenção e o nome viajam.
+  promoverParaProfissional: (arg: unknown) => promoverParaProfissional(arg),
   motivoDaRecusaDaPromocao: (e: unknown) => motivoDaRecusaDaPromocao(e),
 }));
 vi.mock('@/lib/leelaClient', () => ({ ensureLeela: () => undefined }));
@@ -49,10 +57,15 @@ async function montar(claims: Record<string, unknown>): Promise<void> {
   await waitFor(() => expect(getClaims).toHaveBeenCalled());
 }
 
-/** O rótulo da variante 1, verbatim do dono. Ver `ROTULO_DA_TRAVESSIA`. */
-const ROTULO_CTA = /^painel profissional$/i;
+/** Os dois rótulos, verbatim do dono. Ver `CTAS`. */
+const ROTULO_CLUBE = /^criar club$/i;
+const ROTULO_EVENTOS = /^organizar eventos$/i;
 
-const botaoConhecer = (): HTMLElement => screen.getByRole('button', { name: ROTULO_CTA });
+/** O botão que a maioria dos casos usa — qualquer um dos dois serve. */
+const botaoConhecer = (): HTMLElement => screen.getByRole('button', { name: ROTULO_EVENTOS });
+
+const campoDoNome = (): HTMLInputElement =>
+  document.querySelector('[data-slot="ponte-nome-profissional"]') as HTMLInputElement;
 
 const marcarTermo = (): void => {
   fireEvent.click(screen.getByLabelText(/li e aceito o termo do profissional/i));
@@ -91,42 +104,124 @@ describe('S1234-T2 · quem JÁ é profissional', () => {
 
   it('não propõe promoção nenhuma a quem já atravessou', async () => {
     await montar({ role: 'tenant_owner', tenantId: 'castelo' });
-    expect(screen.queryByRole('button', { name: ROTULO_CTA })).toBeNull();
+    expect(screen.queryByRole('button', { name: ROTULO_EVENTOS })).toBeNull();
+    expect(screen.queryByRole('button', { name: ROTULO_CLUBE })).toBeNull();
     expect(promoverParaProfissional).not.toHaveBeenCalled();
   });
 });
 
 // ---------------------------------------------------------------------------
-// PONTE-RET-D1 · o rótulo do dono, e a porta única que ele não vira
+// PONTE-CTA-1 · os dois CTAs por intenção, e o carimbo que os torna legíveis
 // ---------------------------------------------------------------------------
 
-describe('⚔ PONTE-RET-D1 · o rótulo nomeia o lugar, o cartão nomeia os trabalhos', () => {
-  it('o CTA é exatamente "Painel Profissional" — texto do dono, sem paráfrase', async () => {
+describe('⚔ PONTE-CTA-1 · o título nomeia o lugar, os dois botões nomeiam os trabalhos', () => {
+  it('os dois rótulos são os do dono, sem paráfrase', async () => {
     await montar({ role: 'athlete' });
-    const botao = document.querySelector('[data-slot="ponte-cta-painel-profissional"]');
-    expect(botao).not.toBeNull();
-    expect((botao?.textContent ?? '').trim()).toBe('Painel Profissional');
-    // ⛔ O rótulo velho prometia a visita, não o lugar. Não volta.
-    expect((botao?.textContent ?? '').toLowerCase()).not.toContain('conhecer');
-    // ⛔ E não pode virar promessa de transformação da pessoa (RN-468).
-    expect((botao?.textContent ?? '').toLowerCase()).not.toContain('virar');
+    const clube = document.querySelector('[data-slot="ponte-cta-clube"]');
+    const eventos = document.querySelector('[data-slot="ponte-cta-eventos"]');
+    expect((clube?.textContent ?? '').trim()).toBe('Criar Club');
+    expect((eventos?.textContent ?? '').trim()).toBe('Organizar eventos');
+    for (const b of [clube, eventos]) {
+      // ⛔ O rótulo velho prometia a visita, não o trabalho. Não volta.
+      expect((b?.textContent ?? '').toLowerCase()).not.toContain('conhecer');
+      // ⛔ E não pode virar promessa de transformação da pessoa (RN-468).
+      expect((b?.textContent ?? '').toLowerCase()).not.toContain('virar');
+    }
   });
 
-  it('o cartão nomeia as DUAS intenções que o dono pediu', async () => {
+  it('o TÍTULO carrega a palavra do dono para o lugar', async () => {
+    await montar({ role: 'athlete' });
+    expect(screen.getByRole('heading', { name: /^painel profissional$/i })).toBeTruthy();
+  });
+
+  it('⚔ são exatamente DOIS botões, e cada um carimba uma intenção diferente', async () => {
+    // Dois botões só se justificam porque a callable agora sabe qual foi
+    // apertado. Um terceiro, ou dois com a mesma intenção, devolveriam o
+    // cartão ao estado em que o teste não tem leitura.
+    await montar({ role: 'athlete' });
+    const cartao = document.querySelector('[data-slot="porta-conhecer-painel"]');
+    const botoes = Array.from(cartao?.querySelectorAll('button') ?? []);
+    expect(botoes).toHaveLength(2);
+    const intencoes = botoes.map((b) => b.getAttribute('data-intencao'));
+    expect(new Set(intencoes).size).toBe(2);
+    expect(intencoes).toContain('clube');
+    expect(intencoes).toContain('eventos');
+  });
+
+  it('⚔ cada botão manda a SUA intenção para o servidor', async () => {
+    for (const [rotulo, intencao] of [
+      [ROTULO_CLUBE, 'clube'],
+      [ROTULO_EVENTOS, 'eventos'],
+    ] as const) {
+      promoverParaProfissional.mockReset();
+      promoverParaProfissional.mockResolvedValue({
+        statusOnboarding: 'aguardando_convite',
+        jaExistia: false,
+      });
+      await montar({ role: 'athlete' });
+      marcarTermo();
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: rotulo }));
+      });
+      await waitFor(() => expect(promoverParaProfissional).toHaveBeenCalledTimes(1));
+      expect(promoverParaProfissional.mock.calls[0]?.[0]).toMatchObject({ intencao });
+      cleanup();
+    }
+  });
+
+  it('⚔ enquanto um corre, o OUTRO não aceita clique — uma travessia, uma intenção', async () => {
+    let liberar: (() => void) | null = null;
+    promoverParaProfissional.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          liberar = () => resolve({ statusOnboarding: 'aguardando_convite', jaExistia: false });
+        })
+    );
+    await montar({ role: 'athlete' });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: ROTULO_CLUBE }));
+    });
+    const outro = screen.getByRole('button', { name: ROTULO_EVENTOS });
+    expect((outro as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => {
+      fireEvent.click(outro);
+    });
+    expect(promoverParaProfissional).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      liberar?.();
+    });
+  });
+
+  it('só o botão APERTADO vira "Abrindo…" — o outro guarda o próprio nome', async () => {
+    let liberar: (() => void) | null = null;
+    promoverParaProfissional.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          liberar = () => resolve({ statusOnboarding: 'aguardando_convite', jaExistia: false });
+        })
+    );
+    await montar({ role: 'athlete' });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: ROTULO_CLUBE }));
+    });
+    expect(
+      (document.querySelector('[data-slot="ponte-cta-clube"]')?.textContent ?? '').trim()
+    ).toBe('Abrindo…');
+    expect(
+      (document.querySelector('[data-slot="ponte-cta-eventos"]')?.textContent ?? '').trim()
+    ).toBe('Organizar eventos');
+    await act(async () => {
+      liberar?.();
+    });
+  });
+
+  it('o cartão continua nomeando as duas áreas no texto', async () => {
     await montar({ role: 'athlete' });
     const texto = document.querySelector('[data-slot="porta-conhecer-painel"]')?.textContent ?? '';
     expect(texto).toMatch(/eventos/i);
     expect(texto).toMatch(/clubs?/i);
-  });
-
-  it('⚔ a porta é UMA — dois botões sem medição seriam um teste que não mede', async () => {
-    // A landing não tem uma linha de telemetria. Um segundo CTA disparando a
-    // mesma promoção não diria qual intenção converteu, e cobraria da pessoa
-    // uma decisão a mais no cartão que existe para desbloquear um beco.
-    await montar({ role: 'athlete' });
-    const cartao = document.querySelector('[data-slot="porta-conhecer-painel"]');
-    const botoes = Array.from(cartao?.querySelectorAll('button') ?? []);
-    expect(botoes).toHaveLength(1);
   });
 
   it('⚔ o cartão NÃO promete criação de clube na landing', async () => {
@@ -261,6 +356,9 @@ describe('S1234-T2 · as recusas viram frase, nunca erro cru', () => {
     { motivo: 'conta_inelegivel', trecho: /fale com o time leela/i },
     { motivo: 'aceite_ausente', trecho: /aceite o termo/i },
     { motivo: 'aceite_datado_pelo_cliente', trecho: /recarregue a p[áa]gina/i },
+    // PONTE-NOME-1 · a sétima. A pessoa apagou o pré-preenchido e digitou algo
+    // que não vira endereço; a frase diz a régua, não o erro.
+    { motivo: 'nome_profissional_invalido', trecho: /duas letras ou n[úu]meros/i },
     { motivo: 'indisponivel', trecho: /tente de novo/i },
   ];
 
@@ -283,6 +381,97 @@ describe('S1234-T2 · as recusas viram frase, nunca erro cru', () => {
       expect(alerta.textContent ?? '').not.toMatch(/internal|error|\[object/i);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// PONTE-NOME-1 · o nome da produtora, escolhido antes de virar permanente
+// ---------------------------------------------------------------------------
+
+describe('⚔ PONTE-NOME-1 · a porta pergunta o nome, e ele viaja', () => {
+  it('o campo nasce PRÉ-PREENCHIDO com o nome da pessoa, e é editável', async () => {
+    // O default não é invenção da tela: é exatamente o que o resgate usaria em
+    // silêncio como semente do slug. O campo só devolve a caneta para a dona.
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    const campo = campoDoNome();
+    expect(campo).not.toBeNull();
+    expect(campo.value).toBe('Ana Paula');
+    expect(campo.disabled).toBe(false);
+    expect(campo.readOnly).toBe(false);
+  });
+
+  it('⚔ sem `name` no token, o campo nasce VAZIO — a tela não inventa nome pelo e-mail', async () => {
+    // O degrau que o servidor desce quando não há nome (`email.split('@')[0]`)
+    // não pode ser repetido aqui: repeti-lo seria dar cara de escolha a um
+    // palpite que a pessoa nunca fez.
+    await montar({ role: 'athlete', email: 'ana@exemplo.dev' });
+    expect(campoDoNome().value).toBe('');
+  });
+
+  it('o campo tem label e a régua permanente escrita ao lado, não subentendida', async () => {
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    expect(screen.getByLabelText(/nome da sua produtora/i)).toBeTruthy();
+    const cartao = document.querySelector('[data-slot="porta-conhecer-painel"]')?.textContent ?? '';
+    expect(cartao).toMatch(/n[ãa]o muda/i);
+  });
+
+  it('⚔ o nome editado viaja na promoção, aparado', async () => {
+    promoverParaProfissional.mockResolvedValue({
+      statusOnboarding: 'aguardando_convite',
+      jaExistia: false,
+    });
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: '  Castelo Produções  ' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await waitFor(() => expect(promoverParaProfissional).toHaveBeenCalledTimes(1));
+    expect(promoverParaProfissional.mock.calls[0]?.[0]).toMatchObject({
+      nomeProfissional: 'Castelo Produções',
+      intencao: 'eventos',
+    });
+  });
+
+  it('⚔ o campo apagado manda string vazia — e isso é a escolha de não escolher', async () => {
+    promoverParaProfissional.mockResolvedValue({
+      statusOnboarding: 'aguardando_convite',
+      jaExistia: false,
+    });
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: '' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await waitFor(() => expect(promoverParaProfissional).toHaveBeenCalledTimes(1));
+    expect(promoverParaProfissional.mock.calls[0]?.[0]).toMatchObject({ nomeProfissional: '' });
+  });
+
+  it('⚔ a recusa do nome some quando a pessoa corrige — a tela não fica presa no vermelho', async () => {
+    promoverParaProfissional.mockRejectedValue(new Error('qualquer coisa'));
+    motivoDaRecusaDaPromocao.mockReturnValue('nome_profissional_invalido');
+    await montar({ role: 'athlete', name: 'Ana Paula' });
+    fireEvent.change(campoDoNome(), { target: { value: '!!' } });
+    marcarTermo();
+    await act(async () => {
+      fireEvent.click(botaoConhecer());
+    });
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="ponte-recusa"]')).not.toBeNull()
+    );
+    fireEvent.change(campoDoNome(), { target: { value: 'Castelo' } });
+    expect(document.querySelector('[data-slot="ponte-recusa"]')).toBeNull();
+  });
+
+  it('⚔ o campo é OPCIONAL: não bloqueia o botão nem substitui o aceite', async () => {
+    // A porta existe para não ter formulário. Um campo que barrasse a travessia
+    // teria devolvido ao beco exatamente quem ela tirou de lá.
+    await montar({ role: 'athlete', email: 'ana@exemplo.dev' });
+    expect(campoDoNome().value).toBe('');
+    expect((botaoConhecer() as HTMLButtonElement).disabled).toBe(true);
+    marcarTermo();
+    expect((botaoConhecer() as HTMLButtonElement).disabled).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
