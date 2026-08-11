@@ -1438,7 +1438,24 @@ e no kanban — a de dentro deste épico e o piso do Serviço, que é vizinho de
 | S908-T1 · a linha que compõe o repasse previsto some da tela | 📋 | RN-496; o selo de liberação fica |
 | S908-T2 · o campo com o nome da plataforma anterior sai da ficha do inscrito | 📋 | RN-496 e RN-404; a taxa não se mostra ao produtor |
 | S908-T3 · o teste que impede o rótulo antigo de voltar passa a cobrir as três telas | 📋 | depende de T1 e T2 |
-| S908-T4 · o ticket médio vira campo do agregado, com o denominador de quem pagou | 📋 | RN-488; é aqui que a decisão do dono de 10/08 aterrissa |
+| S908-T4 · o ticket médio vira campo do agregado, com o denominador de quem pagou | ✅ **na tela** (lane METRICAS-PAGANTES-PAINEL, `f4cda04b`) · 📋 como CAMPO do agregado | RN-488; é aqui que a decisão do dono de 10/08 aterrissa |
+
+**O que a lane METRICAS-PAGANTES-PAINEL pagou da T4 (11/08 · D-1008-R19):** o card de
+Ticket médio do Overview do evento parou de dividir por inscritos. O denominador agora é
+`inscritos.porStatus.confirmado` do `financeiro/current` — **contagem que o agregado JÁ
+publicava desde o S207-T2**, então a correção não pediu campo novo nem leitura nova.
+Numerador e denominador saem do MESMO doc; sem agregado ou sem pagante o card mostra
+"—", nunca R$ 0,00. Prova: `ticketMedioPorPagante` em `eventos/_lib/financeiro.ts` com 6
+casos falsificados (o denominador antigo devolve 166,67 · 142,86 · 208,33 · 0 · 225 onde
+a verdade é 250 ou "—").
+
+**O que sobra da T4:** materializar o ticket como CAMPO do agregado só se ganharmos um
+consumidor fora da tela (série histórica, export, rollup). Hoje derivar no cliente a
+partir de dois números do mesmo doc é mais barato e não cria uma terceira cópia do mesmo
+dinheiro para manter em sincronia. **Decisão do dono pendente** (registrada na lane): o
+denominador ficou em `confirmado`, e NÃO em `STATUS_QUE_CONTAM_VENDA`
+(confirmado+estornado) — o estorno devolve o face em `receitaConfirmada`, então contar o
+estornado faria o ticket cair a cada reembolso. Reabrir = uma linha.
 
 ### S907 · o piso do Serviço na aritmética, no carimbo e no estorno
 

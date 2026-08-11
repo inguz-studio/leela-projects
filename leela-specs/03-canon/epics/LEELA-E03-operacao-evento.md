@@ -2527,3 +2527,18 @@ no kanban.
 **O cuidado que a história inteira existe para preservar:** o contador que aparece na tela e o
 contador que tranca a configuração do evento são coisas diferentes. Separar o primeiro não pode
 afrouxar o segundo — é por isso que a T3 é um teste de ataque, e não uma nota.
+
+**Registro da lane METRICAS-PAGANTES-PAINEL (11/08 · D-1008-R19) — a T1 tem menos trabalho do que
+parecia:** a contagem de pagantes **já existe publicada** em `eventos/{id}/financeiro/current`,
+no campo `inscritos.porStatus` (`Record<StatusInscrito, number>`), escrito por
+`agregarFinanceiro` desde o S207-T2. Foi ele que destravou o conserto do ticket médio sem campo
+novo e sem leitura nova. A T1 continua de pé para quem precisa do número **no doc do evento**
+(as telas que hoje leem `evento.qtdInscritos` não enxergam o agregado financeiro), mas o
+mecanismo de origem já está resolvido — é projeção, não cálculo novo.
+
+**E a T2 encolheu junto:** a varredura das superfícies do painel (tabela completa no handoff
+`leela-metricas-pagantes-painel.md`) mostrou que as telas que dizem "N inscritos" estão
+**CONFORMES** — elas contam inscritos e é isso que o rótulo promete (contagem regressiva, hub,
+vagas, ocupação, "Inscrições" da Análise). O defeito era só onde a contagem virava **denominador
+de dinheiro**, e havia exatamente um lugar assim no painel inteiro. A T2 vira, então, revisão de
+rótulo caso a caso — não troca cega das dezenove telas.

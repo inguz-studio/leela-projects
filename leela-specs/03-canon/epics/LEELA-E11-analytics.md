@@ -509,7 +509,25 @@ da rodada de 05/08 e no kanban.
 | Tarefa | Estado | Prova |
 |---|---|---|
 | S824-T1 · o rótulo de visitantes para de ser desenhado sem o número que o sustenta | 📋 | RN-489; a faixa de indicadores se reorganiza |
-| S824-T2 · quando o funil ganhar fonte, ele fecha em pagante | 📋 | D-1008-R19; nunca em inscrito |
+| S824-T2 · quando o funil ganhar fonte, ele fecha em pagante | 📋 · **defeito LOCALIZADO** (lane METRICAS-PAGANTES-PAINEL, 11/08) | D-1008-R19; nunca em inscrito |
+
+**O endereço exato, achado pela varredura da METRICAS-PAGANTES-PAINEL:**
+`derivarKpis` (`packages/core/src/overview/kpis.ts:225`) chama
+`derivarTaxaConversao(inscricoesTotais, visitas)` — o docstring da função promete
+"confirmadas / visitas" e o chamador passa o TOTAL de inscritos. É literalmente o funil
+fechando em inscrito. Quem grava é o servidor
+(`functions/src/overview/aggregateProfessionalDashboard.ts:195` →
+`profissionais/{id}/dashboard/current`); o painel só lê, e o input `EventoKpiInput` não
+tem recorte por status — **consertar exige mudar o contrato do rollup** (lane
+METRICAS-PAGANTES-BACKEND).
+
+Três superfícies herdam o mesmo defeito de origem: o card "Taxa de conversão" do Overview
+do evento, o da faixa de indicadores da Visão Geral v3 e o da Análise de vendas do CRM.
+**Nenhuma mente na tela hoje:** em produção `visitas` é sempre `null` → o card mostra
+"—"; no preview do :4601 o valor é constante de mockup (68,2%) do `preview-seed-extra`.
+O rótulo "visitantes → inscritos" ficou INTOCADO de propósito — trocar a palavra para
+"pagantes" sem trocar a conta criaria a mentira em vez de matá-la; conta e rótulo mudam
+no mesmo commit, quando a fonte existir.
 
 **Preso no dono:** CONV-1, se o contador de visitas passa a existir. Enquanto ele não responder,
 a T1 é honestidade e a T2 é contrato escrito para a primeira vez que alguém pedir.
