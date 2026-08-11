@@ -3,7 +3,7 @@ trace: leela-redesign-v2-20260810
 lane: METRICAS-PAGANTES-PAINEL (leva 5 · D-1008-R19 · T1-T2)
 alvo: branch redesign-engajamento-v2 · base 7230a75d → HEAD · C:/dev/leela-wt-redesign-v2
 data: 2026-08-11
-estado: EM CURSO — T1 PAGA (f4cda04b); T2 (varredura) em registro
+estado: CONCLUÍDA — T1 paga e PUSHED (f4cda04b); T2 (varredura das 24 superfícies) registrada; boards E03·S221 + E09·S908-T4 + E11·S824-T2 atualizados no main (784a5fe2); gates todos verdes; :4601 re-servido PID 16464 (bundle index-BeKOgrxg.js); :4599 PID 25384 intocado; NENHUM deploy
 ---
 
 # METRICAS-PAGANTES-PAINEL · handoff vivo
@@ -184,11 +184,49 @@ conserto é do lado do servidor. → **METRICAS-PAGANTES-BACKEND**.
 | Falsificação do T1 | 5/6 casos VERMELHOS com o denominador antigo ✔ (números na tabela acima) |
 | type-check painel | exit 0 ✔ |
 | lint painel `--max-warnings 0` | exit 0 ✔ |
-| Suíte DS completa | (pendente — a lane não tocou o DS, gate roda mesmo assim) |
-| generate-tokens 2× | (pendente) |
-| hex/px no diff da lane | (pendente) |
-| L-021 no diff | (pendente) |
+| Suíte DS completa | **1808/1808** (75 arquivos) ✔ exit 0 — a lane não tocou o DS; o gate rodou igual |
+| type-check DS | exit 0 ✔ |
+| lint DS `--max-warnings 0` | exit 0 ✔ |
+| generate-tokens 2× | `git status --porcelain` VAZIO após cada rodada ✔ |
+| hex/px no diff da lane (`7230a75d..f4cda04b`) | **ZERO** em linhas adicionadas ✔ |
+| L-021 no diff | **ZERO** controle cru · **ZERO** `bg-[var(--surface-raised)]` cru novo ✔ |
+
+## Rebuild + re-serve (fase final)
+
+- DS **não** foi tocado → nenhum `tsup` necessário (o painel consome o mesmo `dist`).
+- `vite build --mode leela-hub` OK (18,57s) — bundle novo
+  `dist/assets/index-BeKOgrxg.js` (sha256 `ec28c35712c742fc…`), CSS `index-CEDR9C7j.css`.
+- PID 29476 (bundle pré-lane `index-uTmz4HsF.js`) MORTO; porta confirmada livre;
+  `.maestro-logs/serve-4601.js` re-servindo a MESMA porta — **:4601 PID novo = 16464**.
+  Verificado: `GET /` 200 · `index.html` referencia `index-BeKOgrxg.js` · bundle 200 ·
+  SPA fallback de `/eventos` e `/parcerias` 200. **:4599 PID 25384 INTOCADO.**
+  NENHUM deploy.
 
 ## Commits da lane
 
-- `f4cda04b` T1 (R19 · ticket médio por pagante; 6 arquivos, +261/−8)
+- `f4cda04b` (worktree · branch `redesign-engajamento-v2`, PUSHED) T1 — R19 · ticket
+  médio por pagante; 6 arquivos, +261/−8
+- `784a5fe2` (repo main, PUSHED) aterrissagem nos boards — E09·S908-T4 marcada paga na
+  tela, E11·S824-T2 com o endereço do defeito, E03·S221 com o escopo encolhido +
+  handoff versionado; 5 arquivos, +253/−6
+
+## Fila / vetáveis / achados
+
+- ⛔ **No dono (TICKET-1):** denominador do ticket médio ficou em `confirmado` e não em
+  `STATUS_QUE_CONTAM_VENDA` (confirmado+estornado). Justificativa aritmética completa na
+  seção do T1. Reabrir = uma linha + o teste que a pina.
+- **METRICAS-PAGANTES-BACKEND (herda desta varredura):**
+  1. `derivarKpis` → `derivarTaxaConversao(inscricoesTotais, visitas)` — funil fecha em
+     inscrito (`packages/core/src/overview/kpis.ts:225`); exige recorte por status no
+     `EventoKpiInput`. Três cards herdam.
+  2. `tenants.gmvAcumulado` **sem escritor** — nasce 0 em `provisionTenant.ts:387` e
+     nenhuma Function incrementa; o macro do admin mostra GMV e Receita Leela zerados
+     para sempre.
+  3. Conferir se os rollups do servidor contam pagante pela MESMA régua que o painel
+     agora usa (é o `Not-tested` declarado no commit do T1).
+- **Registro de escopo:** a lane NÃO tocou rótulo de conversão. "visitantes → inscritos"
+  continua descrevendo com honestidade a conta que existe; conta e rótulo mudam juntos
+  quando a fonte chegar.
+- **Conferência renderizada pendente do maestro/dono no :4601:** Overview de um evento
+  com emissões pendentes — o card "Ticket médio" deve subir em relação ao que estava, e
+  mostrar "—" em evento sem agregado financeiro.
