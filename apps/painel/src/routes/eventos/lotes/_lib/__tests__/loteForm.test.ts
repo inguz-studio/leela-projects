@@ -10,6 +10,7 @@ import {
   inputLocalParaDate,
   loteDesativavel,
   loteImutavel,
+  mensagemErroServidor,
   parsePrecoReais,
   payloadDesativarPelaJanela,
   proximaOrdem,
@@ -615,5 +616,94 @@ describe('capacidadePrevista lê a MESMA pontuação do submit (FIX-PARSE-MILHAR
   it('total com casa decimal cai no gravado, como qualquer texto ilegível', () => {
     const lote = mkLote({ modalidade: '5k', ordem: 1, quantidadeLimite: 50, vendidos: 19 });
     expect(capacidadePrevista(lote, '2,5').configurado).toBe(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RN-559 — a venda PAGA tem face mínima de R$ 10,00 (SERV-2 · 2026-08-11)
+// ---------------------------------------------------------------------------
+//
+// A camada de TELA da regra. Ela não é a autoridade — a Rule é —, mas é onde o
+// organizador descobre o problema enquanto ainda pode corrigi-lo, no campo
+// certo, em vez de levar um toast de servidor depois de clicar em salvar.
+
+describe('face mínima da venda paga no formulário de lote (RN-559)', () => {
+  const base: LoteFormValues = {
+    nome: 'Lote 2',
+    ordem: '2',
+    inicioEm: '2026-02-01T00:00',
+    fimEm: '2026-04-01T00:00',
+    quantidadeLimite: '300',
+    preco: '75,00',
+  };
+
+  const validar = (preco: string) =>
+    validarFormLote({
+      values: { ...base, preco },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [],
+    });
+
+  it('R$ 9,99 é recusado, e o aviso acende NO CAMPO DE PREÇO', () => {
+    const r = validar('9,99');
+    expect(r.ok).toBe(false);
+    expect(erroDoCampo(r, 'preco')).toBe(
+      'A venda paga mínima é R$ 10,00. Para não cobrar nada, deixe R$ 0,00 — ' +
+        'a inscrição gratuita continua permitida.',
+    );
+  });
+
+  it('R$ 10,00 passa, e o payload carrega o número inteiro', () => {
+    const r = validar('10,00');
+    expect(r.ok).toBe(true);
+    if (r.ok && 'preco' in r.input) expect(r.input.preco).toBe(10);
+    else expect.fail('esperava payload completo com preço');
+  });
+
+  it('R$ 0,00 passa — inscrição gratuita continua permitida', () => {
+    const r = validar('0,00');
+    expect(r.ok).toBe(true);
+    if (r.ok && 'preco' in r.input) expect(r.input.preco).toBe(0);
+    else expect.fail('esperava payload completo com preço');
+  });
+
+  it('o centavo acima de zero já é venda paga, e já é recusado', () => {
+    expect(validar('0,01').ok).toBe(false);
+  });
+
+  it('R$ 5,00 e R$ 3,00 são recusados — o mínimo não é o piso do Serviço', () => {
+    expect(validar('5,00').ok).toBe(false);
+    expect(validar('3,00').ok).toBe(false);
+  });
+
+  it('a recusa por face mínima é OUTRA que a recusa por texto ilegível', () => {
+    const porFaixa = validar('9,99');
+    const porTexto = validar('abc');
+    expect(porFaixa.ok).toBe(false);
+    expect(porTexto.ok).toBe(false);
+    expect(erroDoCampo(porFaixa, 'preco')).not.toBe(erroDoCampo(porTexto, 'preco'));
+    expect(erroDoCampo(porFaixa, 'preco')).toContain('R$ 10,00');
+  });
+
+  it('lote CONGELADO (vendido) só valida o nome — o preço nem entra no payload', () => {
+    // Sem esta passagem, um lote legado vendido de face R$ 5,00 não poderia
+    // nem ser renomeado: a RN-200 congela o preço e a RN-559 exigiria o
+    // mínimo. As duas regras se trancariam uma na outra.
+    const r = validarFormLote({
+      values: { ...base, preco: '5,00', nome: 'Nome novo' },
+      modalidade: '5k',
+      loteId: '5k-lote-1',
+      lotesDoEvento: [],
+      congelado: true,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect('preco' in r.input).toBe(false);
+  });
+
+  it('a recusa do servidor enumera a face mínima entre as causas', () => {
+    const msg = mensagemErroServidor({ code: 'permission-denied' });
+    expect(msg).toContain('R$ 10,00');
+    expect(msg).toContain('RN-559');
   });
 });

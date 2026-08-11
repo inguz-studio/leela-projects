@@ -230,8 +230,11 @@ Sete cards, nenhum sendo tocado. Duas frentes seguram tudo.
 3. **O documento do repasse confere os dígitos** — S906: hoje qualquer sequência de onze ou
    catorze dígitos passa.
 
-**O que fica esperando você:** SERV-1 e SERV-2 (o piso de três reais contra vendas pequenas),
-SERV-3, JUROS-1 (salvar os termos comerciais no painel para selar o rastro).
+**O que fica esperando você:** SERV-3 e JUROS-1 (salvar os termos comerciais no painel para
+selar o rastro). **SERV-1 e SERV-2 saíram em 11/08:** você ratificou o piso de três reais e
+decidiu a venda mínima de dez, que foi construída no mesmo dia — um lote entre R$ 0,01 e R$ 9,99
+não pode mais nascer, e a inscrição gratuita continua permitida. Com os dois números de pé, o
+líquido do organizador nunca fica negativo, e a S907 destrava para o piso entrar na tabela.
 
 ### E03 · Operação do evento
 

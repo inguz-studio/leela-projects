@@ -19,9 +19,11 @@
 // =============================================================================
 
 import {
+  MSG_FACE_MINIMA_VENDA_PAGA,
   capacidadeDoLote,
   dataHoraLocalISO,
   dataHoraLocalParaDate,
+  faceMinimaVendaPagaValida,
   isDataHoraLocalISO,
   loteAtivo,
   loteEncerrado,
@@ -178,6 +180,7 @@ export function mensagemErroServidor(erro: unknown): string {
     return (
       'O servidor recusou a gravação. As causas possíveis são: o lote já vendeu e preço, ' +
       'janela e ordem estão congelados (RN-200/300 — a vaga se ajusta em "Ajustar capacidade"); ' +
+      'o preço ficou entre R$ 0,01 e R$ 9,99, e a venda paga mínima é R$ 10,00 (RN-559); ' +
       'a modalidade não existe mais no evento; ou a sua conta não tem permissão de escrita neste evento.'
     );
   }
@@ -498,6 +501,12 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
     erros.push({ campo: 'preco', mensagem: mensagemValorInvalido(precoLido.motivo) });
   } else if (preco === null) {
     erros.push({ campo: 'preco', mensagem: 'Preço inválido (use R$ ≥ 0).' });
+  } else if (!faceMinimaVendaPagaValida(preco)) {
+    // RN-559 — a venda PAGA tem face mínima de R$ 10,00 (decisão do dono em
+    // 2026-08-11). O organizador descobre AQUI, no campo, antes de mandar; a
+    // Rule é a autoridade e recusaria depois, com o toast genérico de servidor.
+    // R$ 0,00 passa: gratuidade não é venda.
+    erros.push({ campo: 'preco', mensagem: MSG_FACE_MINIMA_VENDA_PAGA });
   }
 
   if (erros.length > 0 || !inicioEm || !fimEm || preco === null) return falha(erros);

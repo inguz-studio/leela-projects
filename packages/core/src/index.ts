@@ -279,6 +279,17 @@ export {
   podeAlterarPreco,
 } from './eventos/precoBloqueado';
 
+// RN-559 — a venda PAGA tem face mínima de R$ 10,00 (E04 · SERV-2, 2026-08-11)
+export type { MotivoFaceInvalida, ResultadoFaceMinima } from './eventos/faceMinimaVenda';
+export {
+  FACE_MINIMA_VENDA_PAGA_REAIS,
+  FACE_MINIMA_VENDA_PAGA_CENTAVOS,
+  MSG_FACE_MINIMA_VENDA_PAGA,
+  MSG_FACE_NAO_E_NUMERO_VALIDO,
+  faceMinimaVendaPagaValida,
+  validarFaceMinimaVendaPaga,
+} from './eventos/faceMinimaVenda';
+
 // Data do evento — dia civil no fuso do produto (fix review Onda1 #01/#02).
 // Fonte ÚNICA da validação hoje-ou-futuro (form + Function) e da conversão
 // date-only → instante; telas formatam pinadas em FUSO_EVENTO.
