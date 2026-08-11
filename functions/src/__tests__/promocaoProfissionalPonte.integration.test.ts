@@ -327,4 +327,83 @@ describe('A4 · a travessia da ponte, contra o emulator', () => {
     expect(doc.get('statusOnboarding')).toBe('ativo');
     expect(doc.get('organizacao')).toBe('Castelo');
   });
+
+  // -------------------------------------------------------------------------
+  // PONTE-NOME-1 · o batismo da produtora, contra o banco que o cunha
+  // -------------------------------------------------------------------------
+
+  it('⚔ PONTE-NOME-1 · o nome escolhido na porta vira o SLUG do tenant no resgate', async () => {
+    // Esta é a prova do item inteiro, e ela só existe aqui: o slug nasce no
+    // `resgatarConviteCore`, a partir de `profissionais.organizacao`. Provar o
+    // campo com db falso mostraria a escrita e não o BATISMO — que é onde o
+    // nome vira identificador permanente.
+    const ana = await participanteLogada('t10');
+
+    await promoverParaProfissionalCore(db, ana, {
+      aceiteTermo: true,
+      intencao: 'clube',
+      nomeProfissional: 'Castelo Produções',
+    });
+
+    const prof = await db.collection('profissionais').doc(ana.uid).get();
+    expect(prof.get('organizacao')).toBe('Castelo Produções');
+
+    const codigo = 'NM33PT88';
+    await db.collection(COLECAO_CONVITES_ORGANIZADOR).doc(codigo).set({
+      codigo,
+      status: 'ativo',
+      criadoPor: 'uid-platform-admin',
+      criadoEm: FieldValue.serverTimestamp(),
+    });
+
+    const { tenantId } = await resgatarConviteCore(db, auth, { codigo }, ana.uid, ana.email);
+
+    // ⚔ O endereço interno é o nome ESCOLHIDO, e não a pessoa. Sem o campo, o
+    // `sementeDoSlug` cairia em `Ana Paula` → `ana-paula`, para sempre.
+    expect(tenantId).toBe('castelo-producoes');
+    expect(tenantId).not.toContain('ana');
+
+    const tenant = await db.collection('tenants').doc(tenantId).get();
+    expect(tenant.get('nome')).toBe('Castelo Produções');
+    expect(tenant.get('slug')).toBe('castelo-producoes');
+    // O nome da PESSOA continua existindo, no campo dela — o item não apaga
+    // identidade, ele separa a produtora da titular. E é isto que o campo
+    // novo conserta: antes, os dois eram a mesma string.
+    const depois = await db.collection('profissionais').doc(ana.uid).get();
+    expect(depois.get('nome')).toBe('Ana Paula');
+    expect(depois.get('organizacao')).toBe('Castelo Produções');
+    expect(depois.get('tenantId')).toBe(tenantId);
+  });
+
+  it('⚔ PONTE-NOME-1 · sem nome escolhido, o batismo continua caindo na pessoa — o defeito, medido', async () => {
+    // O caso de controle. Ele existe para que o valor do campo seja um número
+    // e não uma afirmação: é ESTE o desfecho de quem atravessou antes do
+    // conserto, e é ele que a condição de reabertura do painel descreve.
+    const ana = await participanteLogada('t11');
+    await promoverParaProfissionalCore(db, ana, { aceiteTermo: true });
+
+    const codigo = 'NM22PT99';
+    await db.collection(COLECAO_CONVITES_ORGANIZADOR).doc(codigo).set({
+      codigo,
+      status: 'ativo',
+      criadoPor: 'uid-platform-admin',
+      criadoEm: FieldValue.serverTimestamp(),
+    });
+
+    const { tenantId } = await resgatarConviteCore(db, auth, { codigo }, ana.uid, ana.email);
+    expect(tenantId).toBe('ana-paula');
+  });
+
+  it('⚔ PONTE-NOME-1 · nome que não vira slug é recusado ANTES de qualquer escrita', async () => {
+    const ana = await participanteLogada('t12');
+    const erro = await promoverParaProfissionalCore(db, ana, {
+      aceiteTermo: true,
+      nomeProfissional: '!!',
+    }).catch((e: { details?: { motivo?: string } }) => e);
+
+    expect((erro as { details?: { motivo?: string } }).details?.motivo).toBe(
+      'nome_profissional_invalido'
+    );
+    expect((await db.collection('profissionais').doc(ana.uid).get()).exists).toBe(false);
+  });
 });
