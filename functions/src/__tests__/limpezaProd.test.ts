@@ -287,6 +287,20 @@ describe('[B4] poda de chave condenada em qualquer profundidade', () => {
     expect(texto).toContain('saldo/current');
     expect(texto).toContain('dashboard');
   });
+
+  it('⚔ manda recomputar a saúde do tenant, e ANTES do rollup da plataforma', () => {
+    // O passo que faltou na LIMPEZA-PROD de 10/08: `gmvAcumulado` 167.277
+    // sobreviveu à purga apontando para eventos apagados, e o post-check
+    // carimbou OK porque conferiu o rollup contra ele mesmo. A ordem é o
+    // conserto — o callable de plataforma SOMA o campo do tenant, então rodá-lo
+    // primeiro só espalha o número órfão.
+    const p = planejarLimpeza(mundo(), ALVO);
+    const texto = p.recomputesObrigatorios.join(' ');
+    expect(texto).toContain('recomputarSaudeDeTodosOsTenants');
+    expect(texto.indexOf('recomputarSaudeDeTodosOsTenants')).toBeLessThan(
+      texto.indexOf('recomputePlatformRollups')
+    );
+  });
 });
 
 // ===========================================================================

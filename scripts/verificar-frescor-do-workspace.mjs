@@ -17,8 +17,13 @@
 //   node ../../scripts/verificar-frescor-do-workspace.mjs        (cwd = app)
 //   node scripts/verificar-frescor-do-workspace.mjs apps/landing (cwd = raiz)
 //
-// A segunda forma existe para o `predeploy` do Firebase, que roda com o cwd na
-// raiz do repo (onde está a config) e não no diretório do app.
+// ⚠️ A segunda forma NÃO serve para o `predeploy` do Firebase, embora pareça:
+// o firebase-tools envelopa o comando do hook em `cross-env-shell`, que no
+// Windows não separa os argumentos e tenta executar a linha inteira como um
+// binário só (`ENOENT`, medido nesta lane). No `predeploy` a forma que funciona
+// é `npm --prefix apps/<app> run verify:frescor` — a mesma já usada pelo hook
+// das functions. O argumento fica para uso humano e para CI que chame `node`
+// direto.
 // =============================================================================
 
 import { resolve } from 'node:path';
