@@ -135,8 +135,15 @@ Na íntegra: "nao faz sentido funil por inscritos, e ja te falei que ticket méd
 clientes que pagaram, e nao pagamentos emitidos(pendentes + pagos). iss ja esta em vias
 dde correção também?"
 → Regra transversal de métrica: **ticket médio = receita confirmada ÷ nº de clientes que
-PAGARAM** (status dentro de `STATUS_QUE_CONTAM_VENDA`), nunca por inscritos nem por
-emissões; **funil (quando ganhar fonte) fecha em pagante**, não em inscrito. Resposta
+PAGARAM**, nunca por inscritos nem por emissões; **funil (quando ganhar fonte) fecha em
+pagante**, não em inscrito.
+**Emenda 11/08 (evita conserto-de-volta):** a implementação NÃO usa
+`STATUS_QUE_CONTAM_VENDA` de propósito — aquela constante conta VAGA DE LOTE (confirmado
++ estornado) e `receitaConfirmada` é LÍQUIDA de reembolso (`estornarInscricao` devolve o
+face), então contar estornado dividiria receita líquida por gente fora dela. Denominador
+vigente = **pagantes confirmados**, pinado em teste. A divergência é o vetável
+**⛔ TICKET-1** (do dono; reabrir = 1 linha). Lane futura que "alinhar" o denominador à
+constante sem veto do dono está introduzindo o defeito, não consertando. Resposta
 honesta dada ao dono: NÃO estava em vias de correção; defeito real localizado na hora —
 `apps/painel/src/routes/eventos/evento/overview/OverviewKpis.tsx:66` divide
 `receitaConfirmada / qtdInscritos`. Auditoria de TODAS as superfícies (KPIs do painel na
