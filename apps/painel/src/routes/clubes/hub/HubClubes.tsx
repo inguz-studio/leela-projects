@@ -5,7 +5,7 @@
 // erro no fail (§2.12). Popover exclusivo (C3): um único aberto por vez.
 // =============================================================================
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { KpiCard, Button, EmptyState, SearchInput, PageHeader, Skeleton } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
@@ -20,13 +20,6 @@ export interface HubClubesProps {
   ownUserId: string | null;
   onCriarClube: () => void;
   onAbrirClube: (slug: string) => void;
-  /**
-   * Menu secundário da área (D-1008-R9): os acessos Engajamento · Minhas
-   * afiliações · Influenciadores · Assessorias parceiras saíram de botões
-   * soltos no header e viraram a SubNav canônica (ClubesAreaNav, injetada
-   * pela rota — esta view segue presentational, sem Router).
-   */
-  areaNav?: ReactNode;
 }
 
 interface KpisGlobais {
@@ -69,7 +62,6 @@ export function HubClubes({
   ownUserId,
   onCriarClube,
   onAbrirClube,
-  areaNav,
 }: HubClubesProps): JSX.Element {
   const [busca, setBusca] = useState('');
   // C3 — popover exclusivo: um único card com popover aberto por vez.
@@ -101,14 +93,13 @@ export function HubClubes({
         title="Clubes"
         actions={
           // D-1008-R9: os 4 acessos secundários saíram daqui (viraram o menu
-          // secundário da área — `areaNav`); fica só a AÇÃO primária.
+          // secundário da área — hoje desenhado pela MOLDURA ClubesAreaLayout,
+          // D-1008-R16); fica só a AÇÃO primária.
           <Button variant="primary" onClick={onCriarClube}>
             + Criar clube
           </Button>
         }
       />
-
-      {areaNav}
 
       <div className="flex flex-col gap-[var(--spacing-8)] px-[var(--spacing-6)]">
         {loading ? (

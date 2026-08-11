@@ -36,7 +36,6 @@ import {
 import { REGUA_PONTO_E_VIRGULA } from '../../../lib/textosDeCampo';
 import { avaliarRepasse, textoInicialRepasse } from './_lib/repasseForm';
 import { ExtratoRepasses } from './_components/ExtratoRepasses';
-import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 
 function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -229,10 +228,10 @@ export function InfluenciadoresPage(): JSX.Element {
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
       {/* D-1008-R8: frase de apoio cortada — a tabela abaixo tem as colunas. */}
+      {/* D-1008-R9: o menu secundário da área substituiu o botão solto "Voltar
+          para Clubes"; desde o D-1008-R16 quem o desenha é a MOLDURA
+          (ClubesAreaLayout) — a entrada "Clubes" do menu segue sendo a volta. */}
       <PageHeader title="Influenciadores" />
-      {/* D-1008-R9: o menu secundário da área substitui o botão solto "Voltar
-          para Clubes" — a entrada "Clubes" do menu é o caminho de volta. */}
-      <ClubesAreaNav ativa="influenciadores" />
       <div className="flex flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)]">
         {afiliados === null && erro === null ? (
           <div role="status" aria-label="Carregando influenciadores" className="flex flex-col gap-[var(--spacing-4)]">

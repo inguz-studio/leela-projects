@@ -13,7 +13,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EngajamentoView } from './EngajamentoView';
-import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 // Derivação CANÔNICA da ocupação (VG v3 ratificada, D-1008-R3) — CONSUMIDA,
 // nunca re-implementada: a banda Eventos do estudo mostra o MESMO bloco na
 // versão analytics (E02), e duas cópias da razão inscritos/vagas driftariam.
@@ -110,7 +109,6 @@ export function EngajamentoPage(): JSX.Element {
       error={error}
       semClubes={semClubes}
       onCriarClube={() => navigate('/clubes/novo')}
-      areaNav={<ClubesAreaNav ativa="engajamento" />}
     />
   );
 }

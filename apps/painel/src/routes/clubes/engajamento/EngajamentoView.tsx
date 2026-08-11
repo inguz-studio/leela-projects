@@ -102,8 +102,6 @@ export interface EngajamentoViewProps {
   /** Sem nenhum club no tenant — a tela inteira degrada para o convite. */
   semClubes: boolean;
   onCriarClube: () => void;
-  /** Menu secundário da área de clubs (D-1008-R9), injetado pela rota. */
-  areaNav?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -431,7 +429,6 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
     error,
     semClubes,
     onCriarClube,
-    areaNav,
   } = props;
 
   const opcoes = [
@@ -458,8 +455,6 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
           )
         }
       />
-
-      {areaNav}
 
       <div className="flex flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
         {semClubes ? (

@@ -48,3 +48,21 @@ export function clubesAreaNavTabs(ativa: ClubesAreaId): SubNavTab[] {
     active: e.id === ativa,
   }));
 }
+
+/**
+ * Aba ativa da área dado o pathname (D-1008-R16). Vive aqui — e não em cada
+ * página — porque o dono do menu é o LAYOUT ROUTE da área (`ClubesAreaLayout`):
+ * a auditoria do R16 provou que menu colado página a página produz aba órfã
+ * (rota sem menu) e layout inconsistente. Prefixo mais específico primeiro;
+ * o que não casar com nenhuma entrada secundária é a raiz (o hub). Sub-rotas
+ * de uma entrada (ex.: `/clubes/assessorias/{id}`) herdam a aba da entrada.
+ * @pure
+ */
+export function clubesAreaAtiva(pathname: string): ClubesAreaId {
+  const secundarias = ENTRADAS.filter((e) => e.segmento !== '');
+  for (const e of secundarias) {
+    const base = `/clubes/${e.segmento}`;
+    if (pathname === base || pathname.startsWith(`${base}/`)) return e.id;
+  }
+  return 'clubes';
+}

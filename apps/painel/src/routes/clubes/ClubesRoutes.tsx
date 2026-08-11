@@ -14,6 +14,7 @@
 
 import { Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
+import { ClubesAreaLayout } from './ClubesAreaLayout';
 import { HubRoute } from './hub/HubRoute';
 import { NovoClubePage } from './novo/NovoClubePage';
 import { AssessoriasPage } from './assessorias/AssessoriasPage';
@@ -40,25 +41,36 @@ export function ClubesRoutes(): JSX.Element {
       {/* Boundary de segmento (mantém o RootShell) — 500 no shell. E07 · S502-T1. */}
       <AppErrorBoundary layout="shell">
       <Routes>
-        <Route index element={<HubRoute />} />
-        {/* Rota estática ANTES do coringa :slug (fix #14 — o CTA do hub caía
-            no :slug e renderizava "Club não encontrado"). */}
+        {/* MOLDURA da área (D-1008-R16): o layout route é o único dono do menu
+            secundário — toda aba da área o herda, com a ativa derivada do
+            pathname. Menu colado página a página foi a causa das abas órfãs. */}
+        <Route element={<ClubesAreaLayout />}>
+          <Route index element={<HubRoute />} />
+          {/* Engajamento (REDESIGN-DS): a análise da comunidade inteira,
+              cross-club. Vive na área Clubs porque a análise mora com o
+              assunto — a mesma razão que levou a análise de vendas para dentro
+              do CRM (RN-823). Rota ESTÁTICA antes do coringa `:slug`, senão
+              "engajamento" cairia no detalhe de club e renderizaria "Club não
+              encontrado". */}
+          <Route path="engajamento" element={<EngajamentoPage />} />
+          {/* Assessorias parceiras (E18) — rotas estáticas ANTES do coringa
+              :slug. O detalhe fica DENTRO da moldura (não tem shell próprio;
+              sem o menu era beco — só um botão "Voltar"). */}
+          <Route path="assessorias" element={<AssessoriasPage />} />
+          <Route path="assessorias/:parceriaId" element={<ParceriaDetailPage />} />
+          {/* Aba Clubs, DOIS lados (R9-E · S-R9-11-T8 · RN-319): organizador vê
+              os influenciadores do tenant; clube/influenciador vê SÓ as
+              próprias conversões (RN-318). Rotas estáticas ANTES do :slug. */}
+          <Route path="influenciadores" element={<InfluenciadoresPage />} />
+          <Route path="minhas-afiliacoes" element={<MinhasAfiliacoesPage />} />
+        </Route>
+        {/* FORA da moldura por design (vereditos R16, afirmados em teste):
+            fluxos de criação em tela cheia com retorno próprio — o precedente
+            é o `/eventos/novo` do EventosHubLayout. Rota estática ANTES do
+            coringa :slug (fix #14 — o CTA do hub caía no :slug e renderizava
+            "Club não encontrado"). */}
         <Route path="novo" element={<NovoClubePage />} />
-        {/* Engajamento (REDESIGN-DS): a análise da comunidade inteira, cross-club.
-            Vive na área Clubs porque a análise mora com o assunto — a mesma
-            razão que levou a análise de vendas para dentro do CRM (RN-823).
-            Rota ESTÁTICA antes do coringa `:slug`, senão "engajamento" cairia
-            no detalhe de club e renderizaria "Club não encontrado". */}
-        <Route path="engajamento" element={<EngajamentoPage />} />
-        {/* Assessorias parceiras (E18) — rotas estáticas ANTES do coringa :slug. */}
-        <Route path="assessorias" element={<AssessoriasPage />} />
         <Route path="assessorias/nova" element={<CadastrarAssessoriaPage />} />
-        <Route path="assessorias/:parceriaId" element={<ParceriaDetailPage />} />
-        {/* Aba Clubs, DOIS lados (R9-E · S-R9-11-T8 · RN-319): organizador vê
-            os influenciadores do tenant; clube/influenciador vê SÓ as
-            próprias conversões (RN-318). Rotas estáticas ANTES do :slug. */}
-        <Route path="influenciadores" element={<InfluenciadoresPage />} />
-        <Route path="minhas-afiliacoes" element={<MinhasAfiliacoesPage />} />
         <Route path=":slug" element={<ClubeLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="membros" element={<MembrosPage />} />

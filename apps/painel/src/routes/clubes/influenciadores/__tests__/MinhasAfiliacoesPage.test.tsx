@@ -47,8 +47,8 @@ function afiliacao(over: Partial<MinhaAfiliacao> = {}): MinhaAfiliacao {
 const writeText = vi.fn<(s: string) => Promise<void>>();
 
 function renderPage(): void {
-  // MemoryRouter: desde a D-1008-R9 a página monta o menu secundário da área
-  // (ClubesAreaNav → useNavigate) — harness de montagem, asserções intactas.
+  // MemoryRouter: harness de montagem (a página vive sob o router; o menu da
+  // área saiu dela na D-1008-R16 — hoje é da moldura ClubesAreaLayout).
   render(
     <MemoryRouter initialEntries={['/clubes/minhas-afiliacoes']}>
       <ToastProvider>

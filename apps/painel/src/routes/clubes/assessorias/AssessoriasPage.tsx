@@ -17,6 +17,7 @@ import {
   Button,
   ConfirmModal,
   EmptyState,
+  PageHeader,
   SearchInput,
   Skeleton,
   Table,
@@ -27,7 +28,6 @@ import { encerrarParceriaAssessoria } from '@leela/api-client';
 import type { ParceriaAssessoria } from '@leela/core';
 import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useParceriasAssessoria } from './_data/assessorias';
-import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 import {
   formatarDocumentoValor,
   statusParceriaBadge,
@@ -118,28 +118,29 @@ export function AssessoriasPage(): JSX.Element {
     { key: 'responsavel', header: 'Responsável', render: (p) => p.responsavelEmail },
   ];
 
+  // D-1008-R16: era ESTA página o "layout quebrado" que o dono nomeou — o menu
+  // da área vinha DENTRO de uma coluna `mx-auto max-w-5xl` com `px-0` e o
+  // header era custom, então o menu saltava de posição e largura vs TODAS as
+  // abas irmãs. Realinhada à anatomia da área: o menu é da moldura
+  // (ClubesAreaLayout), o header é o PageHeader canônico e o conteúdo corre
+  // full-width em `px-6`, como nas irmãs.
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
-      {/* D-1008-R9: menu secundário canônico da área de clubs. O px próprio do
-          SubNav sai (px-0) porque esta página já carrega o padding do wrapper. */}
-      <ClubesAreaNav ativa="assessorias" className="px-0" />
-      <header className="flex flex-wrap items-start justify-between gap-[var(--spacing-3)]">
-        <div className="flex flex-col gap-[var(--spacing-1)]">
-          <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
-            Assessorias parceiras
-          </h1>
-          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-            {/* D-1008-R8: "(E18)" era jargão interno vazando para o usuário —
-                cortado; a distinção sem comissão/split fica (é o que separa
-                assessoria de influenciador). */}
-            Clubs parceiros com condição de desconto exclusiva — sem comissão, sem split.
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => navigate('/clubes/assessorias/nova')}>
-          Cadastrar assessoria
-        </Button>
-      </header>
-
+    <div className="flex flex-col gap-[var(--spacing-6)]">
+      <PageHeader
+        title="Assessorias parceiras"
+        subtitle={
+          // D-1008-R8: "(E18)" era jargão interno vazando para o usuário —
+          // cortado; a distinção sem comissão/split fica (é o que separa
+          // assessoria de influenciador).
+          'Clubs parceiros com condição de desconto exclusiva — sem comissão, sem split.'
+        }
+        actions={
+          <Button variant="primary" onClick={() => navigate('/clubes/assessorias/nova')}>
+            Cadastrar assessoria
+          </Button>
+        }
+      />
+      <div className="flex flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)]">
       {session.status === 'authenticated' && session.tenantId === null ? (
         <EmptyState
           title="Sessão sem organizador"
@@ -208,6 +209,7 @@ export function AssessoriasPage(): JSX.Element {
           )}
         </div>
       )}
+      </div>
 
       <ConfirmModal
         open={alvo !== null}

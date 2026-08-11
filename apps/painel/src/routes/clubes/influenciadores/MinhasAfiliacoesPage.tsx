@@ -26,7 +26,6 @@ import {
   type MinhaAfiliacao,
 } from '@leela/api-client';
 import { ExtratoRepasses } from './_components/ExtratoRepasses';
-import { ClubesAreaNav } from '../_components/ClubesAreaNav';
 
 function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -223,9 +222,8 @@ export function MinhasAfiliacoesPage(): JSX.Element {
       {/* D-1008-R8: frase de apoio cortada — KPIs e cartões dizem o que há; o
           recorte "só as suas conversões" segue garantido pela RN-318 (dado),
           não por aviso. */}
+      {/* D-1008-R16: o menu secundário da área é da MOLDURA (ClubesAreaLayout). */}
       <PageHeader title="Minhas afiliações" />
-      {/* D-1008-R9: menu secundário canônico da área de clubs. */}
-      <ClubesAreaNav ativa="minhas-afiliacoes" />
       <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">
         {temAfiliacoes ? (
           <section
