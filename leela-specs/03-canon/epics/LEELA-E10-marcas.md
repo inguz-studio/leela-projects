@@ -184,6 +184,7 @@ Consolidar as ativações de cada marca via índice inverso mantido por Function
 > O Vitor (adendo 2): *"a parte de marcas é para ter salvo patrocinadores que já foram cadastrados previamente em algum evento, para que quando haja a necessidade de cadastrar algum patrocinador, futuramente, já haja a listagem."* O recorte **listagem reutilizável** (seed de S811) foi ANTECIPADO no LOTE R9; as ativações consolidadas (S812) seguem no horizonte do épico (Icebox).
 
 - **RN-171 · Registro de patrocinador reutilizável no tenant + autocomplete.** O patrocinador cadastrado fica salvo no registro reutilizável (`profissionais/{profId}/marcas`, o alvo de S811) e alimenta o cadastro futuro de patrocínio em outro evento por **autocomplete/seleção** — não se recomeça do zero. Reusa o shape `ParceriaPatrocinador` (`packages/core/src/clubs/parceria.ts:122-132`: nome/modeloComercial/valorAnual/contrapartida) promovido a registro reutilizável. RN-123 ✅ (modelo comercial).
+  - **Marca não se apaga (decisão do dono, 09/08 · PATROCINADOR-TOGGLE).** Nenhuma superfície do produto exclui uma marca do registro. O que existe é o interruptor sobre o `status` que o modelo já carrega (`ativa | inativa`, `packages/core/src/brands/marca.ts`): marca **inativa** some do autocomplete de patrocínios **novos** e continua listada, com o estado visível, para poder voltar. Desligar avisa na tela o que muda e o que não muda; a contagem de patrocínios afetados **não** entra no aviso enquanto o **S812** estiver no gelo, porque não há leitor barato para ela. Patrocínios já cadastrados em eventos e clubes nunca são tocados — são cópias independentes, e isso é provado por teste, não descrito. Registro: `02-rodadas/2026-08-09-decisoes-dono/01-decisoes-dono.md` §20.
 
 Story `S-R9-12`. Spec: `02-rodadas/2026-07-18-ux-review/`.
 
@@ -194,13 +195,22 @@ A **tela dedicada** do recorte S811 foi entregue no painel (antes só havia o re
 - **Rota própria `/marcas`** na sidebar (o item "Marcas" do DS, antes inerte, agora navega) — decisão de navegação: rota de 1º nível, não aba em Configurações, pelo padrão do painel (espelho de `CrmRoutes`) e porque o DS já reserva o item "Marcas". Commits `[LEELA-MARCAS-T1..T3]`.
 - **Lista** densa (logo 1:1 + nome + Badge de modelo comercial + detalhe R$/ano ou contrapartida), busca por nome, contador "mostrando X de Y", EmptyState honesto.
 - **Criar/editar** via modal do DS (nome + modelo RN-123 condicional + valor/contrapartida + FileInput de logo 1:1 upload-only). Em edição o docId é fixo (renomear não cria órfão).
-- **Excluir** via `ConfirmModal` com consequências reais.
+- **Excluir** via `ConfirmModal` com consequências reais. **⛔ Removido em 11/08** pelo PATROCINADOR-TOGGLE — ver abaixo.
 
 **Decisões documentadas (honestidade de dado):**
 - "Em quantos patrocínios a marca é usada" foi **OMITIDO** — a contagem de ativações (`qtdAtivacoes`) é o **S812** (ainda 🧊 Icebox) e não há reader barato neste recorte. Não se exibe número inventado; a tela explica o papel do registro.
-- **Semântica de exclusão:** excluir remove o doc do registro reutilizável — a marca sai do autocomplete de patrocínios **futuros**; patrocínios **já cadastrados** em eventos/clubes são cópias independentes (`ParceriaPatrocinador`) e **permanecem intactos**. Documentada na própria `ConfirmModal`.
+- **Semântica de exclusão:** excluir removia o doc do registro reutilizável — a marca saía do autocomplete de patrocínios **futuros**; patrocínios **já cadastrados** em eventos/clubes são cópias independentes (`ParceriaPatrocinador`) e **permaneciam intactos**. Registro histórico: a exclusão saiu do produto em 11/08.
 
-**Falta (segue no horizonte do épico):** consolidação de ativações + toggle de logo (**S812**), que mantém `marcas/{marcaId}/ativacoes` + `qtdAtivacoes` por Function. Quando entrar, exibir a contagem na lista e trocar o preview da exclusão para as ativações afetadas.
+### Liga e desliga no lugar da exclusão (PATROCINADOR-TOGGLE · 2026-08-11)
+
+O dono decidiu em 09/08: *"Podemos deixar botao de liga e desliga, avisando"*, esclarecido como *"para excluir algum patrocinador, que na verdade será liga e desliga"*. O que mudou na tela:
+
+- O botão **Excluir** e o `ConfirmModal` de consequências saíram da `MarcasPage`. A porta `excluirMarca` saiu do `@leela/api-client` no mesmo commit — botão religado por engano não encontra função para chamar.
+- A coluna **"No autocomplete"** traz o `Switch` do DS (cânone §3, liga/desliga com efeito imediato) ao lado do `Badge` de estado (cânone §4). O `ConfirmModal` **não** foi reaproveitado de propósito: ele é a peça da ação destrutiva (cânone §8, botão `destructive`), e vestir de vermelho um gesto reversível ensinaria de volta o medo que a decisão removeu.
+- O aviso é a **frase genérica** do §20 e sai no toast da escrita (cânone §11): diz que a marca some do autocomplete de patrocínios novos e que os patrocínios já cadastrados continuam intactos. O **número** de patrocínios afetados continua fora, e entra quando o **S812** sair do gelo — custa uma string.
+- Defeito fechado no mesmo build: o `MarcaFormModal` não carrega `status` no input e a escrita é `setDoc` com `merge` carimbando `status: input.status ?? 'ativa'` — editar uma marca **desligada** a religava em silêncio. O input passa a preservar o `status` de origem; o formulário continua sem campo de estado, porque o estado é do interruptor.
+
+**Falta (segue no horizonte do épico):** consolidação de ativações + toggle de logo (**S812**), que mantém `marcas/{marcaId}/ativacoes` + `qtdAtivacoes` por Function. Quando entrar, exibir a contagem na lista e trocar a frase genérica do aviso pelo número de patrocínios afetados.
 
 ## Plano de execução (ESPEC-SWEEP · 2026-07-19)
 

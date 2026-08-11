@@ -12,6 +12,7 @@ import type { ComboboxOption } from '@leela/design-system';
 import type { Marca, ModeloComercial } from '@leela/core';
 import {
   CONTRAPARTIDA_MIN,
+  marcasParaAutocomplete,
   modeloComercialLabel,
   validarPatrocinador,
   type PatrocinadorInput,
@@ -61,10 +62,11 @@ export function AddPatrocinadorModal({
   // Combobox do DS (shadcn §8 · S-R9-12-T2) — busca embutida no painel do DS,
   // não a "caixa do SO". Escolher preenche o form (parte da listagem, não do
   // zero); a lista cresce, então busca > chips fixos.
-  const marcasAtivas = useMemo(
-    () => (marcasDoRegistro ?? []).filter((m) => m.status === 'ativa'),
-    [marcasDoRegistro],
-  );
+  //
+  // O corte por `status` mora em `_lib/parcerias` (PATROCINADOR-TOGGLE): ele é
+  // metade do que o interruptor da tela de marcas promete, e aqui dentro do
+  // componente nenhum teste o alcançava.
+  const marcasAtivas = useMemo(() => marcasParaAutocomplete(marcasDoRegistro), [marcasDoRegistro]);
   const opcoesMarca: ComboboxOption[] = useMemo(
     () => marcasAtivas.map((m) => ({ value: m.id, label: m.nome })),
     [marcasAtivas],

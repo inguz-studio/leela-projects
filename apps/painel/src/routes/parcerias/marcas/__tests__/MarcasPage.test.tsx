@@ -1,8 +1,9 @@
 // =============================================================================
 // MarcasPage (E10 · S811 seed · RN-171) — estados do módulo Marcas: vazio
-// honesto, erro, dados + contador, criar, editar e excluir (ConfirmModal com
-// consequências). api-client mockado (sem Firestore); core real (validação
-// condicional RN-123 roda de verdade). useToast exige ToastProvider real.
+// honesto, erro, dados + contador, criar, editar e o interruptor que substituiu
+// a exclusão (PATROCINADOR-TOGGLE). api-client mockado (sem Firestore); core
+// real (validação condicional RN-123 roda de verdade). useToast exige
+// ToastProvider real.
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -16,7 +17,7 @@ const mocks = vi.hoisted(() => ({
   onSessionChange: vi.fn(),
   listarMarcas: vi.fn(),
   salvarMarca: vi.fn(),
-  excluirMarca: vi.fn(),
+  definirStatusDaMarca: vi.fn(),
   uploadLogoMarca: vi.fn(),
 }));
 
@@ -24,7 +25,7 @@ vi.mock('@leela/api-client', () => ({
   onSessionChange: mocks.onSessionChange,
   listarMarcas: mocks.listarMarcas,
   salvarMarca: mocks.salvarMarca,
-  excluirMarca: mocks.excluirMarca,
+  definirStatusDaMarca: mocks.definirStatusDaMarca,
   uploadLogoMarca: mocks.uploadLogoMarca,
   marcaIdDoNome: (nome: string) => nome.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
   getLeelaDb: () => ({}),
@@ -64,7 +65,7 @@ beforeEach(() => {
   mocks.onSessionChange.mockReset();
   mocks.listarMarcas.mockReset();
   mocks.salvarMarca.mockReset();
-  mocks.excluirMarca.mockReset();
+  mocks.definirStatusDaMarca.mockReset();
   mocks.uploadLogoMarca.mockReset();
 });
 
@@ -153,25 +154,124 @@ describe('MarcasPage', () => {
     expect(marcaId).toBe('cdl-wellness');
   });
 
-  it('excluir: ConfirmModal com consequências e chama excluirMarca', async () => {
-    setSession('u1');
-    mocks.listarMarcas.mockResolvedValue([marca()]);
-    mocks.excluirMarca.mockResolvedValue(undefined);
-    renderPage();
-    await screen.findByText('CDL Wellness');
+  // ── PATROCINADOR-TOGGLE (decisão do dono de 09/08 §20) ──────────────────
+  // O job: tirar uma marca do autocomplete sem perder o registro dela.
+  describe('interruptor no lugar da exclusão', () => {
+    it('não existe mais caminho de tela que apague uma marca', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([marca()]);
+      renderPage();
+      await screen.findByText('CDL Wellness');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
-    expect(await screen.findByText('Excluir marca do registro?')).toBeInTheDocument();
-    // Consequência honesta: patrocínios já cadastrados permanecem.
-    expect(
-      screen.getByText(/Patrocínios já cadastrados em eventos e clubes continuam intactos/),
-    ).toBeInTheDocument();
+      // Nem o botão, nem o rótulo do modal que ele abria.
+      expect(screen.queryByRole('button', { name: /excluir/i })).toBeNull();
+      expect(screen.queryByText(/excluir marca/i)).toBeNull();
+      // E a porta do api-client foi junto: se alguém religar o botão, o
+      // import não existe mais. Aqui provamos o que a tela alcança.
+      expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument();
+    });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir marca' }));
-    await waitFor(() => expect(mocks.excluirMarca).toHaveBeenCalled());
-    const [, uid, marcaId] = mocks.excluirMarca.mock.calls[0]!;
-    expect(uid).toBe('u1');
-    expect(marcaId).toBe('cdl-wellness');
+    it('desligar chama definirStatusDaMarca com "inativa" e avisa o que muda', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([marca()]);
+      mocks.definirStatusDaMarca.mockResolvedValue(undefined);
+      renderPage();
+      await screen.findByText('CDL Wellness');
+
+      const interruptor = screen.getByRole('switch', {
+        name: 'CDL Wellness: aparecer no autocomplete de patrocínios novos',
+      });
+      expect(interruptor).toBeChecked();
+
+      await userEvent.click(interruptor);
+      await waitFor(() => expect(mocks.definirStatusDaMarca).toHaveBeenCalled());
+      const [, uid, marcaId, status] = mocks.definirStatusDaMarca.mock.calls[0]!;
+      expect(uid).toBe('u1');
+      expect(marcaId).toBe('cdl-wellness');
+      expect(status).toBe('inativa');
+
+      // O "avisando" do dono: a frase genérica, na tela, dizendo o que muda…
+      expect(
+        await screen.findByText(
+          /não aparece mais no autocomplete ao cadastrar patrocínios novos/i,
+        ),
+      ).toBeInTheDocument();
+      // …e o que NÃO muda — os patrocínios já cadastrados são cópias.
+      expect(
+        screen.getByText(
+          /patrocínios já cadastrados em eventos e clubes continuam intactos/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('marca desligada continua listada, com o estado visível e o caminho de volta', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([marca()]);
+      mocks.definirStatusDaMarca.mockResolvedValue(undefined);
+      renderPage();
+      await screen.findByText('CDL Wellness');
+
+      await userEvent.click(
+        screen.getByRole('switch', {
+          name: 'CDL Wellness: aparecer no autocomplete de patrocínios novos',
+        }),
+      );
+      await waitFor(() => expect(mocks.definirStatusDaMarca).toHaveBeenCalledTimes(1));
+
+      // Continua na lista, e o estado é legível sem interpretar a posição do
+      // controle — é o que permite achá-la para religar.
+      expect(screen.getByText('CDL Wellness')).toBeInTheDocument();
+      expect(screen.getByText('Mostrando 1 de 1 marca')).toBeInTheDocument();
+      const interruptor = await screen.findByRole('switch', {
+        name: 'CDL Wellness: aparecer no autocomplete de patrocínios novos',
+      });
+      await waitFor(() => expect(interruptor).not.toBeChecked());
+      expect(screen.getByText('Inativa')).toBeInTheDocument();
+
+      // E o caminho de volta funciona: religar escreve 'ativa'.
+      await userEvent.click(interruptor);
+      await waitFor(() => expect(mocks.definirStatusDaMarca).toHaveBeenCalledTimes(2));
+      expect(mocks.definirStatusDaMarca.mock.calls[1]![3]).toBe('ativa');
+    });
+
+    it('falha ao desligar não mente: o estado na tela não muda', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([marca()]);
+      mocks.definirStatusDaMarca.mockRejectedValue(new Error('permission-denied'));
+      renderPage();
+      await screen.findByText('CDL Wellness');
+
+      await userEvent.click(
+        screen.getByRole('switch', {
+          name: 'CDL Wellness: aparecer no autocomplete de patrocínios novos',
+        }),
+      );
+      expect(
+        await screen.findByText('Não foi possível desativar a marca'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('switch', {
+          name: 'CDL Wellness: aparecer no autocomplete de patrocínios novos',
+        }),
+      ).toBeChecked();
+      expect(screen.getByText('Ativa')).toBeInTheDocument();
+    });
+
+    it('editar uma marca DESLIGADA não a religa em silêncio', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([marca({ status: 'inativa' })]);
+      mocks.salvarMarca.mockResolvedValue('cdl-wellness');
+      renderPage();
+      await screen.findByText('CDL Wellness');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Editar' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar alterações' }));
+
+      await waitFor(() => expect(mocks.salvarMarca).toHaveBeenCalled());
+      const [, , input] = mocks.salvarMarca.mock.calls[0]!;
+      expect(input).toMatchObject({ status: 'inativa' });
+    });
   });
 
   // ── Miniatura do logo (RN-171 · RN-236) ─────────────────────────────────

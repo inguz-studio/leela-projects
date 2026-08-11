@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import type { Marca, StatusMarca } from '@leela/core';
 import {
   eventoNomeLegivel,
   formatBRL,
   kpisParcerias,
+  marcasParaAutocomplete,
   modeloComercialLabel,
   separarParcerias,
   statusParceriaBadge,
@@ -80,5 +82,31 @@ describe('rótulos e formatação', () => {
   it('formatBRL formata em reais pt-BR', () => {
     expect(formatBRL(1234.5)).toContain('1.234,50');
     expect(formatBRL(640)).toContain('640,00');
+  });
+});
+
+// ── PATROCINADOR-TOGGLE (decisão do dono de 09/08 §20) ────────────────────
+describe('marcasParaAutocomplete', () => {
+  function mkMarca(id: string, status: StatusMarca): Marca {
+    return {
+      id,
+      nome: id,
+      modeloComercial: 'financeiro',
+      valorAnual: 1000,
+      status,
+      criadoEm: { seconds: 0, nanoseconds: 0 } as unknown as Marca['criadoEm'],
+      atualizadoEm: { seconds: 0, nanoseconds: 0 } as unknown as Marca['atualizadoEm'],
+    };
+  }
+
+  it('a marca desligada some do autocomplete de patrocínios novos', () => {
+    const registro = [mkMarca('cafe-rota', 'ativa'), mkMarca('cdl', 'inativa')];
+    expect(marcasParaAutocomplete(registro).map((m) => m.id)).toEqual(['cafe-rota']);
+  });
+
+  it('registro que não chegou não vira lista vazia disfarçada de registro vazio', () => {
+    expect(marcasParaAutocomplete(null)).toEqual([]);
+    expect(marcasParaAutocomplete(undefined)).toEqual([]);
+    expect(marcasParaAutocomplete([])).toEqual([]);
   });
 });

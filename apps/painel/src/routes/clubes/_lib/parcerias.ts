@@ -5,6 +5,7 @@
 // =============================================================================
 
 import type {
+  Marca,
   ModeloComercial,
   Parceria,
   ParceriaEventoAfiliado,
@@ -94,6 +95,26 @@ const MODELO_MAPA: Record<ModeloComercial, string> = {
 
 export function modeloComercialLabel(modelo: ModeloComercial): string {
   return MODELO_MAPA[modelo] ?? modelo;
+}
+
+// ---------------------------------------------------------------------------
+// O registro de marcas que alimenta o autocomplete (RN-171 · PATROCINADOR-TOGGLE)
+// ---------------------------------------------------------------------------
+
+/**
+ * As marcas do registro que podem PARTIR um cadastro novo de patrocínio.
+ *
+ * A regra é a metade que o PATROCINADOR-TOGGLE existe para tornar verdadeira:
+ * marca desligada continua no registro do profissional e some daqui. Vivia
+ * embutida num `useMemo` do modal, verdadeira e inchecável — abrir o painel do
+ * Combobox portalizado sob o Dialog não acontece no jsdom, então nenhum teste
+ * alcançava a lista de opções. Pura, ela se prova em uma linha.
+ *
+ * `null` (falha de carga do registro) e lista vazia devolvem o mesmo vazio: a
+ * seção de seleção some, e ninguém parte de um registro que não chegou. @pure
+ */
+export function marcasParaAutocomplete(marcas: Marca[] | null | undefined): Marca[] {
+  return (marcas ?? []).filter((m) => m.status === 'ativa');
 }
 
 // ---------------------------------------------------------------------------
