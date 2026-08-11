@@ -5,7 +5,7 @@
 // A NARRATIVA É A DO PROTÓTIPO, e ela é boa: comunidade → ponte → resultado.
 // Três seções com cabeçalho e legenda, na ordem em que a pergunta do
 // organizador amadurece: "quem está aqui?", "isso vira participação?", "e o que
-// aconteceu na prova?".
+// aconteceu no evento?".
 //
 // A VERDADE DE DADO É A REGRA DURA, e ela mudou o desenho. O estudo pede
 // check-in por pilar, mapa por hora do dia, volume no tempo, ranking de ações e
@@ -99,6 +99,14 @@ export interface EngajamentoViewProps {
   modalidades: ModalidadeDaComunidade[] | null;
   loading: boolean;
   error: Error | null;
+  /**
+   * Recarrega a leitura da comunidade (UXW-FIX · MEL-01).
+   *
+   * O bloco de erro desta tela era o único da área sem saída: dizia que falhou
+   * e deixava a pessoa com a tecla de recarregar do navegador. O irmão do hub e
+   * o de assessorias já ofereciam "Tentar novamente" — este passa a oferecer.
+   */
+  onRetry?: (() => void) | undefined;
   /** Sem nenhum club no tenant — a tela inteira degrada para o convite. */
   semClubes: boolean;
   onCriarClube: () => void;
@@ -364,7 +372,7 @@ function ModalidadesDaComunidade({
         ajuda={
           excedeTop && recorte === 'top'
             ? `As ${RANKING_MAX_MODALIDADES} modalidades com mais membros ativos, de ${lista.length} com gente. Troque o recorte para ver todas.`
-            : 'Membros ativos somados por modalidade dos seus clubs. A modalidade é a do club — não é interesse declarado pelo atleta, que o sistema não guarda — e uma pessoa ativa em dois clubs conta em cada um. Modalidade sem ninguém sai da lista.'
+            : 'Membros ativos somados por modalidade dos seus clubs. A modalidade é a do club, não um interesse que o membro declarou: esse campo não existe. Uma pessoa ativa em dois clubs conta nos dois. Modalidade sem ninguém sai da lista.'
         }
         controle={
           excedeTop ? (
@@ -427,6 +435,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
     modalidades,
     loading,
     error,
+    onRetry,
     semClubes,
     onCriarClube,
   } = props;
@@ -461,7 +470,10 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
           <EmptyState
             icon={<Users aria-hidden />}
             title="Nenhum club para analisar"
-            description="O engajamento nasce da comunidade. Crie um club e esta tela passa a contar quem aparece, o que move o grupo e quanto disso chega aos seus eventos."
+            // UXW-FIX · MEL-10: a abertura era enchimento ("X nasce de Y") e
+            // ainda prometia contagem de presença que esta mesma tela declara
+            // ausente três vezes. Sobra o que a tela realmente passa a mostrar.
+            description="Crie um club e esta tela passa a mostrar quem está na sua comunidade, o que move o grupo e quanto disso chega aos seus eventos."
             action={
               // Botão do DS, não markup cru — mesmo trabalho que ComunidadeResumo.tsx
               // já faz para "Criar um club" (D-10, REV 2026-08-09 · ADIÇÃO).
@@ -471,12 +483,20 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             }
           />
         ) : error ? (
+          // UXW-FIX · MEL-01: a segunda frase era justificativa de projeto
+          // dirigida a quem revisa ("os números só aparecem completos"), e o
+          // bloco não oferecia saída nenhuma. Agora ele diz o que houve e dá o
+          // botão — mesmo par do hub de clubs e de assessorias parceiras.
           <div
             role="alert"
-            className="rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-5)] text-[var(--text-primary)]"
+            className="flex flex-col items-start gap-[var(--spacing-3)] rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-5)] text-[var(--text-primary)]"
           >
-            Não foi possível carregar o engajamento da sua comunidade. Os números desta tela
-            só aparecem completos — nenhum bloco mostra parte do dado como se fosse o todo.
+            <p>Não foi possível carregar o engajamento da sua comunidade. Tente novamente.</p>
+            {onRetry ? (
+              <Button variant="secondary" size="sm" onClick={onRetry}>
+                Tentar novamente
+              </Button>
+            ) : null}
           </div>
         ) : (
           <>
@@ -519,7 +539,12 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <section aria-label="Equilíbrio dos pilares" className="flex flex-col flex-1">
                 <SecaoHead
                   titulo="Equilíbrio dos pilares"
-                  ajuda="Média de pontos por participante em cada pilar sobre o mínimo exigido, ponderada pelo tamanho dos desafios que operam equilíbrio. Não existe distribuição-alvo entre os três: o bloco mostra onde a comunidade está pesando, não onde ela deveria pesar."
+                  // UXW-FIX · MEL-05: a frase antiga encaixava três
+                  // qualificações numa só ("por participante", "sobre o mínimo
+                  // exigido", "ponderada pelo tamanho") e não sobrava leitura
+                  // para quem não desenhou o cálculo. Duas frases, uma ideia
+                  // cada — o que se mede, e o que pesa mais na média.
+                  ajuda="Quanto a comunidade acumulou em cada pilar, em média por participante, comparado ao mínimo do desafio. Desafios com mais gente pesam mais na média. Não existe distribuição-alvo entre os três: o bloco mostra onde a comunidade está pesando, não onde ela deveria pesar."
                 />
                 {loading || pilares === null ? (
                   <Skeleton variant="rect" className="h-40" />
@@ -588,7 +613,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 <Painel>
                   <EmptyState
                     title="Ninguém entrou ainda"
-                    description="Assim que o primeiro atleta usar o código, um convite ou o link do club, a porta dele aparece aqui."
+                    description="Assim que a primeira pessoa entrar pelo código, por um convite ou pelo link do club, a porta dela aparece aqui."
                   />
                 </Painel>
               ) : (
@@ -626,7 +651,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             <CardEmBreve
               titulo="Check-ins realizados"
               icon={<ListOrdered aria-hidden />}
-              causa="O bloco do estudo mostra o total de check-ins do período, a divisão entre os três pilares e o ranking de ações com o Top 10. Tudo depende da contagem de registros por ação — quilômetros, sessões, páginas, noites —, que vive no registro de cada atleta, e as Rules não abrem esse caminho para o organizador. O agregado do desafio guarda pontos médios por pilar, nunca a contagem nem a ação que a formou."
+              causa="O bloco do estudo mostra o total de check-ins do período, a divisão entre os três pilares e o ranking de ações com o Top 10. Tudo depende da contagem de registros por ação — quilômetros, sessões, páginas, noites —, que fica no registro pessoal de quem fez a atividade, e o organizador não tem acesso a esse registro. O que o desafio guarda é a média de pontos por pilar, nunca a contagem de ações."
             />
             </Cascata>
 
@@ -635,7 +660,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <CardEmBreve
                 titulo="Mapa de Check-ins"
                 icon={<CalendarClock aria-hidden />}
-                causa="O club não registra presença: o único check-in que existe é o do QR na largada de um evento, e os registros de atividade do atleta não são legíveis pelo organizador. Sem essa fonte, não há hora nem dia para pintar."
+                causa="O club não registra presença: o único check-in que existe é o do QR na largada de um evento, e os registros de atividade de cada participante não ficam disponíveis para o organizador. Sem essa fonte, não há hora nem dia para pintar."
               />
               <CardEmBreve
                 titulo="Volume de Check-ins"
@@ -666,7 +691,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             <section aria-label="Desafios ligados a um evento" className="flex flex-col">
               <SecaoHead
                 titulo="Desafios ligados a um evento"
-                ajuda="Quanto da atividade em andamento já está apontada para uma prova sua. É intenção declarada no desafio, não inscrição confirmada: um desafio ligado a um evento não significa que os participantes se inscreveram nele."
+                ajuda="Quanto da atividade em andamento já está apontada para um evento seu. É intenção declarada no desafio, não inscrição confirmada: um desafio ligado a um evento não significa que os participantes se inscreveram nele."
               />
               {loading || ponte === null ? (
                 <Skeleton variant="rect" className="h-32" />
@@ -674,7 +699,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 <Painel>
                   <EmptyState
                     title="Nenhum desafio em andamento"
-                    description="Vincular um desafio a um evento transforma o treino da comunidade em preparação para a sua prova."
+                    description="Vincular um desafio a um evento transforma a atividade da comunidade em preparação para o seu evento."
                   />
                 </Painel>
               ) : (
@@ -692,23 +717,24 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </section>
             </Cascata>
 
+            {/* UXW-FIX · MEL-02 + BLQ-17: este era o único em-breve da tela
+                fora do padrão da casa — título em frase inteira ("ainda não é
+                mensurável", que lê como defeito permanente), sem "em breve" e
+                com 52 palavras de causa, três delas descrevendo o modelo de
+                dados. Vira o MESMO CardEmBreve dos cinco irmãos: nome da
+                métrica, causa em uma frase, "em breve" pelo componente. */}
             <Cascata i={9}>
-            <section aria-label="Conversão da base" className="flex flex-col">
-              <SecaoHead titulo="Conversão da base" />
-              <Painel>
-                <EmptyState
-                  icon={<GitBranch aria-hidden />}
-                  title="A conversão da base ainda não é mensurável"
-                  description="O funil pediria duas coisas que o sistema não guarda: quantas pessoas visitaram a página de um evento (nenhuma contagem de visitante existe) e quais membros de club compraram uma inscrição (o cadastro de cliente não carrega o vínculo com o club). Sem as duas, qualquer taxa aqui seria chute com cara de número."
-                />
-              </Painel>
-            </section>
+            <CardEmBreve
+              titulo="Conversão da base"
+              icon={<GitBranch aria-hidden />}
+              causa="Nem a contagem de quem visita a página de um evento nem a ligação entre membro de club e quem compra inscrição existem hoje, e sem as duas qualquer porcentagem aqui seria inventada."
+            />
             </Cascata>
 
             {/* ── Seção 3 · o resultado (estudo · D-1008-R15) ────────────── */}
             <SecaoTitulo
               titulo="Eventos"
-              legenda="O resultado: ocupação das provas e como as pessoas pagam."
+              legenda="O resultado: ocupação dos eventos e como as pessoas pagam."
             />
 
             <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2 items-stretch">
@@ -730,7 +756,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 <EmBreveV3
                   titulo="Formas de pagamento"
                   icon={<CreditCard aria-hidden />}
-                  causa="O doc de pagamento guarda a forma (PIX ou cartão), mas nenhum agregado por forma de pagamento chega ao cliente — e este painel não varre documentos financeiros para somar por conta própria. Quando a série financeira existir, o donut do estudo aparece aqui."
+                  causa="Cada pagamento registra se foi PIX ou cartão, mas ainda não existe um total por forma de pagamento. Quando ele existir, o gráfico aparece aqui."
                 />
               </Cascata>
             </div>

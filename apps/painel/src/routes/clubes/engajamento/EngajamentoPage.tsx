@@ -76,6 +76,14 @@ export function EngajamentoPage(): JSX.Element {
   const error = clubesState.error ?? dados.error;
   const semClubes = clubes !== null && clubes.length === 0;
 
+  // UXW-FIX · MEL-01: o "Tentar novamente" do bloco de erro. Recarrega as DUAS
+  // pontas — a lista de clubs e as leituras do recorte — porque o erro exibido
+  // é o primeiro que apareceu e não diz qual das duas falhou.
+  const onRetry = (): void => {
+    clubesState.refetch();
+    dados.refetch();
+  };
+
   const derivado = useMemo(() => {
     if (!dados.data) return null;
     return {
@@ -107,6 +115,7 @@ export function EngajamentoPage(): JSX.Element {
       onRetryEventos={eventosState.refetch}
       loading={loading}
       error={error}
+      onRetry={onRetry}
       semClubes={semClubes}
       onCriarClube={() => navigate('/clubes/novo')}
     />

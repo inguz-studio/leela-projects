@@ -176,7 +176,7 @@ describe('resumirSituacao · RN-102', () => {
       // Rótulo honesto (D-2): nenhuma Function grava `ultimaAtividadeEm` em
       // produção, então "inativo" aqui não é "sem atividade" — é "sem
       // registro". Ver ROTULO_SITUACAO para a prova completa.
-      { id: 'inativo', rotulo: 'Sem registro (30 dias+)', total: 1 },
+      { id: 'inativo', rotulo: 'Parados há 30 dias ou mais', total: 1 },
     ]);
   });
 

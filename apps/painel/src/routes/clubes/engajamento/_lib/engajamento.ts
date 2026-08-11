@@ -44,11 +44,16 @@ export const ROTULO_PILAR: Record<Pilar, string> = {
  * atividade desde então", não "treinou pela última vez há 30 dias" (D-2, REV
  * 2026-08-09). O escritor de `ultimaAtividadeEm` é card de backend próprio,
  * fora desta lane.
+ *
+ * UXW-FIX · MEL-07: o rótulo era "Sem registro (30 dias+)", e "sem registro"
+ * lê como "não se cadastrou" — a barra media gente parada, não gente sem
+ * cadastro. "Parados há 30 dias ou mais" diz o que a barra conta sem prometer
+ * a última atividade que a D-2 proíbe afirmar.
  */
 export const ROTULO_SITUACAO = {
   novo: 'Novos (7 dias)',
   ativo: 'Ativos',
-  inativo: 'Sem registro (30 dias+)',
+  inativo: 'Parados há 30 dias ou mais',
 } as const;
 
 export const ROTULO_ENTRADA = {
@@ -256,7 +261,7 @@ export function resumirEntrada(membros: readonly Membro[]): ContagemRotulada[] {
 
 /**
  * A ÚNICA ponte club→evento que existe hoje no dado: o desafio pode declarar um
- * `eventoVinculadoId` (RN-113 — o desafio vira preparação para a prova). Não é
+ * `eventoVinculadoId` (RN-113 — o desafio vira preparação para o evento). Não é
  * conversão (ninguém sabe quem comprou), é INTENÇÃO: quanto da atividade da
  * comunidade já está apontada para um evento seu.
  *

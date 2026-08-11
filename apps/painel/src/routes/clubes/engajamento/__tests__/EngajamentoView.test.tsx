@@ -36,7 +36,7 @@ function props(over: Partial<EngajamentoViewProps> = {}): EngajamentoViewProps {
     situacao: [
       { id: 'novo', rotulo: 'Novos (7 dias)', total: 8 },
       { id: 'ativo', rotulo: 'Ativos', total: 120 },
-      { id: 'inativo', rotulo: 'Sem registro (30 dias+)', total: 10 },
+      { id: 'inativo', rotulo: 'Parados há 30 dias ou mais', total: 10 },
     ],
     entrada: [{ id: 'codigo', rotulo: 'Código do club', total: 90 }],
     desafios: [
@@ -107,13 +107,19 @@ describe('EngajamentoView · o que tem fonte', () => {
       })
     ).toBeInTheDocument();
     const ajuda = await abrirAjuda('Equilíbrio dos pilares');
-    expect(ajuda).toHaveTextContent(/Média de pontos por participante em cada pilar/);
+    // MEL-05: a ajuda diz o que se mede e o que pesa mais, em duas frases —
+    // não mais três qualificações encaixadas numa só.
+    expect(ajuda).toHaveTextContent(/em média por participante, comparado ao mínimo do desafio/);
+    expect(ajuda).toHaveTextContent(/Desafios com mais gente pesam mais na média/);
   });
 
-  it('situação dos membros usa o rótulo honesto do dado (D-2: não é "sem atividade", é "sem registro")', async () => {
+  it('situação dos membros usa o rótulo honesto do dado (D-2 + MEL-07: é gente parada, não gente sem cadastro)', async () => {
     render(<EngajamentoView {...props()} />);
-    expect(valorNaTabela('Sem registro (30 dias+)')).toContain('10');
+    expect(valorNaTabela('Parados há 30 dias ou mais')).toContain('10');
+    // A D-2 segue de pé: o rótulo não afirma a ÚLTIMA atividade, que o dado
+    // não sustenta. E "Sem registro" saiu porque lia como "não se cadastrou".
     expect(screen.queryByText(/sem atividade há 30 dias/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/sem registro \(30 dias/i)).not.toBeInTheDocument();
     const ajuda = await abrirAjuda('Situação dos membros');
     expect(ajuda).toHaveTextContent(/há 30 dias ou mais sem nenhum registro de atividade/i);
   });
@@ -135,7 +141,7 @@ describe('EngajamentoView · cabeçalhos e o fim do "ponto de equilíbrio" (REFA
   it('a descrição sai da linha fixa do cabeçalho e vira o "?" — em portal, fora do card', async () => {
     const { container } = render(<EngajamentoView {...props()} />);
     expect(
-      screen.queryByText(/Média de pontos por participante em cada pilar/)
+      screen.queryByText(/em média por participante, comparado ao mínimo do desafio/)
     ).not.toBeInTheDocument();
     const ajuda = await abrirAjuda('Equilíbrio dos pilares');
     expect(container.contains(ajuda)).toBe(false);
@@ -228,18 +234,30 @@ describe('EngajamentoView · o que não tem fonte', () => {
     expect(within(secao).getByText(/total de check-ins do período/i)).toBeInTheDocument();
     expect(within(secao).getByText(/divisão entre os três pilares/i)).toBeInTheDocument();
     expect(within(secao).getByText(/ranking de ações com o Top 10/i)).toBeInTheDocument();
-    // …e a fonte que destrava tudo.
-    expect(within(secao).getByText(/as Rules não abrem esse caminho/i)).toBeInTheDocument();
+    // …e a fonte que destrava tudo, sem jargão de engenharia (BLQ-15).
+    expect(
+      within(secao).getByText(/o organizador não tem acesso a esse registro/i)
+    ).toBeInTheDocument();
+    expect(within(secao).queryByText(/Rules|agregado|atleta/i)).not.toBeInTheDocument();
     expect(within(secao).queryByRole('tab')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Ver top 10/i })).not.toBeInTheDocument();
   });
 
-  it('conversão da base explica as DUAS coisas que faltam, sem taxa nenhuma', () => {
+  /**
+   * MEL-02 + BLQ-17. O bloco era o único em-breve fora do padrão da casa: o
+   * título do estado era uma frase inteira ("ainda não é mensurável", que lê
+   * como defeito permanente), o "Em breve" não aparecia e a causa descrevia o
+   * modelo de dados em 52 palavras. Agora é o MESMO CardEmBreve dos irmãos.
+   */
+  it('conversão da base segue o padrão de em-breve da casa e explica as DUAS coisas que faltam', () => {
     render(<EngajamentoView {...props()} />);
     const secao = screen.getByRole('region', { name: 'Conversão da base' });
-    expect(within(secao).getByText(/nenhuma contagem de visitante existe/i)).toBeInTheDocument();
-    expect(within(secao).getByText(/não carrega o vínculo com o club/i)).toBeInTheDocument();
+    expect(within(secao).getByRole('heading', { name: 'Conversão da base' })).toBeInTheDocument();
+    expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+    expect(within(secao).getByText(/contagem de quem visita a página de um evento/i)).toBeInTheDocument();
+    expect(within(secao).getByText(/membro de club e quem compra inscrição/i)).toBeInTheDocument();
     expect(within(secao).queryByText('%')).not.toBeInTheDocument();
+    expect(within(secao).queryByText(/mensurável|cadastro de cliente|chute/i)).not.toBeInTheDocument();
   });
 
   it('sem desafio de equilíbrio, os pilares explicam a ausência em vez de mostrar zeros', () => {
@@ -261,6 +279,40 @@ describe('EngajamentoView · o que não tem fonte', () => {
     render(<EngajamentoView {...props({ entrada: [] })} />);
     const secao = screen.getByRole('region', { name: 'Como a comunidade entra' });
     expect(within(secao).getByText('Ninguém entrou ainda')).toBeInTheDocument();
+    // BLQ-02: quem entra num club de bem-estar é uma pessoa, não um "atleta".
+    expect(within(secao).getByText(/a primeira pessoa entrar pelo código/i)).toBeInTheDocument();
+    expect(within(secao).queryByText(/atleta/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * D-0802-1 — a categoria do produto é EXPERIÊNCIA. Corrida, prova e atleta são
+ * instâncias de um evento, nunca o nome que a plataforma dá à coisa. A
+ * fronteira que a diretriz NÃO atravessa é o conteúdo do organizador: o rótulo
+ * de modalidade que ele cadastrou ("Corrida de rua") continua intacto, e o
+ * fixture desta suíte prova as duas metades ao mesmo tempo.
+ */
+describe('EngajamentoView · vocabulário da plataforma (D-0802-1)', () => {
+  it('nenhuma superfície da tela chama a categoria de atleta, prova ou corrida', () => {
+    const { container } = render(<EngajamentoView {...props()} />);
+    const texto = container.textContent ?? '';
+    expect(texto).not.toMatch(/atleta/i);
+    expect(texto).not.toMatch(/\bprovas?\b/i);
+    // O rótulo do organizador sobrevive — é conteúdo dele, não da plataforma.
+    expect(texto).toMatch(/Corrida de rua/);
+  });
+
+  it('a ponte fala de EVENTO, não de prova nem de treino', async () => {
+    render(<EngajamentoView {...props({ ponte: [] })} />);
+    const secao = screen.getByRole('region', { name: 'Desafios ligados a um evento' });
+    // BLQ-06: "treino" e "prova" amarravam a frase a corrida — num retiro de
+    // bem-estar ela fica falsa.
+    expect(
+      within(secao).getByText(/transforma a atividade da comunidade em preparação para o seu evento/i)
+    ).toBeInTheDocument();
+    const ajuda = await abrirAjuda('Desafios ligados a um evento');
+    // BLQ-05.
+    expect(ajuda).toHaveTextContent(/já está apontada para um evento seu/i);
   });
 });
 
@@ -275,8 +327,11 @@ describe('EngajamentoView · modalidades da comunidade (estudo · bloco 4, vers�
     render(<EngajamentoView {...props()} />);
     const ajuda = await abrirAjuda('Modalidades da comunidade');
     expect(ajuda).toHaveTextContent(/a modalidade é a do club/i);
-    expect(ajuda).toHaveTextContent(/não é interesse declarado pelo atleta/i);
-    expect(ajuda).toHaveTextContent(/conta em cada um/i);
+    // BLQ-03: "atleta" era a categoria da plataforma para quem está no club —
+    // e a frase ainda empilhava três orações num travessão duplo.
+    expect(ajuda).toHaveTextContent(/não um interesse que o membro declarou/i);
+    expect(ajuda).not.toHaveTextContent(/atleta/i);
+    expect(ajuda).toHaveTextContent(/conta nos dois/i);
   });
 
   it('com mais de cinco modalidades, o card ganha o PRÓPRIO recorte (item 9)', async () => {
@@ -310,8 +365,10 @@ describe('EngajamentoView · banda Eventos (estudo · D-1008-R15)', () => {
   it('a banda existe com a legenda do estudo', () => {
     render(<EngajamentoView {...props()} />);
     expect(screen.getByRole('heading', { name: 'Eventos' })).toBeInTheDocument();
+    // BLQ-07: "provas" era a categoria do evento na voz da plataforma, logo
+    // abaixo de um título que já diz "Eventos".
     expect(
-      screen.getByText('O resultado: ocupação das provas e como as pessoas pagam.')
+      screen.getByText('O resultado: ocupação dos eventos e como as pessoas pagam.')
     ).toBeInTheDocument();
   });
 
@@ -361,9 +418,13 @@ describe('EngajamentoView · banda Eventos (estudo · D-1008-R15)', () => {
     render(<EngajamentoView {...props()} />);
     const secao = screen.getByRole('region', { name: 'Formas de pagamento' });
     expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+    // BLQ-16: "doc", "agregado" e "varre documentos" saíram — e com eles o
+    // "chega ao cliente", que numa tela de organizadora lê como se o COMPRADOR
+    // não recebesse algo.
     expect(
-      within(secao).getByText(/nenhum agregado por forma de pagamento chega ao cliente/i)
+      within(secao).getByText(/ainda não existe um total por forma de pagamento/i)
     ).toBeInTheDocument();
+    expect(within(secao).queryByText(/agregado|doc de pagamento|chega ao cliente/i)).not.toBeInTheDocument();
     expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
   });
 });
@@ -381,17 +442,34 @@ describe('EngajamentoView · estados da tela', () => {
     expect(screen.queryByText('138')).not.toBeInTheDocument();
   });
 
-  it('erro → alerta que explica por que a tela não mostra parte do dado', () => {
-    render(<EngajamentoView {...props({ error: new Error('falhou') })} />);
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      /nenhum bloco mostra parte do dado como se fosse o todo/i
+  /**
+   * MEL-01. O bloco de erro era o único da área sem saída: dizia que falhou e
+   * justificava a decisão de projeto ("os números só aparecem completos") para
+   * quem não pode fazer nada com ela. O irmão do hub já dizia "Tente
+   * novamente"; o botão tem precedente em assessorias parceiras.
+   */
+  it('erro → diz o que houve e OFERECE a saída, sem justificativa de projeto', async () => {
+    const onRetry = vi.fn();
+    render(<EngajamentoView {...props({ error: new Error('falhou'), onRetry })} />);
+    const alerta = screen.getByRole('alert');
+    expect(alerta).toHaveTextContent(
+      /Não foi possível carregar o engajamento da sua comunidade\. Tente novamente\./i
     );
+    expect(alerta).not.toHaveTextContent(/parte do dado como se fosse o todo/i);
+    await userEvent.click(within(alerta).getByRole('button', { name: 'Tentar novamente' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('138')).not.toBeInTheDocument();
   });
 
   it('tenant sem club → convite, sem filtro e sem seção nenhuma', () => {
     render(<EngajamentoView {...props({ semClubes: true })} />);
     expect(screen.getByText('Nenhum club para analisar')).toBeInTheDocument();
+    // MEL-10: nem abertura de enchimento ("o engajamento nasce da
+    // comunidade"), nem promessa de contar presença — que esta mesma tela
+    // declara ausente em três blocos.
+    expect(screen.queryByText(/nasce da comunidade/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/passa a contar quem aparece/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/passa a mostrar quem está na sua comunidade/i)).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Club analisado' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Números da comunidade' })
