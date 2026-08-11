@@ -17,6 +17,7 @@ import { formatarLocalizacaoClube } from '@leela/core';
 import { anoDe, formatInt } from '../_lib/format';
 import { clubeSubNavTabs, type ClubeAbaId } from '../_lib/subnav';
 import { tabsComNavSpa, trilhaComNavSpa } from '../../../lib/navSpa';
+import { linkClubePublico } from '../../../lib/linkPublico';
 
 export interface ClubeShellProps {
   clube: Clube;
@@ -53,7 +54,7 @@ function CodigoConvite({
       </span>
       <span aria-hidden>·</span>
       <span>
-        Página: <span className="text-[var(--text-primary)]">be-hero.com.br/c/{slug}</span>
+        Página: <span className="text-[var(--text-primary)]">{linkClubePublico(slug)}</span>
       </span>
     </div>
   );

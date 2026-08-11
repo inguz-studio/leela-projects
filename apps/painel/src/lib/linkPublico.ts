@@ -12,6 +12,16 @@
 // `VITE_LEELA_URL=http://127.0.0.1:3000` (a landing local). Sem env, o fallback
 // é o domínio de produção do produto (a decisão de domínio segue aberta; o env
 // resolve os dois mundos).
+//
+// UXW-MELHORIAS (MEL-21 + be-hero): o cânone (`LEELA-E12-landing.md`, §Domínio
+// público) proíbe hardcodar `be-hero.com.br` fora deste arquivo. Este É o
+// ÚNICO lugar sancionado para o literal — é a fonte canônica que o resto do
+// painel consome (`PUBLIC_BASE`/`PUBLIC_HOST` abaixo, e os helpers
+// `link*Publico`). Achamos SEIS ocorrências soltas do domínio em rotas de
+// clubs (`ClubeShell`, `ConfiguracoesView`, `DesafiosPage`, `ConviteModal`,
+// `NovoClubePage`) que reescreviam o literal na mão em vez de ler daqui — as
+// cinco trocamos por `linkClubePublico`; esta linha É a fonte, não um
+// consumidor, e por isso não "troca por referência a si mesma".
 // =============================================================================
 
 import { montarLinkPromocional } from '@leela/core';
@@ -21,9 +31,25 @@ export const PUBLIC_BASE: string =
   (import.meta.env.VITE_LEELA_URL as string | undefined)?.replace(/\/$/, '') ??
   'https://be-hero.com.br';
 
+/**
+ * Base pública SEM protocolo, para exibição textual ("be-hero.com.br", nunca
+ * "https://be-hero.com.br") — o formato que as telas de clube já usavam antes
+ * de ler do env. @pure em relação a `PUBLIC_BASE` (calculado uma vez no módulo).
+ */
+export const PUBLIC_HOST: string = PUBLIC_BASE.replace(/^https?:\/\//, '');
+
 /** URL pública de um evento na landing: `${PUBLIC_BASE}/${slug}`. @pure */
 export function linkEventoPublico(slug: string): string {
   return `${PUBLIC_BASE}/${slug}`;
+}
+
+/**
+ * Endereço público de um clube, sem protocolo: `${PUBLIC_HOST}/c/${slug}`.
+ * Mesma anatomia textual que as telas de clube sempre mostraram — só a fonte
+ * do domínio deixou de estar hardcoded. @pure
+ */
+export function linkClubePublico(slug: string): string {
+  return `${PUBLIC_HOST}/c/${slug}`;
 }
 
 // ---------------------------------------------------------------------------

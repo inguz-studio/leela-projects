@@ -16,6 +16,7 @@ import type { ClubeInput, VisibilidadeClube } from '@leela/core';
 import { gerarCodigoConvite, validarClube } from '@leela/core';
 import { criarClubePadrao } from '../_data/clubes';
 import { useTenantSession } from '../../../lib/session/tenantSession';
+import { linkClubePublico } from '../../../lib/linkPublico';
 import {
   CATEGORIA_OPCOES,
   MODALIDADE_OPCOES,
@@ -111,7 +112,7 @@ export function NovoClubePage(): JSX.Element {
           />
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             {slug
-              ? `Endereço público: be-hero.com.br/c/${slug} (definido na criação, não pode ser alterado depois)`
+              ? `Endereço público: ${linkClubePublico(slug)} (definido na criação, não pode ser alterado depois)`
               : 'O endereço público será derivado do nome.'}
           </span>
         </div>

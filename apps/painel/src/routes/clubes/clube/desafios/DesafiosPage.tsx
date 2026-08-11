@@ -12,6 +12,7 @@ import type { Desafio } from '@leela/core';
 import { DesafiosList, type AcaoDesafioId } from './DesafiosList';
 import { useDesafios } from '../../_data/desafios';
 import type { ClubeOutletContext } from '../ClubeLayout';
+import { linkClubePublico } from '@/lib/linkPublico';
 
 export function DesafiosPage(): JSX.Element {
   const { clube } = useOutletContext<ClubeOutletContext>();
@@ -31,7 +32,7 @@ export function DesafiosPage(): JSX.Element {
         break;
       case 'compartilhar':
         void navigator.clipboard
-          ?.writeText(`be-hero.com.br/c/${clube.slug}/desafios/${desafio.id}`)
+          ?.writeText(`${linkClubePublico(clube.slug)}/desafios/${desafio.id}`)
           .then(() => toast({ variant: 'success', title: 'Link do desafio copiado' }))
           .catch(() => toast({ variant: 'danger', title: 'Não foi possível copiar o link' }));
         break;
