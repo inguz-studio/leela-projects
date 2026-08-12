@@ -259,7 +259,22 @@ const controleCruForaDoDs = {
  * COMPÕE `Card` é o comportamento desejado. O que se pega é a DECLARAÇÃO.
  */
 
-/** Sinônimos reconhecidos por padrão — o batismo em outra língua ou outra moda. */
+/**
+ * Sinônimos reconhecidos por padrão — o batismo em outra língua ou outra moda.
+ *
+ * As seis últimas entradas nasceram na Onda 0 Parte B, junto com as peças de
+ * moldura, e é onde o batismo mais acontece: "Bento", "VStack" e "KpiGrid" são
+ * nomes que qualquer pessoa escreveria sem saber que o primitivo existe — a
+ * moldura passou o projeto inteiro sem canônico, então ninguém tem o reflexo
+ * de procurar.
+ *
+ * O que ficou DE FORA, e a razão importa mais que a lista: `ClubeCard`,
+ * `ComunicadoCard` e `CampanhaCard` não são sinônimos de `CardDominio`. A §5
+ * da spec protege explicitamente o wrapper que COMPÕE — `KitCard.tsx`
+ * compondo `Card` é o comportamento desejado —, e pôr esses nomes aqui
+ * proibiria para sempre o wrapper legítimo de uma família de domínio. A dívida
+ * deles é de SUPERFÍCIE, e quem a mede é a catraca, não a regra dura.
+ */
 export const SINONIMOS_PADRAO = {
   Select: ['Dropdown', 'DropdownSelect', 'Picker', 'Seletor'],
   Combobox: ['Autocomplete', 'SelectSearch', 'BuscaSelect'],
@@ -269,6 +284,12 @@ export const SINONIMOS_PADRAO = {
   EmptyState: ['Vazio', 'SemDados', 'NoData'],
   Toast: ['Notificacao', 'Snackbar', 'Alert'],
   Tooltip: ['Hint', 'Dica'],
+  Stack: ['VStack', 'Empilhamento', 'Pilha'],
+  FormGrid: ['GradeDeFormulario', 'FieldGrid', 'FormularioGrid'],
+  MetricGrid: ['KpiGrid', 'GradeDeIndicadores', 'MetricsGrid'],
+  SplitPanel: ['Bento', 'BentoGrid', 'SplitView', 'DoisPaineis'],
+  SectionHeader: ['SecaoHead', 'SectionHead', 'BlocoHead', 'CabecalhoDeBloco'],
+  CardDominio: ['CartaoDominio', 'EntityCard'],
 };
 
 /** true se a subárvore contém JSX — o que separa componente de função comum. */
