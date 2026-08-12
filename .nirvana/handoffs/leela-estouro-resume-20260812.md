@@ -135,7 +135,8 @@ Untracked de emulador limpos sem commitar: `firebase.estouro8080.json`,
 
 ## Merge
 
-`estouro-reserva` → `main`, `--no-ff`. Hash: HASH_AQUI. Push confirmado: `ahead 0`.
+`estouro-reserva` → `main`, `--no-ff`. Hash: `6e9dfdb4`. Push confirmado:
+`origin/main` sincronizado (`ahead 0`, `behind 0`).
 
 ## Fila
 
