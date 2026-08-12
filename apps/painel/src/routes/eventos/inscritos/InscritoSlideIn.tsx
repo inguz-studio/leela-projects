@@ -471,7 +471,7 @@ function AcaoEstorno({
         open={aberto}
         onOpenChange={(o) => !o && setAberto(false)}
         title="Estornar inscrição"
-        description="O valor da linha deste inscrito volta ao pagador. Dentro da janela de arrependimento o estorno sai na hora e a taxa de serviço volta junto; fora dela o pedido entra na fila de análise do organizador e a taxa fica retida. Quem decide a rota é o servidor, pela política do evento. Os demais inscritos do pedido não são afetados (estorno por inscrito)."
+        description="O valor da linha deste inscrito volta ao pagador. Dentro da janela de arrependimento o estorno sai na hora e o Serviço volta junto; fora dela o pedido entra na fila de análise do organizador e o Serviço fica retido. Quem decide a rota é o servidor, pela política do evento. Os demais inscritos do pedido não são afetados (estorno por inscrito)."
         target={
           <div className="flex flex-col gap-[var(--spacing-1)]">
             <span className="font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
@@ -484,7 +484,7 @@ function AcaoEstorno({
           </div>
         }
         loses={[
-          `Devolução de ${valorLabel} ao pagador (mais a taxa de serviço, dentro da janela de arrependimento)`,
+          `Devolução de ${valorLabel} ao pagador (mais o Serviço, dentro da janela de arrependimento)`,
           'A inscrição do atleta (deixa de correr e de receber o kit)',
         ]}
         keeps={[

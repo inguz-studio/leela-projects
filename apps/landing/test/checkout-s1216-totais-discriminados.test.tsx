@@ -96,41 +96,41 @@ function textoDosTotais(): string {
 
 // ── Resumo · a taxa que aparece (RN-435) ────────────────────────────────────
 
-describe('StepResumo · RN-435 — a taxa de serviço nomeia o meio quando é repassada', () => {
-  it('PIX: a linha diz "Taxa de serviço (PIX)" e mostra o valor em R$', () => {
+describe('StepResumo · RN-435/SERV-3 — o Serviço nomeia o meio quando é repassado', () => {
+  it('PIX: a linha diz "Serviço (PIX)" e mostra o valor em R$', () => {
     renderResumo({ forma: 'pix' });
-    expect(screen.getByText('Taxa de serviço (PIX)')).toBeTruthy();
+    expect(screen.getByText('Serviço (PIX)')).toBeTruthy();
     expect(screen.getByText('R$ 8,00')).toBeTruthy();
   });
 
-  it('cartão: a MESMA linha muda de nome — é a taxa daquele meio', () => {
+  it('cartão: a MESMA linha muda de nome — é o Serviço daquele meio', () => {
     renderResumo({
       forma: 'cartao_credito',
       cotacao: cotacao({ taxaServico: 10.3, totalAVista: 110.3, totalCobrado: 110.3 }),
     });
-    expect(screen.getByText('Taxa de serviço (cartão)')).toBeTruthy();
+    expect(screen.getByText('Serviço (cartão)')).toBeTruthy();
     expect(screen.getByText('R$ 10,30')).toBeTruthy();
   });
 
-  it('rótulo mudo NÃO sobrevive: não existe mais "Taxa de serviço" sem meio', () => {
+  it('rótulo mudo NÃO sobrevive: não existe mais "Serviço" sem meio', () => {
     renderResumo({ forma: 'pix' });
-    // Casamento EXATO — o rótulo antigo era exatamente este texto.
-    expect(screen.queryByText('Taxa de serviço')).toBeNull();
+    // Casamento EXATO — o rótulo sem meio é exatamente este texto.
+    expect(screen.queryByText('Serviço')).toBeNull();
   });
 
   it('evento repassado com taxa zero no meio escolhido continua sem linha', () => {
     renderResumo({ cotacao: cotacao({ taxaServico: 0, totalAVista: 100, totalCobrado: 100 }) });
-    expect(screen.queryByText(/taxa de serviço/i)).toBeNull();
+    expect(screen.queryByText(/serviço/i)).toBeNull();
   });
 });
 
-describe('StepResumo · RN-435 — em taxa incorporada a linha existe e não tem número', () => {
+describe('StepResumo · RN-435/SERV-3 — em taxa incorporada a linha existe e não tem número', () => {
   it('diz "inclusa no valor" — o silêncio que o dono reclamou acabou', () => {
     renderResumo({
       taxaRepassada: false,
       cotacao: cotacao({ taxaServico: 0, totalAVista: 100, totalCobrado: 100 }),
     });
-    expect(screen.getByText('Taxa de serviço')).toBeTruthy();
+    expect(screen.getByText('Serviço')).toBeTruthy();
     expect(screen.getByText('inclusa no valor')).toBeTruthy();
   });
 
@@ -230,7 +230,7 @@ describe('StepResumo · RN-435 — a ordem das linhas é a da regra', () => {
     expect(rotulosDosTotais()).toEqual([
       'Subtotal',
       'Desconto',
-      'Taxa de serviço (cartão)',
+      'Serviço (cartão)',
       'Juros do parcelamento',
       'Total parcelado',
     ]);
@@ -279,13 +279,13 @@ function renderConfirmacao(over: Partial<Parameters<typeof StepConfirmacao>[0]> 
   );
 }
 
-describe('StepConfirmacao · RN-435/RN-437 — o comprovante conta a MESMA história', () => {
-  it('repassada no cartão: "Taxa de serviço (cartão)" com valor', () => {
+describe('StepConfirmacao · RN-435/RN-437/SERV-3 — o comprovante conta a MESMA história', () => {
+  it('repassada no cartão: "Serviço (cartão)" com valor', () => {
     renderConfirmacao({
       forma: 'cartao_credito',
       charge: chargeFixture({ taxaServico: 10.3, totalCobrado: 110.3, valorParcela: 110.3 }),
     });
-    expect(screen.getByText('Taxa de serviço (cartão)')).toBeTruthy();
+    expect(screen.getByText('Serviço (cartão)')).toBeTruthy();
     expect(screen.getByText('R$ 10,30')).toBeTruthy();
   });
 
@@ -294,7 +294,7 @@ describe('StepConfirmacao · RN-435/RN-437 — o comprovante conta a MESMA hist�
       taxaRepassada: false,
       charge: chargeFixture({ taxaServico: 0, totalCobrado: 100, valorParcela: 100 }),
     });
-    expect(screen.getByText('Taxa de serviço')).toBeTruthy();
+    expect(screen.getByText('Serviço')).toBeTruthy();
     expect(screen.getByText('inclusa no valor')).toBeTruthy();
     expect(textoDosTotais()).not.toMatch(/R\$\s*0,00/);
   });

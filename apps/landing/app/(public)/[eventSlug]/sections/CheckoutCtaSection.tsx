@@ -42,7 +42,7 @@ export function CheckoutCtaSection({ evento }: { evento: EventoPublico }): React
             </span>
             {/* A-5/CKFORM-T4: sublinha condicional pelo flag RN-347. */}
             {evento.taxaRepassada ? (
-              <span className="text-text-tertiary"> + taxa de serviço</span>
+              <span className="text-text-tertiary"> + Serviço</span>
             ) : null}
           </p>
         ) : null}

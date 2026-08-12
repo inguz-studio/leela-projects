@@ -235,8 +235,8 @@ export function ConfigGeraisForm({
       <div className="flex flex-col gap-[var(--spacing-1)]">
         <Switch
           id="config-repassar-taxa"
-          label="Repassar a taxa de serviço ao comprador"
-          description="Desligado: taxa incorporada — o comprador paga o preço de face e a taxa sai do seu repasse. Ligado: taxa repassada — o comprador paga o preço de face + a taxa."
+          label="Repassar o Serviço ao comprador"
+          description="Desligado: Serviço incorporado — o comprador paga o preço de face e o Serviço sai do seu repasse. Ligado: Serviço repassado — o comprador paga o preço de face + o Serviço."
           checked={values.repassarTaxa}
           disabled={taxaCongelada}
           onCheckedChange={(checked) => set('repassarTaxa', checked)}

@@ -111,7 +111,7 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
                 {/* A-5/CKFORM-T4: sublinha SÓ quando o evento repassa a taxa
                     (RN-347 — flag do leitor; nunca o percentual do tenant). */}
                 {evento.taxaRepassada ? (
-                  <span className="text-text-tertiary"> + taxa de serviço</span>
+                  <span className="text-text-tertiary"> + Serviço</span>
                 ) : null}
               </p>
             ) : (

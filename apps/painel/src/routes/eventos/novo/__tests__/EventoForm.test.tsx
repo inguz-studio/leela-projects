@@ -112,7 +112,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
 
   it('a taxa (RN-347) é um toggle ATIVO; por padrão persiste taxaModo=incorporada', async () => {
     const { onCriarEvento } = renderForm();
-    const toggle = screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' });
+    const toggle = screen.getByRole('switch', { name: 'Repassar o Serviço ao comprador' });
     expect(toggle).toBeEnabled();
 
     await user.type(screen.getByLabelText('Nome do evento'), 'Evento Taxa');
@@ -135,7 +135,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     await user.type(screen.getByLabelText('Endereço / local'), 'SP');
     await user.click(screen.getByRole('button', { name: '10k' }));
     await user.click(
-      screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' }),
+      screen.getByRole('switch', { name: 'Repassar o Serviço ao comprador' }),
     );
     await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
