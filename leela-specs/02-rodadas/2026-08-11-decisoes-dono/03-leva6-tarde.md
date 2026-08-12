@@ -118,3 +118,39 @@ matou; re-inventariar ANTES de trocar.
 **TICKET-1 · RATIFICADO.** Na íntegra: "E o ticket-1. ok."
 → Compra estornada fora do denominador do ticket médio, como implementado (emenda da
 D-1008-R19 já protegia contra conserto-de-volta; agora é decisão do dono, não default).
+
+## Leva 7 — noite (saindo para o filme; janela 3 de 7h autorizada)
+
+**LGPD-1 · DECIDIDO.** Na íntegra: "LGPD-1 - o aceite é obrigatório, e registrado no
+banco." → Nenhum organizador ativo sem aceite REGISTRADO. Frente do resgate: recoletar no
+resgate (o overlay pede o aceite junto do código quando o registro falta) — o seed do
+primeiro convite DESTRAVA. Frente do termo de saúde: "registrado no banco" se aplica
+igual — o aceite de saúde carimba `materialHash` como o termo de uso (auditável). Frente
+Arena: contrato RN-472 já escrito, segue. Frente radar: a base legal do NOME REAL de
+participante de grupo segue com o advogado (é dado de terceiro, não aceite do organizador
+— fica anotada na rodada do radar, não mais como item de painel).
+
+**ESTOURO-2 · DECIDIDO — teto de 15 minutos + comportamento de expiração.** Na íntegra:
+"o pendente de cartão, caso um pagamento de erro, devolveremos a vaga após o checkout
+expirar, (dentro do time de 15 minutos). Se expirou os 15 minutos, o pedido nao é mais
+reservado, e damos um refresh, levanto novamente para a tela de landing page."
+→ Reserva do pendente de cartão expira em **15 minutos** (não os 30 do default); expirou
+= pedido deixa de reservar vaga e a tela dá refresh levando de volta à página do evento
+(landing). RN-546 sai da condição e ganha o número; a UX de expiração entra no fluxo
+pós-pagamento (ramo novo do CKPIX).
+
+**CANONE-1 · DECIDIDO — opção 1, pela leitura do próprio dono.** Na íntegra: "o que eu
+enetndi é que voce nao tá respeitanod o design system, e nao criou um componente novo,
+acione nossa software house para padronizar esse procesos. Se um componente nao existe,
+precisamos documentar e padronizar o componente para nao ficar refazendo ele. Inclusive é
+diretriz nossa de sempre utilizar códigos, partes de código e componentes para fazer as
+telas, como forma de economia de tokens, tempo, e conformidade de código."
+→ **Diretriz permanente: peça que não existe NASCE no design system, documentada e
+padronizada, antes de ser usada — nunca se refaz inline.** A onda de fundação de layout
+(Onda 0 Parte B: primitivos de moldura + cartões de domínio, 23 receitas → 3) DESTRAVA.
+Registrado também como aprendizado da casa em DOIS níveis acima do projeto: lição
+permanente do orquestrador (injetada em todo dispatch de UI de qualquer projeto) e
+memória persistente do maestro.
+
+**Ordem operacional:** painel de decisões atualizado e AVISAR o dono para leitura ("vou
+ler o que realmente preciso conferir"); seguir TUDO do roadmap liberado; janela 3 de 7h.
