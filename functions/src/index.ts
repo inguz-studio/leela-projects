@@ -527,3 +527,16 @@ export { consultarDocumentoDaConta } from './platform/consultarDocumentoDaConta'
 // desfecho — concedido e negado — entra em `auditoriaAcessos` com a porta
 // nomeada. ⚠️ Fable (concede acesso e claims a uma conta de terceiro).
 export { liberarAcessoOrganizador } from './platform/liberarAcessoOrganizador';
+
+// Plataforma — A FICHA COMPLETA DE UM CLIENTE (ADMIN-VISAO onda 3 · S1612-T6 ·
+// RN-539 na forma que o V-2 lhe deu). O dono pediu a ficha com "cpf, e-mail,
+// telefone, cidade, endereço, restrições, pedidos, tudo" e disse onde ela mora:
+// "a visao geral no individuo". Por isso este callable serve UM indivíduo por
+// chamada, e `listarClientesDoTenant` (acima) continua devolvendo só
+// comportamento — a lista magra é o desenho, não uma etapa.
+// A ficha é montada das fontes que JÁ guardam o dado (`inscritos.dadosPessoais`
+// e `pedidos.responsavel`/`pedidos.endereco`); `pessoas` NÃO é lida, e a Rule
+// de `crmClientes` não abre. Registro de acesso e de negativa em
+// `auditoriaAcessos`, com o cliente consultado no rastro.
+// ⚠️ Fable (PII direta — CPF, contato e endereço em claro no retorno).
+export { obterFichaDoCliente } from './platform/obterFichaDoCliente';
