@@ -160,7 +160,9 @@ describe('shellSidebarSections', () => {
   // ADMIN-VISAO onda 4 (S1614-T4): `eventos` e `clubs` entram COLADOS em
   // tenants — as duas listas globais respondem "o que existe na plataforma",
   // que é a pergunta vizinha de "quem opera nela".
-  it('/plataforma: nav própria com 11 itens, ícones e ativo por sub-rota', () => {
+  // ADMIN-VISAO onda 5 (S1615-T2): `contas` FECHA o bloco das varreduras
+  // globais — o terceiro "o que existe na plataforma", e o único que é gente.
+  it('/plataforma: nav própria com 12 itens, ícones e ativo por sub-rota', () => {
     const sections = shellSidebarSections('/plataforma/macro', vi.fn());
     expect(sections).toHaveLength(1);
     const items = sections[0]?.items ?? [];
@@ -168,6 +170,7 @@ describe('shellSidebarSections', () => {
       'tenants',
       'eventos',
       'clubs',
+      'contas',
       'termos',
       'planos',
       // S1608-T2 · RN-413: os códigos de convite de organizador.
@@ -207,6 +210,25 @@ describe('shellSidebarSections', () => {
     chamarOnClick(clubs?.onClick);
     expect(navigate).toHaveBeenCalledWith('/plataforma/clubs', { replace: true });
     expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['clubs']);
+  });
+
+  it('/plataforma/contas: Contas ativo, com ícone e SPA — e sem acender Convites', () => {
+    const navigate = vi.fn();
+    const items = shellSidebarSections('/plataforma/contas', navigate)[0]?.items ?? [];
+    const contas = items.find((i) => i.id === 'contas');
+    expect(contas?.active).toBe(true);
+    expect(contas?.icon).toBeDefined();
+    expect(contas?.href).toBe('/plataforma/contas');
+    chamarOnClick(contas?.onClick);
+    expect(navigate).toHaveBeenCalledWith('/plataforma/contas', { replace: true });
+    // `contas` e `convites` compartilham prefixo até a quarta letra — se o
+    // roteamento por pathname fosse frouxo, os dois acenderiam juntos.
+    expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['contas']);
+  });
+
+  it('/plataforma/convites segue acendendo só Convites, não Contas', () => {
+    const items = shellSidebarSections('/plataforma/convites', vi.fn())[0]?.items ?? [];
+    expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['convites']);
   });
 
   it('/plataforma/tenants segue acendendo Tenants, não as listas globais', () => {

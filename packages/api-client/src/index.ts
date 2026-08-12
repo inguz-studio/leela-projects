@@ -848,3 +848,84 @@ export type {
   ListarCrmClientesOptions,
   ListarCrmClientesResult,
 } from './crm';
+
+// ---------------------------------------------------------------------------
+// Diretório de contas do painel master (ADMIN-VISAO onda 5 · S1615-T1 ·
+// RN-540): leitura paginada de `profissionais` + `atletas`, campos mínimos,
+// sem Rule nova e sem `collectionGroup`. CPF NÃO sai daqui — `pessoas` segue
+// fechada e o documento de identificação só existe pelo callable auditado
+// `consultarDocumentoDaConta` (V-4), uma conta por chamada.
+// ---------------------------------------------------------------------------
+export {
+  DIRETORIO_CONTAS_PAGE_SIZE,
+  DIRETORIO_CONTAS_PAGE_SIZE_MAX,
+  listarProfissionaisPaginado,
+  listarAtletasPaginado,
+} from './platform/diretorioContas';
+export type {
+  ContaAtletaView,
+  ContaDoDiretorio,
+  ContaProfissionalView,
+  DiretorioContasCursor,
+  DiretorioContasOptions,
+  ListarContasResult,
+  ListarProfissionaisOptions,
+  PapelDaConta,
+} from './platform/diretorioContas';
+
+// ---------------------------------------------------------------------------
+// Identificação de UMA conta do diretório (ADMIN-VISAO onda 5 · S1615-T3 ·
+// RN-540 · vetável V-4): callable auditado sobre `pessoas`, que segue FECHADA
+// nas Rules. Sem lote e sem export — o consumidor é a revelação por linha, sob
+// gesto explícito do operador, nunca a montagem da página.
+// ---------------------------------------------------------------------------
+export { consultarDocumentoDaConta } from './platform/documentoDaConta';
+export type {
+  ConsultarDocumentoInput,
+  ConsultarDocumentoResult,
+  DocumentoDaConta,
+  MotivoSemDocumento,
+  TipoDocumentoDaConta,
+} from './platform/documentoDaConta';
+
+// ---------------------------------------------------------------------------
+// Liberação direta de acesso de organizador (ADMIN-VISAO onda 5 · S1615-T3 ·
+// RN-548/RN-551): a segunda porta da aprovação, sem código. Mesmo núcleo e
+// mesma régua do resgate; a recusa vem NOMEADA porque quem chama é o operador.
+// ---------------------------------------------------------------------------
+export {
+  liberarAcessoOrganizador,
+  motivoDaRecusaDaLiberacao,
+} from './platform/liberacaoAcesso';
+export type {
+  LiberarAcessoInput,
+  LiberarAcessoResult,
+  MotivoRecusaLiberacao,
+} from './platform/liberacaoAcesso';
+
+// ---------------------------------------------------------------------------
+// Ficha de UM cliente do tenant (ADMIN-VISAO onda 3 · S1612-T6 · RN-539): o
+// callable auditado que serve o INDIVÍDUO. A lista (`listarClientesDoTenant`,
+// acima) segue magra de propósito — contato, documento, endereço, saúde e
+// pedidos só saem por esta chamada, uma pessoa por vez, e o servidor registra
+// cada abertura em `auditoriaAcessos`. ⛔ Nunca chamar em laço sobre uma página
+// de lista: seria a saída em massa que a RN-540 recusa, emitida por engano.
+// ---------------------------------------------------------------------------
+export { obterFichaDoCliente } from './platform/fichaCliente';
+export type {
+  FichaContatoEmergenciaView,
+  FichaDoClienteView,
+  FichaEnderecoView,
+  FichaPedidoDoClienteView,
+  ObterFichaDoClienteInput,
+} from './platform/fichaCliente';
+
+// ---------------------------------------------------------------------------
+// Recompute manual de `platform/rollups` (ADMIN-VISAO onda 2 · S1613-T4 ·
+// RN-538). O agendamento horário da onda 1 tirou a dependência de lembrança; o
+// disparo manual é a outra metade da regra, e é critério de aceite da S1613 —
+// retrato velho na cara do operador não pode custar até uma hora de espera.
+// Recompute integral e idempotente: clicar duas vezes não conta nada em dobro.
+// ---------------------------------------------------------------------------
+export { recomputePlatformRollups } from './platform/rollups';
+export type { RecomputePlatformRollupsResult } from './platform/rollups';

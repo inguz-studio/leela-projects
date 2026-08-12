@@ -24,6 +24,12 @@ export const PLATFORM_NAV: PlatformNavItem[] = [
   // (Repasses…Billing) — nenhuma das duas é isso.
   { id: 'eventos', label: 'Eventos', href: '/plataforma/eventos' },
   { id: 'clubs', label: 'Clubs', href: '/plataforma/clubs' },
+  // ADMIN-VISAO onda 5 · S1615-T2: o terceiro "o que existe na plataforma", e o
+  // único que é gente. Fecha o bloco das varreduras globais em vez de encostar
+  // em Convites: o item é o DIRETÓRIO de contas, e a fila de quem espera é o
+  // modo padrão dentro dele — quem procura "todos os usuários" procura aqui, no
+  // mesmo lugar onde já procura todos os eventos e todos os clubs.
+  { id: 'contas', label: 'Contas', href: '/plataforma/contas' },
   { id: 'termos', label: 'Termos', href: '/plataforma/tenants' },
   { id: 'planos', label: 'Planos', href: '/plataforma/planos' },
   // S1608-T2 · RN-413: os códigos que liberam conta de organizador.
@@ -44,6 +50,9 @@ export function activeNavId(pathname: string): string | null {
   // ficha do tenant é que ganha sub-rotas (`/tenants/:id/...`), não elas.
   if (pathname.startsWith('/plataforma/eventos')) return 'eventos';
   if (pathname.startsWith('/plataforma/clubs')) return 'clubs';
+  // ADMIN-VISAO onda 5: o diretório de contas. `contas` e `convites` não são
+  // prefixo um do outro — nenhum acende o item do outro.
+  if (pathname.startsWith('/plataforma/contas')) return 'contas';
   if (pathname.startsWith('/plataforma/macro')) return 'macro';
   if (pathname.startsWith('/plataforma/planos')) return 'planos';
   if (pathname.startsWith('/plataforma/convites')) return 'convites';

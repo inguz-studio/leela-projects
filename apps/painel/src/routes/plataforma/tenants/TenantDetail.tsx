@@ -7,6 +7,7 @@
 // da guarda de papel) vira alerta inline com mensagem clara.
 // =============================================================================
 
+import type { ReactNode } from 'react';
 import { KpiCard, Badge, Button, PageHeader, Skeleton } from '@leela/design-system';
 import type { Tenant } from '@leela/core';
 import { deriveTenantHealth } from '@leela/core';
@@ -32,6 +33,18 @@ export interface TenantDetailProps {
   onAction: (action: LifecycleAction) => void;
   onEditarTermos: () => void;
   onVoltar: () => void;
+  /**
+   * Plano de cobrança aplicado + divergência da estampa (S1613-T6 · RN-541).
+   * Entra por SLOT porque depende de duas leituras (termo + catálogo de
+   * planos) que o Resumo não fazia — e a tarefa proíbe reescrever esta tela.
+   */
+  planoAplicado?: ReactNode;
+  /**
+   * Quem responde pela produtora (S1612 · V-3 — é o dono da conta). Slot pela
+   * mesma razão do `planoAplicado`: esta tela está no ar desde a S1601-T4 e a
+   * tarefa proíbe reescrevê-la.
+   */
+  responsavel?: ReactNode;
 }
 
 export function TenantDetail({
@@ -44,6 +57,8 @@ export function TenantDetail({
   onAction,
   onEditarTermos,
   onVoltar,
+  planoAplicado,
+  responsavel,
 }: TenantDetailProps): JSX.Element {
   if (loading) {
     return (
@@ -144,6 +159,12 @@ export function TenantDetail({
           <KpiCard label="GMV acumulado" value={formatBRL(tenant.gmvAcumulado ?? 0)} />
           <KpiCard label="Criado em" value={formatDataHora(tenant.criadoEm)} />
         </section>
+
+        {/* Quem responde pela produtora — o dono da conta (V-3) */}
+        {responsavel}
+
+        {/* Plano de cobrança aplicado × termo vigente (RN-541) */}
+        {planoAplicado}
 
         {/* Ação de ciclo de vida (RN-402 — sempre via Function) */}
         {action && (

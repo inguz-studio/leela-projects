@@ -65,6 +65,25 @@ export interface Profissional {
   nome: string;
   /** E-mail único na plataforma */
   email: string;
+  /**
+   * Telefone de contato, só dígitos (normalizado na escrita). GRAVADO desde o
+   * auto-cadastro do organizador — `criarPerfilOrganizador`
+   * (`packages/api-client/src/platform/profissionais.ts:113`) — e até
+   * 2026-08-11 fora do tipo: o dado existia no doc e nenhuma superfície podia
+   * lê-lo sem cast. Opcional porque doc anterior ao auto-cadastro não o tem
+   * (leitura Postel).
+   *
+   * ADMIN-VISAO · V-3: o dono decidiu que o RESPONSÁVEL da produtora é o dono
+   * da conta, então a ficha do painel master exibe este campo. Nenhuma
+   * coleção nova, nenhum índice — a RN-542 não nasceu.
+   */
+  telefone?: string;
+  /**
+   * Nome da organização que a pessoa declarou no cadastro. Mesma história do
+   * `telefone`: gravado desde sempre, tipado agora. NÃO é o `Tenant.nome` —
+   * este é texto livre do cadastro, aquele é a produtora provisionada.
+   */
+  organizacao?: string;
   /** Papéis atribuídos — granularidade via custom claims */
   papeis: PapelProfissional[];
   criadoEm: Timestamp;

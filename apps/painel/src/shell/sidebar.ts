@@ -26,7 +26,7 @@ import {
   type SidebarRailItem,
   type SidebarSection,
 } from '@leela/design-system';
-import { Banknote, Building2, CreditCard, FileText, Gauge, Heart, Percent, Tags, Ticket, TicketCheck, Undo2, type LucideIcon } from 'lucide-react';
+import { Banknote, Building2, CreditCard, FileText, Gauge, Heart, Percent, Tags, Ticket, TicketCheck, Undo2, Users, type LucideIcon } from 'lucide-react';
 import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
 import { onClickSpa, type NavegarSpa } from '../lib/navSpa';
 
@@ -61,6 +61,10 @@ const PLATFORM_NAV_ICONS: Record<string, LucideIcon> = {
   // não deveria reaprender o ícone de evento ao trocar de casa.
   eventos: Ticket,
   clubs: Heart,
+  // ADMIN-VISAO onda 5 · S1615-T2: o diretório de contas. `Users` é gente no
+  // plural, que é o que a tela é — e nenhum outro item da barra do super-admin
+  // usa o glifo, então ele não disputa leitura com vizinho nenhum.
+  contas: Users,
   termos: FileText,
   planos: Tags,
   // S1608-T2 · RN-413: os códigos de convite de organizador.

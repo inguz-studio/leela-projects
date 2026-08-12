@@ -16,7 +16,14 @@ import { ToastProvider } from '@leela/design-system';
 import { PlatformShell } from './_components/PlatformShell';
 import { TenantsListRoute } from './tenants/TenantsListRoute';
 import { TenantDetailRoute } from './tenants/TenantDetailRoute';
+import { TenantFichaLayout } from './tenants/TenantFichaLayout';
 import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
+import { EventosTabRoute } from './tenants/EventosTabRoute';
+import { ClubsTabRoute } from './tenants/ClubsTabRoute';
+import { ClientesTabRoute } from './tenants/ClientesTabRoute';
+import { VendasTabRoute } from './tenants/VendasTabRoute';
+import { FinanceiroTabRoute } from './tenants/FinanceiroTabRoute';
+import { ContasRoute } from './contas/ContasRoute';
 import { MacroDashboardRoute } from './macro/MacroDashboardRoute';
 import { RepassesAdminRoute } from './repasses/RepassesAdminRoute';
 import { EstornosAdminRoute } from './estornos/EstornosAdminRoute';
@@ -37,14 +44,34 @@ export function PlataformaRoutes(): JSX.Element {
         <Route element={<PlatformShell />}>
           <Route index element={<Navigate to="tenants" replace />} />
           <Route path="tenants" element={<TenantsListRoute />} />
-          <Route path="tenants/:tenantId" element={<TenantDetailRoute />} />
-          <Route path="tenants/:tenantId/termos" element={<TermsEditorRoute />} />
+          {/* ADMIN-VISAO onda 2 · S1612-T1: a ficha do tenant vira UMA rota com
+              abas (03-spec.md · Parte 1). O Resumo continua sendo a rota índice
+              e a tela dele não foi tocada; Termos já existia e entra na barra
+              como filha, sem mudar por dentro. */}
+          <Route path="tenants/:tenantId" element={<TenantFichaLayout />}>
+            <Route index element={<TenantDetailRoute />} />
+            {/* Onda 3 · S1612-T3/T4: o que a produtora produz. */}
+            <Route path="eventos" element={<EventosTabRoute />} />
+            <Route path="clubs" element={<ClubsTabRoute />} />
+            {/* Onda 3 · S1612-T6: para quem ela produz. A lista é
+                comportamento; contato, documento e endereço só saem quando
+                alguém abre UMA pessoa, e o servidor registra cada abertura. */}
+            <Route path="clientes" element={<ClientesTabRoute />} />
+            {/* Onda 2 · S1613-T2/T4/T5: a economia dela. */}
+            <Route path="vendas" element={<VendasTabRoute />} />
+            <Route path="financeiro" element={<FinanceiroTabRoute />} />
+            <Route path="termos" element={<TermsEditorRoute />} />
+          </Route>
           <Route path="planos" element={<PlanosRoute />} />
           {/* ADMIN-VISAO onda 4 · S1614-T2: todos os eventos do sistema, sem
               passar por tenant. Leitura da onda 1, Rule que já existe. */}
           <Route path="eventos" element={<EventosGlobaisRoute />} />
           {/* ADMIN-VISAO onda 4 · S1614-T3: a irmã da lista de eventos. */}
           <Route path="clubs" element={<ClubsGlobaisRoute />} />
+          {/* ADMIN-VISAO onda 5 · S1615-T2: uma tela com dois modos, e o mais
+              fechado é o padrão — Fila (quem aguarda liberação) e Diretório
+              (quem existe). Sem export, sem CSV, sem download (RN-540). */}
+          <Route path="contas" element={<ContasRoute />} />
           {/* S1608-T2 · RN-413: gestão dos códigos que abrem a porta da
               plataforma (gerar, ver uso, revogar). */}
           <Route path="convites" element={<ConvitesRoute />} />
