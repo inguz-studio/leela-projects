@@ -12,6 +12,7 @@ import { ConfirmModal, useToast } from '@leela/design-system';
 import type { TenantStatus } from '@leela/core';
 import { TenantDetail } from './TenantDetail';
 import { PlanoAplicadoCard } from './_components/PlanoAplicadoCard';
+import { ResponsavelCard } from './_components/ResponsavelCard';
 import { useTenantComOwner } from '../_data/tenants';
 import { useCommercialTerms } from '../_data/terms';
 import { usePlanosCobranca } from '../planos/_data/planos';
@@ -82,6 +83,11 @@ export function TenantDetailRoute(): JSX.Element {
         onAction={handleAction}
         onEditarTermos={() => navigate(`/plataforma/tenants/${tenantId}/termos`)}
         onVoltar={() => navigate('/plataforma/tenants')}
+        responsavel={
+          // V-3: responsável É o dono da conta. `useTenantComOwner` já traz o
+          // perfil dele — nenhuma leitura nova.
+          <ResponsavelCard owner={owner} ownerUid={tenant?.ownerUid ?? ''} />
+        }
         planoAplicado={
           <PlanoAplicadoCard
             terms={termos.data}

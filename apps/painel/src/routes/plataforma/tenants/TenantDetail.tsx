@@ -39,6 +39,12 @@ export interface TenantDetailProps {
    * planos) que o Resumo não fazia — e a tarefa proíbe reescrever esta tela.
    */
   planoAplicado?: ReactNode;
+  /**
+   * Quem responde pela produtora (S1612 · V-3 — é o dono da conta). Slot pela
+   * mesma razão do `planoAplicado`: esta tela está no ar desde a S1601-T4 e a
+   * tarefa proíbe reescrevê-la.
+   */
+  responsavel?: ReactNode;
 }
 
 export function TenantDetail({
@@ -52,6 +58,7 @@ export function TenantDetail({
   onEditarTermos,
   onVoltar,
   planoAplicado,
+  responsavel,
 }: TenantDetailProps): JSX.Element {
   if (loading) {
     return (
@@ -152,6 +159,9 @@ export function TenantDetail({
           <KpiCard label="GMV acumulado" value={formatBRL(tenant.gmvAcumulado ?? 0)} />
           <KpiCard label="Criado em" value={formatDataHora(tenant.criadoEm)} />
         </section>
+
+        {/* Quem responde pela produtora — o dono da conta (V-3) */}
+        {responsavel}
 
         {/* Plano de cobrança aplicado × termo vigente (RN-541) */}
         {planoAplicado}
