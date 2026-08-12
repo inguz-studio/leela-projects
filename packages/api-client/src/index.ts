@@ -870,3 +870,18 @@ export type {
   ListarProfissionaisOptions,
   PapelDaConta,
 } from './platform/diretorioContas';
+
+// ---------------------------------------------------------------------------
+// Identificação de UMA conta do diretório (ADMIN-VISAO onda 5 · S1615-T3 ·
+// RN-540 · vetável V-4): callable auditado sobre `pessoas`, que segue FECHADA
+// nas Rules. Sem lote e sem export — o consumidor é a revelação por linha, sob
+// gesto explícito do operador, nunca a montagem da página.
+// ---------------------------------------------------------------------------
+export { consultarDocumentoDaConta } from './platform/documentoDaConta';
+export type {
+  ConsultarDocumentoInput,
+  ConsultarDocumentoResult,
+  DocumentoDaConta,
+  MotivoSemDocumento,
+  TipoDocumentoDaConta,
+} from './platform/documentoDaConta';

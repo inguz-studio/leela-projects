@@ -503,3 +503,15 @@ export { onInscritoWriteCrm } from './crm/agregarClientes';
 // valorGasto/ltv/eventos) — nunca CPF/e-mail/telefone/endereço. ⚠️ Fable
 // (PII individual, cross-fronteira por servidor).
 export { listarClientesDoTenant } from './platform/listarClientesDoTenant';
+
+// Plataforma — IDENTIFICAÇÃO DE UMA CONTA no diretório do painel master
+// (ADMIN-VISAO onda 5 · S1615-T3 · RN-540 · vetável V-4). O dono decidiu que o
+// diretório identifica por CPF; o mecanismo é leitura por callable auditado, e
+// a Rule de `pessoas` (`firestore.rules:2724`) CONTINUA FECHADA para todo
+// cliente. UMA conta por chamada, sem lote e sem export: uma coluna de CPF
+// faria o painel emitir uma consulta por linha só por alguém abrir a tela.
+// Autorizado pelo predicado `isPlatformAdmin` do core (as duas pernas —
+// RN-401), com registro de acesso E de negativa em `auditoriaAcessos`; o
+// número nunca entra em log nem no doc de auditoria (ADR-014 §5). ⚠️ Fable
+// (PII direta — CPF em claro no retorno).
+export { consultarDocumentoDaConta } from './platform/consultarDocumentoDaConta';
