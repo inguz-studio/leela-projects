@@ -6,12 +6,15 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  LIMIAR_ROLLUP_OBSOLETO_HORAS,
+  idadeDoRollupEmHoras,
   liquidoDoProdutor,
+  rollupObsoleto,
   rotuloEconomiaAusente,
   rotuloParcelas,
   servicoDaVenda,
 } from '../economia';
-import { mkPagamento } from '../../_test/fixtures';
+import { mkPagamento, ts } from '../../_test/fixtures';
 
 describe('servicoDaVenda / liquidoDoProdutor · RN-537 lê o carimbo', () => {
   it('devolve os valores gravados em conciliacao, sem tocar em valorFinal', () => {
@@ -104,5 +107,36 @@ describe('rotuloParcelas', () => {
 
   it('PIX é à vista de fato — não é dado faltando', () => {
     expect(rotuloParcelas(mkPagamento({ forma: 'pix' }))).toBe('À vista');
+  });
+});
+
+describe('rollupObsoleto · RN-538 · a idade é parte do número', () => {
+  const AGORA = new Date('2026-08-11T12:00:00Z');
+
+  it('o limiar é maior que a cadência do cron (hora em hora), com folga', () => {
+    expect(LIMIAR_ROLLUP_OBSOLETO_HORAS).toBeGreaterThan(1);
+  });
+
+  it('retrato da última execução do cron está fresco', () => {
+    expect(rollupObsoleto(ts('2026-08-11T11:15:00Z'), AGORA)).toBe(false);
+  });
+
+  it('janela legítima entre duas execuções não acende o aviso', () => {
+    // 59 minutos: o cron ainda não rodou de novo e nada está errado.
+    expect(rollupObsoleto(ts('2026-08-11T11:01:00Z'), AGORA)).toBe(false);
+  });
+
+  it('além do limiar, obsoleto', () => {
+    expect(rollupObsoleto(ts('2026-08-11T08:00:00Z'), AGORA)).toBe(true);
+  });
+
+  it('carimbo ausente conta como obsoleto — número sem data não passa por atual', () => {
+    expect(rollupObsoleto(null, AGORA)).toBe(true);
+    expect(rollupObsoleto(undefined, AGORA)).toBe(true);
+  });
+
+  it('idade em horas é null sem carimbo, e o número quando há', () => {
+    expect(idadeDoRollupEmHoras(null, AGORA)).toBeNull();
+    expect(idadeDoRollupEmHoras(ts('2026-08-11T10:00:00Z'), AGORA)).toBe(2);
   });
 });

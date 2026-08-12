@@ -21,7 +21,7 @@
 // nomeia.
 // =============================================================================
 
-import type { FormaPagamento, Pagamento, StatusPagamento } from '@leela/core';
+import type { FormaPagamento, Pagamento, StatusPagamento, Timestamp } from '@leela/core';
 
 // ---------------------------------------------------------------------------
 // As duas cifras da venda — lidas, nunca calculadas
@@ -115,3 +115,52 @@ export function rotuloParcelas(pagamento: Pick<Pagamento, 'cartao'>): string {
  * outro número, que esta tela não computa.
  */
 export const SUBSTANTIVO_VENDAS = { singular: 'venda', plural: 'vendas' } as const;
+
+// ---------------------------------------------------------------------------
+// Idade do retrato macro (RN-538)
+// ---------------------------------------------------------------------------
+
+/**
+ * Quantas horas o retrato de `platform/rollups` pode ter antes de a tela
+ * declarar que ele está velho.
+ *
+ * O número não é arbitrário: desde a onda 1 o recompute tem cron próprio, no
+ * minuto 15 de CADA HORA (`agendarRecomputePlatformRollups`,
+ * `functions/src/platform/rollups.ts`). Um retrato com mais de três horas
+ * significa que pelo menos duas execuções não aconteceram — é sinal de que o
+ * agendamento parou, não de cadência normal. Um limiar de uma hora acenderia
+ * o aviso na janela legítima entre duas execuções; um de um dia esconderia
+ * vinte e três falhas seguidas.
+ */
+export const LIMIAR_ROLLUP_OBSOLETO_HORAS = 3;
+
+const UMA_HORA_MS = 60 * 60 * 1000;
+
+/**
+ * Idade do retrato em HORAS. `null` quando não há carimbo legível — e null é
+ * "não sei quando isto foi medido", que a tela diz com essas palavras em vez
+ * de exibir uma idade inventada. @pure
+ */
+export function idadeDoRollupEmHoras(
+  atualizadoEm: Timestamp | null | undefined,
+  agora: Date
+): number | null {
+  if (!atualizadoEm || typeof atualizadoEm.toDate !== 'function') return null;
+  const medidoEm = atualizadoEm.toDate().getTime();
+  if (!Number.isFinite(medidoEm)) return null;
+  return (agora.getTime() - medidoEm) / UMA_HORA_MS;
+}
+
+/**
+ * O retrato passou do limiar de frescor? Carimbo ausente conta como OBSOLETO:
+ * um número macro sem data conhecida é o caso que a RN-538 existe para
+ * impedir de passar por atual. @pure
+ */
+export function rollupObsoleto(
+  atualizadoEm: Timestamp | null | undefined,
+  agora: Date
+): boolean {
+  const idade = idadeDoRollupEmHoras(atualizadoEm, agora);
+  if (idade === null) return true;
+  return idade > LIMIAR_ROLLUP_OBSOLETO_HORAS;
+}

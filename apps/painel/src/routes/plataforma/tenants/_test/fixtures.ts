@@ -6,7 +6,7 @@
 // `plataforma/repasses/_test/fixtures.ts`.
 // =============================================================================
 
-import type { Pagamento, Pedido, Timestamp } from '@leela/core';
+import type { Pagamento, Pedido, TenantRollup, Timestamp } from '@leela/core';
 import type { VendaDoTenant } from '../_data/vendas';
 
 export function ts(iso: string): Timestamp {
@@ -66,6 +66,21 @@ export function mkPedido(overrides: Partial<Pedido> = {}): Pedido {
     codigoPedido: 'K7M2Q',
     criadoEm: ts('2026-04-10T12:00:00Z'),
     atualizadoEm: ts('2026-04-10T12:05:00Z'),
+    ...overrides,
+  };
+}
+
+/** Linha do tenant em `platform/rollups.tenants[tenantId]`. */
+export function mkTenantRollup(overrides: Partial<TenantRollup> = {}): TenantRollup {
+  return {
+    tenantId: 'castelo-producoes',
+    nome: 'Castelo Produções',
+    status: 'ativo',
+    gmv: 100000,
+    receitaLeela: 10500,
+    platformFeePct: 10.5,
+    eventosAtivos: 3,
+    health: 'saudavel',
     ...overrides,
   };
 }
