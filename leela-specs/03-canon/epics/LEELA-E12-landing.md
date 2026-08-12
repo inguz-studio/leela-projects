@@ -4041,3 +4041,34 @@ que ela buscava vem da própria regra, porque só a taxa Leela se chama Serviço
 de merge, que vale mais que a pressa: o inventário é de 09/08 e mira caminhos que o rename de
 Parcerias mudou, então **re-inventariar antes de trocar**. Os campos continuam intocados pela mesma
 razão de sempre: renome é de texto, nunca de dado financeiro.
+
+---
+
+## Delta o aceite de saúde passa a ser auditável (leva 7 do dono · 2026-08-11)
+
+O **LGPD-1** foi decidido na noite de 11/08, na íntegra: *"o aceite é obrigatório, e registrado no
+banco."* A frente do resgate mora no [[LEELA-E00-fundacao-tecnica]] (o overlay recolhe o aceite
+quando o registro falta, e o seed do primeiro convite destrava). **A frente que mora aqui é o termo
+de saúde**, e ela vinha da mesma conversa jurídica desde 09/08.
+
+Hoje o pedido guarda, do aceite de saúde, **a versão e a hora, e nada mais**. O texto é montado na
+hora da leitura e o nome da produtora entra nele vindo do perfil vigente — então trocar o nome da
+produtora reescreve, para trás, perante quem cada pessoa declarou estar apta. A assimetria é o que
+denunciava o buraco: o **termo de uso** guarda `materialHash`, a impressão digital do texto aceito,
+e o de saúde não guardava.
+
+"Registrado no banco" alcança os dois. O aceite de saúde passa a **carimbar `materialHash` como o
+termo de uso já faz**, e o texto ganha versão nova quando muda — que é a primeira das três saídas
+que o painel listava. As outras duas ficam escritas como recusadas: congelar o texto inteiro dentro
+do pedido guarda mais do que a prova exige, e deixar como está transformaria em acidente o que
+agora é decisão.
+
+**Efeito prático hoje, medido:** nulo. Os três aceites que sobrevivem à limpeza são compras de
+teste do dono (`8CDHM`, `Q57PA`, `N4FHP`). O preço subia com cada venda real, e é por isso que a
+regra entra antes do volume.
+
+**Onde vive:** `aceites.saude` no documento do pedido, `paragrafosDoTermoSaude` em
+`AceitesCompra.tsx` e `resolverOrganizadorPublico` em `apps/landing/lib/leitor.ts`. Medição em
+`.nirvana/handoffs/leela-limpeza-prod-20260806.md §T9`. A **PB-11 continua aberta** e é outra
+pergunta: ela é sobre o retry carimbar a versão que a pessoa não leu, não sobre o que se guarda do
+texto.

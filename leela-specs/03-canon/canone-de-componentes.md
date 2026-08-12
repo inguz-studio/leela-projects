@@ -107,16 +107,19 @@ ADR-017, sem custo de bundle público.
 | Evento | `CardEvento` |
 | Desafio | `CardDesafio` |
 | Evento em lista | `EventRow` |
-| Clube, comunicado, campanha, parceria, afiliação | ⛔ **sem cânone** — decisão CANONE-1 |
+| Clube, comunicado, campanha, parceria, afiliação | 🔨 **nasce no DS por composição** — CANONE-1 decidido em 11/08 (Onda 0 Parte B) |
 
 ## 6. Slot, bento e grade composta
 
 | Padrão | Canônico |
 |---|---|
-| Grade de formulário · grade de indicadores · bento assimétrico · empilhamento com ritmo · cabeçalho de bloco interno | ⛔ **sem cânone** — decisão CANONE-1 |
+| Grade de formulário · grade de indicadores · bento assimétrico · empilhamento com ritmo · cabeçalho de bloco interno | 🔨 **nasce no DS** — CANONE-1 decidido em 11/08 (Onda 0 Parte B) |
 
-O DS publica 50 componentes e nenhum é layout. Enquanto a decisão não voltar, layout composto é
-**finding de processo, não de tela**: quem escreve não viola nada, porque não há nada. As três
+O DS publica 50 componentes e nenhum era layout. **A decisão voltou em 11/08** (leva 7): peça que
+não existe nasce no design system, documentada, antes de ser usada — diretriz permanente do dono,
+escrita em `04-engenharia/governanca-design.md`. Até os primitivos existirem, layout composto
+continua sendo **finding de processo, não de tela**; a partir deles, é divergência como qualquer
+outra. As três
 famílias reais em uso (grade de formulário 1→2/3 colunas, grade de indicadores 2→4, bento
 assimétrico `[Nfr_Mfr]`) estão medidas, com as 23 receitas que as implementam, no inventário §7.1.
 
