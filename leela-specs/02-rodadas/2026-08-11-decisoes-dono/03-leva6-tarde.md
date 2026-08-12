@@ -103,3 +103,18 @@ cada tela fazendo a sua). O bloco no painel ganha uma linha-resumo em linguagem 
 foram decididas." → lane REGISTRO-BOARDS (painel 25→15, kanban, épicos, RNs novas,
 VISAO-DE-PROJETO refresh) + lanes de build CKPIX-FLOW e ESTOURO-BUILD + ondas 2/3/5 do
 ADMIN-VISAO na sequência.
+
+## Adendo da noite — SERV-3 e TICKET-1
+
+**SERV-3 · DECIDIDO.** Na íntegra: "serv3 -> é somente quando falar da taxa Leela, que
+chamaremos 'serviço' para referenciar o que é essa cobrança."
+→ A palavra **"Serviço" nomeia exatamente a cobrança da Leela (a taxa da plataforma)**,
+em toda superfície onde ELA aparece — checkout do comprador, painel do organizador e
+super-admin. Outras cobranças (gateway, juros etc.) mantêm seus nomes; a desambiguação no
+admin é essa: só a taxa Leela vira "Serviço". O renome das 34 strings DESTRAVA — com o
+aviso da lane de merge: o inventário de 09/08 mira caminhos que o rename de Parcerias
+matou; re-inventariar ANTES de trocar.
+
+**TICKET-1 · RATIFICADO.** Na íntegra: "E o ticket-1. ok."
+→ Compra estornada fora do denominador do ticket médio, como implementado (emenda da
+D-1008-R19 já protegia contra conserto-de-volta; agora é decisão do dono, não default).
