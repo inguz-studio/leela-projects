@@ -137,7 +137,7 @@ export const MOTIVO_GATEWAY_SEM_RESPOSTA = 'gateway_sem_resposta';
 /**
  * Motivo TIPADO do cancelamento por PRAZO VENCIDO — o valor que vai para
  * `canceladoMotivo` no pedido e no pagamento quando um PIX pendente passa de
- * `pixExpiraEm` sem ser pago (RN-157 · RN-CKPIX-2).
+ * `pixExpiraEm` sem ser pago (RN-157 · RN-560 (ramo 2)).
  *
  * POR QUE ELE PRECISA DE NOME. A máquina de status não tem estado "vencido"
  * (premissa CK2-4: reusar a máquina vigente), então o PIX que venceu vira

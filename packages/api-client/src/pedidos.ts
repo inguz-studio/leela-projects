@@ -70,7 +70,7 @@ export interface ObservarPedidoHandlers {
 }
 
 /**
- * OBSERVA UM pedido em TEMPO REAL (RN-CKPIX-1..4). É a resposta ao problema
+ * OBSERVA UM pedido em TEMPO REAL (RN-560). É a resposta ao problema
  * que a RN-469 abriu e a RN-470 deixou em aberto: quem escreve o desfecho do
  * pagamento é o WEBHOOK, no servidor, num instante que ninguém na tela
  * controla — e até aqui a única forma de a tela saber era o comprador clicar

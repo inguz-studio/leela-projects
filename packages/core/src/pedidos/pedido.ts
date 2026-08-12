@@ -225,7 +225,7 @@ export interface Pedido {
    */
   codigoPedido?: string;
   /**
-   * POR QUE o pedido foi cancelado, quando ele foi (RN-CKPIX-2). Presente só
+   * POR QUE o pedido foi cancelado, quando ele foi (RN-560 (ramo 2)). Presente só
    * em `status === 'cancelado'`, e nem sempre: quem cancela sem carimbar
    * motivo deixa o campo ausente, e ausência aqui é ausência de causa apurada,
    * nunca "cancelado por engano".
@@ -664,7 +664,7 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
     pedido.codigoPedido = data['codigoPedido'];
   }
 
-  // RN-CKPIX-2: a CAUSA do cancelamento, pela mesma leitura Postel do código
+  // RN-560 (ramo 2): a CAUSA do cancelamento, pela mesma leitura Postel do código
   // acima e pela mesma razão — é rótulo de causa, não dinheiro. O escritor é a
   // Function (`expirarPixPendente` hoje, `varrerPixVencidos` pela RN-545
   // amanhã), e um literal novo do servidor não pode derrubar a leitura da
