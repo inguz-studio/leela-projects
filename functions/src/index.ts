@@ -515,3 +515,15 @@ export { listarClientesDoTenant } from './platform/listarClientesDoTenant';
 // número nunca entra em log nem no doc de auditoria (ADR-014 §5). ⚠️ Fable
 // (PII direta — CPF em claro no retorno).
 export { consultarDocumentoDaConta } from './platform/consultarDocumentoDaConta';
+
+// Plataforma — A SEGUNDA PORTA DA APROVAÇÃO (ADMIN-VISAO onda 5 · S1615-T3 ·
+// RN-548/RN-551): o administrador libera uma conta que espera, SEM código. As
+// duas portas terminam no MESMO estado terminal, produzido pelo MESMO núcleo
+// (`provisionTenantCore`) — não existe segunda máquina de aprovação, e a
+// igualdade é provada campo a campo em
+// `adminVisaoOnda5Liberacao.integration.test.ts`. Mesma régua de elegibilidade
+// do resgate (`contaElegivelParaPapelDeOrganizador`); a recusa vem NOMEADA,
+// porque quem chama é o operador da plataforma e não um enumerador. Todo
+// desfecho — concedido e negado — entra em `auditoriaAcessos` com a porta
+// nomeada. ⚠️ Fable (concede acesso e claims a uma conta de terceiro).
+export { liberarAcessoOrganizador } from './platform/liberarAcessoOrganizador';

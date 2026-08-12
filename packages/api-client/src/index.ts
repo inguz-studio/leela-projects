@@ -885,3 +885,18 @@ export type {
   MotivoSemDocumento,
   TipoDocumentoDaConta,
 } from './platform/documentoDaConta';
+
+// ---------------------------------------------------------------------------
+// Liberação direta de acesso de organizador (ADMIN-VISAO onda 5 · S1615-T3 ·
+// RN-548/RN-551): a segunda porta da aprovação, sem código. Mesmo núcleo e
+// mesma régua do resgate; a recusa vem NOMEADA porque quem chama é o operador.
+// ---------------------------------------------------------------------------
+export {
+  liberarAcessoOrganizador,
+  motivoDaRecusaDaLiberacao,
+} from './platform/liberacaoAcesso';
+export type {
+  LiberarAcessoInput,
+  LiberarAcessoResult,
+  MotivoRecusaLiberacao,
+} from './platform/liberacaoAcesso';
