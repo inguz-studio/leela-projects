@@ -34,7 +34,10 @@
 // o webhook (releitura in-tx) continua de pé como segunda linha.
 //
 // SEGURANÇA (a review antagonista ataca isto):
-//   1. AUTORIZAÇÃO: só o DONO do pedido (responsavel.atletaId === uid).
+//   1. AUTORIZAÇÃO: só o DONO do pedido (responsavel.atletaId === uid) —
+//      ou o CHAMADOR DE SISTEMA da varredura agendada (S322-T1 · RN-545),
+//      que é a única outra forma de `ChamadorExpiracaoPix` e não vem de
+//      input de cliente por caminho nenhum.
 //   2. ANTI-ABUSO DE RELÓGIO: o servidor decide COM O PRÓPRIO relógio
 //      (agoraCheckout injetado) — chamar ANTES da hora ⇒ failed-precondition
 //      (esta porta NÃO é um "cancelar pedido" genérico).
@@ -92,6 +95,29 @@ export interface ExpirarPixPendenteResult {
  */
 export const MOTIVO_CANCELAMENTO_GATEWAY_FALHOU = 'cancelamento_gateway_falhou';
 
+/**
+ * QUEM está mandando expirar (S322-T1 · RN-545).
+ *
+ * O core nasceu com um chamador só — o DONO do pedido, autenticado, pela
+ * porta pública. A RN-545 traz um segundo: a varredura agendada, que não tem
+ * uid nenhum e precisa expirar pedido de qualquer comprador. As duas saídas
+ * possíveis eram criar uma segunda máquina de cancelamento (duas
+ * implementações do gateway-primeiro, do fail-safe e da guarda de corrida,
+ * divergindo na primeira manutenção) ou dar ao core a distinção do chamador.
+ * O precedente da casa é o segundo caminho: `encerrarPixAnteriorNaCriacao` já
+ * reusa este mesmo core na trava do PIX.
+ *
+ * `{ sistema: true }` NÃO afrouxa a porta pública: o callable continua
+ * construindo `{ uid: context.auth.uid }` byte a byte, e nenhum caminho leva
+ * input do cliente a virar `sistema`. É union fechada — não existe
+ * `{ uid, sistema }`, e por isso não existe "pedir para ser sistema".
+ *
+ * O que o sistema PULA: só a checagem de dono. Relógio do servidor,
+ * gateway-primeiro, fail-safe e releitura transacional valem iguais para os
+ * dois — a varredura não ganha nenhum atalho sobre dinheiro.
+ */
+export type ChamadorExpiracaoPix = { uid: string } | { sistema: true };
+
 // ---------------------------------------------------------------------------
 // Núcleo (testável com Admin SDK contra o Emulator; callable é wrapper fino)
 // ---------------------------------------------------------------------------
@@ -100,7 +126,7 @@ export async function expirarPixPendenteCore(
   db: Db,
   provider: PaymentProvider,
   rawInput: unknown,
-  caller: { uid: string },
+  caller: ChamadorExpiracaoPix,
   agora: () => Date = () => new Date()
 ): Promise<ExpirarPixPendenteResult> {
   const pedidoId =
@@ -123,11 +149,19 @@ export async function expirarPixPendenteCore(
   }
   // Ownership ANTES de qualquer informação de estado (não confirmar a um
   // sondador nem o status de pedido alheio).
-  if (pedidoSnap.get('responsavel.atletaId') !== caller.uid) {
-    throw new https.HttpsError(
-      'permission-denied',
-      'Este pedido pertence a outro pagador.'
-    );
+  //
+  // S322-T1: a VARREDURA não tem dono a apresentar — ela expira pedido de
+  // qualquer comprador, e é esse o trabalho dela. O que ela pula é ESTA
+  // checagem e só ela; tudo abaixo (relógio do servidor, gateway-primeiro,
+  // fail-safe, releitura in-tx) roda idêntico. A porta pública segue
+  // exigindo o dono, provado por teste de ataque.
+  if (!('sistema' in caller)) {
+    if (pedidoSnap.get('responsavel.atletaId') !== caller.uid) {
+      throw new https.HttpsError(
+        'permission-denied',
+        'Este pedido pertence a outro pagador.'
+      );
+    }
   }
 
   const statusPedido = pedidoSnap.get('status') as string;
