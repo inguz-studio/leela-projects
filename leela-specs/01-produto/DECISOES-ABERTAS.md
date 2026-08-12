@@ -4,7 +4,7 @@
 >
 > **O corte de 09/08, e é ele que explica o tamanho desta página.** Você disse que 67 decisões não é razoável, que o painel devia carregar decisão de negócio e de produto, e que duplicidade, CTA inconsistente e contraste eu resolvo. **Trinta e nove itens saíram**: 37 decididos com default, porquê e condição de reabertura escritos, um absorvido pelo LGPD-1 e um fechado porque a ação já tinha sido executada. Nada foi apagado — o registro item a item está em `02-rodadas/2026-08-09-corte-painel/01-decisoes-maestro.md`, e os consertos que essas decisões geram estão em `02-rodadas/2026-08-09-corte-painel/02-fila-execucao.md`. Nenhum item de dinheiro cobrado, de dado pessoal ou de vocabulário de marca saiu sem você.
 >
-> **Disciplina de limpeza.** Item resolvido sai deste painel na mesma aterrissagem. O registro completo, com o seu verbatim, passa a viver no arquivo da rodada em `02-rodadas/`. Este painel só carrega o que ainda é seu, e o histórico do que já fechou mora lá, não aqui.
+> **Disciplina de limpeza.** Item resolvido sai deste painel na mesma aterrissagem. O registro completo, com a sua fala na íntegra, passa a viver no arquivo da rodada em `02-rodadas/`. Este painel só carrega o que ainda é seu, e o histórico do que já fechou mora lá, não aqui.
 >
 > **Limpeza de 09/08 (pós-pausa).** JUROS-3 e JUROS-4 saíram — fechados pelo lote 1 e pela sua correção (*"eu que decido como cobrarei juros pelo painel admin, manualmente"*; o "até 3x sem juros" era exemplo, e o JUROS-ALINHAMENTO que nasceu dele foi cancelado). JUROS-5 saiu porque você entregou o número (1,89% a.m.) e a tabela foi calculada na rodada. Registro: `02-rodadas/2026-08-09-decisoes-dono/`.
 >
@@ -32,21 +32,15 @@
 >
 > **Um entrou na madrugada de 12/08, vindo da construção do fluxo que você decidiu, e a conta sobe para 12.** O **CKLOGIN-1**: a lane que construiu o pós-pagamento descobriu que o "cliente logado" da sua frase não existe para quem compra pela primeira vez — a sessão do checkout é anônima e nunca vira conta logada. O fluxo está construído e redireciona; o muro é a promoção da sessão, e ela mexe na fronteira de autenticação que foi provada fechada. Default proposto: promover ao confirmar o pagamento, re-provando a fronteira.
 >
-> **A conta de hoje: 12 itens abertos** — 10 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar", contados à mão, um a um, contra as duas seções abaixo. Eram 11 depois da leva 7, 14 depois da leva 6 e 25 antes dela. Antes disso eram 27 com o **CANONE-1**, que entrou em 11/08 com a medição da sua ordem sobre componentes (o único item que a rodada de componentes manda para cá: as outras 223 divergências têm conserto e trava, e não precisam de você); PCLIENTE-1, SERV-1 e SERV-2 saíram na manhã de 11/08. Os parágrafos abaixo são registros de 10 e 11/08 e as contas deles eram outras; ficaram para você seguir o rastro.
+> **Oito saíram na manhã de 12/08, na leva 8, e a conta cai para 4.** Você fechou de uma vez o que travava o checkout, o CRM e a lista de interesses, e o registro completo, com a sua fala em cada item, está em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`. O **CKLOGIN-1** fecha com *"Ok, promova a sessao ao confirmar o pagamento."* — a sessão anônima do checkout vira conta logada no pagamento confirmado (RN-562), e o custo que o item declarou entra junto: a fronteira de autenticação que foi provada fechada é **re-provada**, não presumida intacta. O **PB-11** fecha com *"3 - em vigor."*: o que valia por default do maestro passa a valer por decisão sua, e vira a RN-567. O **ARENA-1** fecha com a visão que você já tem para depois — *"a ideia é que isso vire um 'tinder' depois, com essas informações. quando desenvolvermos a versão mobile."* —, então hoje o dado nasce guardado, a RN-472 fica intocada e a abertura vira direção registrada no épico do app, sem uma linha construída. O **ARENA-4** fecha mudando a fonte no meio do caminho: a lista física passa a derivar das **modalidades de esporte do Strava** (RN-563), a mesma lista passa a servir **três** lugares — Arena, onboarding de usuário novo e preferências do perfil (RN-564) —, e a RN-557 nasce com a tabela de 50 termos, que continua vetável barato para o seu corte fino. Os três primeiros **CRM** fecham juntos: as quatro visões de dado pronto (CRM-1), o agregado de cidade e bairro sem o endereço na ficha (CRM-2, RN-566), e o e-mail de cada participante que a tela já pedia e a gravação jogava fora (CRM-3, RN-565, com a sua razão registrada — exportar lista e notificar pelo sistema). O **ADMIN-USUARIOS-2** fecha **além** dos dois defaults propostos, com *"aprovar cadastro, reusar e revogar devem existir já"*: as três operações existem, "reusar" foi lido como **recusar**, e a leitura está declarada para reabrir barato se estiver errada.
+>
+> **A conta de hoje: 4 itens abertos** — 2 em "Decisões que dependem de você" (o **item 12** e o **CRM-4**) e 2 em "Ações que só você pode executar" (o **69** e o **JUROS-1**), contados à mão, um a um, contra as duas seções abaixo. Eram 12 antes da leva 8, 11 depois da leva 7, 14 depois da leva 6 e 25 antes dela. O parágrafo abaixo é o registro da conta anterior e ficou para você seguir o rastro.
+>
+> **A conta de 12/08 de madrugada era: 12 itens abertos** — 10 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar". Antes disso eram 27 com o **CANONE-1**, que entrou em 11/08 com a medição da sua ordem sobre componentes (o único item que a rodada de componentes manda para cá: as outras 223 divergências têm conserto e trava, e não precisam de você); PCLIENTE-1, SERV-1 e SERV-2 saíram na manhã de 11/08. Os parágrafos abaixo são registros de 10 e 11/08 e as contas deles eram outras; ficaram para você seguir o rastro.
 >
 > **A conta de 10/08 era: 28 itens abertos.** São **25** em "Decisões que dependem de você" e **3** em "Ações que só você pode executar" — contados à mão, um a um, contra as duas seções abaixo, já sem o COMPROMETIDO-1 e o VITRINE-2, que a purga de 10/08 fechou. Os cinco que entraram em 09/08 são os **ADMINVISAO-1 a ADMINVISAO-5**, da spec da visão master do painel admin: dois de dado pessoal, um de dinheiro, um de modelo e um de mecanismo. Eles fecham juntos, e a esteira não constrói as ondas que dependem deles enquanto isso não acontece. A "Fila de construção" no fim não é decisão e não entra na conta, agora sem exceção nenhuma: o **ADMIN-USUARIOS-1**, que morava lá dentro e pedia resposta sua, subiu para o bloco das decisões — você o decidiu em 09/08 e ele saiu na segunda troca de 10/08, dando lugar ao **ADMIN-USUARIOS-2**.
 
 ## Decisões que dependem de você
-
-### CKLOGIN-1 · o "cliente logado" do pós-pagamento não existe para quem compra pela primeira vez
-
-Você decidiu que o pagamento confirmado leva "para a área interna com o cliente logado". A lane que construiu o fluxo descobriu o muro: o checkout cria uma sessão **anônima** e nunca a promove; a conta da pessoa nasce fora de banda (por e-mail, no `contaSemFriccao`); e a área do cliente é inalcançável por sessão anônima por decisão anterior sua (RN-451). Quem já tem conta e está logada chega. Quem compra pela primeira vez cai na porta de entrada — hoje com um aviso explicando por quê, que a lane deixou no lugar.
-
-- **Caso de uso:** a Ana compra o primeiro ingresso, paga o PIX, a tela confirma e a leva para a área do cliente — e a área pede login de uma conta que ela ainda nem sabe que tem.
-- **Job story:** quando eu acabo de pagar, eu quero ver minha compra na hora, para ter certeza de que deu certo, sem descobrir no meio do caminho que preciso criar senha.
-- **O que fica com você:** dizer se a sessão do checkout vira a conta logada no fim da compra.
-- **Opções:** **promover a sessão anônima a conta logada ao confirmar o pagamento** (**default proposto** — é o que a sua frase pede; custo real: mexer na fronteira de autenticação que foi provada fechada, e re-prová-la) · manter como está, com o aviso na porta explicando o caminho do e-mail · pedir a senha dentro do próprio checkout, antes de pagar (mais atrito na tela do dinheiro).
-- **Onde aterrissa:** fluxo do checkout + RN-451; detalhe completo em `.nirvana/handoffs/leela-ckpix-flow-20260811.md` §"Área do cliente logado".
 
 ### 12 · domínio público
 
@@ -58,96 +52,19 @@ Todo endereço do produto ainda é o marcador `{DOMINIO_LEELA}`, e o remetente d
 - **Por que agora:** o produto já está no ar em `leela-landing.web.app` e o e-mail transacional sai por `vitoreldp@gmail.com`, que o DMARC do Gmail tende a jogar em spam quando a Brevo envia por ele.
 - **Onde aterrissa:** env dos dois apps, substituição do marcador nas specs e verificação DKIM/SPF/DMARC na Brevo. Puxa junto o item 66 e o placeholder `contato@leela.app`, que a porta de entrada do organizador já usa como CTA de "Falar com o time Leela".
 
-### PB-11 · no retry, a prova de aceite carimba a versão que a pessoa não leu
-
-A conferência de versão vale na criação do pedido: se a tela declara uma versão diferente da vigente, o servidor recusa. No retry de uma compra já nascida, o carimbo usa a vigente sem conferir a exibida, e isso está medido: pedido sem bloco de aceite, política na v3, retry declarando a v1, resultado carimba a v3.
-
-- **Caso de uso:** a Ana aceita a v1, a política vira v3 no meio da compra, e o retry carimba a v3 que ela nunca leu. O documento fica com uma prova, e a prova aponta para um texto que não estava na tela dela.
-- **Job story:** quando eu aceito uma política antes de pagar, eu quero que fique registrado exatamente o texto que estava na minha frente, para que a prova do meu aceite corresponda ao que eu li.
-- **O que fica com você:** escolher entre prova ausente e prova errada. Recusar ali deixaria sem prova um pedido já pago.
-- **Por que agora:** é decisão jurídica, não técnica, e o caso de teste já está escrito no ponto exato onde a decisão vira código.
-- **Opções:** carimbar a vigente e manter a compra viva (**em vigor**) · recusar o retry divergente e ficar sem prova nesse pedido.
-- **Onde aterrissa:** `aceitesVersaoExibida.integration` e o caminho de replay de `createInscricaoCharge`.
-
-### ARENA-1 · quem vê o que a pessoa preencheu na Arena Social
-
-Você pediu a Arena Social — mini bio, gênero, gêneros de interesse (pessoas e experiências), interesses nos pilares de bem-estar e a foto da conta. A frase não diz quem vê, e visibilidade é a diferença entre um formulário e uma rede.
-
-- **Caso de uso:** a Ana preenche a mini bio e os interesses. Ou só ela vê, e a área ainda não conecta ninguém, ou outros participantes veem, e o produto precisa dizer isso a ela antes de ela preencher.
-- **Job story:** quando eu escrevo sobre mim numa plataforma, eu quero saber quem vai ler antes de começar a escrever, para decidir o quanto eu conto. As duas opções servem gente diferente: quem quer conhecer pessoas na mesma experiência é servida pela abertura, e quem só quer guardar os próprios dados é servida pelo fechamento.
-- **O que fica com você:** dizer quem vê o perfil da Arena.
-- **Por que agora:** a resposta desenha as Rules e as telas antes de virar código; mudar visibilidade depois de dado preenchido é retrabalho com dado de gente real.
-- **Opções:** só a própria pessoa vê, e a abertura para outros participantes vem depois, junto da feature de conexão (**default proposto** — o dado nasce guardado e nenhuma promessa é feita antes da hora) · participantes de uma mesma experiência veem o perfil de quem optou por aparecer · organizador da experiência também vê. Em qualquer opção, o campo de gêneros de pessoas segue a régua própria da RN-472 e **nunca** fica visível por default.
-- **Onde aterrissa:** RN-471 e RN-472 em [[LEELA-E12-landing]]; S1226 em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`.
-
-### ARENA-4 · Vocabulário · o corte da lista derivada de pilares e modalidades
-
-Você decidiu o método em 09/08: a lista de interesses da Arena sai dos pilares e modalidades disponíveis (*"podemos usar de base"*). A spec formalizou a derivação (RN-553 a RN-556, `02-rodadas/2026-08-10-arena-2-lista/`) e a medição corrigiu a premissa do item antigo: a listagem existe — RN-114 define os 3 pilares (Físico, Mental, Espiritual) e as 16 ações do catálogo, e o clube tem 9 modalidades de vocabulário fechado. O que sobrou é a escolha que só você pode fazer: as fontes se sobrepõem em cinco práticas (Correr ↔ Corrida de rua, Caminhar ↔ Caminhada, Pedalar ↔ Ciclismo, Nadar ↔ Natação, Yoga/alongamento ↔ Bem-estar/Yoga) e algumas ações têm rótulo de hábito, não de interesse.
-
-- **Caso de uso:** a Ana abre a Arena e escolhe interesses numa lista que é a mesma taxonomia dos clubes e desafios. Se a lista dela disser "Corrida" e o clube disser "Corrida de rua", é a mesma coisa com dois nomes — e é você quem diz qual nome o produto fala.
-- **Job story:** quando eu escolho o que me interessa, eu quero categorias com nome de interesse e não de tarefa, para me reconhecer na lista em vez de decifrá-la.
-- **O que fica com você:** o corte sobre a tabela de 20 termos da spec (§Parte 5 de `03-spec.md` da rodada) — quais entram, quais rótulos mudam, e se as cinco fusões valem. Dois rótulos foram reescritos pela esteira ("Sono e descanso" para dormir-7h, "Menos tela" para limitar-tela-noite) e estão marcados para o seu veto ser barato.
-- **Por que agora:** a tela de interesses (S1226) não nasce sem a lista, e a mesma lista serve a categorização da home que você avisou que vai mexer (D-0802-1). Nascer uma vez, num lugar só, evita duas listas divergindo. Uma honestidade de medição: a proposta não traz "eventos por termo" porque a produção congelada de 10/08 tem 2 eventos de teste — a ancoragem é a taxonomia canônica, não uso que ainda não existe.
-- **Opções:** **ratificar a tabela** (20 termos em 3 pilares, fusões e rótulos como estão — **default proposto**) · cortar/acrescentar/renomear sobre a tabela, e a RN-557 nasce na forma da resposta · só pilares (Físico/Mental/Espiritual sem granular — a lista mínima que a sua frase permite).
-- **Onde aterrissa:** RN-557 em [[LEELA-E12-landing]] (nasce na forma da resposta); `S1245-T2` em `02-rodadas/2026-08-10-arena-2-lista/04-fila-codigo.md`.
-
-### CRM-1 · quais visões entram na primeira leva do CRM
-
-Você perguntou que outras informações estratégicas o painel CRM podia mostrar ao organizador. A varredura achou dez visões possíveis e mediu o custo de cada uma; seis saem de dado que já está no banco, quatro dependem de coleta ou de destravar outra coisa. A ordem proposta não é por sofisticação, é por quanto cada uma muda uma decisão que o Castelo toma de verdade.
-
-- **Caso de uso:** o Castelo abre o CRM e vê perfil de idade e sexo. O que ele precisava saber era se o link do Téo trouxe venda nova ou só comissão sobre venda que ele já teria feito de qualquer jeito.
-- **Job story:** quando eu abro o CRM depois de uma campanha, eu quero saber o que de fato mudou a minha venda, para escolher onde colocar o próximo real de esforço.
-- **O que fica com você:** dizer quais entram na primeira leva. Este é veto de escopo, não de mecanismo — cada visão recusada continua escrita e volta quando você quiser.
-- **Por que agora:** cada visão é um agregado mantido por Function, e agregado é barato de nascer e caro de aposentar. Escolher quatro agora custa menos que construir dez e descobrir que três ninguém abre.
-- **Opções:** as quatro que saem de dado pronto e não pedem nada a ninguém — **de onde veio a venda** (cupom, afiliado, direto, com a comissão de cada canal), **distribuição geográfica**, **quem pagou e não apareceu** e **como o seu público paga** (PIX contra cartão, e em quantas parcelas) — deixando recorrência, funil e motivo de estorno para a leva seguinte (**default proposto** — é o corte que entrega dinheiro e logística primeiro, e nenhuma delas pede um campo novo) · a lista inteira das construíveis de uma vez, que é mais trabalho num lote e adia a primeira entrega · só a geografia, que foi o que você pediu por nome, e o resto espera.
-- **Onde aterrissa:** `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md` §Parte 2; fila em `03-fila-proposta.md` Frentes 1 e 3. As regras nasceriam em [[LEELA-E19-crm]] e [[LEELA-E11-analytics]].
-
-### CRM-2 · a localização entra como agregado, e o endereço continua fora da ficha do cliente
-
-Você perguntou se dá para fazer algo com localização e endereço. Dá, e o dado já está inteiro no banco desde o checkout novo: CEP, rua, bairro, cidade e UF, persistidos por pedido. O que existe é uma premissa escrita reservando essa decisão para você — a **P-CKMOD-1** diz que endereço nunca entra no doc do cliente e que incluí-lo "exige decisão explícita do Vitor registrada aqui". A pergunta de hoje é exatamente ela, dezoito dias depois.
-
-- **Caso de uso:** a Marina quer saber de que bairros vem o público para escolher onde montar o balcão de retirada de kit. Ou ela vê a contagem por bairro, ou ela vê o endereço da Ana na ficha dela, e as duas coisas são muito diferentes.
-- **Job story:** quando eu planejo a retirada de kit, eu quero saber de que região vem o meu público, para escolher o ponto certo sem precisar do endereço de ninguém em particular.
-- **O que fica com você:** autorizar a contagem agregada por cidade e bairro, e dizer se o endereço passa também a aparecer na ficha individual do cliente.
-- **Por que agora:** o desenho do agregado muda conforme a resposta, e ele nasce com Rules próprias. Mudar depois de existir contagem é reprocesso; mudar depois de existir endereço em ficha é dado de gente real que saiu e não volta.
-- **Opções:** **agregado sim, ficha não** (**default proposto** — a contagem por cidade e bairro nasce no mesmo molde da demografia, sem identidade, com a mesma supressão de privacidade do cohort, e a premissa P-CKMOD-1 continua valendo para a ficha) · agregado e ficha, o que dá ao organizador o endereço de cada pessoa numa área que hoje não tem controle de papel — eu **recomendo recusar**, porque é o mesmo desenho que o P-IAMENU-1 já registrou como buraco · nada, e a pergunta fica respondida com "temos o dado e escolhemos não usá-lo".
-- **Onde aterrissa:** `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md` §Parte 3; tarefas 2a a 2d em `03-fila-proposta.md`. A premissa P-CKMOD-1 vive em [[LEELA-E19-crm]] e é ela que muda de estado.
-- **Duas coisas que a resposta não decide e você precisa saber.** O endereço é do **comprador**, uma vez por pedido, nunca por participante — quem compra quatro ingressos dá um endereço, então o mapa descreve de onde vem o dinheiro, não de onde vem a gente. E a **distância até o local do evento não é calculável**, porque o evento não tem endereço estruturado: `local` é texto livre e não existe coordenada em lugar nenhum. Estruturar o endereço do evento é tarefa própria, vale por si (mapa na página pública, endereço certo no ingresso, busca por proximidade na vitrine) e não espera este item.
-
-### CRM-3 · o e-mail que já pedimos a cada participante é jogado fora
-
-Este item não escolhe entre dois futuros: ele conserta uma coisa que ninguém decidiu. O checkout exibe um campo de e-mail para **cada** atleta, obrigatório, a pessoa preenche, o payload envia, o servidor valida — e a gravação monta o bloco de dados pessoais com CPF, nascimento, gênero e telefone, sem e-mail. O campo nunca existiu no modelo, e a esteira herdou o buraco como se fosse regra.
-
-- **Caso de uso:** a Ana compra quatro ingressos para a família e digita o e-mail dos quatro. O Castelo consegue falar com uma pessoa, a Ana, e as outras três são invisíveis para qualquer comunicado dele.
-- **Job story:** quando eu dou o meu e-mail na hora da inscrição, eu quero receber o que diz respeito ao evento em que eu vou entrar, para não depender de quem pagou por mim para saber a que horas é a largada.
-- **O que fica com você:** autorizar guardar esse e-mail. É expansão do que se guarda sobre alguém que não é o comprador, então é sua, e não da esteira.
-- **Por que agora:** custo de atrito **zero** — o campo já está na tela e já é obrigatório; ninguém digita nada a mais. E há um efeito colateral bom que some se a decisão demorar: a chave que une o mesmo cliente entre os seus eventos tenta CPF, depois e-mail, depois um identificador de sessão; sem e-mail, todo participante que não comprou cai no último recurso e vira cliente novo a cada evento.
-- **Opções:** guardar, com a mesma disciplina de minimização do resto do bloco (**default proposto** — é o maior retorno sobre esforço de toda a proposta, e o dado já foi coletado com a pessoa vendo o que digitava) · não guardar, e aí vale tirar o campo do checkout, porque pedir um dado obrigatório e descartá-lo é pior que não pedir · guardar só com uma frase explícita na tela dizendo para que serve, o que é mais honesto e custa uma linha.
-- **Onde aterrissa:** tarefa `COL-T1` em `02-rodadas/2026-08-05-crm-estrategia/03-fila-proposta.md`; o campo nasceria em `packages/core/src/eventos/dadosPessoais.ts` e a regra em [[LEELA-E19-crm]], ao lado da RN-172.
-
 ### CRM-4 · o que se pede ao participante depois da compra, e em troca de quê
 
 A segunda metade da sua pergunta foi sobre os campos que incentivamos as pessoas a responder com o tempo. A resposta curta da esteira é que **nada novo entra no checkout** — ele é a única tela onde o dinheiro entra, e cada campo a mais é venda perdida. O que existe é uma escada para fora dele, e ela precisa de você porque cada degrau é uma promessa feita a quem responde.
+
+> **Onde este item parou, em 12/08.** Você leu e respondeu com uma pergunta: *"como assim em troca de que?"* O esclarecimento foi dado no chat e a sua resposta ainda não voltou, então o item fica aqui **intacto**, com os degraus e a contrapartida de cada um como estavam. Os outros três de CRM fecharam na mesma leva e este não foi decidido por default de propósito: cada degrau é uma promessa feita a quem responde, e promessa não sai da esteira.
 
 - **Caso de uso:** a Ana acabou de pagar e está na tela de confirmação com o ingresso na mão. É ali que confirmar o endereço de entrega custa quase nada, e é ali que perguntar a renda dela seria uma invasão.
 - **Job story:** quando eu acabei de pagar e estou aliviada, eu quero responder só o que me devolve alguma coisa na hora, para sentir que estou completando a minha compra em vez de preencher pesquisa dos outros.
 - **O que fica com você:** dizer até que degrau a gente sobe, e qual contrapartida é dita em voz alta.
 - **Por que agora:** a tela de pós-pagamento e a área do cliente acabaram de nascer, e o FormBuilder é a próxima frente da fila. Decidir agora faz os pedidos nascerem no lugar certo em vez de virarem campo avulso depois.
-- **Opções:** **degraus 1 e 2 agora** (**default proposto** — degrau 1 é conserto sem atrito nenhum: guardar o e-mail que já se pede, guardar o código de município que o consultor de CEP já devolve e a gente descarta, e copiar cidade e UF do endereço quando o participante é o próprio comprador; degrau 2 é a confirmação logo depois da compra, com contrapartida imediata e verdadeira — "confirme para o kit chegar certo") · subir também o degrau 3, o perfil de interesses, que é a Arena Social e depende dos vetos ARENA · subir tudo, incluindo a pergunta de satisfação depois do evento, que depende do canal de e-mail travado na chave do Brevo.
+- **Opções:** **degraus 1 e 2 agora** (**default proposto** — degrau 1 é conserto sem atrito nenhum: guardar o e-mail que já se pede, guardar o código de município que o consultor de CEP já devolve e a gente descarta, e copiar cidade e UF do endereço quando o participante é o próprio comprador; degrau 2 é a confirmação logo depois da compra, com contrapartida imediata e verdadeira — "confirme para o kit chegar certo") · subir também o degrau 3, o perfil de interesses, que é a Arena Social — e ele **destravou em 12/08**, porque os dois itens ARENA que o seguravam foram decididos na leva 8: o dado nasce guardado (ARENA-1) e a lista de interesses passou a derivar das modalidades do Strava, com a tabela pronta para o seu corte fino (ARENA-4) · subir tudo, incluindo a pergunta de satisfação depois do evento, que depende do canal de e-mail travado na chave do Brevo.
 - **Onde aterrissa:** `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md` §Parte 7; tarefas `COL-T2` e `V2-T3` em `03-fila-proposta.md`.
 - **O que a esteira recusa pedir, em qualquer degrau:** renda, profissão, estado civil e número de filhos. São os campos que todo formulário de evento pede, que nenhum organizador abre depois, e que cada um obriga a guardar, justificar e expurgar dado pessoal sem que nenhuma decisão melhore.
-
-### ADMIN-USUARIOS-2 · aprovar existe; recusar e revogar, não
-
-Sua decisão de 09/08 criou as duas portas de aprovação (código ou liberação direta) e a spec de 10/08 as formalizou (`02-rodadas/2026-08-10-admin-usuarios/`). O que a sua frase não alcança: o que você faz com um cadastro que **não** quer aprovar, e o que acontece se quiser desfazer um acesso já concedido. Hoje não existe nem um nem outro — a fila só cresce, e a única revogação do sistema é a de **convite ainda não usado**; conta liberada não tem caminho de volta pelo painel.
-
-- **Caso de uso:** um cadastro claramente de teste (ou de má-fé) entra na fila e fica lá para sempre, na frente de gente real, porque não há gesto de recusa. Ou: você libera alguém por engano, e desfazer vira operação de engenharia em vez de um botão.
-- **Job story:** quando eu olho a fila de cadastros, eu quero poder tirar da frente o que não vou aprovar, para a fila ser a lista real de quem espera decisão minha.
-- **O que fica com você:** se a recusa existe (e o que ela diz à pessoa), e se a revogação existe (e o que ela faz com o tenant já provisionado).
-- **Por que agora:** a tela da fila (S1615) nasce agora; nascer sem o gesto de recusa é barato de aceitar hoje e caro de remendar quando a fila tiver volume. E o que já está cravado pela RN-552, qualquer que seja a sua resposta: recusa e revogação, se existirem, deixam o mesmo rastro da aprovação, e revogação **nunca apaga dado** — no máximo suspende o tenant, que o lifecycle já sabe fazer.
-- **Opções para a recusa:** **fila sem recusa por ora** — cadastro indesejado simplesmente não é aprovado (**default proposto**, porque não inventa comunicação com a pessoa nem estado novo sem caso real) · recusa explícita com estado próprio, sem avisar a pessoa · recusa explícita com aviso à pessoa — a mais honesta e a que mais decide por você (copy, tom, canal).
-- **Opções para a revogação:** **não nasce nesta fase** (**default proposto** — nenhum caso real a pediu, e revogar organizador com vendas vivas tem consequência em cascata) · revogação = suspender o tenant pelo lifecycle que já existe, sem apagar nada.
-- **Onde aterrissa:** RN-552 (nasce na forma da resposta); tarefa `S1616-T5`. Detalhe em `02-rodadas/2026-08-10-admin-usuarios/03-spec.md §Parte 5`.
 
 ## Ações que só você pode executar
 
