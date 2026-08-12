@@ -224,6 +224,25 @@ export interface Pedido {
    * RN-469, por campo.
    */
   codigoPedido?: string;
+  /**
+   * POR QUE o pedido foi cancelado, quando ele foi (RN-CKPIX-2). Presente só
+   * em `status === 'cancelado'`, e nem sempre: quem cancela sem carimbar
+   * motivo deixa o campo ausente, e ausência aqui é ausência de causa apurada,
+   * nunca "cancelado por engano".
+   *
+   * O valor canônico de hoje é {@link MOTIVO_CANCELAMENTO_PIX_EXPIRADO}, e a
+   * razão de o campo ser `string` livre em vez de um enum é que o escritor é a
+   * Function: um literal novo do servidor não pode derrubar a leitura da
+   * compra de ninguém. Quem CONSOME compara com a constante do core; quem não
+   * reconhece o valor trata como cancelamento sem causa declarada.
+   *
+   * ⚠️ O campo já era ESCRITO por `expirarPixPendente` desde a CK2-4 e era
+   * DESCARTADO por `parsePedido` — o doc carregava a causa e nenhuma tela
+   * podia lê-la. É esta lacuna que a lane CKPIX-FLOW fecha: sem ela, o ramo do
+   * PIX vencido teria de adivinhar a causa a partir do status, que não a
+   * distingue de qualquer outro cancelamento.
+   */
+  canceladoMotivo?: string;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -643,6 +662,17 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
   // cai no "ausência é ausência" da RN-475, que já é o comportamento certo.
   if (isCodigoPedidoValido(data['codigoPedido'])) {
     pedido.codigoPedido = data['codigoPedido'];
+  }
+
+  // RN-CKPIX-2: a CAUSA do cancelamento, pela mesma leitura Postel do código
+  // acima e pela mesma razão — é rótulo de causa, não dinheiro. O escritor é a
+  // Function (`expirarPixPendente` hoje, `varrerPixVencidos` pela RN-545
+  // amanhã), e um literal novo do servidor não pode derrubar a leitura da
+  // compra. Só string não-vazia entra; qualquer outra coisa vira ausência, que
+  // é o estado honesto de "não sei por quê".
+  const motivo = data['canceladoMotivo'];
+  if (typeof motivo === 'string' && motivo.length > 0) {
+    pedido.canceladoMotivo = motivo;
   }
 
   if (data['formaPagamento'] !== undefined) {

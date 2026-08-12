@@ -21,10 +21,12 @@ import {
   getDoc,
   getDocs,
   limit as firestoreLimit,
+  onSnapshot,
   orderBy,
   query,
   where,
   type Firestore,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import {
   parsePagamento,
@@ -50,6 +52,67 @@ export async function getPedido(
   const snap = await getDoc(doc(db, 'pedidos', pedidoId));
   if (!snap.exists()) return null;
   return parsePedido(snap.id, snap.data());
+}
+
+/** Handlers do observador realtime de UM pedido — `next` a cada mudança. */
+export interface ObservarPedidoHandlers {
+  /**
+   * O pedido a cada escrita do servidor. `null` = o doc não existe (só
+   * acontece sem Rules; com Rules a inexistência chega por `error`).
+   */
+  next: (pedido: Pedido | null) => void;
+  /**
+   * A assinatura caiu (Rules, rede, ou um doc que `parsePedido` recusa).
+   * Chamado no máximo uma vez por assinatura — depois dele o listener está
+   * morto e o chamador precisa do próprio caminho de leitura.
+   */
+  error?: (err: Error) => void;
+}
+
+/**
+ * OBSERVA UM pedido em TEMPO REAL (RN-CKPIX-1..4). É a resposta ao problema
+ * que a RN-469 abriu e a RN-470 deixou em aberto: quem escreve o desfecho do
+ * pagamento é o WEBHOOK, no servidor, num instante que ninguém na tela
+ * controla — e até aqui a única forma de a tela saber era o comprador clicar
+ * em "atualizar". A RN-470 foi revogada pelo dono em 11/08; esta função é o
+ * canal que a revogação pede.
+ *
+ * POR QUE `onSnapshot` E NÃO POLLING. A leitura já é autorizada doc a doc pela
+ * mesma Rule da RN-469 (`allow read` avalia igual no get e no listener), então
+ * o listener não custa permissão nova. Ele custa UMA leitura por MUDANÇA real,
+ * onde o polling custa uma por janela: um PIX de 30 minutos consultado a cada
+ * 5 s são 360 leituras por checkout abandonado, contra 1 aqui. E a cadência do
+ * polling seria um chute — o webhook não tem hora.
+ *
+ * FAIL-FAST DO PARSE, CONTIDO AQUI. `parsePedido` derruba a leitura de um doc
+ * incoerente, e dentro de um callback de snapshot isso mataria a assinatura em
+ * silêncio. O `try/catch` converte a recusa no canal de `error`, que é onde o
+ * chamador já sabe olhar — o mesmo desfecho que ele teria com `getPedido`.
+ *
+ * Devolve o `Unsubscribe` para o cleanup do caller. O listener vive enquanto a
+ * tela vive: é o comprador esperando o desfecho, e não uma superfície de
+ * operação — quando a compra fecha, ele sai.
+ */
+export function observarPedido(
+  db: Firestore,
+  pedidoId: string,
+  handlers: ObservarPedidoHandlers
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, 'pedidos', pedidoId),
+    (snap) => {
+      if (!snap.exists()) {
+        handlers.next(null);
+        return;
+      }
+      try {
+        handlers.next(parsePedido(snap.id, snap.data()));
+      } catch (err) {
+        handlers.error?.(err instanceof Error ? err : new Error(String(err)));
+      }
+    },
+    (err) => handlers.error?.(err)
+  );
 }
 
 /** Parâmetros de listagem de pedidos de um evento */

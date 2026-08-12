@@ -135,6 +135,29 @@ export const MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO = 'pix_anterior_nao_encerrado';
 export const MOTIVO_GATEWAY_SEM_RESPOSTA = 'gateway_sem_resposta';
 
 /**
+ * Motivo TIPADO do cancelamento por PRAZO VENCIDO — o valor que vai para
+ * `canceladoMotivo` no pedido e no pagamento quando um PIX pendente passa de
+ * `pixExpiraEm` sem ser pago (RN-157 · RN-CKPIX-2).
+ *
+ * POR QUE ELE PRECISA DE NOME. A máquina de status não tem estado "vencido"
+ * (premissa CK2-4: reusar a máquina vigente), então o PIX que venceu vira
+ * `cancelado` — o MESMO valor de um cancelamento por qualquer outra causa. O
+ * status sozinho, portanto, não distingue "o prazo venceu" de "a cobrança foi
+ * cancelada", e uma tela que dissesse "o PIX foi cancelado depois que o prazo
+ * venceu" por cima de um `cancelado` qualquer estaria afirmando uma causa que
+ * não apurou. É este campo que autoriza a frase.
+ *
+ * DOIS ESCRITORES, UM LITERAL. Hoje quem escreve é o `expirarPixPendente`
+ * (callable disparada pelo timer do comprador); a varredura periódica da
+ * RN-545 (`varrerPixVencidos`) escreve o MESMO valor, pela RN-544, que mantém
+ * a transição `pendente → cancelado` em vez de inventar estado novo. Os dois
+ * caminhos convergem aqui de propósito: a tela do checkout reage ao CAMPO, não
+ * a quem o escreveu, e é por isso que ela não precisa saber se a varredura já
+ * subiu.
+ */
+export const MOTIVO_CANCELAMENTO_PIX_EXPIRADO = 'pix_expirado';
+
+/**
  * Ciclo de vida do pagamento — espelho PT do ChargeStatus do gateway
  * (pending/confirmed/failed/refunded/cancelled — ADR-006). O estorno
  * PARCIAL (por inscrito — RN-341) vive na máquina de `reembolsos` (S904),
