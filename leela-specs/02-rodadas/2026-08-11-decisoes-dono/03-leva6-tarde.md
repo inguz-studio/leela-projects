@@ -154,3 +154,9 @@ memória persistente do maestro.
 
 **Ordem operacional:** painel de decisões atualizado e AVISAR o dono para leitura ("vou
 ler o que realmente preciso conferir"); seguir TUDO do roadmap liberado; janela 3 de 7h.
+
+**Complemento do dono (mesmo ato):** "é primordial que nossa software forge utilize a
+prática de snippets e design system." → A diretriz sobe ao nível da EMPRESA
+(software-forge): snippets/partes reutilizáveis + design system são prática primordial em
+qualquer projeto que ela execute. Registrado na memória permanente da empresa
+(`learned.md`), no ledger do orquestrador e na memória do maestro.
