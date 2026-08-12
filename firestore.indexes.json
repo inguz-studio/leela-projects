@@ -121,6 +121,20 @@
       ]
     },
     {
+      "collectionGroup": "pagamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pixExpiraEm",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
