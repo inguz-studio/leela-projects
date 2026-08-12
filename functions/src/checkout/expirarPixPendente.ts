@@ -65,6 +65,7 @@ import {
 } from '@leela/core';
 import { selectPaymentProvider } from '../payments/selectProvider';
 import { agoraCheckout } from './relogioCheckout';
+import { lerLotesDasLinhasNaTx, liberarNaTx } from './reservaLote';
 
 type Db = admin.firestore.Firestore;
 
@@ -262,7 +263,20 @@ export async function expirarPixPendenteCore(
         return { pedidoId, statusPedido: statusFresco, expirado: false, jaFinal: true };
       }
 
+      // RN-544 (porta 1 e porta 4 — varredura e onCall usam ESTE core): a
+      // vaga volta na MESMA transação que mata o pedido. Liberar num passo
+      // separado deixaria uma janela em que a vaga não está nem vendida nem
+      // disponível, e um crash no meio a deixaria presa para sempre.
+      // Leitura AINDA na fase de leitura da tx.
+      const lotesDoPedido = await lerLotesDasLinhasNaTx(
+        db,
+        tx,
+        (pedidoFresco.get('eventoId') as string | undefined) ?? '',
+        (pedidoFresco.get('itens') as { loteId?: string | null }[] | undefined) ?? []
+      );
+
       const now = FieldValue.serverTimestamp();
+      liberarNaTx(tx, lotesDoPedido, { pedidoId, porta: 'expiracao_prazo_pix' });
       tx.update(pedidoRef, {
         status: 'cancelado',
         canceladoMotivo: MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
