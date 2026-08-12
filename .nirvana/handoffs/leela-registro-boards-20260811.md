@@ -96,3 +96,61 @@ código que está no ar enquanto a lane CKPIX-FLOW não subir.
   profissional"). Todos rodam com default em vigor e nenhum segura tarefa.
 - Não mexeu na emenda anti-conserto-de-volta da D-1008-R19: ela permanece como está, agora com o
   TICKET-1 ratificado por trás.
+
+---
+
+# Adendo · a leva 7, na mesma aterrissagem
+
+O dono decidiu mais três itens depois da leva 6, e eles entraram na mesma lane. Fonte: as seções
+"Leva 7" e o complemento no fim de `03-leva6-tarde.md`.
+
+| # | Commit | O que entrou |
+|---|---|---|
+| 6 | `f6c5774c` | painel: LGPD-1, ESTOURO-2 e CANONE-1 saem; parágrafo de troca; conta 14 → 11; a fila de construção registra o seed do convite destravado |
+| 7 | `24f4fee8` | E04 (RN-546 com o número), E00 (aceite no resgate + seed), E12 (materialHash no termo de saúde), E01 + governança + cânone + ondas (a diretriz de reuso) e a nota jurídica na rodada do radar |
+| 8 | `d6d2bf94` | kanban, BOARD-EPICOS e VISAO-DE-PROJETO |
+
+## A conta do painel: 14 → 11
+
+Recontada à mão contra as seções: **9 decisões + 2 ações**. Bate com o previsto.
+
+**Os três removidos:** LGPD-1 · ESTOURO-2 · CANONE-1.
+
+**Os onze que ficam:** 12 (domínio público), PB-11, ARENA-1, ARENA-4, CRM-1, CRM-2, CRM-3, CRM-4,
+ADMIN-USUARIOS-2 · e as ações 69 (conferência visual) e JUROS-1.
+
+## O que cada decisão moveu
+
+**LGPD-1** — *"o aceite é obrigatório, e registrado no banco."* Três das quatro frentes do item
+fecham com a frase: o resgate passa a **recoletar** o aceite no overlay quando o registro falta
+(primeira das três saídas; as outras duas ficam escritas como recusadas), o termo de saúde passa a
+carimbar `materialHash` como o termo de uso, e a Arena já estava contratada na RN-472. **O seed do
+primeiro convite de organizador DESTRAVOU** — era a única coisa retida por este item, e está
+marcado no painel (fila de construção), no E00 e na `S1242-T7` do kanban. A quarta frente — a base
+legal do nome real de participante de comunidade — **saiu do painel**: é dado de terceiro, não
+aceite de organizador, e passou a morar em `02-rodadas/2026-08-09-radar-whatsapp/01-decisoes-dono.md`
+com a condição de reabertura que já existia. O radar não ganha nem perde gate com isso (o risco foi
+assumido pelo dono em 09/08).
+
+**ESTOURO-2** — teto de **15 minutos**, não os 30 do default, e a expiração **devolve a pessoa à
+página do evento**. A RN-546 sai da condição no E04 e ganha os três pontos do enunciado; o texto
+condicionado de 10/08 fica legível abaixo, marcado, porque é ele que explica de onde vinha o 30. O
+trabalho se divide: contador e liberação na **ESTOURO-BUILD**, tela da expiração na **CKPIX-FLOW**
+(nova `S1246-T4`) — a expiração é ramo do pós-pagamento, mesma família da RN-560.
+
+**CANONE-1** — opção 1, pela leitura do próprio dono. Virou **diretriz permanente** em
+`04-engenharia/governanca-design.md`: peça que o DS não publica nasce nele, documentada e
+padronizada, antes de ser usada — nunca inline, nunca refeita. As três razões dele ficaram
+escritas (tokens, tempo, conformidade). O cânone perdeu os dois "⛔ sem cânone" (§5 e §6), a **Onda
+0 Parte B destravou** no roadmap e no E01, e o gate ganhou destino para o `padrao-orfao`: a
+contagem vira fila de trabalho em vez de licença. O complemento do dono no mesmo ato — *"é
+primordial que nossa software forge utilize a prática de snippets e design system"* — está
+registrado como diretriz de casa, um nível acima do projeto.
+
+## Gates do adendo
+
+- Contagem do painel refeita à mão: 9 + 2 = 11.
+- Wikilinks: varredura sobre os doze arquivos tocados nas duas levas — todos resolvem.
+- Nenhuma RN nova foi consumida nesta leva: a 546 já existia (condicionada) e passou a ter
+  enunciado firme. **Próxima livre continua 562.**
+- Nenhum enunciado apagado: o texto condicionado da RN-546 ficou marcado, como a RN-470 já estava.
