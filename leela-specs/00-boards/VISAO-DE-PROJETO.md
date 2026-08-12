@@ -11,22 +11,56 @@ atualizado: 2026-08-11
 > tem, o que está parado esperando você e o que anda sozinho. Uma leitura de dez minutos, sem
 > abrir mais nada.
 >
-> As três alturas continuam onde estavam: [[BOARD-EPICOS]] é o mapa de uma linha por épico,
-> [[V1-KANBAN]] é o board vivo e [[CONVENCAO-BOARDS]] é a regra de como se escreve um card.
+> **Retrato da noite de 11/08**, depois das duas janelas de trabalho do dia e da sua leva 6 de
+> decisões. As três alturas continuam onde estavam: [[BOARD-EPICOS]] é o mapa de uma linha por
+> épico, [[V1-KANBAN]] é o board vivo e [[CONVENCAO-BOARDS]] é a regra de como se escreve um card.
 
 ## Onde o produto está, em cinco linhas
 
 O organizador **opera** o evento inteiro e **vende** ponta a ponta: o atleta descobre, se
 inscreve e paga; ele vê a receita, estorna e pede o repasse. Isso está no ar.
 
-O que está sendo fechado agora é o **produto web**: o dinheiro que está em voo, os afiliados, as
-marcas, o CRM e a análise. Em paralelo, o **redesign** trocou a pele do painel inteiro — tema
-novo, camada de vidro, menus, navegação de área — e esse trabalho está **construído e fora do
-ar**, esperando entrar na linha principal e subir com conferência visual.
+O redesign **entrou na linha principal** em 11/08 e a primeira parte dele **subiu**: o painel com
+a pele nova, a área de clubs com moldura, o painel de engajamento e a área de Parcerias estão em
+produção, com a conferência visual fechada antes de subir. Depois desse deploy o dia produziu
+muito mais — e tudo isso está **construído, na main e fora do ar**.
 
-Depois vem o **app do atleta**, agora como site instalável em vez de aplicativo de loja. Por
-último a **camada social**. Fora dessa fila, com spec pronta e nenhuma linha escrita, está o
-**radar da comunidade do WhatsApp**.
+O que está sendo fechado agora é o **produto web**: o dinheiro em voo, o painel de administração,
+os afiliados, o CRM e a análise. Depois vem o **app do atleta** como site instalável, e por último
+a **camada social**. Fora da fila, com spec pronta e nenhuma linha escrita, está o **radar da
+comunidade do WhatsApp**.
+
+## O que mudou hoje, e é muito
+
+**A sua leva 6, à noite, tirou onze decisões da sua mesa de uma vez.** O painel caiu de 25 para
+**14 itens**. Três frentes que estavam paradas esperando você voltaram a andar: o pós-pagamento do
+checkout, o painel de administração inteiro e o renome do "Serviço".
+
+**As duas janelas de trabalho do dia entregaram, em ordem:**
+
+1. **O deploy da madrugada** levou ao ar o chrome novo do painel, a área de clubs, o painel de
+   engajamento e a área de Parcerias — com o gate visual fechado antes de subir, como a regra da
+   casa manda.
+2. **A revisão de componentes virou roadmap, cânone e trava.** A medição corrigiu o número que os
+   boards carregavam: não são 40 telas com fundo cru (isso não existe no produto), são **223
+   lugares** que reescreveram à mão um componente que já existia pronto. O mapa de qual componente
+   é o padrão virou canônico, as seis ondas de conversão estão ordenadas, e a trava agora é código
+   que roda com catraca — o número só pode cair.
+3. **A Onda 0 e a Onda 1 da conversão foram pagas.** O design system parou de duplicar o próprio
+   motor; o checkout e a página pública pararam de remontar o cartão da casa 38 vezes. E um clique
+   inútil morreu: evento com uma modalidade e um kit só já vem escolhido, e **o checkout caiu de 16
+   para 14 passos**.
+4. **A venda mínima de R$ 10,00 virou regra no mesmo dia** em que você a decidiu (RN-559): um lote
+   entre R$ 0,01 e R$ 9,99 não nasce mais, e a recusa diz o motivo na tela e no servidor.
+5. **O painel master ganhou as listas globais** — todos os eventos e todos os clubs do sistema, com
+   a produtora em cada linha e contador que não mente.
+6. **Quinze melhorias de texto** entraram nas telas do redesign, mais a grade da Agenda navegável
+   por teclado e o endereço público dos clubs saindo do código chumbado.
+7. **Dois números que mentiam foram consertados no servidor**: o GMV de cada produtora, que nascia
+   zero e ficava zero para sempre, e o funil, que dividia por inscrito em vez de por quem pagou.
+
+**O que isso deixa pendente, e é o maior recado desta página:** tudo do item 2 em diante está na
+main e **não está no ar**. O próximo deploy é grande, e ele não sobe sem a conferência visual.
 
 ## O placar
 
@@ -37,32 +71,33 @@ Depois vem o **app do atleta**, agora como site instalável em vez de aplicativo
 | 📋 **Pendente** — tem trabalho planejado, ninguém tocando | 7 | E03 · E09 · E11 · E13 · E17 · E19 · E20 |
 | 🧊 **Gelado** — adiado de propósito | 2 | E14 integrações de treino · E15 creator studio |
 
-**Total: 21 épicos.** No board vivo: **46 cards no backlog**, **15 em execução**, 112 feitos e
-4 fora da V1.
+**Total: 21 épicos.** No board vivo: **46 cards abertos no backlog**, **15 em execução**, **3 em
+execução já construídos e esperando deploy**, 112 feitos e 4 fora da V1.
 
-O peso do que falta, por épico, contando só o que está aberto:
+O peso do que falta, por épico, contando só o que está aberto no board vivo:
 
 | Épico | Cards abertos | Histórias abertas | Tarefas abertas |
 |---|---|---|---|
-| [[LEELA-E12-landing]] · landing, checkout e área do cliente | 21 | 27 | 57 |
-| [[LEELA-E16-plataforma-superadmin]] · plataforma e admin | 9 | 13 | 66 |
+| [[LEELA-E12-landing]] · landing, checkout e área do cliente | 22 | 28 | 60 |
+| [[LEELA-E16-plataforma-superadmin]] · plataforma e admin | 9 | 12 | 63 |
 | [[LEELA-E00-fundacao-tecnica]] · fundação e contas | 8 | 11 | 42 |
 | [[LEELA-E04-config-vendas]] · configuração e vendas | 8 | 10 | 44 |
 | [[LEELA-E09-financeiro-profissional]] · financeiro | 7 | 6 | 26 |
-| [[LEELA-E01-design-system]] · design system e casca | 5 | 5 | 17 |
-| [[LEELA-E05-clubs]] · clubs e comunidade | 4 | 6 | 14 |
-| [[LEELA-E08-influenciador]] · afiliados | 4 | 2 | 5 |
-| [[LEELA-E11-analytics]] · análise | 4 | 3 | 17 |
+| [[LEELA-E01-design-system]] · design system e casca | 4 | 3 | 12 |
+| [[LEELA-E05-clubs]] · clubs e comunidade | 4 | 5 | 12 |
+| [[LEELA-E11-analytics]] · análise | 4 | 3 | 18 |
 | [[LEELA-E19-crm]] · CRM | 4 | 1 | 14 |
+| [[LEELA-E08-influenciador]] · afiliados | 4 | 1 | 1 |
 | [[LEELA-E03-operacao-evento]] · operação do evento | 3 | 5 | 14 |
-| [[LEELA-E10-marcas]] · marcas e parcerias | 2 | 2 | 9 |
-| [[LEELA-E13-app-atleta]] · app do atleta | 2 | 0 | 0 |
-| [[LEELA-E18-assessorias-parceiras]] · assessorias | 1 | 1 | 4 |
-| [[LEELA-E17-perfil-social]] · social no app | 1 | 0 | 0 |
+| [[LEELA-E10-marcas]] · marcas e parcerias | 2 | 1 | 5 |
 | [[LEELA-E20-radar-comunidade]] · radar do WhatsApp | 1 | 9 | 0 |
+| [[LEELA-E13-app-atleta]] · app do atleta | 1 | 0 | 0 |
+| [[LEELA-E17-perfil-social]] · social no app | 1 | 0 | 0 |
+| [[LEELA-E18-assessorias-parceiras]] · assessorias | 1 | 0 | 0 |
 
 Uma história pode aparecer em dois épicos quando o trabalho atravessa os dois — o número da
-esquerda conta cards, não trabalho duplicado.
+esquerda conta cards, não trabalho duplicado. Os números caíram em vários épicos porque o dia
+fechou tarefa, não porque alguém tirou trabalho da conta.
 
 ---
 
@@ -70,44 +105,119 @@ esquerda conta cards, não trabalho duplicado.
 
 ### E12 · Landing, checkout e área do cliente
 
-O maior de todos, e por um motivo bom: é onde o dinheiro entra. Está em execução com oito cards.
+O maior de todos, e por um motivo bom: é onde o dinheiro entra. Ganhou um card novo hoje à noite,
+vindo direto da sua decisão.
 
 **As três próximas entregas**
 
-1. **A área do cliente vira painel de verdade** — S1233: casca com cabeçalho de conta, navegação
-   que fica de pé e estados com nome próprio. Espera você no **PCLIENTE-1**.
-2. **A porta entre o painel do cliente e o profissional** — S1234 e S1235: o defeito está
-   consertado e no ar; falta declarar a travessia nos dois sentidos.
-3. **O primeiro acesso e a criação de conta pela landing** — S1229 e S1230: o código de seis
-   dígitos vira a prova de que o e-mail é seu, e nenhuma conta nasce antes disso.
+1. **A tela do pagamento avisa sozinha** — S1246, três tarefas: a tela passa a observar o pedido e
+   cada desfecho ganha destino (PIX pago e PIX vencido vão para a área do cliente, cartão recusado
+   volta ao checkout, cartão aceito mostra sucesso e leva junto). **Não espera nada** — nasceu
+   decidida por você hoje.
+2. **O painel do cliente vira painel de verdade** — S1233: casca com cabeçalho de conta, navegação
+   que fica de pé e estados com nome próprio. Destravou na sua decisão da manhã ("já existe": é o
+   `/minha-conta` de hoje ganhando casca, no mesmo endereço).
+3. **A palavra "Serviço" nas três aplicações** — S1231, quatro tarefas. Destravou hoje à noite, com
+   um cuidado: o inventário das 34 frases é de 09/08 e mira caminhos que o rename de Parcerias
+   mudou, então a primeira tarefa é **re-inventariar antes de trocar**.
 
-**O que fica esperando você:** PCLIENTE-1 (a forma do painel do cliente), PONTE-CTA-1 (você deu
-três nomes para a mesma porta e só um pode subir), ARENA-1 e ARENA-4 (o que aparece do que a
-pessoa preenche na Arena Social), SERV-3 (até onde vai a palavra "Serviço" — segura quatro
-tarefas de renomeação inteiras).
+**O que fica esperando você:** ARENA-1 e ARENA-4 (o que aparece do que a pessoa preenche na Arena
+Social, e o corte do vocabulário), PB-11 (no retry, a prova de aceite carimba a versão que a pessoa
+não leu) e o item 12, o domínio público.
 
 **O que ninguém pediu ainda e está parado:** o pedido de reembolso e a troca de titularidade pelo
 lado de quem comprou (S1236 e S1237). As máquinas existem no servidor e têm tela do lado do
-profissional; do lado da participante não existe nada. É promessa não cumprida.
+profissional; do lado da participante não existe nada.
 
 ### E16 · Plataforma e painel de administração
 
-Nove cards abertos e o maior número de tarefas do projeto — sessenta e seis. Quase tudo é tela,
-não é regra: a apuração de 09/08 mostrou que nove dos onze itens da visão de administração já
+Nove cards e o maior número de tarefas do projeto — sessenta e três. **A onda 4 fechou hoje** (as
+listas globais de eventos e clubs), e **os seus cinco vetos da noite destravaram as ondas 2, 3 e
+5**. Quase tudo aqui é tela, não é regra: a apuração de 09/08 mostrou que nove dos onze itens já
 existem no banco e nas regras.
 
 **As três próximas entregas**
 
-1. **A ficha da produtora por dentro** — S1612 e S1613: você abre uma produtora e vê os eventos,
-   os clubs, os clientes e a economia dela numa rota com abas.
-2. **O diretório de contas e a fila de aprovação** — S1615: uma tela, dois modos, e o mais
-   fechado é o padrão.
-3. **A aprovação converge** — S1616: liberar direto e resgatar convite terminam no mesmo lugar,
-   com registro de quem aprovou.
+1. **A ficha da produtora por dentro** — S1612 e S1613: abas de eventos, clubs, clientes, vendas e
+   financeiro numa rota só. "Faturamento gerado" agora tem nome definido por você: é a receita da
+   Leela. Enquanto o custo operacional não existir em código, a parcela de custo aparece vazia com
+   rótulo, em vez de fingir um número.
+2. **O diretório de contas e a fila de aprovação** — S1615: uma tela, dois modos. O diretório passa
+   a identificar por CPF ou documento estrangeiro, como você decidiu, por uma leitura de servidor
+   auditada que registra cada consulta.
+3. **A aprovação converge** — S1616: liberar direto e resgatar convite terminam no mesmo lugar, com
+   registro de quem aprovou, e a tela descobre a liberação sem F5.
 
-**O que fica esperando você:** ADMINVISAO-1 a ADMINVISAO-5 (cinco perguntas que seguram a onda
-inteira), ADMIN-USUARIOS-2 (recusar e revogar não existem), ADMINSEP-3 (a conta de administração
-de produção é a mesma da demonstração — ação sua, não decisão).
+**O que fica esperando você:** ADMIN-USUARIOS-2 (recusar e revogar não existem — segura uma tarefa
+só). E o **LGPD-1**, que continua olhando esta frente: com a ficha de cliente passando a mostrar
+contato e documento, a superfície de dado pessoal do painel master ficou maior do que era quando o
+item foi escrito.
+
+### E04 · Configuração e vendas
+
+Oito cards, quarenta e quatro tarefas. É o épico com mais trabalho especificado e não construído —
+e a sua frase da noite mexeu na ordem dele.
+
+**As três próximas entregas**
+
+1. **A varredura do PIX vencido** — S322, quatro tarefas. Hoje um PIX abandonado seguraria a vaga
+   para sempre. Você disse *"não podemos ter excedentes de ingressos jamais"*, e é exatamente isto
+   que esta história protege.
+2. **A vaga sai do estoque quando a cobrança nasce** — S323, sete tarefas, depois da S322 no ar.
+   Uma tarefa só, o teto da reserva de cartão, fica retida no **ESTOURO-2**; o resto não espera.
+3. **A lista de modalidades passa a ter dono** — S316: hoje ela nasce na criação do evento e morre
+   lá.
+
+**O que fica esperando você:** ESTOURO-2, e só. A venda mínima de R$ 10,00 já é código.
+
+### E01 · Design system e casca do painel
+
+Quatro cards. Três coisas grandes fecharam hoje: o cânone, a trava e as duas primeiras ondas de
+conversão.
+
+**As três próximas entregas**
+
+1. **As ondas 2 a 5 da conversão** — operação do evento, o dinheiro que sai, a comunidade e o
+   relance. Elas convertem cartão e botão e **não dependem de você**; podem começar antes da sua
+   resposta sobre layout.
+2. **A Onda 0 Parte B** — os primitivos de layout e os cartões de domínio. Retida no **CANONE-1**.
+3. **O painel passa a se chamar Painel Profissional** — S034: o banco já chama a coleção de
+   profissionais desde o começo; foi o texto que ficou preso em organizador.
+
+**O que fica esperando você:** o **CANONE-1**, com a versão curta agora escrita no painel — o kit
+de peças tem 50 peças e nenhuma é de moldura; 106 lugares montam moldura na mão, de 23 jeitos; a
+pergunta é se o kit ganha peças oficiais de moldura ou se cada tela continua fazendo a sua.
+
+### E05 · Clubs e comunidade
+
+Quatro cards. A área de clubs e o painel de engajamento **estão no ar** desde a madrugada, e o
+"Meus Clubes" vazio deixou de ser beco: agora aponta um caminho que existe.
+
+**As três próximas entregas**
+
+1. **Os três resíduos que a review achou** — desafio sem participante ainda desenha três barras em
+   zero em vez do vazio honesto.
+2. **A contagem de check-ins** — S115: um número só destrava três blocos do estudo que hoje dizem
+   "em breve".
+3. **O membro do club e o comprador viram a mesma pessoa** — S1904, que mora no E19 e fecha a
+   pergunta de quantos da comunidade viraram inscritos.
+
+**O que fica esperando você:** nada. O CLUBES-1 fechou.
+
+### E10, E18 e E08 · Marcas, parcerias, assessorias e afiliados
+
+A área **Parcerias está no ar**: o item do menu mudou de nome e juntou marcas, assessorias e
+afiliações num lugar só.
+
+**As três próximas entregas**
+
+1. **As ativações da marca** — S812: saber em quantos patrocínios cada marca é usada.
+2. **O campo de valor do repasse** — S708: hoje "1.500" vira quinze reais, porque o separador de
+   milhar é lido como centavo.
+3. **O desconto retroativo do clube-influenciador** — aguarda sua revisão da hipótese, sem pressa.
+
+**O que fica esperando você:** se o épico também muda de nome nos arquivos. Na tela a área já se
+chama Parcerias; o épico continua se chamando Marcas.
 
 ### E00 · Fundação, contas e entrada
 
@@ -116,102 +226,16 @@ esse aceite.
 
 **As três próximas entregas**
 
-1. **Virar profissional deixa de ser cadastro** — S033 e S1611: a porta encolhe de sete
-   perguntas para quatro e serve cliente e profissional.
-2. **A conta de administração é outra** — S032: administração não acumula com organizador nem
-   com cliente; comprar um ingresso com o e-mail da administração não pode criar vínculo.
+1. **Virar profissional deixa de ser cadastro** — S033 e S1611: a porta encolhe de sete perguntas
+   para quatro e serve cliente e profissional.
+2. **A conta de administração é outra** — S032: administração não acumula com organizador nem com
+   cliente. Junto vem o que a sua decisão de hoje mandou para a esteira: o seed para de semear
+   administrador contra o projeto real, e nenhuma conta de demonstração nasce de novo.
 3. **A prontidão de deploy entra na esteira** — S040: o conferidor existe e roda pelo caminho
    longo; falta o atalho e o passo automático.
 
 **O que fica esperando você:** LGPD-1 (um organizador pode estar ativo sem prova de que aceitou o
-termo — segura o primeiro convite), PB-11 (no retry, a prova de aceite carimba a versão que a
-pessoa não leu).
-
-### E04 · Configuração e vendas
-
-Oito cards, quarenta e quatro tarefas. É o épico com mais trabalho especificado e não construído.
-
-**As três próximas entregas**
-
-1. **A vaga sai do estoque quando a cobrança nasce** — S322 e S323: sua decisão de 09/08. E a
-   varredura do PIX vencido, que hoje não existe — sem ela um PIX abandonado segura a vaga para
-   sempre.
-2. **A lista de modalidades passa a ter dono** — S316: hoje ela nasce na criação do evento e
-   morre lá. Você voltou ao assunto em 10/08.
-3. **O lote pode dispensar o kit** — S317: o interruptor por lote, ligado por padrão para nada
-   mudar de comportamento sozinho.
-
-**O que fica esperando você:** ESTOURO-2 (por quanto tempo o pendente de cartão reserva a vaga —
-segura uma tarefa da S323), a proposta em duas fases das modalidades, SEMKIT-1 (o reparo dos dois
-kits de produção é escrito em campo de preço e precisa da sua autorização).
-
-### E01 · Design system e casca do painel
-
-Cinco cards. Três deles são o redesign, construído e fora do ar.
-
-**As três próximas entregas**
-
-1. **A barra de abas fica transparente** — S004-T6, a última tarefa da história do chrome novo.
-   Está na lane em voo.
-2. **O painel passa a se chamar Painel Profissional** — S034: o banco já chama a coleção de
-   profissionais desde o começo; foi a copy que ficou presa em organizador.
-3. **A trava que reprova componente feito à mão** — S005-T5, o código do gate `leela-canon`. É a
-   única tarefa que sobrou da revisão de componentes: o inventário, o cânone e as ondas
-   aterrissaram em 11/08.
-
-**O que a revisão de componentes descobriu, e vale ler antes das ondas.** Sua ordem de 10/08 virou
-medição, e a medição corrigiu o número que este board carregava. Não são 40 telas com fundo cru:
-fundo cru literal não existe no produto, e todos os tokens estão certos. São **192 superfícies que
-reescreveram à mão o cartão que já existia pronto**, mais 17 botões, 8 estados vazios e 5 controles
-crus — 223 no total. Dois dos cinco controles crus estão dentro do próprio design system. E o
-design system não tem componente de layout nenhum, o que quer dizer que bento e slot, dois dos
-padrões que você citou, não podiam ser respeitados porque não existiam. Detalhe em
-`02-rodadas/2026-08-11-roadmap-componentes/`.
-
-**O que fica esperando você:** o **CANONE-1** — o design system ganha layout e cartão de domínio, ou
-isso continua receita de tela. Mais o que já estava: a lista das frases de apoio que foram cortadas,
-o H1 em itálico contra o peso 800, e se "flat" quer dizer item de menu ou variante de botão.
-
-### E05 · Clubs e comunidade
-
-Quatro cards. Dois são o redesign da área; dois são o que a comunidade ainda não sabe contar.
-
-**As três próximas entregas**
-
-1. **A área de clubs para de abandonar quem entra** — S113: o menu passa a ser do layout da área,
-   e cada rota prova que tem exatamente um menu.
-2. **Os três resíduos que a review achou** — desafio sem participante ainda desenha três barras
-   em zero em vez do vazio honesto.
-3. **A contagem de check-ins** — S115: um número só destrava três blocos do estudo que hoje dizem
-   "em breve".
-
-**O que fica esperando você:** CLUBES-1 — "Meus Clubes" nasce vazio porque não existe caminho
-para um participante entrar num clube.
-
-### E10 e E18 · Marcas, parcerias e assessorias
-
-Dois cards no E10, um no E18, e os dois convergem para a mesma entrega.
-
-**As três próximas entregas**
-
-1. **Marcas vira Parcerias** — S813: o item do menu troca de nome e a área junta marcas,
-   assessorias parceiras e afiliações. Está na lane em voo.
-2. **As ativações da marca** — S812: saber em quantos patrocínios cada marca é usada.
-3. **O endereço antigo continua funcionando** — S813-T3: link salvo não morre.
-
-**O que fica esperando você:** se o épico também muda de nome nos arquivos. Hoje a área na tela
-se chama Parcerias e o épico continua se chamando Marcas.
-
-### E08 · Afiliados e influenciadores
-
-Quatro cards, cinco tarefas. É o épico mais leve dos que estão em curso.
-
-**As três próximas entregas**
-
-1. **A migração para Parcerias** — as telas de afiliação passam a morar na área nova.
-2. **O campo de valor do repasse** — S708: hoje "1.500" vira quinze reais, porque o separador de
-   milhar é lido como centavo.
-3. **O desconto retroativo do clube-influenciador** — aguarda sua revisão da hipótese.
+termo — segura o primeiro convite de organizador) e PB-11.
 
 ---
 
@@ -219,22 +243,22 @@ Quatro cards, cinco tarefas. É o épico mais leve dos que estão em curso.
 
 ### E09 · Financeiro
 
-Sete cards, nenhum sendo tocado. Duas frentes seguram tudo.
+Sete cards, nenhum sendo tocado. As duas decisões que os seguravam caíram hoje.
 
 **As três próximas entregas**
 
-1. **O ticket médio conta cliente que pagou** — S908: você reforçou isso em 10/08 e a resposta
-   honesta foi que não estava em vias de correção. A conta errada foi localizada na hora.
-2. **O piso do Serviço** — S907: seis tarefas, todas mexendo em dinheiro, com a tabela nascendo
-   vazia para nada mudar em produção até você configurar.
-3. **O documento do repasse confere os dígitos** — S906: hoje qualquer sequência de onze ou
-   catorze dígitos passa.
+1. **O piso do Serviço** — S907, seis tarefas, todas mexendo em dinheiro, com a tabela nascendo
+   vazia para nada mudar em produção até você configurar. Destravou com o piso de R$ 3,00
+   ratificado por você e a venda mínima de R$ 10,00 já construída: o líquido do organizador nunca
+   fica negativo.
+2. **O ticket médio como campo do agregado** — S908: a conta na tela já está certa, e você
+   ratificou a régua (compra estornada fora do denominador). O que sobra é materializar o número se
+   e quando alguém fora da tela precisar dele.
+3. **O documento do repasse confere os dígitos** — S906: hoje qualquer sequência de onze ou catorze
+   dígitos passa.
 
-**O que fica esperando você:** SERV-3 e JUROS-1 (salvar os termos comerciais no painel para
-selar o rastro). **SERV-1 e SERV-2 saíram em 11/08:** você ratificou o piso de três reais e
-decidiu a venda mínima de dez, que foi construída no mesmo dia — um lote entre R$ 0,01 e R$ 9,99
-não pode mais nascer, e a inscrição gratuita continua permitida. Com os dois números de pé, o
-líquido do organizador nunca fica negativo, e a S907 destrava para o piso entrar na tabela.
+**O que fica esperando você:** JUROS-1 — abrir os termos comerciais do Castelo no painel e salvar
+sem mudar nada, para o histórico voltar a bater.
 
 ### E03 · Operação do evento
 
@@ -242,11 +266,13 @@ Três cards. O maior deles é a outra metade da métrica de pagante.
 
 **As três próximas entregas**
 
-1. **O contador de pagantes** — S221: quatro tarefas, incluindo o teste de ataque que prova que
-   separar o número exibido não afrouxou a fechadura que congela a configuração do evento.
-2. **O kit não vende desconto** — S318: "sem kit" era um kit com preço negativo, e você revogou
-   isso.
+1. **O contador de pagantes** — S221: quatro tarefas, incluindo o teste que prova que separar o
+   número exibido não afrouxou a fechadura que congela a configuração do evento.
+2. **O kit não vende desconto** — S318: o reparo em produção ficou sem objeto na purga de 10/08, e
+   o que sobra é a fonte do seed, para uma terceira execução não ressuscitar os dois kits.
 3. **O credenciamento** — S211: a tabela do organizador e o código curto ao lado do QR.
+
+**O que fica esperando você:** nada. SEMKIT-1 e SEMKIT-2 saíram do painel hoje.
 
 ### E11 · Análise
 
@@ -254,33 +280,32 @@ Quatro cards. É onde as perguntas de "de onde vem a venda" ainda não têm resp
 
 **As três próximas entregas**
 
-1. **O cartão de conversão para de prometer o que não medimos** — S824: o rótulo de visitantes
-   deixa de ser desenhado sem o número que o sustenta.
-2. **A forma de pagamento vira número** — S825: o dado existe em cada pedido e nenhum resumo
-   chega à tela.
+1. **O cartão de conversão para de prometer o que não medimos** — S824-T1: o rótulo de visitantes
+   deixa de aparecer enquanto não houver contagem de visitas. A outra metade já foi paga hoje no
+   servidor.
+2. **A forma de pagamento vira número** — S825: o dado existe em cada pedido e nenhum resumo chega
+   à tela.
 3. **De onde vem a venda e de onde vem o público** — canal de origem com a comissão de cada um.
-
-**O que fica esperando você:** CONV-1, se o contador de visitas passa a existir.
+   Espera o CRM-1.
 
 ### E19 · CRM
 
-Quatro cards. O backend está pronto e a lista com histórico já está no ar; o que falta é decidir
-o que se pergunta ao participante.
+Quatro cards. O backend está pronto e a lista com histórico está no ar; o que falta é decidir o que
+se pergunta ao participante.
 
 **As três próximas entregas**
 
-1. **O membro do club e o comprador viram a mesma pessoa** — S1904: sem isso, o estudo não
-   consegue dizer quantos da comunidade viraram inscritos.
-2. **As visões da primeira leva** — espera CRM-1.
-3. **A localização como agregado** — espera CRM-2.
+1. **O membro do club e o comprador viram a mesma pessoa** — S1904.
+2. **As visões da primeira leva** — espera o CRM-1.
+3. **A localização como agregado** — espera o CRM-2.
 
-**O que fica esperando você:** CRM-1, CRM-2, CRM-3 e CRM-4. Quatro perguntas, e as três entregas
-acima dependem delas.
+**O que fica esperando você:** CRM-1, CRM-2, CRM-3 e CRM-4. Quatro perguntas, e o épico inteiro
+atrás delas.
 
 ### E20 · Radar da comunidade do WhatsApp
 
-Um card, nove histórias, zero linha de código. A spec está completa, foi revisada por antagonista
-e teve os buracos da verificação fechados em 10/08.
+Um card, nove histórias, zero linha de código. A spec está completa, foi revisada por antagonista e
+teve os buracos da verificação fechados em 10/08.
 
 **As três próximas entregas**
 
@@ -288,88 +313,87 @@ e teve os buracos da verificação fechados em 10/08.
    catorze dias registrando o laudo.
 2. **S2002** — a ponte de dados sobe agregado contra o emulador, com regras fechadas para todo
    cliente.
-3. **S2003** — o radar vira tela de verdade no painel, com o termo do organizador como
-   pré-condição de ligar.
+3. **S2003** — o radar vira tela no painel, com o termo do organizador como pré-condição de ligar.
 
-**Registrado:** o risco jurídico foi assumido por você.
+**Registrado:** o risco jurídico foi assumido por você. A fase F1 continua atrás do LGPD-1.
 
 ### E13 · App do atleta, e E17 · Social no app
 
-Os dois esperam a mesma coisa: a ratificação de que o app do atleta nasce como site instalável em
-vez de aplicativo de loja. Com essa decisão, o bloqueio das lojas morre, o ingresso passa a
-funcionar sem rede, e de nove histórias sobram seis.
+Os dois esperam a mesma coisa: a ratificação de que o app nasce como site instalável em vez de
+aplicativo de loja. Com essa decisão, o bloqueio das lojas morre, o ingresso passa a funcionar sem
+rede, e de nove histórias sobram seis.
 
 ---
 
 ## O que está travado em você
 
-Vinte e quatro decisões estão no painel canônico [[DECISOES-ABERTAS]] esperando sua palavra, mais
-três ações que só você executa. Elas não estão repetidas aqui de propósito — o painel é o lugar
-único delas. O que esta página acrescenta é **o custo de cada espera**:
+**Quatorze itens, e eram vinte e cinco de manhã.** Doze decisões e duas ações, todas no painel
+canônico [[DECISOES-ABERTAS]], que é o lugar único delas. O que esta página acrescenta é o **custo
+de cada espera**:
 
 | Decisão | O que ela segura |
 |---|---|
-| **SERV-3** | quatro tarefas de renomeação, em três aplicações |
+| **LGPD-1** | o primeiro convite de organizador, que está retido; e agora também a leitura jurídica da ficha de cliente do painel master |
 | **CRM-1 a CRM-4** | o épico do CRM inteiro, que é onde a base de contatos vira retenção |
-| **ADMINVISAO-1 a 5** | a onda inteira do painel de administração — sessenta e seis tarefas atrás delas |
-| **LGPD-1** | o primeiro convite de organizador, que está retido |
-| **PCLIENTE-1** | a casca do painel do cliente |
+| **CANONE-1** | a onda de fundação do design system. As ondas de tela **não** dependem dela e podem começar antes |
+| **ADMIN-USUARIOS-2** | recusar e revogar acesso — uma tarefa da fila de aprovação |
+| **ARENA-1 e ARENA-4** | a tela de interesses da Arena Social e o vocabulário que ela expõe |
 | **ESTOURO-2** | uma tarefa da reserva de vaga; o resto da história anda sem ela |
-| **CONV-1** | o cartão de conversão sair da honestidade e virar número |
-| **CLUBES-1** | "Meus Clubes" deixar de nascer vazio |
-| **SEMKIT-1** | o reparo dos dois kits de produção |
-| **ADMIN-USUARIOS-2** | recusar e revogar acesso |
-| **CANONE-1** | a onda de fundação do design system: primitivos de layout e cartões de domínio. As ondas de tela que só convertem cartão e botão **não** dependem dela e podem começar antes |
+| **PB-11** | a prova de aceite no retry — decisão jurídica, não técnica |
+| **12 · domínio público** | o endereço definitivo do produto e o remetente do e-mail |
 
-Além dessas, a rodada do redesign produziu decisões novas que ainda estão entrando no painel:
+**As duas ações que só você executa:** a conferência visual das telas novas (agora com um lote
+grande esperando deploy) e o **JUROS-1**, que é abrir os termos comerciais no painel e salvar.
 
-- a **lista das frases de apoio cortadas** (você pediu o corte; a lista é sua para vetar);
-- a **proposta em duas fases** para alcançar as modalidades a partir de lotes;
-- o título **"Modalidades da comunidade"** no lugar de "Top 5 modalidades de interesse" — o
-  interesse declarado não existe como dado;
-- o **nome do épico** de Marcas, agora que a área na tela se chama Parcerias;
-- **H1 em itálico contra peso 800**, que é decisão de design system global;
-- se a landing passa a dizer **"Acessar painel profissional"**, para casar com o resto.
-
-**Ações que só você pode executar:** ADMINSEP-3 (separar a conta de administração de produção da
-conta de demonstração), a conferência visual das telas novas, e JUROS-1.
+**Fora do painel, e continua fora:** seis vetos pequenos que a rodada do redesign produziu — a
+lista das frases de apoio cortadas, a proposta em duas fases para alcançar as modalidades, o título
+"Modalidades da comunidade", o nome do épico de Marcas, o H1 em itálico contra o peso 800, e se a
+landing passa a dizer "Acessar painel profissional". Todos rodam com default em vigor e nenhum
+segura tarefa. Se você quiser vê-los no painel, eles sobem na próxima aterrissagem.
 
 ## O que anda sozinho, sem depender de você
 
-A ordem da noite de 11/08, com o que já aterrissou marcado:
+A fila que a leva 6 deixou ordenada, e nenhuma destas lanes precisa de resposta sua:
 
-1. ✅ o painel de engajamento desenhado chegou à tela — três faixas, ocupação real, modalidades
-   reais e os blocos sem fonte dizendo por quê;
-2. 🔄 Marcas vira Parcerias, e a área de clubs ganha moldura de verdade;
-3. 📋 a métrica que conta cliente pagante, na tela e no servidor;
-4. 📋 a revisão de texto das telas do redesign;
-5. 📋 a review antagonista de tudo que a rodada produziu, e só então o merge;
-6. 📋 o roadmap de revisão de componentes;
-7. 📋 o deploy, que **não sobe sem a conferência visual** — se ela não puder ser feita aqui, ela é
-   sua, antes de qualquer "está no ar".
+1. 🔄 **REGISTRO-BOARDS** — esta aterrissagem: painel limpo, regras novas, épicos e boards em dia.
+2. 📋 **CKPIX-FLOW** — a tela do pagamento reage sozinha nos quatro ramos que você escreveu.
+3. 📋 **ESTOURO-BUILD** — a varredura do PIX vencido e a reserva da vaga, para o excedente não
+   existir.
+4. 📋 **ADMIN-VISAO ondas 2, 3 e 5** — a ficha da produtora, a aba de clientes e o diretório de
+   contas.
+5. 📋 **SERV3-RENOME** — as 34 frases, com o re-inventário antes.
+6. 📋 **As ondas 2 a 5 do roadmap de componentes** — conversão de cartão e botão, tela por tela.
+7. ⛔ **O deploy**, que **não sobe sem a conferência visual**. Se ela não puder ser feita aqui, ela
+   é sua, antes de qualquer "está no ar".
 
-## O que os boards estavam dizendo errado
+## As três próximas entregas do projeto inteiro
 
-Seis achados desta varredura. Os três primeiros já foram consertados nesta rodada; os três
-últimos ficam anotados porque consertá-los é decisão, não faxina.
+Se for para olhar uma coisa só de cada frente, é esta:
 
-1. **A leva 3, 4 e 5 do redesign não tinha card nem história.** Treze decisões suas de 10 e 11 de
-   agosto viravam código sem existir no board. Consertado: sete histórias novas em épicos que já
-   existiam, e nenhum épico novo precisou nascer.
-2. **Nove histórias viviam só na pasta da rodada e no kanban**, sem constar do épico: S221, S907,
-   S908, S824, S1231, S1611, S1242, S1243 e S031. As quatro primeiras foram consolidadas nos
-   épicos agora; as outras cinco ficam para a próxima aterrissagem que as tocar.
-3. **O radar do WhatsApp tinha spec completa e zero presença no board.** Um épico inteiro invisível
-   para quem lê o kanban. Consertado: entrou com as nove histórias.
-4. **Um card em "Feito" descrevia trabalho que não está no ar.** O engajamento do redesign v2 vive
-   numa branch. Ficou marcado como construído e fora do ar; a régua da casa é que feito quer dizer
-   no ar.
-5. **O checklist executável parou em 06/08**, enquanto o kanban e os épicos seguiram até 11/08. Ou
-   ele volta a ser mantido, ou deixa de ser a terceira altura e a tarefa passa a viver só no card
-   e no épico. É decisão de processo, e prefiro que seja sua.
-6. **Nove cards não têm âncora de épico** — usam etiquetas como Plano, Higiene, Consolidações,
-   Decisões e Docs. Sete já estão fechados e são história; dois continuam abertos no backlog. A
-   regra diz que card se ancora em épico, então esses dois precisam de destino.
+| Frente | A próxima entrega | Espera alguém? |
+|---|---|---|
+| **Dinheiro** | a vaga deixa de estourar: varredura do PIX vencido + reserva do pendente | não |
+| **Checkout** | a tela do pagamento avisa sozinha e leva a pessoa para a área dela | não |
+| **Administração** | a ficha da produtora por dentro, com a economia dela | não |
+| **Produto no ar** | o deploy do lote grande de 11/08, com conferência visual | você, se a conferência não puder ser feita aqui |
+
+## O que os boards ainda dizem errado
+
+Três achados continuam abertos da varredura de 11/08 de manhã, e os três são decisão, não faxina.
+
+1. **O checklist executável parou em 06/08**, enquanto o kanban e os épicos seguiram. Ou ele volta
+   a ser mantido, ou deixa de ser a terceira altura e a tarefa passa a viver só no card e no épico.
+2. **Dois cards abertos não têm âncora de épico** — usam etiquetas como Plano e Higiene. A regra da
+   casa diz que card se ancora em épico, então esses dois precisam de destino.
+3. **Cinco histórias ainda vivem só no kanban e na pasta da rodada**, sem constar do épico: S1231,
+   S1611, S1242, S1243 e S031. Elas entram na próxima aterrissagem que as tocar — a S1231 é a mais
+   provável, porque o renome do Serviço acabou de destravar.
+
+Os três achados desta mesma varredura que **já foram consertados** ficam anotados aqui para não
+serem redescobertos: as levas 3, 4 e 5 do redesign viravam código sem card (sete histórias novas
+entraram em épicos que já existiam), nove histórias viviam só na pasta da rodada e no kanban
+(quatro já subiram ao épico), e o radar do WhatsApp tinha spec completa e zero presença no board
+(entrou com as nove histórias).
 
 ## Como manter esta página viva
 
