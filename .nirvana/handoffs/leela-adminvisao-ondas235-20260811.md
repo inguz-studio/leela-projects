@@ -267,6 +267,38 @@ declarou; não é regressão desta retomada.
 ⚠️ `pnpm type-check` na raiz reprova em `@leela/mobile`, e isso é dívida de `main` provada acima —
 não bloqueia esta lane.
 
+### Segunda rodada de gates, depois de trazer a `main`
+
+A `main` andou muito enquanto a lane estava parada: entraram o **SERV-3-RENOME** (a taxa da Leela
+vira "Serviço" em toda superfície humana, super-admin incluído), a **Onda 0 Parte B** da fundação de
+layout e a **leva 8** de decisões do dono. Merge de `origin/main` para dentro da branch em
+`df782a3a`, **sem conflito**, e os gates rodaram **de novo, do zero**, com os três pacotes
+reconstruídos antes:
+
+| Fatia | Arquivos | Testes | Duração |
+|---|---|---|---|
+| 1 | 64 | 806 | 333s |
+| 2 | 64 | 654 | 266s |
+| 3 | 64 | 715 | 331s |
+| 4 | 62 | 680 | 299s |
+| **Total** | **254** | **2855** | **~20min** |
+
+**0 falhas, os mesmos 2855.** O rename de "taxa" para "Serviço" não quebrou nenhuma asserção desta
+lane porque as telas novas já nasciam com o glossário certo. `tsc` e `eslint --max-warnings 0`
+limpos nos quatro pacotes; functions da lane 4 arquivos · 62 testes · 0 falhas.
+
+### Achado que a `main` criou para a fila
+
+A Onda 0 Parte B entregou os **primitivos de moldura que não existiam quando esta lane escreveu as
+telas**: `Stack`, `SectionHeader`, `SplitPanel`, `MetricGrid`, `FormGrid`. Isso muda a leitura do
+CANONE-1 para este território. A auditoria desta retomada mediu, dentro dos cinco componentes novos
+da lane, **quatro receitas distintas de par rótulo/valor** (`ResponsavelCard`,
+`FichaDoClienteDrawer`, `PlanoAplicadoCard` e a lista de divergências) e **três de cabeçalho de
+seção** — todas inline, porque na hora em que foram escritas o design system publicava 50
+componentes e nenhum de layout. Agora publica. **A ficha do tenant é candidata direta da adoção**,
+e o `SectionHeader` cobre sozinho as três receitas de cabeçalho. Não é trabalho desta lane (o
+código é anterior e está verde), é item da lane do roadmap de componentes.
+
 ## Notas de mecanismo para quem vier depois
 
 **O worktree precisa de `pnpm`, não de `npm`.** O repositório não declara `workspaces` no
