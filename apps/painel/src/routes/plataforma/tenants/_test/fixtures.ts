@@ -6,7 +6,7 @@
 // `plataforma/repasses/_test/fixtures.ts`.
 // =============================================================================
 
-import type { Pagamento, Pedido, TenantRollup, Timestamp } from '@leela/core';
+import type { Pagamento, Pedido, SaldoRepasse, TenantRollup, Timestamp } from '@leela/core';
 import type { VendaDoTenant } from '../_data/vendas';
 
 export function ts(iso: string): Timestamp {
@@ -66,6 +66,25 @@ export function mkPedido(overrides: Partial<Pedido> = {}): Pedido {
     codigoPedido: 'K7M2Q',
     criadoEm: ts('2026-04-10T12:00:00Z'),
     atualizadoEm: ts('2026-04-10T12:05:00Z'),
+    ...overrides,
+  };
+}
+
+/**
+ * `tenants/{tid}/saldo/current`. `dentroJanelaDN` nasce 0 de propósito: é o
+ * que a Function grava SEMPRE (a fonte por transação não existe — ver o tipo
+ * do core, `finance/repasse-types.ts`).
+ */
+export function mkSaldo(overrides: Partial<SaldoRepasse> = {}): SaldoRepasse {
+  return {
+    tenantId: 'castelo-producoes',
+    vendidoBruto: 42000,
+    retido: 6300,
+    disponivel: 27200,
+    comprometido: 8500,
+    dentroJanelaDN: 0,
+    eventosSemTermo: 0,
+    atualizadoEm: ts('2026-08-11T11:00:00Z'),
     ...overrides,
   };
 }

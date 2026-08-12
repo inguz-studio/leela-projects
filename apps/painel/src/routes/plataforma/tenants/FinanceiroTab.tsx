@@ -33,6 +33,7 @@
 // duas precisões lado a lado leem como dois números diferentes da mesma coisa.
 // =============================================================================
 
+import type { ReactNode } from 'react';
 import { Coins, Wallet } from 'lucide-react';
 import {
   Badge,
@@ -58,6 +59,13 @@ export interface FinanceiroTabProps {
   error: Error | null;
   /** Relógio injetado — o limiar de frescor é testável sem timer falso. */
   agora: Date;
+  /**
+   * Bloco de saldo e repasses do tenant (S1613-T5). Entra por SLOT porque ele
+   * tem escrita (aprovar/recusar/pagar) e modais próprios: espalhar doze props
+   * de mutação por aqui tiraria desta casca a única coisa que ela é, que é
+   * apresentacional.
+   */
+  repasses?: ReactNode;
 }
 
 export function FinanceiroTab({
@@ -66,6 +74,7 @@ export function FinanceiroTab({
   loading,
   error,
   agora,
+  repasses,
 }: FinanceiroTabProps): JSX.Element {
   const obsoleto = rollupObsoleto(atualizadoEm, agora);
 
@@ -147,6 +156,8 @@ export function FinanceiroTab({
             icon={<Wallet aria-hidden />}
           />
         </section>
+
+        {repasses}
       </div>
     </div>
   );

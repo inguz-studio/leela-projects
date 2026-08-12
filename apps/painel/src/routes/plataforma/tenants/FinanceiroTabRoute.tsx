@@ -17,6 +17,7 @@
 
 import { useParams } from 'react-router-dom';
 import { FinanceiroTab } from './FinanceiroTab';
+import { RepassesDoTenantSecao } from './_components/RepassesDoTenantSecao';
 import { usePlatformRollups } from '../_data/rollups';
 
 export function FinanceiroTabRoute(): JSX.Element {
@@ -30,6 +31,7 @@ export function FinanceiroTabRoute(): JSX.Element {
       loading={loading}
       error={error}
       agora={new Date()}
+      repasses={<RepassesDoTenantSecao tenantId={tenantId} />}
     />
   );
 }
