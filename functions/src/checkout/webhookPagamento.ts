@@ -68,6 +68,7 @@ import {
   type ResultadoConfirmacaoOrfao,
 } from './estornarPagamentoOrfao';
 import { fecharReembolsoPorEstorno } from '../finance/requestRefund';
+import { lerLotesDasLinhasNaTx, liberarNaTx } from './reservaLote';
 
 type Db = admin.firestore.Firestore;
 
@@ -359,7 +360,20 @@ export async function processarWebhookPagamento(
     }
 
     if (resultado.status === 'failed') {
+      // RN-544 (porta 2): o pagamento morreu ⇒ a vaga volta, na MESMA
+      // transação do flip. Leitura ANTES das escritas (disciplina da tx).
+      // Esta porta NÃO cancela nada no gateway — a cobrança já morreu lá
+      // fora, é o gateway avisando —, e por isso ela não carimba
+      // `gatewayCancelado`: a assimetria entre "a plataforma decidiu" e "o
+      // gateway avisou" continua legível no doc.
+      const lotesFalhou = await lerLotesDasLinhasNaTx(
+        db,
+        tx,
+        (pedidoSnap.get('eventoId') as string | undefined) ?? '',
+        (pedidoSnap.get('itens') as { loteId?: string | null }[] | undefined) ?? []
+      );
       gravarLedger('falhou');
+      liberarNaTx(tx, lotesFalhou, { pedidoId: orderId, porta: 'webhook_falhou' });
       tx.update(pagamentoRef, { status: 'falhou', atualizadoEm: agora });
       tx.update(pedidoRef, { status: 'falhou', atualizadoEm: agora });
       // Inscritos permanecem 'pendente' (nova tentativa de pagamento é
@@ -384,6 +398,18 @@ export async function processarWebhookPagamento(
     const inscritoRefs = (pedidoSnap.get('inscritoRefs') as string[]) ?? [];
     const inscritosSnaps = await Promise.all(
       inscritoRefs.map((id) => tx.get(eventoRef.collection('inscritos').doc(id)))
+    );
+
+    // RN-544 (porta 3): a confirmação não LIBERA a reserva — ela a CONVERTE
+    // em venda. O decremento entra na mesma tx do flip e `vendidos` sobe
+    // pelo recompute que o gatilho de inscrito já dispara, então a soma
+    // `vendidos + reservas` nunca conta a mesma pessoa duas vezes. Leitura
+    // aqui, na fase de leitura; a escrita desce com as outras.
+    const lotesConfirmado = await lerLotesDasLinhasNaTx(
+      db,
+      tx,
+      eventoId,
+      (pedidoSnap.get('itens') as { loteId?: string | null }[] | undefined) ?? []
     );
 
     const cupom = pagamentoSnap.get('cupom') as { codigo?: string } | undefined;
@@ -591,6 +617,12 @@ export async function processarWebhookPagamento(
 
     // ── ESCRITAS (efeito financeiro — exactly-once sob a+b+c) ─────────────
     gravarLedger('confirmado');
+
+    // RN-544: a reserva vira venda (ver leitura acima).
+    liberarNaTx(tx, lotesConfirmado, {
+      pedidoId: orderId,
+      porta: 'webhook_confirmado',
+    });
 
     tx.update(pagamentoRef, {
       status: 'confirmado',

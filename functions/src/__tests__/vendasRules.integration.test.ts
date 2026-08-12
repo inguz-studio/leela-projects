@@ -208,6 +208,35 @@ describe('lotes — leitura e fronteira de venda (∑ só-Function)', () => {
     await assertFails(updateDoc(lote(dbAs(MARINA_UID, marina), '5k-lote-3'), { vendidos: 1 }));
   });
 
+  // ⚔ S323-T1 (RN-543) — `reservas` é contador de VAGA: quem o escreve
+  // decide se a venda abre. O ataque abaixo é o mesmo do `vendidos`, e por
+  // isso ele fica ao lado: um organizador que pudesse zerar `reservas`
+  // liberaria para si a vaga que outra pessoa está pagando.
+  it('cliente NÃO cria lote com `reservas` > 0 (∑ de Function — RN-543)', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(
+      setDoc(lote(db, 'lote-reserva-forjada'), lotePayload({ reservas: 3, ordem: 51 }))
+    );
+    // Zero explícito passa — é o mesmo tratamento do `vendidos`.
+    await assertSucceeds(
+      setDoc(lote(db, 'lote-reserva-zero'), lotePayload({ reservas: 0, ordem: 52 }))
+    );
+  });
+
+  it('cliente NÃO escreve `reservas` no update — nem para cima nem para baixo', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(updateDoc(lote(db, '5k-lote-3'), { reservas: 1 }));
+    // Zerar é o ataque que importa: soltaria a vaga de um pagamento vivo.
+    await assertFails(updateDoc(lote(db, '5k-lote-3'), { reservas: 0 }));
+  });
+
+  it('smuggling de `reservas` junto de uma edição legítima é negado', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(
+      updateDoc(lote(db, '5k-lote-3'), { nome: 'Lote 3 renomeado', reservas: 0 })
+    );
+  });
+
   it('lote VENDIDO congela preço/janela (RN-200/300 per-lote); lote sem venda edita', async () => {
     const db = dbAs(MARINA_UID, marina);
     // 5k-lote-1 tem vendidos = 150 (seed) → preço congelado
@@ -221,6 +250,43 @@ describe('lotes — leitura e fronteira de venda (∑ só-Function)', () => {
     const { deleteDoc } = await import('firebase/firestore');
     await assertFails(deleteDoc(lote(db, '5k-lote-1'))); // vendidos > 0
     await assertSucceeds(deleteDoc(lote(db, '10k-lote-3'))); // vendidos 0
+  });
+
+  // ⚔ S323-T1 (RN-543): apagar o lote sob um pedido pendente destruiria o
+  // contador que a liberação vai decrementar — e essa liberação vive DENTRO
+  // da transação que confirma um pagamento. Um doc sumido ali derrubaria a
+  // confirmação de uma compra PAGA. O organizador espera o pendente morrer
+  // (minutos, pela varredura da RN-545) ou paga.
+  it('delete de lote SEM venda mas COM reserva viva é negado', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    const { deleteDoc } = await import('firebase/firestore');
+    const alvo = 'lote-com-reserva-viva';
+    // Timestamp do ADMIN SDK: o `jan()`/`fev()` do topo é do SDK cliente, e
+    // misturar as duas instâncias faz o Admin recusar o doc inteiro.
+    const ts = (iso: string) => admin.firestore.Timestamp.fromDate(new Date(iso));
+    await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/lotes/${alvo}`).set({
+      id: alvo,
+      tenantId: CASTELO_ID,
+      modalidade: '5k',
+      ordem: 61,
+      nome: 'Lote com reserva',
+      inicioEm: ts('2027-02-01T00:00:00-03:00'),
+      fimEm: ts('2027-04-01T00:00:00-03:00'),
+      quantidadeLimite: 100,
+      preco: 99,
+      vendidos: 0,
+      reservas: 1,
+      criadoEm: ts('2027-02-01T00:00:00-03:00'),
+      atualizadoEm: ts('2027-02-01T00:00:00-03:00'),
+    });
+    await assertFails(deleteDoc(lote(db, alvo)));
+
+    // Morta a reserva, o delete volta a passar — a trava é a reserva, não
+    // uma proibição nova de apagar lote.
+    await adminDb
+      .doc(`eventos/${MEIA_FLORIPA_ID}/lotes/${alvo}`)
+      .update({ reservas: 0 });
+    await assertSucceeds(deleteDoc(lote(db, alvo)));
   });
 
   it('preco com sub-centavo ou Infinity é negado; 2 casas passa (re-review S300 #6)', async () => {
@@ -261,8 +327,20 @@ describe('lotes — face mínima da venda paga (RN-559)', () => {
       modalidade: '5k',
       ordem: 41,
       nome: 'Lote legado barato',
-      inicioEm: jan(),
-      fimEm: fev(),
+      // ⚠️ CONSERTO INCIDENTAL (lane ESTOURO-BUILD, 11/08): este seed usava
+      // `jan()`/`fev()`, que são Timestamp do SDK CLIENTE, num write do
+      // ADMIN. O Admin recusa o doc inteiro ("Detected an object of type
+      // Timestamp that doesn't match the expected instance"), o `beforeAll`
+      // levantava, e os OITO casos da RN-559 vinham sendo SILENCIOSAMENTE
+      // pulados desde que nasceram (commit 4d674ce2) — a face mínima de
+      // R$ 10,00 não tinha prova rodando em lugar nenhum. Suíte que pula não
+      // é suíte verde.
+      inicioEm: admin.firestore.Timestamp.fromDate(
+        new Date('2027-02-01T00:00:00-03:00')
+      ),
+      fimEm: admin.firestore.Timestamp.fromDate(
+        new Date('2027-04-01T00:00:00-03:00')
+      ),
       quantidadeLimite: 100,
       preco: 5,
       vendidos: 0,

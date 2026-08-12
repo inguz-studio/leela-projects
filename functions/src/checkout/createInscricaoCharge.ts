@@ -54,6 +54,12 @@ import {
   meioDaForma,
   modoTaxaDoEvento,
   MOTIVO_GATEWAY_SEM_RESPOSTA,
+  MOTIVO_LOTE_ESGOTADO,
+  MOTIVO_VAGAS_EM_PAGAMENTO,
+  MSG_LOTE_ESGOTADO,
+  MSG_VAGAS_EM_PAGAMENTO,
+  cabeNaCapacidade,
+  recusaPorReserva,
   MSG_EVENTO_FECHADO_SEM_CUPOM,
   PLATFORM_CONFIG_DOC_PATH,
   CAMPO_TAXA_PLATAFORMA,
@@ -149,6 +155,11 @@ import {
   MOTIVO_SEM_CODIGO_PEDIDO_LIVRE,
   sortearCodigoPedidoNaTx,
 } from './codigoPedidoReserva';
+import {
+  lerLotesDoPedidoNaTx,
+  linhasPorLote,
+  reservarNaTx,
+} from './reservaLote';
 
 type Db = admin.firestore.Firestore;
 
@@ -1612,6 +1623,41 @@ async function criarDocsDeCheckout(
         }
       }
 
+      // ── RN-543 · O GATE DE CAPACIDADE, e a reserva da vaga ───────────────
+      //
+      // A decisão do dono (ESTOURO-1): pendente SEGURA a vaga. Até aqui uma
+      // venda só consumia vaga na CONFIRMAÇÃO, então duas cobranças PIX em
+      // voo pela mesma última vaga passavam as duas — e as duas pagavam.
+      //
+      // O gate roda DENTRO desta transação, na fase de leitura, por dois
+      // motivos que não se substituem: (1) não existe janela entre checar e
+      // gravar; (2) ler-e-escrever o doc do lote é o que dá às duas
+      // requisições concorrentes um DOCUMENTO EM COMUM para o Firestore
+      // serializar. Dois compradores distintos não passavam por nenhum doc
+      // compartilhado — a trava PIX é por (comprador, carrinho) —, e era por
+      // isso que a corrida do ESTOURO-1 continuava aberta.
+      //
+      // Fail-closed com motivo TIPADO e SEM criar doc nenhum: nem pedido,
+      // nem inscrito, nem pagamento, nem cobrança no gateway.
+      const linhasDeLote = linhasPorLote(sale.itens);
+      const lotesDaVenda = await lerLotesDoPedidoNaTx(tx, eventoRef, linhasDeLote);
+      for (const lote of lotesDaVenda) {
+        if (cabeNaCapacidade(lote, lote.linhas)) continue;
+        // Duas recusas com instruções OPOSTAS ao comprador, e por isso dois
+        // motivos: esgotado é definitivo; reservado volta em minutos quando
+        // o pendente alheio morre pela varredura (RN-545). Dizer "esgotado"
+        // nos dois casos mandaria embora quem só precisava esperar.
+        const porReserva = recusaPorReserva(lote, lote.linhas);
+        throw new https.HttpsError(
+          'failed-precondition',
+          porReserva ? MSG_VAGAS_EM_PAGAMENTO : MSG_LOTE_ESGOTADO,
+          {
+            motivo: porReserva ? MOTIVO_VAGAS_EM_PAGAMENTO : MOTIVO_LOTE_ESGOTADO,
+            loteId: lote.loteId,
+          }
+        );
+      }
+
       // RN-173 (CK2-T1): leitura dos docs de pessoa AINDA na fase de leitura
       // da tx (contrato de transação) — corrida de dois checkouts com o
       // MESMO CPF serializa por retry otimista, nunca duplica pessoa.
@@ -1910,6 +1956,11 @@ async function criarDocsDeCheckout(
         };
       }
       tx.create(pagamentoRef, pagamentoDoc);
+
+      // RN-543: a cobrança nasceu ⇒ a vaga SAI do estoque. No mesmo commit
+      // do pedido, dos inscritos e do pagamento — reservar num passo
+      // separado recriaria a janela que o gate acabou de fechar.
+      reservarNaTx(tx, lotesDaVenda);
 
       // S1209-PIXBE-T2: esta cobrança passa a ser a PIX viva do par
       // (comprador, evento) — na MESMA tx que a criou, senão a janela entre

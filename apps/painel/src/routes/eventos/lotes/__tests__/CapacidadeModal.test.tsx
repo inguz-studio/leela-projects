@@ -25,6 +25,7 @@ const LOTE: Lote = {
   quantidadeLimite: 50,
   preco: 75,
   vendidos: 19,
+  reservas: 0,
   inicioEm: ts(new Date('2026-02-01T03:00:00Z')),
   fimEm: ts(new Date('2026-04-01T03:00:00Z')),
   criadoEm: ts(new Date('2025-11-01T00:00:00Z')),

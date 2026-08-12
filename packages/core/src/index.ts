@@ -542,6 +542,13 @@ export {
   motivoEncerramento,
   precoVigente,
   parseLote,
+  vagasDisponiveis,
+  cabeNaCapacidade,
+  recusaPorReserva,
+  MOTIVO_LOTE_ESGOTADO,
+  MOTIVO_VAGAS_EM_PAGAMENTO,
+  MSG_LOTE_ESGOTADO,
+  MSG_VAGAS_EM_PAGAMENTO,
 } from './eventos/lote';
 
 // ---------------------------------------------------------------------------
@@ -796,15 +803,21 @@ export type {
   FormaPagamento,
   StatusPagamento,
   GatewayPagamento,
+  MotivoCancelamentoPedido,
 } from './pedidos/pagamento';
 export {
   FORMAS_PAGAMENTO,
   isFormaPagamento,
   PIX_EXPIRACAO_SEGUNDOS,
+  RESERVA_CARTAO_TETO_SEGUNDOS,
+  reservaDeCartaoExpirada,
   MOTIVO_PIX_PENDENTE_ATIVO,
   MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO,
   MOTIVO_GATEWAY_SEM_RESPOSTA,
   MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
+  MOTIVOS_CANCELAMENTO_PEDIDO,
+  isMotivoCancelamentoPedido,
+  canceladoPorPrazoPix,
   STATUS_PAGAMENTO,
   isStatusPagamento,
   TRANSICOES_STATUS_PAGAMENTO,
