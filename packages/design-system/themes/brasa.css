@@ -230,6 +230,9 @@
   --layout-grid-gap: var(--spacing-4);
   --layout-list-gap: var(--spacing-2);
   --layout-toolbar-pb: var(--spacing-4);
+  --layout-split-3-2: 3fr 2fr;
+  --layout-split-7-3: 7fr 3fr;
+  --layout-split-1-3: 1fr 3fr;
   --btn-height-sm: 32px;
   --btn-height-md: 36px;
   --btn-height-lg: 48px;
@@ -369,6 +372,9 @@
   --section-title-spacing: -0.01em;
   --section-link-size: var(--font-size-sm);
   --section-link-icon-size: 14px;
+  --section-eyebrow-size: var(--font-size-xs-plus);
+  --section-eyebrow-weight: var(--font-weight-bold);
+  --section-eyebrow-spacing: 0.08em;
   --subnav-height: 48px;
   --subnav-underline: 2px;
   --subnav-px: var(--spacing-10);
