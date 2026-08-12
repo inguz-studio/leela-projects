@@ -900,3 +900,20 @@ export type {
   LiberarAcessoResult,
   MotivoRecusaLiberacao,
 } from './platform/liberacaoAcesso';
+
+// ---------------------------------------------------------------------------
+// Ficha de UM cliente do tenant (ADMIN-VISAO onda 3 · S1612-T6 · RN-539): o
+// callable auditado que serve o INDIVÍDUO. A lista (`listarClientesDoTenant`,
+// acima) segue magra de propósito — contato, documento, endereço, saúde e
+// pedidos só saem por esta chamada, uma pessoa por vez, e o servidor registra
+// cada abertura em `auditoriaAcessos`. ⛔ Nunca chamar em laço sobre uma página
+// de lista: seria a saída em massa que a RN-540 recusa, emitida por engano.
+// ---------------------------------------------------------------------------
+export { obterFichaDoCliente } from './platform/fichaCliente';
+export type {
+  FichaContatoEmergenciaView,
+  FichaDoClienteView,
+  FichaEnderecoView,
+  FichaPedidoDoClienteView,
+  ObterFichaDoClienteInput,
+} from './platform/fichaCliente';
