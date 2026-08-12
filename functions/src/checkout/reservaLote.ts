@@ -40,7 +40,7 @@
 // mecanismo.
 // =============================================================================
 
-import * as admin from 'firebase-admin';
+import type * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { reservaDeCartaoExpirada } from '@leela/core';
