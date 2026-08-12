@@ -252,14 +252,14 @@ export function StepConfirmacao({
             taxaServico > 0 ? (
               <div className="flex items-center justify-between">
                 <dt className="text-text-secondary">
-                  {meioDaTaxa !== null ? `Taxa de serviço (${meioDaTaxa})` : 'Taxa de serviço'}
+                  {meioDaTaxa !== null ? `Serviço (${meioDaTaxa})` : 'Serviço'}
                 </dt>
                 <dd className="text-text-primary">{formatarPreco(taxaServico)}</dd>
               </div>
             ) : null
           ) : (
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-text-secondary">Taxa de serviço</dt>
+              <dt className="text-text-secondary">Serviço</dt>
               <dd className="whitespace-nowrap text-text-secondary">inclusa no valor</dd>
             </div>
           )}

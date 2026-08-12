@@ -33,7 +33,7 @@ export function LotesSection({ evento }: { evento: EventoPublico }): React.JSX.E
               </span>
               {/* A-5/CKFORM-T4: badge SÓ quando o evento repassa (RN-347). */}
               {evento.taxaRepassada ? (
-                <span className="text-sm text-text-tertiary"> + taxa de serviço</span>
+                <span className="text-sm text-text-tertiary"> + Serviço</span>
               ) : null}
             </p>
           ) : null}
