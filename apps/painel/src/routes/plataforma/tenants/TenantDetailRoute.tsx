@@ -11,7 +11,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmModal, useToast } from '@leela/design-system';
 import type { TenantStatus } from '@leela/core';
 import { TenantDetail } from './TenantDetail';
+import { PlanoAplicadoCard } from './_components/PlanoAplicadoCard';
 import { useTenantComOwner } from '../_data/tenants';
+import { useCommercialTerms } from '../_data/terms';
+import { usePlanosCobranca } from '../planos/_data/planos';
 import { useTransitionTenant } from '../../../lib/query/mutations';
 import { SUSPEND_PREVIEW, type LifecycleAction } from '../_lib/lifecycle';
 import { platformErrorMessage } from '../_lib/errors';
@@ -36,6 +39,10 @@ export function TenantDetailRoute(): JSX.Element {
 
   const { tenant, owner, loading, error } = useTenantComOwner(tenantId);
   const transitionMutation = useTransitionTenant(tenantId);
+  // RN-541 — o plano aplicado é estampa, e a estampa pode ter sido editada
+  // depois. As duas leituras já existem no gateway e já são de platform_admin.
+  const termos = useCommercialTerms(tenantId);
+  const planos = usePlanosCobranca();
 
   const runTransition = useCallback(
     async (to: TenantStatus) => {
@@ -75,6 +82,13 @@ export function TenantDetailRoute(): JSX.Element {
         onAction={handleAction}
         onEditarTermos={() => navigate(`/plataforma/tenants/${tenantId}/termos`)}
         onVoltar={() => navigate('/plataforma/tenants')}
+        planoAplicado={
+          <PlanoAplicadoCard
+            terms={termos.data}
+            planos={planos.data}
+            loading={termos.loading || planos.loading}
+          />
+        }
       />
 
       <ConfirmModal
