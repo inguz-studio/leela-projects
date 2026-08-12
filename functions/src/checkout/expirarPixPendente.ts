@@ -56,7 +56,10 @@ import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
-import type { PaymentProvider } from '@leela/core';
+import {
+  MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
+  type PaymentProvider,
+} from '@leela/core';
 import { selectPaymentProvider } from '../payments/selectProvider';
 import { agoraCheckout } from './relogioCheckout';
 
@@ -228,12 +231,12 @@ export async function expirarPixPendenteCore(
       const now = FieldValue.serverTimestamp();
       tx.update(pedidoRef, {
         status: 'cancelado',
-        canceladoMotivo: 'pix_expirado',
+        canceladoMotivo: MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
         atualizadoEm: now,
       });
       tx.update(pagamentoRef, {
         status: 'cancelado',
-        canceladoMotivo: 'pix_expirado',
+        canceladoMotivo: MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
         // Prova de que a cobrança foi morta LÁ FORA antes de morrer aqui —
         // a reconciliação sabe distinguir pedido cancelado com gateway
         // fechado de pedido cancelado sem cobrança nenhuma.

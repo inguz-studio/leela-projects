@@ -135,6 +135,74 @@ export const MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO = 'pix_anterior_nao_encerrado';
 export const MOTIVO_GATEWAY_SEM_RESPOSTA = 'gateway_sem_resposta';
 
 /**
+ * Motivo TIPADO do cancelamento por PRAZO da cobrança PIX (RN-157 · RN-545).
+ * Carimbado em `canceladoMotivo` no pedido E no pagamento, na mesma
+ * transação que os leva a `'cancelado'`.
+ *
+ * CONTRATO DE DADOS — por que ele sai do literal solto e vira constante do
+ * core agora: a partir da RN-545 são TRÊS as portas que escrevem este
+ * estado (o `expirarPixPendente` do comprador, a varredura agendada
+ * `varrerPixVencidos` e — pelo `'failed'` do OVERDUE — o webhook, que usa
+ * motivo próprio), e uma tela passa a REAGIR a ele. Enquanto o valor era um
+ * literal dentro da Function, a tela só podia adivinhá-lo por comparação de
+ * string copiada; com a constante, servidor e tela leem o MESMO símbolo.
+ * Mesma disciplina de `MOTIVO_PIX_PENDENTE_ATIVO`.
+ *
+ * O VALOR NÃO MUDOU: `'pix_expirado'` é exatamente o que a porta do
+ * comprador já grava desde a CK2-T5 — nomear não migra dado, e nenhum doc
+ * existente precisa ser reescrito.
+ */
+export const MOTIVO_CANCELAMENTO_PIX_EXPIRADO = 'pix_expirado';
+
+/**
+ * Motivos de cancelamento que o par pedido+pagamento pode carregar. Lista
+ * de UM hoje: cancelar por prazo é o único caminho automático de
+ * cancelamento da plataforma. A lista existe para o próximo motivo entrar
+ * sem virar literal solto de novo.
+ */
+export type MotivoCancelamentoPedido = typeof MOTIVO_CANCELAMENTO_PIX_EXPIRADO;
+
+/** Lista canônica de motivos de cancelamento — única fonte para validação/UI. */
+export const MOTIVOS_CANCELAMENTO_PEDIDO: readonly MotivoCancelamentoPedido[] = [
+  MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
+];
+
+/** Type guard de MotivoCancelamentoPedido. @pure */
+export function isMotivoCancelamentoPedido(
+  value: unknown
+): value is MotivoCancelamentoPedido {
+  return (
+    typeof value === 'string' &&
+    (MOTIVOS_CANCELAMENTO_PEDIDO as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Este pedido/pagamento morreu pelo PRAZO do PIX? (RN-157 · RN-545)
+ *
+ * A pergunta que a tela faz, num predicado só, para não reimplementar a
+ * conjunção (`status` E `canceladoMotivo`) em cada superfície — e para o
+ * caso ambíguo ficar decidido num lugar: `'cancelado'` SEM motivo é
+ * cancelamento de outra origem (ou doc anterior ao carimbo) e responde
+ * `false`. Aceita `pedido` e `pagamento` porque os dois carregam o par de
+ * campos com o MESMO significado, gravados na MESMA transação.
+ *
+ * O que ela NÃO cobre, de propósito: `'falhou'` do webhook (OVERDUE do
+ * gateway, ~1 dia depois) é outro desfecho — a plataforma não decidiu, o
+ * gateway avisou —, e a spec mantém os dois distintos. Tela que queira
+ * tratar os dois iguais faz a disjunção explícita. @pure
+ */
+export function canceladoPorPrazoPix(doc: {
+  status?: unknown;
+  canceladoMotivo?: unknown;
+}): boolean {
+  return (
+    doc.status === 'cancelado' &&
+    doc.canceladoMotivo === MOTIVO_CANCELAMENTO_PIX_EXPIRADO
+  );
+}
+
+/**
  * Ciclo de vida do pagamento — espelho PT do ChargeStatus do gateway
  * (pending/confirmed/failed/refunded/cancelled — ADR-006). O estorno
  * PARCIAL (por inscrito — RN-341) vive na máquina de `reembolsos` (S904),

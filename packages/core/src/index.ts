@@ -796,6 +796,7 @@ export type {
   FormaPagamento,
   StatusPagamento,
   GatewayPagamento,
+  MotivoCancelamentoPedido,
 } from './pedidos/pagamento';
 export {
   FORMAS_PAGAMENTO,
@@ -804,6 +805,10 @@ export {
   MOTIVO_PIX_PENDENTE_ATIVO,
   MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO,
   MOTIVO_GATEWAY_SEM_RESPOSTA,
+  MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
+  MOTIVOS_CANCELAMENTO_PEDIDO,
+  isMotivoCancelamentoPedido,
+  canceladoPorPrazoPix,
   STATUS_PAGAMENTO,
   isStatusPagamento,
   TRANSICOES_STATUS_PAGAMENTO,
