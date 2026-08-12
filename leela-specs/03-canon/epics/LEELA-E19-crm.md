@@ -349,3 +349,113 @@ no E00. A chave é a que o CRM já usa, com o segredo que ela já tem.
 
 **Preso no dono:** CRM-1 e CRM-4 tocam o mesmo território — o que se pede ao participante depois
 da compra e quais visões entram na primeira leva. A T3 espera CRM-1.
+
+---
+
+## Delta o CRM sai do papel — quatro visões, um agregado e o e-mail que se jogava fora (leva 8 do dono · 2026-08-12)
+
+Fecha os três itens de CRM que estavam no painel desde 05/08: **CRM-1**, **CRM-2** e **CRM-3**.
+O quarto, o **CRM-4**, continua aberto por decisão de não decidir por ele. Registro completo em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §5, §6 e §7.
+
+### CRM-1 · as quatro visões que saem de dado pronto — sem consumir número de RN
+
+Na íntegra: *"1-ok"*. Default ratificado. Entram as quatro que não pedem nada a ninguém: **de
+onde veio a venda**, com a comissão por canal; **distribuição geográfica**; **quem pagou e não
+apareceu**; e **como o público paga**, entre PIX e cartão e em quantas parcelas. Recorrência,
+funil e motivo de estorno ficam para a leva seguinte.
+
+Este item **não consome número de RN**, e isso é deliberado: é veto de escopo de fila, não regra
+de negócio nova. Cada visão recusada continua escrita e volta quando ele quiser. O que muda é a
+fila — as Frentes 1 e 3 de `02-rodadas/2026-08-05-crm-estrategia/03-fila-proposta.md` entram com
+quatro agregados, não dez.
+
+**A `S1904-T3` destrava.** Ela esperava o CRM-1 para saber o recorte, e a resposta dele o dá.
+
+### RN-565 · o e-mail de cada participante é guardado
+
+Na íntegra: *"3-guardar (isso é muito importante para que o organizador consiga exportar ou
+enviar notificações depois pelo nosso sistema)"*
+
+O checkout exibe um campo de e-mail para **cada** participante, obrigatório, a pessoa preenche, o
+payload envia, o servidor valida — e a gravação montava o bloco de dados pessoais com CPF,
+nascimento, gênero e telefone, **sem e-mail**. O campo nunca existiu no modelo, e a esteira
+herdou o buraco como se fosse regra.
+
+O e-mail passa a ser **persistido no bloco de dados pessoais**, com a mesma minimização e a mesma
+leitura restrita do resto do bloco: `isTenantWriter`, nunca afiliado, patrocinador ou
+coordenador. Custo de atrito **zero** — o campo já está na tela e já é obrigatório.
+
+**O efeito colateral bom, que sumiria se a decisão demorasse.** A chave que une o mesmo cliente
+entre eventos tenta CPF, depois e-mail, depois um identificador de sessão. Sem e-mail, todo
+participante que não comprou caía no último recurso e virava cliente novo a cada evento — a
+RN-172 e a RN-173 sustentam a metade do CPF, e esta regra devolve a segunda.
+
+**A regra não cria comunicação.** Guardar o e-mail e usar o e-mail são dois atos. A razão que ele
+deu — **exportação de lista e envio de notificações pelo sistema** — fica registrada abaixo como
+direção deste épico, e as duas continuam sendo trabalho com escopo e base legal próprios.
+
+**Default vetável:** a terceira opção do item, uma frase na tela dizendo para que o e-mail serve,
+fica de fora por ora, porque a frase dele não a pediu e copy nova na tela do dinheiro é decisão
+de produto. Custa uma linha acrescentar.
+
+**Onde vive:** `packages/core/src/eventos/dadosPessoais.ts`, ao lado da RN-172; tarefa `COL-T1`.
+
+### RN-566 · agregado sim, ficha não — e a P-CKMOD-1 muda de estado
+
+Na íntegra: *"2-ok"*. Default ratificado, e ele decide as duas metades de uma vez:
+
+- A contagem por **cidade e bairro** nasce como **agregado sem identidade**, no mesmo molde de
+  `demografia/current` e com a mesma supressão de privacidade do cohort. Não fere a allowlist da
+  RN-172 porque é outra categoria de dado, não uma exceção nela.
+- O **endereço não passa a aparecer na ficha individual do cliente**. A **P-CKMOD-1 continua
+  valendo inteira** para a ficha.
+
+A regra escreve as duas metades juntas de propósito. Separá-las é o jeito de alguém autorizar a
+segunda daqui a três meses achando que já estava autorizada.
+
+**As duas medições que a decisão carrega, e que ela não muda.** O endereço é do **comprador**,
+uma vez por pedido, nunca por participante (`packages/core/src/pedidos/endereco.ts:7-13`): quem
+compra quatro ingressos dá um endereço, então o mapa descreve de onde vem o dinheiro e não de
+onde vem a gente. E a distância até o local do evento continua **não sendo calculável**, porque
+`Evento.local` é texto livre (`packages/core/src/eventos/evento.ts:119`) e não existe coordenada
+em lugar nenhum. Estruturar o endereço do evento é tarefa própria e não espera este item.
+
+**Onde vive:** `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md` §Parte 3, tarefas
+2a a 2d.
+
+### A premissa P-CKMOD-1 sai da espera
+
+A premissa dizia, desde 19/07, que endereço nunca entra no doc do cliente e que incluí-lo *"exige
+decisão explícita do Vitor registrada aqui"*. **A decisão chegou em 12/08**, vinte e quatro dias
+depois. Ela **confirma a premissa para a ficha** e **autoriza a metade que a premissa não
+tratava**, o agregado sem identidade. A premissa continua vigente; o que muda é que ela deixa de
+ser uma pergunta aberta pendurada neste épico.
+
+**Condição de reabertura:** ele querer o endereço na ficha individual. A esteira **recomenda
+recusar**, pela mesma razão que o P-IAMENU-1 já tinha achado — é uma área sem controle de papel,
+e endereço de gente real que sai não volta.
+
+### Direção registrada · exportação de lista e notificação pelo sistema
+
+A razão que o dono deu para guardar o e-mail nomeia os dois consumidores futuros do dado, e por
+isso ela vira **insumo registrado** deste épico, não só justificativa de uma decisão: exportação
+de lista de participantes e envio de notificações pelo sistema são a direção que este dado serve.
+
+Registrar direção não é construir feature. As duas continuam com escopo próprio, e a de
+notificação em particular depende do canal de e-mail e da doutrina de consentimento que o LGPD-1
+cravou em 11/08. **Condição que a direção não resolve:** a base legal do envio a quem não
+comprou. Guardar o e-mail e usar o e-mail são dois atos, e o segundo tem uma pergunta que o CRM-3
+não responde.
+
+### O que continua preso no dono, neste épico
+
+Só o **CRM-4** — o que se pede ao participante depois da compra, e em troca de quê. Ele leu a
+proposta e respondeu com uma pergunta (*"como assim em troca de que?"*); o esclarecimento foi
+dado no chat e a resposta dele ainda não veio. O item fica no painel com o texto intacto, e o
+card do CRM desta leva **não o antecipa**, mesmo tocando território vizinho.
+
+### Painel, na mesma aterrissagem
+
+**CRM-1, CRM-2 e CRM-3 saíram** do [[DECISOES-ABERTAS]]. Nenhum entrou no lugar. O **CRM-4**
+continua onde estava.
