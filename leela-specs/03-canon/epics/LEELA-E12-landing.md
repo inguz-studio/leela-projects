@@ -4004,6 +4004,49 @@ Três fronteiras, escritas para a lane de build não redescobri-las:
 - **Nada aqui cria pedido, inscrito ou cobrança em ponto novo** (RN-440 intocada), e a tela continua
   sendo aviso e nunca garantia de emissão (RN-421).
 
+#### O mecanismo, decidido com registro (lane CKPIX-FLOW · 11/08)
+
+A fronteira acima mandava a esteira escolher e registrar. Escolhido: **assinatura do doc do pedido
+(`onSnapshot`)**, por `observarPedido` novo em `packages/api-client/src/pedidos.ts`, ao lado do
+`getPedido` que a S1225-T3 já usava. Três razões, e a terceira é a que fecha:
+
+- a Rule da RN-469 **já autoriza** o comprador a ler o próprio pedido, doc a doc, e o `allow read`
+  avalia igual no `getDoc` e no listener — nenhuma permissão nova;
+- o custo é **uma leitura por mudança real**, contra uma por janela no polling: um PIX de 30 minutos
+  consultado a cada 5 s são 360 leituras por checkout abandonado, contra 1 aqui;
+- a cadência do polling seria **chute**, porque o webhook não tem hora marcada. Um número escolhido
+  no escuro é o que esta regra veio tirar da tela.
+
+A leitura de carregamento e o botão "Atualizar estado do pedido" da S1225-T3 **ficam**, como rede:
+assinatura cai (Rules, rede, aba suspensa por horas), e é o botão que sobra entre o comprador e o
+escuro do incidente de 04/08.
+
+Duas coisas que a implementação teve de acertar e valem para quem mexer depois:
+
+- **`falhou` num PIX é vencimento, e é prova, não palpite.** O mapa `WEBHOOK_EVENT_TO_CHARGE`
+  (`functions/src/payments/asaasProvider.ts`) tem três eventos que viram `failed`; dois são de cartão
+  por definição. Sobra `PAYMENT_OVERDUE` — o mesmo fato que a varredura da RN-545 carimba como
+  `pix_expirado` pelo outro caminho. Sem essa leitura, o vencimento que chega pelo gateway contaria
+  ao comprador uma história diferente do que chega pela nossa varredura.
+- **O `canceladoMotivo` era escrito e descartado.** `expirarPixPendente` grava a causa desde a CK2-4
+  e `parsePedido` a jogava fora — o doc carregava a razão e nenhuma tela podia lê-la. O campo entrou
+  no contrato do core por leitura Postel, com a constante `MOTIVO_CANCELAMENTO_PIX_EXPIRADO` como
+  ponto de encontro com a lane ESTOURO-BUILD. Sem ele, o ramo 2 teria de adivinhar a causa a partir
+  do `status`, que não distingue "o prazo venceu" de qualquer outro cancelamento.
+
+**O quinto ramo** (RN-546 · ESTOURO-2, leva 7) entra pela mesma porta e sai por outra: reserva
+vencida devolve a pessoa à **página do evento**, não à área do cliente — ali não houve compra, e o
+que ela precisa é escolher de novo. A tela está construída e testada; o predicado que a acende
+(`reservaDoPedidoExpirou`) responde `false` até a ESTOURO-BUILD definir o campo, porque a RN-546 é
+explícita em que o **pedido continua vivo** — a expiração da reserva não é transição de `status`, e
+chutar o nome do campo produziria um ramo que nunca acende ou que acende no doc errado.
+
+⛔ **Fica aberto para o dono, e não é da esteira:** o "área do cliente **logado**" da frase dele. O
+checkout cria sessão **anônima** e nunca a promove; `/minha-conta` é inalcançável por sessão anônima
+por decisão anterior (RN-451); e a conta nasce fora de banda pelo `contaSemFriccao`, com link por
+e-mail. Quem comprou pela primeira vez cai na porta de entrada — agora com o aviso explicando por
+que saiu do checkout, mas ainda tendo de entrar. Fechar isso é frente própria.
+
 ### RN-561 (nova, dona) · o endereço completo é exigido por segurança e cadastro, e a razão fica escrita
 
 Na íntegra: *"ck endereço, nao mude nada, mantém pedindo o endereço, pois isso pe importante para
