@@ -53,6 +53,7 @@ import {
   expirarPixPendenteCore,
   MOTIVO_CANCELAMENTO_GATEWAY_FALHOU,
 } from './expirarPixPendente';
+import { recontarReservasCore, type RecontagemResultado } from './reservaLote';
 
 type Db = admin.firestore.Firestore;
 
@@ -75,6 +76,11 @@ export interface VarrerPixVencidosResultado {
   naoElegiveis: number;
   /** Erros isolados por item (não derrubam o lote). */
   erros: number;
+  /**
+   * Fecho da rodada: a recontagem absoluta de `reservas` (RN-544/RN-546).
+   * Ausente quando a rodada não a executou (ver `varrerPixVencidosCore`).
+   */
+  recontagem?: RecontagemResultado;
 }
 
 /** O erro é a recusa TIPADA do gateway (fail-safe), não uma falha nossa? */
@@ -101,7 +107,8 @@ export async function varrerPixVencidosCore(
   db: Db,
   provider: PaymentProvider,
   agora: Date = new Date(),
-  teto: number = PIX_VENCIDOS_LOTE_MAX
+  teto: number = PIX_VENCIDOS_LOTE_MAX,
+  opcoes: { recontar?: boolean } = {}
 ): Promise<VarrerPixVencidosResultado> {
   const resultado: VarrerPixVencidosResultado = {
     encontrados: 0,
@@ -128,7 +135,10 @@ export async function varrerPixVencidosCore(
     .get();
 
   resultado.encontrados = vencidos.size;
-  if (vencidos.empty) return resultado;
+  if (vencidos.empty) {
+    await fecharRodada(db, agora, resultado, opcoes);
+    return resultado;
+  }
 
   for (const doc of vencidos.docs) {
     const pedidoId = doc.get('pedidoRef') as unknown;
@@ -183,15 +193,72 @@ export async function varrerPixVencidosCore(
   // achados fica de fora, para o silêncio não custar quota. Rodada com
   // recusa do gateway é `warn`: dinheiro que a plataforma tentou matar e
   // não conseguiu não desce ao nível de rotina.
-  if (resultado.encontrados > 0) {
-    const linha = { ...resultado }; // sem PII
-    if (resultado.recusadosGateway > 0 || resultado.erros > 0) {
-      logger.warn('pix_varredura_rodada', linha);
-    } else {
-      logger.info('pix_varredura_rodada', linha);
+  await fecharRodada(db, agora, resultado, opcoes);
+  return resultado;
+}
+
+/**
+ * O FECHO DA RODADA (RN-544 · RN-546): a recontagem absoluta de `reservas`,
+ * e depois o log.
+ *
+ * A recontagem roda mesmo quando a rodada não achou PIX vencido nenhum — o
+ * drift que ela cura não vem de PIX vencendo, vem de crash, contador semeado
+ * e correção manual; e o teto de 15 minutos do pendente de CARTÃO (RN-546)
+ * vence sem nenhum PIX envolvido. Amarrá-la a "houve item" deixaria a vaga
+ * do cartão presa até o próximo abandono de PIX.
+ *
+ * `recontar: false` existe para os testes que exercitam SÓ a expiração
+ * (isolar o efeito é o que torna a falha legível); produção nunca passa.
+ */
+async function fecharRodada(
+  db: Db,
+  agora: Date,
+  resultado: VarrerPixVencidosResultado,
+  opcoes: { recontar?: boolean }
+): Promise<void> {
+  if (opcoes.recontar !== false) {
+    try {
+      resultado.recontagem = await recontarReservasCore(db, agora);
+      if (resultado.recontagem.executada === false) {
+        logger.warn('reserva_recontagem_pulada', {
+          motivo: resultado.recontagem.motivoPulo,
+          pendentes: resultado.recontagem.pendentes,
+        }); // sem PII
+      }
+    } catch (err) {
+      // A recontagem é REDE, não a máquina principal: falhar nela não pode
+      // derrubar a expiração que já aconteceu nesta rodada.
+      resultado.erros += 1;
+      logger.error('reserva_recontagem_falhou', {
+        erro: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      }); // sem PII
     }
   }
-  return resultado;
+
+  // OBSERVABILIDADE, e o limite dito em voz alta: a plataforma não tem
+  // política de alerta (pendência do CTO registrada em DECISOES-ABERTAS —
+  // "o gancho de incidente existe e do outro lado não há ninguém"). Este
+  // log é casável pela doutrina de incidente e NÃO é alerta: varredura
+  // parada aparece na AUSÊNCIA das linhas de rodada. Nenhum heartbeat novo
+  // foi inventado sem o dono pedir.
+  //
+  // Rodada com recusa do gateway ou correção de contador é `warn`: dinheiro
+  // que a plataforma tentou matar e não conseguiu, e contador de vaga que
+  // estava mentindo, não descem ao nível de rotina.
+  const houveOQueContar =
+    resultado.encontrados > 0 || (resultado.recontagem?.corrigidos ?? 0) > 0;
+  if (!houveOQueContar) return;
+
+  const linha = { ...resultado }; // sem PII
+  if (
+    resultado.recusadosGateway > 0 ||
+    resultado.erros > 0 ||
+    (resultado.recontagem?.corrigidos ?? 0) > 0
+  ) {
+    logger.warn('pix_varredura_rodada', linha);
+  } else {
+    logger.info('pix_varredura_rodada', linha);
+  }
 }
 
 // ---------------------------------------------------------------------------
