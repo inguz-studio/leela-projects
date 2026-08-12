@@ -311,6 +311,41 @@ describe('Regressões do REVIEW-E01', () => {
     expect(contrastRatio(brasa['border-strong']!, brasa['surface-base']!)).toBeGreaterThanOrEqual(3.0);
     expect(contrastRatio(wine['border-strong']!, wine['surface-base']!)).toBeGreaterThanOrEqual(3.0);
   });
+
+  // ── Badge `outline` (Onda 0 Parte B · CANONE-1) ──────────────────────────
+  //
+  // Numa pílula TRANSPARENTE a borda é o componente inteiro: sem ela não há
+  // pílula. Isso a tira da isenção de "frame decorativo" que o `Card` invoca
+  // (lá há fundo próprio) e a põe sob a 1.4.11. Os dois pares abaixo já
+  // rodam na matriz genérica; o caso existe com nome para que quem for
+  // enxugar a matriz um dia saiba QUEM depende deles.
+  //
+  // As cinco instâncias da landing que esta variante substitui usam
+  // `border-default`, que dá 1.67:1 no brasa e 1.46:1 no wine — converter
+  // para o canônico SOBE o contraste, não desce.
+  it('BADGE-OUTLINE: a borda da pílula ≥ 3:1 sobre base e raised, nos três temas', () => {
+    for (const [nome, tokens] of themes) {
+      for (const fundo of ['surface-base', 'surface-raised'] as const) {
+        const ratio = contrastRatio(
+          resolveMatrixColor(tokens, 'border-strong'),
+          resolveMatrixColor(tokens, fundo),
+        );
+        expect(ratio, `${nome}: border-strong sobre ${fundo} = ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3.0);
+      }
+    }
+  });
+
+  it('BADGE-OUTLINE: o texto da pílula ≥ 4.5:1 sobre base e raised, nos três temas', () => {
+    for (const [nome, tokens] of themes) {
+      for (const fundo of ['surface-base', 'surface-raised'] as const) {
+        const ratio = contrastRatio(
+          resolveMatrixColor(tokens, 'text-primary'),
+          resolveMatrixColor(tokens, fundo),
+        );
+        expect(ratio, `${nome}: text-primary sobre ${fundo} = ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
