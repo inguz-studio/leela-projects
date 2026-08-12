@@ -917,3 +917,13 @@ export type {
   FichaPedidoDoClienteView,
   ObterFichaDoClienteInput,
 } from './platform/fichaCliente';
+
+// ---------------------------------------------------------------------------
+// Recompute manual de `platform/rollups` (ADMIN-VISAO onda 2 · S1613-T4 ·
+// RN-538). O agendamento horário da onda 1 tirou a dependência de lembrança; o
+// disparo manual é a outra metade da regra, e é critério de aceite da S1613 —
+// retrato velho na cara do operador não pode custar até uma hora de espera.
+// Recompute integral e idempotente: clicar duas vezes não conta nada em dobro.
+// ---------------------------------------------------------------------------
+export { recomputePlatformRollups } from './platform/rollups';
+export type { RecomputePlatformRollupsResult } from './platform/rollups';

@@ -20,6 +20,7 @@ import { TenantFichaLayout } from './tenants/TenantFichaLayout';
 import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
 import { EventosTabRoute } from './tenants/EventosTabRoute';
 import { ClubsTabRoute } from './tenants/ClubsTabRoute';
+import { ClientesTabRoute } from './tenants/ClientesTabRoute';
 import { VendasTabRoute } from './tenants/VendasTabRoute';
 import { FinanceiroTabRoute } from './tenants/FinanceiroTabRoute';
 import { ContasRoute } from './contas/ContasRoute';
@@ -52,6 +53,10 @@ export function PlataformaRoutes(): JSX.Element {
             {/* Onda 3 · S1612-T3/T4: o que a produtora produz. */}
             <Route path="eventos" element={<EventosTabRoute />} />
             <Route path="clubs" element={<ClubsTabRoute />} />
+            {/* Onda 3 · S1612-T6: para quem ela produz. A lista é
+                comportamento; contato, documento e endereço só saem quando
+                alguém abre UMA pessoa, e o servidor registra cada abertura. */}
+            <Route path="clientes" element={<ClientesTabRoute />} />
             {/* Onda 2 · S1613-T2/T4/T5: a economia dela. */}
             <Route path="vendas" element={<VendasTabRoute />} />
             <Route path="financeiro" element={<FinanceiroTabRoute />} />

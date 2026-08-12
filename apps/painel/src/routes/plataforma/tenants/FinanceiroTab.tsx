@@ -37,6 +37,7 @@ import type { ReactNode } from 'react';
 import { Coins, Wallet } from 'lucide-react';
 import {
   Badge,
+  Button,
   Card,
   CardHeader,
   CardTitle,
@@ -66,6 +67,15 @@ export interface FinanceiroTabProps {
    * apresentacional.
    */
   repasses?: ReactNode;
+  /**
+   * Dispara o recompute do agregado na hora (RN-538, segunda metade). Ausente
+   * = a tela mostra só a idade e o aviso, sem prometer ação que não existe.
+   */
+  onRecompute?: () => void;
+  /** true enquanto o recompute roda (desabilita o botão). */
+  recomputando?: boolean;
+  /** Mensagem do último recompute que falhou; null quando não houve. */
+  erroDoRecompute?: string | null;
 }
 
 export function FinanceiroTab({
@@ -75,6 +85,9 @@ export function FinanceiroTab({
   error,
   agora,
   repasses,
+  onRecompute,
+  recomputando = false,
+  erroDoRecompute = null,
 }: FinanceiroTabProps): JSX.Element {
   const obsoleto = rollupObsoleto(atualizadoEm, agora);
 
@@ -113,7 +126,23 @@ export function FinanceiroTab({
                 Retrato de {formatDataHora(atualizadoEm)}
               </p>
               {obsoleto ? <Badge variant="alerta">Retrato desatualizado</Badge> : null}
+              {onRecompute ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={recomputando}
+                  onClick={onRecompute}
+                >
+                  {recomputando ? 'Recalculando…' : 'Recalcular agora'}
+                </Button>
+              ) : null}
             </div>
+
+            {erroDoRecompute ? (
+              <p role="alert" className="text-[length:var(--font-size-sm)] text-[var(--text-danger)]">
+                {erroDoRecompute}
+              </p>
+            ) : null}
 
             {obsoleto ? (
               <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">

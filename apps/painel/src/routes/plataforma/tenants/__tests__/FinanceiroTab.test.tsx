@@ -10,7 +10,8 @@
 // então o limiar da RN-538 é medido sem timer falso).
 // =============================================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { render, screen, within } from '@testing-library/react';
 import { FinanceiroTab } from '../FinanceiroTab';
 import { mkTenantRollup, ts } from '../_test/fixtures';
@@ -119,5 +120,45 @@ describe('FinanceiroTab · estados', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Faturamento gerado' })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RN-538, segunda metade: o recompute disparável da própria tela. É critério de
+// aceite da S1613 — "dado que o rollup está obsoleto, quando olho a tela, então
+// consigo disparar o recompute dali mesmo e o número atualiza".
+// ---------------------------------------------------------------------------
+
+describe('FinanceiroTab · RN-538 · o recompute sai da própria tela', () => {
+  it('sem `onRecompute` a tela NÃO promete ação que não existe', () => {
+    renderTab();
+    expect(screen.queryByRole('button', { name: /Recalcular/ })).not.toBeInTheDocument();
+  });
+
+  it('com `onRecompute` o botão aparece e dispara', async () => {
+    const user = userEvent.setup();
+    const onRecompute = vi.fn();
+    renderTab({ onRecompute });
+    await user.click(screen.getByRole('button', { name: 'Recalcular agora' }));
+    expect(onRecompute).toHaveBeenCalledTimes(1);
+  });
+
+  it('o botão fica desabilitado enquanto o recompute roda', () => {
+    const onRecompute = vi.fn();
+    renderTab({ onRecompute, recomputando: true });
+    expect(screen.getByRole('button', { name: 'Recalculando…' })).toBeDisabled();
+  });
+
+  it('recompute que falha vira alerta na tela, não silêncio', () => {
+    renderTab({
+      onRecompute: vi.fn(),
+      erroDoRecompute: 'Apenas platform_admin recomputa os rollups da plataforma.',
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(/Apenas platform_admin/);
+  });
+
+  it('o botão existe mesmo com o retrato fresco — esperar a hora cheia é escolha do operador', () => {
+    renderTab({ onRecompute: vi.fn(), atualizadoEm: ts('2026-08-11T11:55:00Z') });
+    expect(screen.getByRole('button', { name: 'Recalcular agora' })).toBeInTheDocument();
   });
 });
