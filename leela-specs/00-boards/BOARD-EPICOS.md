@@ -14,6 +14,34 @@ atualizado: 2026-08-11
 > quem e as três próximas entregas de cada frente — veja [[VISAO-DE-PROJETO]].** Este board
 > continua sendo o mapa de uma linha por épico; aquele é a visão que o dono pediu em 11/08.
 
+## O que a leva 6 do dono destravou (2026-08-11, à noite)
+
+Onze itens saíram do painel de decisões numa leva só, e o efeito nos épicos é este. Palavras do
+dono e leitura item a item em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md`.
+
+| Épico | O que mudou | Estado |
+|---|---|---|
+| [[LEELA-E12-landing]] | **RN-560** — a tela do pagamento reage sozinha nos quatro ramos (CKPIX-1) e **revoga a RN-470**; **RN-561** — o endereço fica, com a razão escrita (CKENDERECO-1); história nova **S1246** | 📋 lane CKPIX-FLOW, ainda sem código |
+| [[LEELA-E12-landing]] · [[LEELA-E11-analytics]] | **SERV-3 decidido**: "Serviço" nomeia exatamente a cobrança da Leela em toda superfície; a RN-495 ganha alcance e o renome das 34 strings destrava | 📋 lane SERV3-RENOME · ⚠️ re-inventariar antes de trocar |
+| [[LEELA-E16-plataforma-superadmin]] | os cinco vetáveis **V-1 a V-5** fecham juntos; **RN-542 não nasce** (responsável é o owner), a **RN-540** passa a mostrar CPF por callable auditado, a **RN-549** nasce ratificando a RN-510 | 📋 **ondas 2, 3 e 5 destravadas** |
+| [[LEELA-E04-config-vendas]] | *"não podemos ter excedentes de ingressos jamais"* prioriza a reserva de vaga (RN-543 a RN-546), especificada em 10/08 e sem uma linha escrita | 📋 lane ESTOURO-BUILD |
+| [[LEELA-E09-financeiro-profissional]] · [[LEELA-E11-analytics]] | **TICKET-1 ratificado** — compra estornada fora do denominador do ticket médio por decisão, não por default | ✅ já implementado; o que mudou é quem manda mexer |
+| [[LEELA-E03-operacao-evento]] | **SEMKIT-1 e SEMKIT-2** eram resíduo: decididos no lote 1 de 09/08, o reparo ficou sem objeto na purga de 10/08 | ✅ nada fica com o dono |
+
+Nenhum épico novo precisou nascer, e uma história nova entrou: a **S1246** no E12.
+
+### A leva 7, na mesma noite — três itens que seguravam trabalho grande
+
+| Épico | O que mudou | Estado |
+|---|---|---|
+| [[LEELA-E00-fundacao-tecnica]] | **LGPD-1 decidido** — *"o aceite é obrigatório, e registrado no banco"*: quando o registro falta, o overlay do resgate recolhe o aceite junto do código | 📋 **o seed do primeiro convite DESTRAVOU** |
+| [[LEELA-E12-landing]] | a metade do termo de saúde: o aceite passa a carimbar `materialHash`, como o termo de uso já faz | 📋 |
+| [[LEELA-E20-radar-comunidade]] | a base legal do nome real de participante sai do painel — é dado de terceiro, não aceite de organizador; segue com o advogado, anotada na rodada do radar | ⏸️ sem gate sobre o radar (risco assumido pelo dono em 09/08) |
+| [[LEELA-E04-config-vendas]] | **ESTOURO-2 decidido** — teto de **15 minutos** (não 30) e a expiração devolve a pessoa à página do evento; a RN-546 sai da condição | 📋 S323-T7 destravada |
+| [[LEELA-E01-design-system]] | **CANONE-1 decidido pela opção 1** — peça que não existe nasce no DS, documentada, nunca inline; virou diretriz permanente da casa na governança de design | 📋 **Onda 0 Parte B destravada** |
+
+Com a leva 7 o painel do dono foi de 14 para **11 itens**.
+
 ## O que a rodada do redesign acrescentou (2026-08-10/11)
 
 Sete histórias novas entraram em épicos que já existiam, e nenhum épico novo precisou nascer. As

@@ -1445,6 +1445,15 @@ real e grava a senha `demo1234`, publicada no repositório (`:127`, `:182-188`),
 provado por REST na lane FIX-AUTHGUARD. Fator único, senha pública, e alcance cross-tenant de
 PII, dinheiro e elevação de papel.
 
+**+11/08 · o ADMINSEP-3 foi decidido pelo dono (leva 6 da tarde).** Na íntegra: *"nao é pra ter
+admin demo ja falei isso antes também."* Não existe conta de demonstração de tipo nenhum, e a
+conta que administra a plataforma em produção não é conta de vitrine — coerente com a purga de
+10/08, que tirou as duas contas demo do Auth. A sugestão do maestro de uma conta demo para teste
+de checkout está **retirada**: teste ponta a ponta de compra em produção só pelo caminho do dono.
+O que a decisão manda para a esteira é o que a task A6 já dizia — o seed para de semear
+administrador contra o projeto real e nenhuma conta de demonstração nasce de novo. Registro em
+`02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §ADMINSEP-3`.
+
 **Pendência do CTO humano**, no molde do item 62: segundo fator para `platform_admin` exige
 subir para Identity Platform, que é tier pago. Não há MFA em lugar nenhum do repositório
 hoje.
@@ -2088,3 +2097,110 @@ diretório, que era a metade ainda aberta, foi respondido pela própria ordem da
 lugar (recusa/revogação — a pergunta que a frase não alcança). **ADMINVISAO-5 foi atualizado
 no lugar**: as duas letras ganharam default proposto com custo medido; a decisão continua do
 dono.
+
+---
+
+## Delta os cinco vetáveis da visão master fecham juntos (leva 6 do dono · 2026-08-11)
+
+Os cinco vetáveis que a SPEC-ADMIN-VISAO abriu em 09/08 — **V-1 a V-5**, itens **ADMINVISAO-1 a
+ADMINVISAO-5** do painel — foram decididos na noite de 11/08, num lote só. As palavras do dono estão
+em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md`. **As ondas 2, 3 e 5 da fila
+(`02-rodadas/2026-08-09-admin-visao/04-fila-build.md`) destravam.**
+
+### V-1 · ADMINVISAO-1 · "faturamento gerado" é o dinheiro da Leela
+
+Na íntegra: *"faturamento gerado é para a leela, já que ficamos como que sobra do TPV menos custos
+operacionais e repasses dos organizadores."*
+
+A ficha da produtora chama de **faturamento gerado** a receita da **Leela**: TPV menos custos
+operacionais menos repasses dos organizadores. A **RN-537 não muda de enunciado** — o número
+continua vindo do carimbo e nunca de conta refeita no cliente; o que fica decidido é **qual dos três
+dinheiros o rótulo nomeia**.
+
+A consequência que a esteira não pode esconder: **custo operacional não existe em código** (achado 2
+da conferência de 09/08 — `custoGateway`, `custoReal` e `receitaPlataforma` com zero ocorrências, e
+o `netValue` do Asaas descartado de propósito). Enquanto a **S1610** não subir, a parcela de custo
+fica **vazia com rótulo**, como a RN-455 e a RN-537 já mandam, e a tela declara o que falta em vez de
+apresentar um número que finge estar completo. Tarefa: `S1613-T4`.
+
+### V-2 · ADMINVISAO-2 · a aba de clientes mostra a ficha completa, contato incluído
+
+Na íntegra: *"tem que guardar cpf, e-mail, telefone, cidade, endereço, restrições, pedidos, tudo. É
+a ficha geral de clientes, membros, participantes dos clubs, e a visao geral no individuo, para
+analisarmos como organizadores."*
+
+É a segunda opção do item: **comportamento e contato**. A aba mostra a ficha completa por indivíduo —
+CPF, e-mail, telefone, cidade, endereço, restrições e pedidos —, e o alcance é de clientes, membros e
+participantes de clubs.
+
+O que isso move na **RN-539**: o callable com Admin SDK continua sendo o mecanismo (a Rule
+`firestore.rules:382` não abre, e nenhuma leitura de `crmClientes` pelo client SDK é acrescentada),
+mas ele deixa de devolver só o que o CRM minimiza. O contato existe noutro lugar e é de lá que ele
+sai — `pedidos.responsavel` (e-mail e telefone) e `inscritos.dadosPessoais` (CPF e telefone) —, lido
+cross-tenant por servidor, com registro de acesso e de negativa como a RN-540 já manda.
+
+**A RN-172 não muda.** O CRM continua minimizando por desenho: o que a ficha do painel master faz é
+montar a visão a partir das fontes que já guardam o dado, não engordar o documento do cliente.
+
+**A fronteira que o próprio item escreveu continua valendo:** concentrar PII de participante de todo
+produtor numa superfície só é frente do **LGPD-1**, e o LGPD-1 segue aberto. A decisão do dono diz o
+*que* a tela mostra; a leitura jurídica de sob que base isso é tratado é a mesma conversa de advogado
+que o LGPD-1 já pede, e ela não foi respondida aqui.
+
+### V-3 · ADMINVISAO-3 · responsável é o dono da conta
+
+Na íntegra: *"Responsável é o dono da conta."*
+
+É a primeira opção. **A RN-542 não nasce** — nenhum campo novo, nenhuma coleção, nenhum índice. O
+trabalho é o que o item já dizia: tipar `telefone` e `organizacao` na interface `Profissional`
+(gravados hoje por `packages/api-client/src/platform/profissionais.ts:113` sem estarem no tipo) e
+exibir. Tarefa na `S1612`.
+
+### V-4 · ADMINVISAO-4 · o diretório identifica por CPF, e por documento estrangeiro
+
+Na íntegra: *"sim, identificação via CPF ou documento estrangeiro."*
+
+O diretório de contas **mostra CPF**; quem não tem CPF é identificado pelo documento estrangeiro. A
+**RN-540 muda nesta metade**: "CPF não aparece no painel master sem decisão própria" passa a ter a
+decisão própria, e ela é sim.
+
+**Default do maestro, registrado e vetável — o mecanismo.** A frase do dono responde *se* o CPF
+aparece, não *por onde*. Das três saídas do item, fica a do meio: **leitura por callable auditado,
+com registro de cada consulta**, no molde do `getBankDetailsForPayout`. A Rule de `pessoas`
+(`firestore.rules:2688`) **continua fechada**, que é a escolha mais conservadora do arquivo e a que
+não transforma a coleção de CPF do sistema inteiro em leitura de painel. Abrir a Rule seria a saída
+barata de construir e cara de defender, e trocar depois é a mesma decisão com uma tela já construída
+em cima. Veto do dono muda isso a qualquer momento; o custo da troca é de servidor, não de tela.
+
+O resto da RN-540 fica de pé sem emenda: sem export, sem CSV, sem download, e a negativa registrada
+junto do acesso. Tarefas `S1615-T1` e `S1615-T5`.
+
+### V-5 · ADMINVISAO-5 · atividade é qualquer clique de navegação ou de ação
+
+Na íntegra: *"é qualquer clique em botões, menus, para navegar ou mudar de tela ou ter ações."*
+
+Isto responde a **letra (a)** e ratifica o que já está no ar: a **RN-510** faz o aviso subir na
+primeira interação com qualquer acionável, e a leitura estrita de "ação bloqueada" **cai**. A
+**RN-549 nasce na forma da resposta** — a régua do gatilho vira texto canônico com a definição do
+dono, sem reescrever P11 nem P14 e sem derrubar a medição de 08/08. Tarefa `S1616-T4`.
+
+A **letra (b)** — como a tela descobre que foi liberada sem recarregar — não é tocada por esta frase,
+e por isso **segue o default proposto em 10/08, que já estava em vigor**: a **RN-550**, com o painel
+assinando o doc próprio da pessoa, a vitrine caindo sozinha pela mesma saída por sessão do resgate e
+o aviso ganhando a linha da segunda espera. Default em vigor não retém tarefa, então `S1616-T2` e
+`S1616-T3` **destravam**; se o dono vetar depois, o custo continua sendo o que a RN-550 dimensionou —
+um listener, um nome na allowlist e uma linha de copy.
+
+### O que destrava, e o que continua esperando
+
+| Onda | Esperava | Estado agora |
+|---|---|---|
+| **2 · a economia do tenant** | onda 1 · REDESIGN-DS · **V-1** | **destravada** — a onda 1 está paga e o redesign entrou na main em 11/08 |
+| **3 · produção e pessoas** | onda 1 · onda 2 · REDESIGN-DS · **V-2** e **V-3** | **destravada pelos vetos**; a ordem interna continua: a SubNav nasce na onda 2 |
+| **5 · o diretório de contas** | onda 1 · REDESIGN-DS · **V-4**, **V-5** e a leitura do **LGPD-1** para a metade de PII | **destravada pelos vetos**; a metade de PII continua olhando o **LGPD-1**, que segue aberto no painel |
+| 1 e 4 | — | pagas: a onda 1 fechou em 10/08 e a onda 4 fechou em 11/08 (S1614) |
+
+**Duas coisas que esta leva não respondeu, e continuam no painel.** O **ADMIN-USUARIOS-2** (recusar e
+revogar) segue aberto, então a `S1616-T5` continua retida. O **LGPD-1** segue aberto, e agora ele
+carrega uma frente a mais: com o V-2 e o V-4 decididos como foram, a superfície de PII do painel
+master é maior do que era quando o item foi escrito.

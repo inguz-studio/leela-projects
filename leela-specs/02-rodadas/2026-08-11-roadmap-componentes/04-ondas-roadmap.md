@@ -24,15 +24,15 @@ usar.
 
 | Onda | Superfície | JTBD servido | Divergências | Estado |
 |---|---|---|---|---|
-| **0** | design system e moldura | enabler (marcado como enabler, não forjado) | 2 + 4 lacunas | parte livre, parte retida em CANONE-1 |
+| **0** | design system e moldura | enabler (marcado como enabler, não forjado) | 2 + 4 lacunas | Parte A paga em 11/08 · **Parte B livre desde 11/08** (CANONE-1 decidido) |
 | **1** | landing pública e checkout | 04.1 *"Descubro evento → me inscrever em poucos cliques"* | 64 | livre |
 | **2** | painel · eventos | 04.1 *"Vendo inscrições chegarem"*, *"Preparo a entrega de kits"*, *"Faço check-in no balcão"* | 65 | livre |
 | **3** | painel · plataforma e recebimento | 04.1 *"Processo repasse → operação escalável"* | 36 | livre |
 | **4** | painel · clubes e parcerias | 04.4 *"comunidade com rosto e nome"* + 04.1 *"Vendo com promotor → link rastreável"* | 31 | livre |
 | **5** | painel · visão geral e CRM | 04.1 *"acompanhar resultado de relance"* + candidato P8 *"conhecer meus clientes"* | 20 | livre |
 
-Total convertido ao fim das seis: 223 divergências, mais as lacunas de cânone que a CANONE-1
-resolver.
+Total convertido ao fim das seis: 223 divergências, mais as quatro lacunas de cânone — que o
+CANONE-1 resolveu em 11/08 pela criação das peças no design system, e não pela receita de tela.
 
 ## A medição anti-carga
 
@@ -142,7 +142,13 @@ sem reconferir contra o código — **o mesmo modo de falha da entrada do BarCha
 corrigiu em `25da1ad8`. Nenhuma lane futura para F4 ou F5. Fica a lição de processo: item herdado
 de handoff se reconfere no código antes de virar linha de onda.
 
-### Parte B — retida em CANONE-1
+### Parte B — DESTRAVADA em 11/08 (leva 7 do dono)
+
+> **O CANONE-1 foi decidido**, pela primeira opção, com a leitura do próprio dono: *"Se um
+> componente nao existe, precisamos documentar e padronizar o componente para nao ficar refazendo
+> ele."* A diretriz completa e as três razões dele (tokens, tempo, conformidade) estão em
+> `04-engenharia/governanca-design.md`, na seção da diretriz de reuso. Esta parte deixa de esperar
+> resposta e entra na fila como qualquer outra onda.
 
 Primitivos de layout (as três famílias medidas), cartões de domínio por composição, cabeçalho de
 bloco interno promovido de `components/SecaoHead.tsx` para o DS. Cada um com story, teste e AA por

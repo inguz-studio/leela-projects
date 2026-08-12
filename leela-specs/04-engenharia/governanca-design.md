@@ -116,3 +116,43 @@ O que fecha: o mapa canônico em **`03-canon/canone-de-componentes.md`**, que é
 ### Primitivos no DS
 
 `Popover`/`DropdownMenu`, `Command`, `Combobox`, `Calendar`, `Checkbox`, `Radio`/`RadioGroup`, `Input`, `Textarea`, `SearchInput`, `Switch`, `Modal`/`Dialog`, `Tooltip`, `Tabs`, `Select`, `FilterMenu` já existem no DS (R9-A criou os de seleção rica e datas; GATE-DS-W1 confirmou 46 componentes publicados). Antes de escrever qualquer controle, confira o barrel `@leela/design-system` e o showroom (`packages/design-system` → `#/componentes`). Ver `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-05`.
+
+### Peça que não existe nasce no DS, documentada — diretriz do dono (2026-08-11 · PERMANENTE)
+
+> **Diretriz vinculante do Vitor, na íntegra:** *"o que eu enetndi é que voce nao tá respeitanod o
+> design system, e nao criou um componente novo, acione nossa software house para padronizar esse
+> procesos. Se um componente nao existe, precisamos documentar e padronizar o componente para nao
+> ficar refazendo ele. Inclusive é diretriz nossa de sempre utilizar códigos, partes de código e
+> componentes para fazer as telas, como forma de economia de tokens, tempo, e conformidade de
+> código."*
+>
+> Fecha o item **CANONE-1** do painel, pela primeira das duas opções. Registro em
+> `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §Leva 7`.
+
+**A regra, em uma frase:** quando a tela precisa de uma peça que o design system não publica, a
+peça **nasce no design system, documentada e padronizada, antes de ser usada** — nunca se resolve
+inline na tela, e nunca se refaz na próxima.
+
+Isto fecha o buraco que a §8 sozinha não alcançava. A §8 diz "use o primitivo do DS"; ela não dizia
+o que fazer quando o primitivo **não existe**, e era exatamente aí que nasciam as 23 receitas de
+moldura para a mesma coisa. A resposta agora é uma só: para de escrever a receita, cria a peça.
+
+**As três razões, que são as do dono e valem repetir porque explicam o custo:** economia de tokens,
+economia de tempo e conformidade de código. Reescrever uma moldura na mão custa contexto em toda
+tela que a repete, custa a revisão de cada cópia e produz divergência que ninguém consegue reprovar
+depois.
+
+**O que isto destrava:** a **Onda 0 Parte B** do roadmap de componentes — os primitivos de layout
+(as três famílias medidas, 23 receitas → 3), os cartões de domínio por composição e o cabeçalho de
+bloco promovido para o DS. Cada um com story, teste e AA por estado, como qualquer componente.
+
+**Como a diretriz é conferida:** ela não vive só em prosa, e é essa a lição da §8. A **RN-558** já
+torna procedência regra de negócio, o cânone (`03-canon/canone-de-componentes.md`) é o mapa padrão
+→ componente, e o gate `leela-canon` mede. O que esta diretriz acrescenta ao gate é o destino do
+**padrão órfão**: quando o cânone não tem componente para o padrão, o caminho deixa de ser
+"instância permitida e contada" e passa a ser **criar a peça no DS** — a contagem de órfão vira
+fila de trabalho, não licença.
+
+**Fora do projeto.** O dono registrou a mesma diretriz um nível acima, para a casa inteira:
+*"é primordial que nossa software forge utilize a prática de snippets e design system."* Vale em
+qualquer projeto que a software-forge execute, e não só na Leela.
