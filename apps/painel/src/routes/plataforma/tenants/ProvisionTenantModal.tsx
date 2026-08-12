@@ -173,7 +173,7 @@ export function ProvisionTenantModal({
             type="number"
             inputMode="decimal"
             step="0.1"
-            label="Taxa da plataforma (%) — opcional"
+            label="Serviço (%) — opcional"
             value={values.platformFeePct}
             onChange={(e) => set('platformFeePct', e.target.value)}
             placeholder="10.5"

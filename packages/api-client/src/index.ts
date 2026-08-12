@@ -388,6 +388,7 @@ export type {
 // ---------------------------------------------------------------------------
 export {
   getPedido,
+  observarPedido,
   listarPedidosDoEvento,
   getPedidoDoInscrito,
   getPagamento,
@@ -395,6 +396,7 @@ export {
 export type {
   ListarPedidosDoEventoParams,
   GetPedidoDoInscritoParams,
+  ObservarPedidoHandlers,
 } from './pedidos';
 
 // ---------------------------------------------------------------------------

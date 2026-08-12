@@ -536,7 +536,9 @@ se confundir por descuido. O servidor reconta da fonte (`resolverPagantes`: `cou
 sobre `status in STATUS_PAGANTE`, no MESMO índice single-field que a query de pendentes
 já usava — nenhum índice novo), e a régua de "quem pagou" virou constante única em
 `packages/core/src/eventos/inscrito.ts`, onde o vetável TICKET-1 do dono passa a caber
-numa linha.
+numa linha. **+11/08 (leva 6):** o TICKET-1 foi **ratificado pelo dono** (*"E o ticket-1.
+ok."*) e deixou de ser vetável — compra estornada fica fora do denominador por decisão,
+não por default. A linha continua existindo; o que mudou é quem precisa mandar mexer nela.
 
 Falsificação executada (denominador antigo de volta): 400 pagantes com 300 boletos
 parados e 100 canceladas sobre 2.000 visitas devolvia **40,0% onde a verdade é 20,0%**;

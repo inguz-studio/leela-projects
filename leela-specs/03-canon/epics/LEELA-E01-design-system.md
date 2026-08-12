@@ -763,3 +763,44 @@ app do banco não descobre que pagou, RN-470). Nenhum comportamento dos dois foi
 
 Detalhe completo, com o delta visual item a item para a conferência renderizada, em
 `.nirvana/handoffs/leela-canon-onda1-20260811.md`.
+
+---
+
+## Delta o CANONE-1 fecha, e a fundação de layout destrava (leva 7 do dono · 2026-08-11)
+
+O único vetável que a rodada de componentes mandou ao dono voltou na mesma noite, e ele escolheu a
+primeira das duas opções — não pelo rótulo dela, mas pela própria leitura do problema. Na íntegra:
+
+> *"o que eu enetndi é que voce nao tá respeitanod o design system, e nao criou um componente novo,
+> acione nossa software house para padronizar esse procesos. Se um componente nao existe,
+> precisamos documentar e padronizar o componente para nao ficar refazendo ele. Inclusive é
+> diretriz nossa de sempre utilizar códigos, partes de código e componentes para fazer as telas,
+> como forma de economia de tokens, tempo, e conformidade de código."*
+
+**O que fica decidido, em uma frase:** peça que o design system não publica **nasce nele**,
+documentada e padronizada, antes de ser usada — nunca inline na tela, nunca refeita na próxima. A
+diretriz completa, com as três razões do dono (economia de tokens, economia de tempo, conformidade
+de código), é permanente e vive em `04-engenharia/governanca-design.md`. Ela **complementa a RN-558**
+sem substituí-la: a RN-558 diz que toda instância de padrão nomeado usa o componente do cânone; a
+diretriz diz o que acontece quando o cânone não tem componente para o padrão.
+
+**O que destrava, aqui:**
+
+- **Onda 0 Parte B** — os primitivos de layout para as três famílias medidas (grade de formulário,
+  grade de indicadores, painel assimétrico): **23 receitas viram 3**. Mais os cinco cartões de
+  domínio por composição (clube, comunicado, campanha, parceria, afiliação) e o cabeçalho de bloco
+  interno promovido de `components/SecaoHead.tsx` para o DS.
+- **O cânone perde os dois "sem cânone"** — as linhas §5 e §6 de `03-canon/canone-de-componentes.md`
+  deixam de dizer "decisão CANONE-1" e passam a apontar para a Onda 0 Parte B.
+- **O gate ganha o destino do padrão órfão.** Enquanto não havia decisão, `padrao-orfao` era
+  contagem sem consequência: a instância seguia permitida porque não havia contra o quê reprovar.
+  Agora o órfão vira fila de trabalho — a peça nasce.
+
+**O custo, escrito para não virar surpresa:** primitivo novo é componente como qualquer outro, com
+story, teste e contraste AA por estado. É uma onda de fundação antes das ondas de tela — e o dono
+aceitou esse custo de olhos abertos, porque o compara com o de reescrever a mesma moldura pela
+vigésima quarta vez.
+
+**Fora do projeto.** O dono registrou a mesma prática um nível acima, para a casa: *"é primordial
+que nossa software forge utilize a prática de snippets e design system."* Registro em
+`02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §Leva 7` e no complemento do mesmo ato.

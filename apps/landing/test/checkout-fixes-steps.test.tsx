@@ -231,18 +231,18 @@ describe('StepModalidadeKit — A-5/CKFORM-T4 · nota de taxa CONDICIONAL (RN-34
     );
   }
 
-  it('evento em modo repassada: nota da taxa aparece no step 0, antes do resumo', () => {
+  it('evento em modo repassada: nota do Serviço aparece no step 0, antes do resumo', () => {
     renderKit(true);
-    expect(screen.getByText(/repassa a taxa de serviço/i)).toBeTruthy();
+    expect(screen.getByText(/repassa o serviço/i)).toBeTruthy();
   });
 
   // S1216-T4 · D-ACH-7 — a nota deixou de existir só num dos modos. O caso
   // anterior exigia SILÊNCIO em taxa incorporada, e o silêncio foi o achado.
-  it('evento em modo incorporada: a nota diz que não há taxa adicional', () => {
+  it('evento em modo incorporada: a nota diz que não há valor adicional', () => {
     renderKit(false);
-    expect(screen.getByText(/não há taxa adicional/i)).toBeTruthy();
+    expect(screen.getByText(/não há valor adicional/i)).toBeTruthy();
     expect(screen.getByText(/valor exibido é o valor final/i)).toBeTruthy();
-    expect(screen.queryByText(/repassa a taxa de serviço/i)).toBeNull();
+    expect(screen.queryByText(/repassa o serviço/i)).toBeNull();
     // Nenhum dos dois ramos revela percentual (703db9c).
     expect(screen.queryByText(/%/)).toBeNull();
   });

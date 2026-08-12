@@ -44,7 +44,7 @@ const columns: TableColumn<TenantRollup>[] = [
   },
   { key: 'gmv', header: 'GMV', align: 'right', render: (t) => formatBRL(t.gmv) },
   { key: 'receitaLeela', header: 'Receita Leela', align: 'right', render: (t) => formatBRL(t.receitaLeela) },
-  { key: 'platformFeePct', header: 'Taxa', align: 'right', render: (t) => formatPct(t.platformFeePct) },
+  { key: 'platformFeePct', header: 'Serviço', align: 'right', render: (t) => formatPct(t.platformFeePct) },
   { key: 'eventosAtivos', header: 'Eventos', align: 'right', render: (t) => formatInt(t.eventosAtivos) },
 ];
 

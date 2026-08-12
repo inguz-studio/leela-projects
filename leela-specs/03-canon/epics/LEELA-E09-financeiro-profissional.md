@@ -1452,10 +1452,15 @@ a verdade é 250 ou "—").
 **O que sobra da T4:** materializar o ticket como CAMPO do agregado só se ganharmos um
 consumidor fora da tela (série histórica, export, rollup). Hoje derivar no cliente a
 partir de dois números do mesmo doc é mais barato e não cria uma terceira cópia do mesmo
-dinheiro para manter em sincronia. **Decisão do dono pendente** (registrada na lane): o
-denominador ficou em `confirmado`, e NÃO em `STATUS_QUE_CONTAM_VENDA`
-(confirmado+estornado) — o estorno devolve o face em `receitaConfirmada`, então contar o
-estornado faria o ticket cair a cada reembolso. Reabrir = uma linha.
+dinheiro para manter em sincronia. **Decisão do dono — RATIFICADA em 11/08** (leva 6 da
+tarde, na íntegra: *"E o ticket-1. ok."*): o denominador fica em `confirmado`, e NÃO em
+`STATUS_QUE_CONTAM_VENDA` (confirmado+estornado) — o estorno devolve o face em
+`receitaConfirmada`, então contar o estornado faria o ticket cair a cada reembolso. O
+**TICKET-1 deixa de ser default vetável e passa a ser decisão do dono**; reabrir continua
+custando uma linha, mas agora custa também a palavra dele. A emenda anti-conserto-de-volta
+da D-1008-R19 permanece como está: lane futura que "alinhar" o denominador está desfazendo
+uma decisão, não consertando um descuido. Registro em
+`02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §Adendo da noite`.
 
 **A varredura do SERVIDOR fechou o `Not-tested` da T4 (lane METRICAS-PAGANTES-BACKEND ·
 11/08 · `e1191818`/`30084e5a`).** A pergunta em aberto era se os rollups do servidor

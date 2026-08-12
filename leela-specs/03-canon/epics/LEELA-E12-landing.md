@@ -2863,6 +2863,17 @@ e-mail, e o `/cadastrar` do painel continua criando conta sem verificação (**C
 
 ### RN-470 (nova, dona) · feedback pós-pagamento em tela, para PIX e cartão
 
+> **⛔ REVOGADA em 2026-08-11 por decisão do dono (leva 6 da tarde · item CKPIX-1).** Na
+> íntegra: *"a tela precisa receber o webhook de volta do gateway de pagamento. Após reeber
+> confirmação, direcionamos para a área interna com o cliente logado"* — e os outros três ramos,
+> escritos em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §CKPIX-1`. O que morre é a
+> **postura passiva**: a tela que só relê o pedido no carregamento e num clique. Sobrevivem os
+> três elementos que o dono pediu em 04/08 para o PIX pendente (mensagem, CTA para os próprios
+> pedidos, orientação de e-mail) e a régua de que a tela é aviso e nunca garantia de emissão
+> (RN-421). A sucessora é a **RN-560**, na seção "Delta o pós-pagamento reage sozinho" no fim
+> deste épico. **O enunciado abaixo não foi apagado**, pela mesma disciplina da RN-211 e da
+> RN-416: ele é o que ainda explica por que o código de hoje se comporta como se comporta.
+
 Verbatim do dono: *"precisamos dar uma resposta para ele ou em tela, no caso de pix ou em
 cartao também. Mas de inicio podemos colocar a mensagem 'Estamos confirmando o seu pedido' e
 abaixo, um CTA para ele visualizar os proprios pedidos dentro do sistema, e uma orientação
@@ -3948,3 +3959,159 @@ dela seguem intactos. Fila com territórios em `02-rodadas/2026-08-10-arena-2-li
 **ARENA-2 saiu** do [[DECISOES-ABERTAS]] (decidido 09/08 + especificado hoje); no lugar entrou o
 **ARENA-4** — o corte do vocabulário, a única pergunta que a frase do dono não alcança. ARENA-1
 não foi tocado por esta rodada (social é fronteira, não assunto).
+
+---
+
+## Delta o pós-pagamento reage sozinho, e o endereço ganha razão (leva 6 do dono · 2026-08-11)
+
+Formaliza os dois itens do painel que a medição da Onda 1 do roadmap de componentes tinha mandado
+para o dono — **CKPIX-1** e **CKENDERECO-1** — e que ele decidiu na noite de 11/08. As palavras
+dele estão em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md`; a medição que abriu os dois
+itens está em `02-rodadas/2026-08-11-roadmap-componentes/06-decisoes-checkout-onda1.md`.
+
+A **RN-470 fica revogada** e continua legível na seção dela, marcada — mesma disciplina da RN-211 e
+da RN-416.
+
+### RN-560 (nova, dona) · o desfecho do pagamento chega à tela sozinho, e cada ramo tem destino
+
+Na íntegra, a decisão do dono: *"a tela precisa receber o webhook de volta do gateway de pagamento.
+Após reeber confirmação, direcionamos para a área interna com o cliente logado, para visualizar as
+proprias compras na área do cliente. Outra alternativa é: se o pix nao foi pago, ser redirecionado
+avisando que o pix foi canelado após o prazo evncer, e levar tambem para a area do cliente. cartao
+recusado, da mensagem de erro e fala para revisar os dados de cartao, e volta para o checkout.
+cartao aceito, mostra mensagem de sucesso e depois já loader redirecinando para aread o cliente
+também."*
+
+A tela do pagamento deixa de ser passiva. Ela **observa o pedido** e reage ao desfecho, nos quatro
+ramos, sem a pessoa precisar recarregar nem perguntar:
+
+| Ramo | O que a pessoa vê | Para onde vai |
+|---|---|---|
+| **PIX confirmado** | confirmação da compra | área do cliente logada — os próprios ingressos e compras |
+| **PIX vencido sem pagamento** | aviso de que o PIX foi cancelado depois de vencer o prazo | área do cliente |
+| **Cartão recusado** | mensagem de erro pedindo para revisar os dados do cartão | volta ao checkout |
+| **Cartão aceito** | mensagem de sucesso, depois o loader | área do cliente |
+
+Três fronteiras, escritas para a lane de build não redescobri-las:
+
+- **O webhook continua chegando ao servidor, não à tela.** O que muda é a tela passar a observar o
+  pedido que o webhook materializa. *Qual* mecanismo faz isso — listener, polling curto com a aba
+  visível, ou outro — é decisão de engenharia e sai decidida com registro, dentro da lane
+  **CKPIX-FLOW**. O dono decidiu o comportamento; o custo do mecanismo é da esteira.
+- **O destino "área do cliente" já existe** e é o `/minha-conta` da landing, confirmado pelo dono na
+  manhã do mesmo dia (item PCLIENTE-1: *"já existe"*). A dependência dura que a RN-470 declarava —
+  o CTA de "ver meus pedidos" só nascer quando a área existisse — está paga.
+- **Nada aqui cria pedido, inscrito ou cobrança em ponto novo** (RN-440 intocada), e a tela continua
+  sendo aviso e nunca garantia de emissão (RN-421).
+
+#### O mecanismo, decidido com registro (lane CKPIX-FLOW · 11/08)
+
+A fronteira acima mandava a esteira escolher e registrar. Escolhido: **assinatura do doc do pedido
+(`onSnapshot`)**, por `observarPedido` novo em `packages/api-client/src/pedidos.ts`, ao lado do
+`getPedido` que a S1225-T3 já usava. Três razões, e a terceira é a que fecha:
+
+- a Rule da RN-469 **já autoriza** o comprador a ler o próprio pedido, doc a doc, e o `allow read`
+  avalia igual no `getDoc` e no listener — nenhuma permissão nova;
+- o custo é **uma leitura por mudança real**, contra uma por janela no polling: um PIX de 30 minutos
+  consultado a cada 5 s são 360 leituras por checkout abandonado, contra 1 aqui;
+- a cadência do polling seria **chute**, porque o webhook não tem hora marcada. Um número escolhido
+  no escuro é o que esta regra veio tirar da tela.
+
+A leitura de carregamento e o botão "Atualizar estado do pedido" da S1225-T3 **ficam**, como rede:
+assinatura cai (Rules, rede, aba suspensa por horas), e é o botão que sobra entre o comprador e o
+escuro do incidente de 04/08.
+
+Duas coisas que a implementação teve de acertar e valem para quem mexer depois:
+
+- **`falhou` num PIX é vencimento, e é prova, não palpite.** O mapa `WEBHOOK_EVENT_TO_CHARGE`
+  (`functions/src/payments/asaasProvider.ts`) tem três eventos que viram `failed`; dois são de cartão
+  por definição. Sobra `PAYMENT_OVERDUE` — o mesmo fato que a varredura da RN-545 carimba como
+  `pix_expirado` pelo outro caminho. Sem essa leitura, o vencimento que chega pelo gateway contaria
+  ao comprador uma história diferente do que chega pela nossa varredura.
+- **O `canceladoMotivo` era escrito e descartado.** `expirarPixPendente` grava a causa desde a CK2-4
+  e `parsePedido` a jogava fora — o doc carregava a razão e nenhuma tela podia lê-la. O campo entrou
+  no contrato do core por leitura Postel, com a constante `MOTIVO_CANCELAMENTO_PIX_EXPIRADO` como
+  ponto de encontro com a lane ESTOURO-BUILD. Sem ele, o ramo 2 teria de adivinhar a causa a partir
+  do `status`, que não distingue "o prazo venceu" de qualquer outro cancelamento.
+
+**O quinto ramo** (RN-546 · ESTOURO-2, leva 7) entra pela mesma porta e sai por outra: reserva
+vencida devolve a pessoa à **página do evento**, não à área do cliente — ali não houve compra, e o
+que ela precisa é escolher de novo. A tela está construída e testada; o predicado que a acende
+(`reservaDoPedidoExpirou`) responde `false` até a ESTOURO-BUILD definir o campo, porque a RN-546 é
+explícita em que o **pedido continua vivo** — a expiração da reserva não é transição de `status`, e
+chutar o nome do campo produziria um ramo que nunca acende ou que acende no doc errado.
+
+⛔ **Fica aberto para o dono, e não é da esteira:** o "área do cliente **logado**" da frase dele. O
+checkout cria sessão **anônima** e nunca a promove; `/minha-conta` é inalcançável por sessão anônima
+por decisão anterior (RN-451); e a conta nasce fora de banda pelo `contaSemFriccao`, com link por
+e-mail. Quem comprou pela primeira vez cai na porta de entrada — agora com o aviso explicando por
+que saiu do checkout, mas ainda tendo de entrar. Fechar isso é frente própria.
+
+### RN-561 (nova, dona) · o endereço completo é exigido por segurança e cadastro, e a razão fica escrita
+
+Na íntegra: *"ck endereço, nao mude nada, mantém pedindo o endereço, pois isso pe importante para
+segurança e cadastro dos usários."*
+
+CEP, logradouro, número, cidade e UF continuam **obrigatórios** no checkout
+(`validacao.ts:109-125`), inclusive para quem retira o kit no balcão. O que muda não é a tela: é que
+a exigência deixa de ser passo de arquitetura sem dono e passa a ter razão declarada — **segurança e
+cadastro dos usuários**, palavras do dono. Os 2 passos que a medição da Onda 1 contou como "não
+decidem nada do job" ficam, agora por decisão registrada e não por inércia.
+
+**Reabertura:** só por ordem dele. A opção "endereço só quando houver entrega", que levaria o
+checkout de 14 para 12 passos, fica escrita como recusada.
+
+**Consequência na tela:** a razão precisa ser legível para quem preenche. Escrever a exigência e
+mostrá-la era o default proposto do item, e é o que fica de tarefa — não é campo novo nem validação
+nova, é uma linha de texto no passo de dados.
+
+### História nova
+
+| História | O que entrega | Espera |
+|---|---|---|
+| **LEELA-S1246** · O pós-pagamento reage sozinho | a tela observa o pedido e reage (T1) · os quatro ramos com destino, incluindo a volta ao checkout no cartão recusado (T2) · a razão do endereço fica legível no passo de dados (T3) | nada — lane CKPIX-FLOW |
+
+### O que a decisão do SERV-3 faz com a RN-495
+
+No mesmo adendo da noite, o dono decidiu o **SERV-3**, na íntegra: *"serv3 -> é somente quando falar
+da taxa Leela, que chamaremos 'serviço' para referenciar o que é essa cobrança."*
+
+A **RN-495 não muda de enunciado — ganha alcance**: "Serviço" nomeia **exatamente a cobrança da
+Leela**, em toda superfície onde ela aparece, o comprador e o organizador e o super-admin. A
+recomendação desta seção de manter "Serviço da plataforma" no super-admin **cai**: a desambiguação
+que ela buscava vem da própria regra, porque só a taxa Leela se chama Serviço e as outras cobranças
+(gateway, juros) mantêm os nomes delas. As 34 strings do renome **destravam** — com o aviso da lane
+de merge, que vale mais que a pressa: o inventário é de 09/08 e mira caminhos que o rename de
+Parcerias mudou, então **re-inventariar antes de trocar**. Os campos continuam intocados pela mesma
+razão de sempre: renome é de texto, nunca de dado financeiro.
+
+---
+
+## Delta o aceite de saúde passa a ser auditável (leva 7 do dono · 2026-08-11)
+
+O **LGPD-1** foi decidido na noite de 11/08, na íntegra: *"o aceite é obrigatório, e registrado no
+banco."* A frente do resgate mora no [[LEELA-E00-fundacao-tecnica]] (o overlay recolhe o aceite
+quando o registro falta, e o seed do primeiro convite destrava). **A frente que mora aqui é o termo
+de saúde**, e ela vinha da mesma conversa jurídica desde 09/08.
+
+Hoje o pedido guarda, do aceite de saúde, **a versão e a hora, e nada mais**. O texto é montado na
+hora da leitura e o nome da produtora entra nele vindo do perfil vigente — então trocar o nome da
+produtora reescreve, para trás, perante quem cada pessoa declarou estar apta. A assimetria é o que
+denunciava o buraco: o **termo de uso** guarda `materialHash`, a impressão digital do texto aceito,
+e o de saúde não guardava.
+
+"Registrado no banco" alcança os dois. O aceite de saúde passa a **carimbar `materialHash` como o
+termo de uso já faz**, e o texto ganha versão nova quando muda — que é a primeira das três saídas
+que o painel listava. As outras duas ficam escritas como recusadas: congelar o texto inteiro dentro
+do pedido guarda mais do que a prova exige, e deixar como está transformaria em acidente o que
+agora é decisão.
+
+**Efeito prático hoje, medido:** nulo. Os três aceites que sobrevivem à limpeza são compras de
+teste do dono (`8CDHM`, `Q57PA`, `N4FHP`). O preço subia com cada venda real, e é por isso que a
+regra entra antes do volume.
+
+**Onde vive:** `aceites.saude` no documento do pedido, `paragrafosDoTermoSaude` em
+`AceitesCompra.tsx` e `resolverOrganizadorPublico` em `apps/landing/lib/leitor.ts`. Medição em
+`.nirvana/handoffs/leela-limpeza-prod-20260806.md §T9`. A **PB-11 continua aberta** e é outra
+pergunta: ela é sobre o retry carimbar a versão que a pessoa não leu, não sobre o que se guarda do
+texto.

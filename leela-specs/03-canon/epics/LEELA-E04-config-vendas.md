@@ -2379,7 +2379,31 @@ rodada com o gateway cancelado antes dos docs; reprocessar no-opa; trocar a expr
 `every 5 minutes` derruba o teste. **Materializa a RN-157; é pré-requisito da RN-543.**
 **Estado:** regra selada, código não construído (S322).
 
-### RN-546 (nova, dona · 2026-08-10 · condicionada ao ESTOURO-2) · o pendente de cartão reserva com teto próprio
+### RN-546 (nova, dona · 2026-08-10 · **decidida pelo dono em 11/08, leva 7**) · o pendente de cartão reserva por 15 minutos, e a expiração devolve a pessoa à página do evento
+
+> **A condição caiu.** Na íntegra: *"o pendente de cartão, caso um pagamento de erro, devolveremos
+> a vaga após o checkout expirar, (dentro do time de 15 minutos). Se expirou os 15 minutos, o
+> pedido nao é mais reservado, e damos um refresh, levanto novamente para a tela de landing
+> page."* O enunciado vigente é este:
+>
+> 1. **O teto é de 15 minutos**, e não os 30 do default proposto. O número é o do carrinho, não o
+>    do PIX — o dono amarrou a reserva de cartão ao tempo do checkout, que é a régua que a pessoa
+>    já vê na tela.
+> 2. **Expirado o teto, o pedido deixa de reservar vaga.** A vaga volta ao estoque pela mesma
+>    varredura, por recontagem, e o **pedido continua vivo** — nada é cancelado no gateway, porque
+>    dinheiro em voo não se toca. Confirmação atrasada entra, e o excedente eventual aparece pelo
+>    caminho que a RN-498 já exige.
+> 3. **A tela dá refresh e leva de volta à página do evento** (landing). É comportamento novo de
+>    tela: a expiração deixa de ser um estado parado e vira uma saída. Ela entra como **ramo novo
+>    do fluxo pós-pagamento** — a mesma família da RN-560, e por isso o trabalho de tela mora na
+>    lane CKPIX-FLOW, enquanto o contador e a liberação moram na ESTOURO-BUILD.
+>
+> **A `S323-T7` deixa de estar retida.** O ESTOURO-2 saiu do painel em 11/08.
+
+O texto abaixo é o enunciado condicionado como ele nasceu em 10/08, mantido legível porque é ele
+que explica de onde vinha o número 30 e por que a pergunta subiu ao dono.
+
+#### Enunciado original (10/08 · condicionado)
 
 A letra do dono não distingue meio, e o pedido de cartão também nasce `'pendente'` — mas cartão
 não tem vencimento natural (não há `pixExpiraEm` dele), e um webhook perdido deixaria a vaga
@@ -2395,7 +2419,9 @@ nenhuma linha de cartão entra antes da resposta (S323-T7).
 
 **S322 · a varredura do PIX vencido** — 4 tarefas (`S322-T1` a `S322-T4`), backend só, sobe
 primeiro e sozinha. **S323 · a reserva do pedido pendente** — 7 tarefas (`S323-T1` a `S323-T7`,
-a T7 retida pelo ESTOURO-2), **depende da S322 no ar e provada**. Job stories, Given/When/Then e
+**a T7 destravada em 11/08**, com o número do dono: 15 minutos, não 30), **depende da S322 no ar e
+provada**. A frente foi **priorizada** na leva 6, pelo princípio que ele ratificou — *"não podemos
+ter excedentes de ingressos jamais"* — e virou a lane ESTOURO-BUILD. Job stories, Given/When/Then e
 territórios em `02-rodadas/2026-08-10-estouro-reserva/03-spec.md` e `04-fila-codigo.md`.
 **Nada construído.** ⚔ contador de vaga dentro da transação do dinheiro: rota opus, review
 antagonista (dupla na S323), lane própria, sem carona em deploy.

@@ -186,22 +186,36 @@ export const MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO = 'pix_anterior_nao_encerrado';
 export const MOTIVO_GATEWAY_SEM_RESPOSTA = 'gateway_sem_resposta';
 
 /**
- * Motivo TIPADO do cancelamento por PRAZO da cobrança PIX (RN-157 · RN-545).
- * Carimbado em `canceladoMotivo` no pedido E no pagamento, na mesma
- * transação que os leva a `'cancelado'`.
+ * Motivo TIPADO do cancelamento por PRAZO VENCIDO — o valor que vai para
+ * `canceladoMotivo` no pedido e no pagamento quando um PIX pendente passa de
+ * `pixExpiraEm` sem ser pago (RN-157 · RN-560 (ramo 2)).
  *
- * CONTRATO DE DADOS — por que ele sai do literal solto e vira constante do
- * core agora: a partir da RN-545 são TRÊS as portas que escrevem este
- * estado (o `expirarPixPendente` do comprador, a varredura agendada
- * `varrerPixVencidos` e — pelo `'failed'` do OVERDUE — o webhook, que usa
- * motivo próprio), e uma tela passa a REAGIR a ele. Enquanto o valor era um
- * literal dentro da Function, a tela só podia adivinhá-lo por comparação de
- * string copiada; com a constante, servidor e tela leem o MESMO símbolo.
- * Mesma disciplina de `MOTIVO_PIX_PENDENTE_ATIVO`.
+ * POR QUE ELE PRECISA DE NOME. A máquina de status não tem estado "vencido"
+ * (premissa CK2-4: reusar a máquina vigente), então o PIX que venceu vira
+ * `cancelado` — o MESMO valor de um cancelamento por qualquer outra causa. O
+ * status sozinho, portanto, não distingue "o prazo venceu" de "a cobrança foi
+ * cancelada", e uma tela que dissesse "o PIX foi cancelado depois que o prazo
+ * venceu" por cima de um `cancelado` qualquer estaria afirmando uma causa que
+ * não apurou. É este campo que autoriza a frase.
  *
- * O VALOR NÃO MUDOU: `'pix_expirado'` é exatamente o que a porta do
- * comprador já grava desde a CK2-T5 — nomear não migra dado, e nenhum doc
- * existente precisa ser reescrito.
+ * DOIS ESCRITORES, UM LITERAL. Hoje quem escreve é o `expirarPixPendente`
+ * (callable disparada pelo timer do comprador); a varredura periódica da
+ * RN-545 (`varrerPixVencidos`) escreve o MESMO valor, pela RN-544, que mantém
+ * a transição `pendente → cancelado` em vez de inventar estado novo. Os dois
+ * caminhos convergem aqui de propósito: a tela do checkout reage ao CAMPO, não
+ * a quem o escreveu, e é por isso que ela não precisa saber se a varredura já
+ * subiu.
+ *
+ * TRÊS PORTAS, NA VERDADE (lane ESTOURO-BUILD, RN-544/RN-545): além do
+ * callable do comprador e da varredura agendada, existe o webhook — e ele
+ * usa motivo PRÓPRIO. O `'failed'` do OVERDUE do Asaas leva o pedido a
+ * `'falhou'`, não a `'cancelado'`, porque ali a plataforma não decidiu nada:
+ * o gateway avisou. Os dois desfechos ficam distintos de propósito, e o
+ * predicado abaixo é onde essa distinção está decidida.
+ *
+ * O VALOR NÃO MUDOU e não vai mudar: `'pix_expirado'` é o que a porta do
+ * comprador grava desde a CK2-T5 — nomear não migra dado, e nenhum doc já
+ * gravado precisa ser reescrito.
  */
 export const MOTIVO_CANCELAMENTO_PIX_EXPIRADO = 'pix_expirado';
 

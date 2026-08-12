@@ -103,7 +103,7 @@ export function TaxaGlobalRoute(): JSX.Element {
 
   if (query.isPending) {
     return (
-      <div role="status" aria-label="Carregando tabela de taxa" className="flex flex-col gap-[var(--spacing-4)] p-[var(--spacing-6)]">
+      <div role="status" aria-label="Carregando tabela do Serviço" className="flex flex-col gap-[var(--spacing-4)] p-[var(--spacing-6)]">
         <Skeleton variant="rect" className="h-[var(--header-height)]" />
         <Skeleton variant="rect" className="h-60" />
       </div>
@@ -114,7 +114,7 @@ export function TaxaGlobalRoute(): JSX.Element {
     return (
       <div className="p-[var(--spacing-6)]">
         <div role="alert" className="rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-5)] text-[var(--text-primary)]">
-          Não foi possível carregar a tabela de taxa da plataforma.
+          Não foi possível carregar a tabela do Serviço.
         </div>
       </div>
     );
@@ -123,7 +123,7 @@ export function TaxaGlobalRoute(): JSX.Element {
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
       <PageHeader
-        title="Taxa da plataforma"
+        title="Serviço"
         subtitle="Tabela global por meio de pagamento — percentual + valor fixo por venda"
         badges={
           <Badge variant="neutro">
@@ -135,18 +135,18 @@ export function TaxaGlobalRoute(): JSX.Element {
       <form
         noValidate
         onSubmit={handleSubmit}
-        aria-label="Tabela global de taxa"
+        aria-label="Tabela global do Serviço"
         className="flex max-w-2xl flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)]"
       >
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
           Este é o padrão de TODOS os organizadores (ex.: 6% no PIX + R$ 2,00 por venda). A
-          exceção negociada de um organizador é editada nos termos comerciais dele. A taxa é
-          congelada em cada compra: mudar a tabela vale só para as próximas vendas.
+          exceção negociada de um organizador é editada nos termos comerciais dele. O Serviço é
+          congelado em cada compra: mudar a tabela vale só para as próximas vendas.
         </p>
         {!query.data && (
           <p role="note" className="rounded-[var(--card-radius)] bg-[var(--surface-overlay)] p-[var(--spacing-4)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            Sem tabela configurada, o checkout usa a taxa percentual dos termos de cada tenant
-            (sem componente fixo).
+            Sem tabela configurada, o checkout usa o percentual do Serviço nos termos de cada
+            tenant (sem componente fixo).
           </p>
         )}
 
@@ -186,7 +186,7 @@ export function TaxaGlobalRoute(): JSX.Element {
               onChange={(e) => setConfirmaZero(e.target.checked)}
             />
             <span className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">
-              Confirmo taxa ZERO no(s) meio(s) marcado(s) — a plataforma não cobrará nada nessas
+              Confirmo Serviço ZERO no(s) meio(s) marcado(s) — a plataforma não cobrará nada nessas
               vendas
             </span>
           </label>

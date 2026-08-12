@@ -220,8 +220,8 @@ export function StepModalidadeKit({
             revela percentual (703db9c). */}
         <p className="mt-2 text-xs text-text-tertiary">
           {taxaRepassada
-            ? 'Este evento repassa a taxa de serviço: ela varia conforme a forma de pagamento e entra no total exibido por opção no resumo, antes do pagamento.'
-            : 'Não há taxa adicional neste evento: a taxa de serviço já está inclusa e o valor exibido é o valor final.'}
+            ? 'Este evento repassa o Serviço: ele varia conforme a forma de pagamento e entra no total exibido por opção no resumo, antes do pagamento.'
+            : 'Não há valor adicional neste evento: o Serviço já está incluso e o valor exibido é o valor final.'}
         </p>
       </div>
 
