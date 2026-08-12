@@ -145,13 +145,17 @@ se separar em silêncio: essa separação é o defeito que a L-021 descreve, um 
 A L-021 é explícita: padrão sem componente canônico declarado é finding de **processo**, nunca
 silêncio. Traduzido em gate:
 
-Quando um padrão aparece no código e **não** tem componente canônico no DS (hoje: layout
-composto — bento, grid, slot, section, surface —, e `<details>`/acordeão), o gate não reprova a
+Quando um padrão aparece no código e **não** tem componente canônico no DS, o gate não reprova a
 tela. Ele reprova a **ausência de decisão**: o script da §7 lista o padrão órfão e aponta para o
 item aberto no painel do dono. Enquanto a decisão não voltar, a instância nova é permitida e
 contada; quando ela voltar, o padrão migra para a Regra 1 ou 2 e a contagem vira catraca.
 
 Isto é o que impede o gate de virar bloqueio de trabalho por um vazio que só o dono pode fechar.
+
+**O mecanismo já rodou uma vez, e é o que dá crédito a ele.** Layout composto (bento, grade, slot,
+empilhamento, cabeçalho de bloco) era o exemplo desta seção até 11/08. A CANONE-1 voltou, as peças
+nasceram no DS na Onda 0 Parte B, e a família saiu daqui para a catraca `grade-crua` no mesmo dia.
+O que sobra na §6 hoje é `<details>`/acordeão.
 
 ## 7. Script `scripts/gate-canon.mjs` — a catraca
 
@@ -171,20 +175,47 @@ regra dura não julga sem ambiguidade:
 |---|---|
 | `superficie-crua` | `<div>`/`<section>`/`<article>` com a assinatura raio + fundo + espaçamento fazendo papel de cartão |
 | `botao-cru-estilizado` | `<button>` com `className` que replica variante do `Button` |
-| `receita-de-grid` | assinaturas distintas de `grid-cols-*` (mede a ausência de cânone de layout, §6) |
+| `grade-crua` | **instâncias** de moldura escrita à mão (bloco de classes com `grid-cols-*`) |
+| `receita-de-grid` | assinaturas **distintas** de `grid-cols-*` |
 | `padrao-orfao` | instâncias de padrão sem canônico declarado |
 
 O número de cada contagem vive em `scripts/gate-canon.baseline.json`, versionado. **Subir reprova;
 descer atualiza o arquivo no mesmo commit.** A catraca é o que torna o inventário desta rodada um
 ativo que não apodrece: cada onda derruba o número e o número não pode voltar.
 
+**`grade-crua` entrou em 11/08, com a Onda 0 Parte B.** Enquanto layout não tinha canônico, a §6
+mandava tratá-lo como finding de processo, e a única contagem cabível era a de RECEITAS — medir
+instâncias de um padrão sem componente seria contar uma dívida que ninguém podia pagar. Com
+`Stack`, `FormGrid`, `MetricGrid`, `SplitPanel` e `SectionHeader` publicados, a família migrou para
+a catraca como a §6 previa. As duas contagens ficam, porque respondem perguntas diferentes:
+`grade-crua` é o tamanho da dívida (o que as ondas 1 a 5 derrubam) e `receita-de-grid` é a
+diversidade — é ela que denuncia tela reinventando a fração com o primitivo já publicado.
+
+Baseline de entrada, medido em `1e67eaff`: **104 no painel, 12 na landing**. O inventário §7.1 havia
+contado 106 no painel em `b0f979e5`; a diferença é a Onda 1 e o redesign no meio do caminho, e o
+número que vale daqui em diante é o do script, que é o único com catraca.
+
 Uso:
 
 ```
-node scripts/gate-canon.mjs              # verifica contra o baseline
-node scripts/gate-canon.mjs --atualizar  # regrava o baseline (só quando desceu)
-node scripts/gate-canon.mjs --relatorio  # lista arquivo:linha de cada contagem
+node scripts/gate-canon.mjs                    # verifica contra o baseline
+node scripts/gate-canon.mjs --atualizar        # regrava o baseline (só quando desceu)
+node scripts/gate-canon.mjs --relatorio        # lista arquivo:linha de cada contagem
+node scripts/gate-canon.mjs --remedir "razão"  # regrava DEPOIS de a régua mudar
 ```
+
+### 7.1 · `--remedir`, a porta para quando o instrumento melhora
+
+`--atualizar` recusa quando uma contagem sobe, e essa recusa é o coração da catraca. Ela tem um
+ponto cego: quando a **régua** fica melhor, o número sobe sem que o código tenha piorado. Aconteceu
+no primeiro dia da Onda 0 Parte B — `SecaoHead` virou sinônimo de `SectionHeader` e
+`padrao-reimplementado` foi de 2 para 3, na mesma árvore, sem uma linha de `apps/` tocada.
+
+Sem porta declarada, o único caminho seria editar o JSON à mão: exatamente o "conserte o baseline
+em vez do código" que o script existe para impedir, e sem rastro nenhum. `--remedir` exige uma
+**razão em texto** (mínimo 20 caracteres), grava a razão e o delta dentro do próprio baseline em
+`remedicoes[]`, e faz o ato aparecer sozinho no diff da revisão. É o mesmo desenho da porta única de
+exceção da governança §8: não se proíbe o caso legítimo, obriga-se ele a aparecer.
 
 ## 8. Testes da regra
 

@@ -1,5 +1,5 @@
 {
-  "medidoEm": "2026-08-11",
+  "medidoEm": "2026-08-12",
   "contagens": {
     "superficie-crua": {
       "painel": 107,
@@ -8,6 +8,10 @@
     "botao-cru-estilizado": {
       "painel": 6,
       "landing": 0
+    },
+    "grade-crua": {
+      "painel": 104,
+      "landing": 12
     },
     "receita-de-grid": {
       "painel": 23,
@@ -21,7 +25,16 @@
       "total": 3
     },
     "padrao-reimplementado-fora-do-ds": {
-      "total": 2
+      "total": 3
     }
-  }
+  },
+  "remedicoes": [
+    {
+      "data": "2026-08-12",
+      "razao": "Onda 0 Parte B (CANONE-1): a regua mudou, nao a arvore. (1) contagem NOVA grade-crua mede as instancias de moldura escrita a mao — 104 no painel, 12 na landing —, que so passaram a ser divergencia agora que Stack/FormGrid/MetricGrid/SplitPanel/SectionHeader existem no DS; (2) padrao-reimplementado subiu 2 para 3 porque SecaoHead virou sinonimo de SectionHeader, e o arquivo ja existia intocado. Nenhuma linha de apps/ foi tocada nesta lane.",
+      "subiram": [
+        "padrao-reimplementado-fora-do-ds.total: 2 → 3"
+      ]
+    }
+  ]
 }

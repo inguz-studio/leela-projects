@@ -71,7 +71,7 @@ decisões da leva 3, 4 e 5 (D-1008-R4 a R19) estão em
 | Épico | História nova | O que ela resolve | Estado |
 |---|---|---|---|
 | [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
-| [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | 📋 destravada — o merge saiu em 11/08, o inventário mede a main |
+| [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | ✅ Onda 0 Partes A+B pagas 12/08 (lane FUNDACAO-RESUME) — construído, aguardando deploy |
 | [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 |

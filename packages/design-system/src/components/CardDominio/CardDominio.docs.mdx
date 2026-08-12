@@ -1,0 +1,24 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './CardDominio.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# CardDominio
+
+O cartão de entidade em lista: clube, comunicado, campanha, parceria, afiliação. Uma peça para as cinco famílias — elas têm a mesma anatomia, e cinco corpos iguais seriam cinco motores para manter em sincronia.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="CardDominio"
+  snippet={`import { CardDominio } from '@leela/design-system';
+
+<CardDominio title="Clube Vento Sul" />`}
+  contract={contract}
+/>

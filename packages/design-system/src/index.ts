@@ -179,6 +179,7 @@ export {
   CardFooter,
 } from './components/Card';
 export type {
+  CardElement,
   CardProps,
   CardHeaderProps,
   CardTitleProps,
@@ -186,6 +187,39 @@ export type {
   CardContentProps,
   CardFooterProps,
 } from './components/Card';
+
+// ── Moldura (Onda 0 Parte B · CANONE-1) ────────────────────────────────────
+// O DS publicava 50 componentes e NENHUM era layout: não havia Grid, Bento,
+// Stack, Section nem Surface no barrel, e por isso 106 lugares do painel
+// montavam moldura à mão em 23 receitas para três famílias (inventário
+// 2026-08-11 §7.1). As quatro peças abaixo são essas três famílias mais o
+// empilhamento, cada uma com a escala FECHADA — fechar a escala é o serviço
+// que o primitivo presta. `SectionHeader` fecha a §7.3 (cabeçalho de bloco
+// interno, que o painel resolvia em `components/SecaoHead.tsx` depois de duas
+// cópias). Nomes: `Grid` e `Surface` estão fora porque já são sinônimos
+// reservados de `Table` e `Card` na regra 2 do gate `leela-canon`.
+export { Stack, stackVariants } from './components/Stack';
+export type { StackProps, StackElement } from './components/Stack';
+export { FormGrid, formGridVariants } from './components/FormGrid';
+export type { FormGridProps, FormGridElement } from './components/FormGrid';
+export { MetricGrid, metricGridVariants } from './components/MetricGrid';
+export type { MetricGridProps, MetricGridElement } from './components/MetricGrid';
+export { SplitPanel, splitPanelVariants } from './components/SplitPanel';
+export type { SplitPanelProps, SplitPanelElement } from './components/SplitPanel';
+export { SectionHeader } from './components/SectionHeader';
+export type { SectionHeaderProps } from './components/SectionHeader';
+// Cartão de domínio (inventário §7.2): clube, comunicado, campanha, parceria
+// e afiliação não tinham canônico e produziam os sete `<article>` crus da §5.
+// UMA peça para as cinco famílias — elas têm a mesma anatomia, e cinco corpos
+// iguais seriam cinco motores para manter em sincronia (a lição do
+// ConfirmModal).
+// Aviso em bloco (Onda 0 Parte B · encaminhado pela lane CKPIX-FLOW): o
+// barrel tinha 78 componentes e nenhum era Alert/Callout/Banner, e o checkout
+// repetia a mesma forma QUATRO vezes a mao.
+export { Alert, alertVariants } from './components/Alert';
+export type { AlertProps, AlertTone, AlertLive } from './components/Alert';
+export { CardDominio } from './components/CardDominio';
+export type { CardDominioProps, CardDominioAccent } from './components/CardDominio';
 
 // ── Gráficos (Recharts · ADR-010 · lote FID-EVT-T2) ─────────────────────────
 export { BarChart, DonutChart, chartCategoryVar, formatChartInt, pctOf, CHART_CATEGORY_COUNT } from './components/charts';

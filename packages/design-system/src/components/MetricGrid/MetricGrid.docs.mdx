@@ -1,0 +1,24 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './MetricGrid.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# MetricGrid
+
+A grade de indicadores, na escada fixa do preset (1 → xs:2 → lg:N). Aposenta sete receitas e executa a decisão do REDESIGN-V2 item 6.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="MetricGrid"
+  snippet={`import { MetricGrid } from '@leela/design-system';
+
+<MetricGrid columns={4}>…</MetricGrid>`}
+  contract={contract}
+/>

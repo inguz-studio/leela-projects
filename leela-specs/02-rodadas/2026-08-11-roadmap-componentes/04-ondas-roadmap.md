@@ -24,7 +24,7 @@ usar.
 
 | Onda | Superfície | JTBD servido | Divergências | Estado |
 |---|---|---|---|---|
-| **0** | design system e moldura | enabler (marcado como enabler, não forjado) | 2 + 4 lacunas | Parte A paga em 11/08 · **Parte B livre desde 11/08** (CANONE-1 decidido) |
+| **0** | design system e moldura | enabler (marcado como enabler, não forjado) | 2 + 4 lacunas | Parte A paga em 11/08 · **Parte B paga em 12/08** (lane `FUNDACAO-RESUME`, mergeada na main) |
 | **1** | landing pública e checkout | 04.1 *"Descubro evento → me inscrever em poucos cliques"* | 64 | livre |
 | **2** | painel · eventos | 04.1 *"Vendo inscrições chegarem"*, *"Preparo a entrega de kits"*, *"Faço check-in no balcão"* | 65 | livre |
 | **3** | painel · plataforma e recebimento | 04.1 *"Processo repasse → operação escalável"* | 36 | livre |
@@ -161,6 +161,19 @@ pelo toggle do Storybook (L-019).
 **Fechamento da Parte A (11/08 · lane `canon-onda-0`).** Os cinco itens livres estão pagos. Os
 números: DS 77 arquivos de teste, 1842 casos; painel 235 arquivos, 2583 casos; 50 de 50 componentes
 com story e com teste; zero controle cru dentro do DS.
+
+**Fechamento da Parte B (12/08 · lane `FUNDACAO-RESUME`, auditada peça a peça).** As sete peças
+novas (`Stack`, `FormGrid`, `MetricGrid`, `SplitPanel`, `SectionHeader`, `CardDominio`, `Alert`) e
+os três upgrades (`Badge` `outline`+`size`, `Card`+`CardTitle` `as`) estão pagos, cada um com story,
+docs, contrato LLM e teste. Gates do zero: DS 84 arquivos/1984 casos, painel 239 arquivos/2646
+casos, `contrast.test.ts` com os casos nomeados ALERT e BADGE-OUTLINE, `server-safety.test.ts`
+cobrindo as sete peças pelo grafo de `server.ts`, tokens 2× sem diff, `gate-canon` PASS com a
+catraca intacta (nenhuma contagem subiu), tsc e eslint `--max-warnings 0` limpos nos dois pacotes.
+**Achado da auditoria:** a linha do cânone para os três upgrades (`Badge`, `Card`, `CardTitle`) só
+entrou no commit `443394a1` (o das seis peças novas), não nos commits que mudaram o código
+(`143e3ac5`, `1e53feac`) — quebra a atomicidade "linha do cânone no mesmo commit" que a Parte A
+praticou. Não bloqueou o merge porque o estado final da árvore está correto e o `gate-canon` (que é
+quem aplica a regra em código) passa; fica registrado para a próxima lane não repetir o padrão.
 
 Uma correção ao texto da spec do gate, que só apareceu na execução: **§9 manda o gate nascer `warn`
 para não barrar ninguém, e `warn` não faz isso neste repositório.** Os três `lint` rodam com
