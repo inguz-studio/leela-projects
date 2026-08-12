@@ -3,7 +3,7 @@ trace: leela-redesign-v2-20260810
 lane: REGISTRO-LEVA8
 alvo: main de C:/dev/LEELA — docs apenas (leela-specs/ + .nirvana/handoffs/), NENHUM código
 data: 2026-08-12
-estado: EM CURSO
+estado: CONCLUÍDA — 4 commits pagos, 2 pushes; painel 12→4; RN-562 a RN-567; zero código; zero deploy
 ---
 
 # REGISTRO-LEVA8 · handoff vivo
@@ -60,10 +60,43 @@ Próxima livre depois desta lane: **568**.
 
 ## Aterrissagens
 
-### 1 · rodada, RNs, épicos, painel e boards — `HEAD`
+Todos os commits com `--only` e pathspec explícito, na ordem: rodada → épicos → painel e
+índice → boards.
 
-Commits com `--only` e pathspec explícito, na ordem: rodada → épicos → índice de RN →
-painel → boards. Push no fim.
+### 1 · a rodada — `23110a70`
+
+`leela-specs/02-rodadas/2026-08-12-decisoes-dono/` com os quatro arquivos da casa:
+
+| Arquivo | O que carrega |
+|---|---|
+| `01-decisoes-dono.md` | as oito falas na íntegra, com leitura, efeito, onde aterrissa e condição de reabertura |
+| `02-tabela-modalidades.md` | o gate de frescor do Strava, a tabela PT-BR de 50 termos, os 16 cortes, as 2 fusões e os 3 acréscimos |
+| `03-rns-delta.md` | a faixa consumida, o que cada regra faz e o que ela **não** faz |
+| `04-fila-cards.md` | os seis cards que a leva manda para a fila |
+
+### 2 · os épicos, na mesma aterrissagem — `97c468aa`
+
+**E12** ganha RN-562, RN-563, RN-564 e RN-567, mais a RN-557 na forma final e as histórias
+S1247, S1248 e S1249. **E16** ganha a RN-552 na forma final e a `S1616-T5` destravada. **E19**
+ganha RN-565 e RN-566, o escopo ratificado do CRM-1, a P-CKMOD-1 saindo da espera e a direção
+de exportação/notificação registrada. **E13** recebe a visão de conexão entre participantes
+como direção de produto, sem história e sem card.
+
+### 3 · painel e índice de RN — `d9931223` · push `7aa78e00..d9931223`
+
+Painel **12 → 4**, com a narrativa de saída dos oito e a conta refeita à mão contra as duas
+seções. O CRM-4 ganhou a nota de onde parou e o degrau 3 dele foi corrigido (os dois ARENA que
+o seguravam destravaram). Índice: faixa 562-567 na tabela, narrativa do próximo número
+reescrita, conta de 292 para 298, **próxima livre = 568**.
+
+Uma limpeza de vocabulário entrou junto: o termo banido começado em v saiu da linha 7 do painel
+e virou "a sua fala na íntegra".
+
+### 4 · os boards — `496c8492` · push `d9931223..496c8492`
+
+Seis cards no kanban, todos no padrão épico → história → tarefa e com a fala do dono no
+cabeçalho. BOARD-EPICOS ganha a seção da leva 8. V1-CHECKLIST ganha as 14 tarefas e o gate de
+frescor do Strava com as duas URLs e a data.
 
 ## O que esta lane NÃO fez
 
