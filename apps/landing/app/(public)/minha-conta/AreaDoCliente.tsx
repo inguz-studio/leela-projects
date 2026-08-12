@@ -23,6 +23,7 @@
 // =============================================================================
 
 import { useCallback, useEffect, useState } from 'react';
+import { Clock } from 'lucide-react';
 import {
   getMeusClubesEConvites,
   getMeusIngressos,
@@ -32,6 +33,7 @@ import {
   type GetMinhasComprasResult,
 } from '@leela/api-client';
 import { Tabs } from '@/app/_ds/ds';
+import { consumirAvisoDaArea, type AvisoDaArea } from '@/lib/areaDoCliente';
 import { ensureLeela } from '@/lib/leelaClient';
 import { rotuloDaConta, useSessaoLeela } from '@/lib/sessao';
 import { EmailNaoVerificado, FalhaDeLeitura, PortaDeEntrada } from './EstadosDaArea';
@@ -77,7 +79,48 @@ async function lerClubesDegradando(): Promise<GetMeusClubesEConvitesResult> {
   }
 }
 
-export function AreaDoCliente(): React.JSX.Element {
+/**
+ * O aviso que o checkout deixou para esta chegada (RN-560, ramo 2).
+ *
+ * POR QUE ELE FICA ACIMA DE TUDO, inclusive da porta de entrada: o dono decidiu
+ * que o PIX vencido "redireciona AVISANDO" — o aviso e o destino são um gesto
+ * só. Quem chega aqui SEM conta nomeada vê a `PortaDeEntrada`, e é exatamente
+ * essa pessoa que mais precisa da explicação: sem ela, o checkout simplesmente
+ * virou uma tela de login, sem uma palavra sobre o PIX que morreu.
+ *
+ * `role="status"` e não `alert`: quando esta linha aparece, o fato já foi
+ * anunciado com urgência na tela anterior. Repetir a urgência na chegada é
+ * gritar duas vezes a mesma notícia.
+ */
+function AvisoDeChegada({ aviso }: { aviso: AvisoDaArea }): React.JSX.Element {
+  return (
+    <section
+      role="status"
+      data-slot="aviso-de-chegada"
+      className="mb-8 flex items-start gap-3 rounded-ds-lg border border-feedback-warning bg-feedback-warning-surface p-5"
+    >
+      <Clock
+        size={18}
+        strokeWidth={2}
+        aria-hidden
+        className="mt-0.5 shrink-0 text-feedback-warning-fg"
+      />
+      <p className="text-sm text-feedback-warning-fg">
+        {aviso === 'pix-vencido'
+          ? 'O PIX da sua última tentativa foi cancelado depois que o prazo venceu, e nada foi cobrado de você. A vaga voltou para o evento.'
+          : null}
+      </p>
+    </section>
+  );
+}
+
+/**
+ * A área em si. O `AreaDoCliente` que a rota renderiza é a casca que põe o
+ * aviso de chegada ACIMA de qualquer um dos cinco desfechos desta função — e a
+ * separação existe porque são cinco `return` distintos, e pendurar o aviso em
+ * cada um seria garantir que o próximo `return` esquecesse dele.
+ */
+function AreaDoClienteConteudo(): React.JSX.Element {
   const sessao = useSessaoLeela();
   const [dados, setDados] = useState<Dados | null>(null);
   const [falhou, setFalhou] = useState(false);
@@ -209,5 +252,22 @@ export function AreaDoCliente(): React.JSX.Element {
         <PortasDaConta />
       </div>
     </div>
+  );
+}
+
+export function AreaDoCliente(): React.JSX.Element {
+  // RN-560 · leitura DESTRUTIVA, uma vez por montagem. `sessionStorage` não
+  // existe no servidor, então ela precisa acontecer em efeito e não no estado
+  // inicial — ler no `useState` produziria hidratação divergente.
+  const [aviso, setAviso] = useState<AvisoDaArea | null>(null);
+  useEffect(() => {
+    setAviso(consumirAvisoDaArea());
+  }, []);
+
+  return (
+    <>
+      {aviso !== null ? <AvisoDeChegada aviso={aviso} /> : null}
+      <AreaDoClienteConteudo />
+    </>
   );
 }

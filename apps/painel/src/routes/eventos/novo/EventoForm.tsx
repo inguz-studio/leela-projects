@@ -405,12 +405,12 @@ export function EventoForm({
       {/* Taxa de serviço (RN-347) — toggle REAL: persiste `taxaModo` no cadastro. */}
       <fieldset className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--card-radius)] bg-[var(--surface-sunken)] p-[var(--spacing-4)]">
         <legend className="px-[var(--spacing-1)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Taxa de serviço
+          Serviço
         </legend>
         <Switch
           id="repassar-taxa"
-          label="Repassar a taxa de serviço ao comprador"
-          description="Desligado (padrão): taxa incorporada — o comprador paga o preço de face e a taxa sai do seu repasse. Ligado: taxa repassada — o comprador paga o preço de face + a taxa."
+          label="Repassar o Serviço ao comprador"
+          description="Desligado (padrão): Serviço incorporado — o comprador paga o preço de face e o Serviço sai do seu repasse. Ligado: Serviço repassado — o comprador paga o preço de face + o Serviço."
           checked={values.repassarTaxa}
           onCheckedChange={(checked) => set('repassarTaxa', checked)}
         />

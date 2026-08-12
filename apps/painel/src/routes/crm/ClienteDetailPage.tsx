@@ -114,7 +114,7 @@ export function ClienteDetailPage(): JSX.Element {
               className="grid grid-cols-2 gap-[var(--spacing-4)] md:grid-cols-4"
             >
               <KpiCard label="LTV" value={formatBRL(cliente.ltv)} hint="receita atribuível confirmada" />
-              <KpiCard label="Valor gasto" value={formatBRL(cliente.valorGasto)} hint="inclui taxa repassada" />
+              <KpiCard label="Valor gasto" value={formatBRL(cliente.valorGasto)} hint="inclui o Serviço repassado" />
               <KpiCard label="Eventos" value={formatInt(cliente.qtdEventos)} />
               <KpiCard label="Inscrições" value={formatInt(cliente.qtdInscricoes)} />
             </section>
