@@ -85,6 +85,57 @@ export function isFormaPagamento(value: unknown): value is FormaPagamento {
 export const PIX_EXPIRACAO_SEGUNDOS = 30 * 60;
 
 /**
+ * TETO DA RESERVA DE VAGA DO PENDENTE DE CARTÃO em segundos (RN-546 ·
+ * ESTOURO-2, decidido pelo dono em 2026-08-11): **15 minutos**.
+ *
+ * Sem retoque, a frase dele: *"devolveremos a vaga após o checkout expirar,
+ * (dentro do time de 15 minutos). Se expirou os 15 minutos, o pedido nao é
+ * mais reservado."*
+ *
+ * POR QUE O CARTÃO PRECISA DE TETO E O PIX NÃO: o PIX tem vencimento
+ * natural (`pixExpiraEm`, carimbado na criação) e a varredura da RN-545 o
+ * executa. O cartão não tem vencimento nenhum — o pedido nasce `'pendente'`,
+ * a confirmação normalmente chega em segundos, e um webhook perdido deixaria
+ * o pedido pendente para sempre. Sob a RN-543, "para sempre" é uma vaga
+ * presa que ninguém consegue soltar.
+ *
+ * O NÚMERO É O DO CARRINHO, NÃO O DO PIX: 15 minutos é
+ * `CARRINHO_PRAZO_SEGUNDOS` (RN-158), o mesmo relógio do checkout. A spec
+ * havia PROPOSTO 30 (o número do PIX); o dono escolheu ancorar no prazo do
+ * checkout, e a escolha dele é a que vale. Os dois valores continuam
+ * separados de propósito — são dois relógios com dois donos, e fundi-los
+ * faria mudar o prazo do PIX mexer no estoque do cartão.
+ *
+ * O QUE VENCE COM O TETO É A RESERVA, NÃO O PEDIDO: nada é cancelado no
+ * gateway (cancelar cobrança de cartão em processamento é mexer em dinheiro
+ * em voo). A vaga volta; o pedido continua vivo; e se a confirmação chegar
+ * depois, ela entra — pago nunca é recusado (RN-498), e o excedente
+ * eventual aparece pelo caminho que a RN-498 já exige.
+ */
+export const RESERVA_CARTAO_TETO_SEGUNDOS = 15 * 60;
+
+/**
+ * A reserva de vaga deste pedido de CARTÃO já venceu pelo teto? (RN-546)
+ *
+ * CONTRATO DE TELA: é este predicado que responde "reserva expirada", e ele
+ * é exato no instante em que a pessoa olha — não espera a varredura passar
+ * (que carimba o fato até 5 minutos depois, para a trilha). Tela que
+ * precise do estado imediato usa o predicado; quem audita lê o carimbo.
+ *
+ * Só morde CARTÃO e só em pedido `'pendente'`: PIX tem `pixExpiraEm` e morre
+ * pela porta dele; pedido em estado final não reserva nada. @pure
+ */
+export function reservaDeCartaoExpirada(
+  pedido: { formaPagamento?: unknown; status?: unknown; criadoEmMillis?: unknown },
+  agoraMillis: number
+): boolean {
+  if (pedido.formaPagamento !== 'cartao_credito') return false;
+  if (pedido.status !== 'pendente') return false;
+  if (typeof pedido.criadoEmMillis !== 'number') return false;
+  return agoraMillis >= pedido.criadoEmMillis + RESERVA_CARTAO_TETO_SEGUNDOS * 1000;
+}
+
+/**
  * Motivo TIPADO da recusa de uma SEGUNDA cobrança PIX enquanto a primeira
  * está pendente e dentro do prazo (S1209-PIXBE-T2 · RN-157). Viaja no
  * `details` do erro `failed-precondition` de `createInscricaoCharge`.

@@ -56,10 +56,27 @@ import {
 // Contratos de entrada (Picks estruturais — aceitam o doc parseado inteiro)
 // ---------------------------------------------------------------------------
 
-/** Subconjunto do Lote necessário para derivar o preço vigente + rótulo. */
+/**
+ * Subconjunto do Lote necessário para derivar o preço vigente + rótulo.
+ *
+ * `reservas` entrou com a RN-543 e NÃO participa de preço nenhum: o
+ * `computeSaleState` continua sem lê-la, e a virada (RN-300) também. Ela
+ * está aqui porque o mesmo `LoteVenda` que precifica é o que o GATE DE
+ * CAPACIDADE consulta na cotação — e um Pick sem o campo obrigaria a
+ * carregar o lote duas vezes, ou a passar o contador por fora, que é como se
+ * perde o contador.
+ */
 export type LoteVenda = Pick<
   Lote,
-  'id' | 'nome' | 'ordem' | 'inicioEm' | 'fimEm' | 'vendidos' | 'quantidadeLimite' | 'preco'
+  | 'id'
+  | 'nome'
+  | 'ordem'
+  | 'inicioEm'
+  | 'fimEm'
+  | 'vendidos'
+  | 'reservas'
+  | 'quantidadeLimite'
+  | 'preco'
 >;
 
 /** Subconjunto do Cupom necessário para vigência + desconto. */
