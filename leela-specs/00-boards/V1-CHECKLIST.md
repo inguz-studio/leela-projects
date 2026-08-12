@@ -1128,3 +1128,44 @@ caminho.
   deploy.** Duas colisões de identificador corrigidas (`S033`/`S034` e `S1221`). Nenhuma regra de
   negócio nova: a faixa segue em **509**. O painel do dono ganhou **PARSE-1** e **RESPIRO-1**, e o
   item de observabilidade foi para o CTO humano em vez de virar pergunta ao dono.
+
+## RODADA 2026-08-12 · a leva 8 do dono (REGISTRO-LEVA8 — documento; zero linha de código)
+
+Oito decisões registradas na íntegra em `02-rodadas/2026-08-12-decisoes-dono/`, painel de **12
+para 4**, faixa **RN-562 a RN-567** consumida (próxima livre = **568**), e a RN-552 e a RN-557
+nascendo na forma da resposta sem consumir número. **Território `leela-specs/` +
+`.nirvana/handoffs/` apenas; zero linha de código de produto; zero deploy.**
+
+### Tarefas que nascem desta leva
+
+- [ ] **S1247-T1** — a sessão anônima do checkout vira conta logada ao confirmar o pagamento (RN-562, CKLOGIN-1)
+- [ ] **S1247-T2** — a **re-prova da fronteira de autenticação** das RN-476 a RN-480, com teste que compara o desfecho campo a campo ⚔ gate obrigatório, não regressão opcional
+- [ ] **S1247-T3** — o aviso do caminho do e-mail sai da porta
+- [ ] **S1616-T5** — recusa com estado próprio e sem comunicação automática, revogação por suspensão do tenant, rastro da RN-551 nas três (RN-552 forma final, ADMIN-USUARIOS-2)
+- [ ] **S1245-T1** — a derivação pura no core com a fonte física do Strava, e os rótulos de pilar num lugar só (RN-563)
+- [ ] **S1245-T2** — a lista exposta com o corte (RN-557 forma final) — **destravada**
+- [ ] **S1245-T3** — o órfão declarado, agora com duas classes: saiu da taxonomia interna, ou nunca veio da fonte externa
+- [ ] **S1248-T1** — o passo de interesses no onboarding de usuário novo (RN-564) — espera a S1245-T1
+- [ ] **S1249-T1** — as preferências do perfil lendo a mesma derivação (RN-564) — espera a S1245-T1
+- [ ] **COL-T1** — o e-mail de cada participante guardado no bloco de dados pessoais (RN-565, CRM-3)
+- [ ] **2a a 2d** — o agregado de cidade e bairro sem identidade, com o endereço fora da ficha (RN-566, CRM-2)
+- [ ] **Frentes 1 e 3** — as quatro visões de dado pronto do CRM (CRM-1, sem RN nova)
+- [ ] **S1904-T3** — a tela do club diz quantos da comunidade compraram — **destravada** pelo CRM-1
+- [ ] **PB11-T1** — a divergência entre a versão exibida e a carimbada passa a ser registrada no pedido (RN-567, PB-11)
+
+### O que a lane deixou explicitamente por fazer
+
+1. **CRM-4 não foi decidido.** O dono respondeu com uma pergunta e a resposta dele não voltou. O
+   item ficou no painel intacto, e o card do CRM desta leva não o antecipa.
+2. **Item 12 (domínio público) segue aberto**, com as duas ações que só ele executa (69 e JUROS-1).
+3. **Nada foi construído.** Tudo que a leva destrava virou card, e o gate de re-prova da fronteira
+   de autenticação da S1247-T2 é a condição que a própria decisão do CKLOGIN-1 carregou.
+
+### O gate de frescor do Strava, cumprido em 2026-08-12
+
+Enum da API (autoridade dos identificadores, 56 valores):
+`https://developers.strava.com/swagger/sport_type.json`. Lista humana agrupada (52 tipos em 5
+grupos): `https://support.strava.com/en-us/articles/15402005-supported-sport-types-on-strava`. A
+página `developers.strava.com/docs/reference/` **não** enumera o tipo — quem for por ela sai com
+três exemplos. A tabela PT-BR derivada, com 50 termos e os 16 cortes nomeados, está em
+`02-rodadas/2026-08-12-decisoes-dono/02-tabela-modalidades.md`.

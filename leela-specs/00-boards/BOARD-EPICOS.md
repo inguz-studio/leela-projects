@@ -1,7 +1,7 @@
 ---
 tags: [leela, kanban, epicos, visao-alto-nivel]
 aliases: [Board de épicos, Visão de épicos, Onde o produto está]
-atualizado: 2026-08-11
+atualizado: 2026-08-12
 ---
 
 # 🗺️ Visão de épicos — onde o produto está
@@ -13,6 +13,26 @@ atualizado: 2026-08-11
 > **Para a leitura de projeto inteira — épico pendente, história, tarefa, o que está travado em
 > quem e as três próximas entregas de cada frente — veja [[VISAO-DE-PROJETO]].** Este board
 > continua sendo o mapa de uma linha por épico; aquele é a visão que o dono pediu em 11/08.
+
+## O que a leva 8 do dono destravou (2026-08-12, de manhã)
+
+Oito itens saíram do painel numa leva só, e a conta caiu de 12 para 4. As palavras dele e a
+leitura item a item estão em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`; a tabela
+de modalidades derivada do Strava está em `.../02-tabela-modalidades.md`.
+
+| Épico | O que mudou | Estado |
+|---|---|---|
+| [[LEELA-E12-landing]] | **RN-562** — a sessão anônima do checkout vira conta logada ao confirmar o pagamento (CKLOGIN-1), com a fronteira de autenticação das RN-476 a RN-480 **re-provada** no mesmo ato; história nova **S1247** | 📋 **destravado, sem build** — card 1 da fila; o custo da re-prova é tarefa própria (S1247-T2), não regressão opcional |
+| [[LEELA-E12-landing]] | **RN-563** — a lista física deriva das modalidades de esporte do **Strava**, com gate de frescor recorrente; **RN-564** — uma lista, **três** consumidores (Arena + onboarding + preferências); **RN-557** nasce na forma da resposta com a tabela de 50 termos (ARENA-4); histórias novas **S1248** e **S1249** | 📋 **`S1245-T2` destravada** — a tabela segue vetável barato até a tela nascer; onboarding e preferências são escopo NOVO |
+| [[LEELA-E12-landing]] | **RN-567** — no replay, a prova de aceite carimba a política vigente e a divergência fica registrada (PB-11 ratificado: *"3 - em vigor."*) | 📋 prioridade baixa — o comportamento já vale; o que nasce é o registro da divergência |
+| [[LEELA-E12-landing]] · [[LEELA-E13-app-atleta]] | **ARENA-1 fechado**: hoje só a própria pessoa vê, RN-471 e **RN-472 intocadas**; a visão de conexão entre participantes vira **direção de produto** no épico do app | ✅ decidido · 🧊 **nada se constrói agora** — a abertura vem com a versão mobile |
+| [[LEELA-E16-plataforma-superadmin]] | **RN-552 nasce na forma da resposta**: aprovar, **recusar** e **revogar** existem, com o rastro da RN-551 nas três e a revogação suspendendo o tenant sem apagar dado (ADMIN-USUARIOS-2) | 📋 **`S1616-T5` destravada** — recusa sem comunicação automática e sem revogação de organizador com venda viva, os dois vetáveis |
+| [[LEELA-E19-crm]] | **RN-565** — o e-mail de cada participante passa a ser guardado (CRM-3); **RN-566** — a localização entra como agregado sem identidade e o endereço fica **fora** da ficha (CRM-2), o que tira a **P-CKMOD-1** da espera; **CRM-1** ratifica as quatro visões de dado pronto, sem consumir RN | 📋 **COL-T1, tarefas 2a-2d e Frentes 1 e 3 destravadas**; a **`S1904-T3`** sai da espera do CRM-1 |
+
+**O que continua com o dono, deste ato.** O **CRM-4** — o que se pede ao participante depois da
+compra, e em troca de quê. Ele respondeu com uma pergunta, o esclarecimento foi dado e a resposta
+não voltou; o item ficou no painel intacto, e o card do CRM desta leva **não o antecipa**. E o
+**item 12** (domínio público), com as duas ações que só ele executa (69 e JUROS-1).
 
 ## O que a leva 6 do dono destravou (2026-08-11, à noite)
 

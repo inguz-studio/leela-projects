@@ -1775,3 +1775,50 @@ service worker do app.
 app instalável fica no mesmo domínio da landing") agora tem um vizinho: a rota `/ingresso/*`
 já ocupa espaço nesse domínio e é `noindex` por regra. Quem responder o ADR precisa olhar as
 duas rotas juntas.
+
+---
+
+## Direção de produto · a Arena vira conexão entre participantes na versão mobile (leva 8 do dono · 2026-08-12)
+
+Entra aqui, e não no E12, porque o dono deu endereço no tempo à visão e o endereço é este épico.
+Registro completo em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §3.
+
+**Fala do dono, na íntegra (item ARENA-1, 12/08):** *"a ideia é que isso vire um 'tinder'
+depois, com essas informações. quando desenvolvermos a versão mobile."*
+
+### O que a frase decide, e o que ela promete
+
+Duas coisas numa frase só, e elas não se contradizem.
+
+**Hoje vale o fechamento.** Só a própria pessoa vê o que preencheu na Arena Social: mini bio,
+gênero, gêneros de interesse, interesses nos pilares e a foto da conta. O dado nasce guardado e
+nenhuma promessa é feita a ninguém antes da hora. A RN-471 governa esse default e a **RN-472 fica
+intocada** — os gêneros de pessoas nunca ficam visíveis por default, e essa régua não é negociada
+pela visão: ela é justamente a que a conexão vai ter de respeitar quando existir.
+
+**A abertura existe, tem forma e tem hora.** Conexão e descoberta entre participantes, com o
+dado que a Arena já coleta, **na versão mobile**. É direção de produto declarada, não backlog:
+**nada se constrói agora** e nenhuma história nasce deste registro.
+
+### O que a visão obriga a esteira a fazer desde já, sem construir nada
+
+O dado de Arena nasce com o campo de **visibilidade por pessoa** previsto no modelo, mesmo que
+hoje ele só aceite um valor. Mudar visibilidade depois de existir dado de gente real é retrabalho
+caro, e o item do painel dizia isso antes de ser decidido. Isso é desenho de modelo, não feature:
+entra na spec da Arena (S1226) e neste registro, não numa lane de build.
+
+### O que a direção não é
+
+**Não é escopo do PWA v1.** A reespecificação de 19/07 reduziu nove histórias para seis, e
+nenhuma delas é esta. A conexão entra quando o produto web inteiro fechar, pela ordem que o
+próprio dono ratificou em 18/07 — horizonte 3 antes do 2, terminando por projeto.
+
+**Não é decisão de consentimento tomada.** Quando a feature entrar em escopo, ela reabre o
+ARENA-1 inteiro, com desenho de consentimento **por campo**, e não como ajuste de flag. É a
+condição de reabertura registrada no painel, e ela está aqui de novo porque quem for construir a
+conexão vai ler este épico, não o painel de 12/08.
+
+**Não toca a lista de interesses.** A taxonomia derivada (RN-553, RN-557, RN-563 e RN-564, todas
+no [[LEELA-E12-landing]]) segue sendo assunto do E12. O que a Arena oferece como interesse e quem
+vê o que a pessoa escolheu são perguntas separadas, e a leva 8 respondeu as duas em lugares
+diferentes de propósito.
