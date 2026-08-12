@@ -1445,6 +1445,15 @@ real e grava a senha `demo1234`, publicada no repositório (`:127`, `:182-188`),
 provado por REST na lane FIX-AUTHGUARD. Fator único, senha pública, e alcance cross-tenant de
 PII, dinheiro e elevação de papel.
 
+**+11/08 · o ADMINSEP-3 foi decidido pelo dono (leva 6 da tarde).** Na íntegra: *"nao é pra ter
+admin demo ja falei isso antes também."* Não existe conta de demonstração de tipo nenhum, e a
+conta que administra a plataforma em produção não é conta de vitrine — coerente com a purga de
+10/08, que tirou as duas contas demo do Auth. A sugestão do maestro de uma conta demo para teste
+de checkout está **retirada**: teste ponta a ponta de compra em produção só pelo caminho do dono.
+O que a decisão manda para a esteira é o que a task A6 já dizia — o seed para de semear
+administrador contra o projeto real e nenhuma conta de demonstração nasce de novo. Registro em
+`02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §ADMINSEP-3`.
+
 **Pendência do CTO humano**, no molde do item 62: segundo fator para `platform_admin` exige
 subir para Identity Platform, que é tier pago. Não há MFA em lugar nenhum do repositório
 hoje.

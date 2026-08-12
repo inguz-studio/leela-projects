@@ -14,6 +14,22 @@ atualizado: 2026-08-11
 > quem e as três próximas entregas de cada frente — veja [[VISAO-DE-PROJETO]].** Este board
 > continua sendo o mapa de uma linha por épico; aquele é a visão que o dono pediu em 11/08.
 
+## O que a leva 6 do dono destravou (2026-08-11, à noite)
+
+Onze itens saíram do painel de decisões numa leva só, e o efeito nos épicos é este. Palavras do
+dono e leitura item a item em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md`.
+
+| Épico | O que mudou | Estado |
+|---|---|---|
+| [[LEELA-E12-landing]] | **RN-560** — a tela do pagamento reage sozinha nos quatro ramos (CKPIX-1) e **revoga a RN-470**; **RN-561** — o endereço fica, com a razão escrita (CKENDERECO-1); história nova **S1246** | 📋 lane CKPIX-FLOW, ainda sem código |
+| [[LEELA-E12-landing]] · [[LEELA-E11-analytics]] | **SERV-3 decidido**: "Serviço" nomeia exatamente a cobrança da Leela em toda superfície; a RN-495 ganha alcance e o renome das 34 strings destrava | 📋 lane SERV3-RENOME · ⚠️ re-inventariar antes de trocar |
+| [[LEELA-E16-plataforma-superadmin]] | os cinco vetáveis **V-1 a V-5** fecham juntos; **RN-542 não nasce** (responsável é o owner), a **RN-540** passa a mostrar CPF por callable auditado, a **RN-549** nasce ratificando a RN-510 | 📋 **ondas 2, 3 e 5 destravadas** |
+| [[LEELA-E04-config-vendas]] | *"não podemos ter excedentes de ingressos jamais"* prioriza a reserva de vaga (RN-543 a RN-546), especificada em 10/08 e sem uma linha escrita | 📋 lane ESTOURO-BUILD |
+| [[LEELA-E09-financeiro-profissional]] · [[LEELA-E11-analytics]] | **TICKET-1 ratificado** — compra estornada fora do denominador do ticket médio por decisão, não por default | ✅ já implementado; o que mudou é quem manda mexer |
+| [[LEELA-E03-operacao-evento]] | **SEMKIT-1 e SEMKIT-2** eram resíduo: decididos no lote 1 de 09/08, o reparo ficou sem objeto na purga de 10/08 | ✅ nada fica com o dono |
+
+Nenhum épico novo precisou nascer, e uma história nova entrou: a **S1246** no E12.
+
 ## O que a rodada do redesign acrescentou (2026-08-10/11)
 
 Sete histórias novas entraram em épicos que já existiam, e nenhum épico novo precisou nascer. As
