@@ -32,9 +32,13 @@ comunidade do WhatsApp**.
 
 ## O que mudou hoje, e é muito
 
-**A sua leva 6, à noite, tirou onze decisões da sua mesa de uma vez.** O painel caiu de 25 para
-**14 itens**. Três frentes que estavam paradas esperando você voltaram a andar: o pós-pagamento do
-checkout, o painel de administração inteiro e o renome do "Serviço".
+**As suas duas levas da noite tiraram catorze decisões da sua mesa.** O painel caiu de 25 para
+**11 itens**. A leva 6 destravou três frentes que estavam paradas — o pós-pagamento do checkout, o
+painel de administração inteiro e o renome do "Serviço". A leva 7, logo depois, fechou os três que
+seguravam o trabalho maior: o aceite obrigatório e registrado (que solta o primeiro convite de
+organizador), o teto de 15 minutos da reserva de cartão com a volta à página do evento, e a
+diretriz de que peça que não existe nasce no design system, documentada — que solta a fundação de
+moldura.
 
 **As duas janelas de trabalho do dia entregaram, em ordem:**
 
@@ -149,9 +153,10 @@ existem no banco e nas regras.
    registro de quem aprovou, e a tela descobre a liberação sem F5.
 
 **O que fica esperando você:** ADMIN-USUARIOS-2 (recusar e revogar não existem — segura uma tarefa
-só). E o **LGPD-1**, que continua olhando esta frente: com a ficha de cliente passando a mostrar
-contato e documento, a superfície de dado pessoal do painel master ficou maior do que era quando o
-item foi escrito.
+só), e mais nada. O **LGPD-1 fechou na leva 7**: o aceite é obrigatório e registrado. Fica o aviso
+de engenharia, que não é decisão sua: com a ficha de cliente passando a mostrar contato e
+documento, a superfície de dado pessoal do painel master ficou maior, e a onda 5 sobe com essa
+fronteira escrita.
 
 ### E04 · Configuração e vendas
 
@@ -164,11 +169,13 @@ e a sua frase da noite mexeu na ordem dele.
    para sempre. Você disse *"não podemos ter excedentes de ingressos jamais"*, e é exatamente isto
    que esta história protege.
 2. **A vaga sai do estoque quando a cobrança nasce** — S323, sete tarefas, depois da S322 no ar.
-   Uma tarefa só, o teto da reserva de cartão, fica retida no **ESTOURO-2**; o resto não espera.
+   O teto da reserva de cartão agora tem número seu: **15 minutos**, o tempo do checkout, e quando
+   ele estoura a pessoa volta para a página do evento.
 3. **A lista de modalidades passa a ter dono** — S316: hoje ela nasce na criação do evento e morre
    lá.
 
-**O que fica esperando você:** ESTOURO-2, e só. A venda mínima de R$ 10,00 já é código.
+**O que fica esperando você:** nada. O ESTOURO-2 fechou na leva 7 e a venda mínima de R$ 10,00 já
+é código.
 
 ### E01 · Design system e casca do painel
 
@@ -180,13 +187,15 @@ conversão.
 1. **As ondas 2 a 5 da conversão** — operação do evento, o dinheiro que sai, a comunidade e o
    relance. Elas convertem cartão e botão e **não dependem de você**; podem começar antes da sua
    resposta sobre layout.
-2. **A Onda 0 Parte B** — os primitivos de layout e os cartões de domínio. Retida no **CANONE-1**.
+2. **A Onda 0 Parte B** — os primitivos de moldura e os cartões de domínio: 23 receitas viram 3.
+   **Destravada na leva 7**, com a sua diretriz por trás.
 3. **O painel passa a se chamar Painel Profissional** — S034: o banco já chama a coleção de
    profissionais desde o começo; foi o texto que ficou preso em organizador.
 
-**O que fica esperando você:** o **CANONE-1**, com a versão curta agora escrita no painel — o kit
-de peças tem 50 peças e nenhuma é de moldura; 106 lugares montam moldura na mão, de 23 jeitos; a
-pergunta é se o kit ganha peças oficiais de moldura ou se cada tela continua fazendo a sua.
+**O que fica esperando você:** nada. O **CANONE-1** fechou com a sua leitura — peça que não existe
+nasce no design system, documentada, antes de ser usada, nunca inline —, e ela virou diretriz
+permanente da casa, com as suas três razões escritas: economia de tokens, economia de tempo e
+conformidade de código.
 
 ### E05 · Clubs e comunidade
 
@@ -234,8 +243,9 @@ esse aceite.
 3. **A prontidão de deploy entra na esteira** — S040: o conferidor existe e roda pelo caminho
    longo; falta o atalho e o passo automático.
 
-**O que fica esperando você:** LGPD-1 (um organizador pode estar ativo sem prova de que aceitou o
-termo — segura o primeiro convite de organizador) e PB-11.
+**O que fica esperando você:** PB-11, e só. O **LGPD-1 fechou na leva 7** — o aceite é obrigatório
+e registrado no banco —, e com ele **o seed do primeiro convite de organizador destravou**: quando
+o registro de consentimento falta, o overlay do resgate recolhe o aceite junto do código.
 
 ---
 
@@ -315,7 +325,9 @@ teve os buracos da verificação fechados em 10/08.
    cliente.
 3. **S2003** — o radar vira tela no painel, com o termo do organizador como pré-condição de ligar.
 
-**Registrado:** o risco jurídico foi assumido por você. A fase F1 continua atrás do LGPD-1.
+**Registrado:** o risco jurídico foi assumido por você em 09/08, e o radar não tem gate por causa
+disso. A base legal do nome real de participante saiu do painel na leva 7 — é dado de terceiro, não
+aceite de organizador, então segue com o advogado e fica anotada na própria rodada do radar.
 
 ### E13 · App do atleta, e E17 · Social no app
 
@@ -327,20 +339,21 @@ rede, e de nove histórias sobram seis.
 
 ## O que está travado em você
 
-**Quatorze itens, e eram vinte e cinco de manhã.** Doze decisões e duas ações, todas no painel
-canônico [[DECISOES-ABERTAS]], que é o lugar único delas. O que esta página acrescenta é o **custo
-de cada espera**:
+**Onze itens, e eram vinte e cinco de manhã.** Nove decisões e duas ações, todas no painel canônico
+[[DECISOES-ABERTAS]], que é o lugar único delas. O que esta página acrescenta é o **custo de cada
+espera**:
 
 | Decisão | O que ela segura |
 |---|---|
-| **LGPD-1** | o primeiro convite de organizador, que está retido; e agora também a leitura jurídica da ficha de cliente do painel master |
 | **CRM-1 a CRM-4** | o épico do CRM inteiro, que é onde a base de contatos vira retenção |
-| **CANONE-1** | a onda de fundação do design system. As ondas de tela **não** dependem dela e podem começar antes |
 | **ADMIN-USUARIOS-2** | recusar e revogar acesso — uma tarefa da fila de aprovação |
 | **ARENA-1 e ARENA-4** | a tela de interesses da Arena Social e o vocabulário que ela expõe |
-| **ESTOURO-2** | uma tarefa da reserva de vaga; o resto da história anda sem ela |
 | **PB-11** | a prova de aceite no retry — decisão jurídica, não técnica |
 | **12 · domínio público** | o endereço definitivo do produto e o remetente do e-mail |
+
+Nenhuma delas segura uma frente inteira, e é essa a diferença de hoje: das catorze que saíram nas
+duas levas, cinco destravaram trabalho grande — o painel de administração, o pós-pagamento, o
+renome do Serviço, a reserva de vaga e a fundação de moldura.
 
 **As duas ações que só você executa:** a conferência visual das telas novas (agora com um lote
 grande esperando deploy) e o **JUROS-1**, que é abrir os termos comerciais no painel e salvar.
@@ -353,17 +366,23 @@ segura tarefa. Se você quiser vê-los no painel, eles sobem na próxima aterris
 
 ## O que anda sozinho, sem depender de você
 
-A fila que a leva 6 deixou ordenada, e nenhuma destas lanes precisa de resposta sua:
+A fila que as levas 6 e 7 deixaram ordenada, e nenhuma destas lanes precisa de resposta sua:
 
 1. 🔄 **REGISTRO-BOARDS** — esta aterrissagem: painel limpo, regras novas, épicos e boards em dia.
-2. 📋 **CKPIX-FLOW** — a tela do pagamento reage sozinha nos quatro ramos que você escreveu.
-3. 📋 **ESTOURO-BUILD** — a varredura do PIX vencido e a reserva da vaga, para o excedente não
-   existir.
+2. 📋 **CKPIX-FLOW** — a tela do pagamento reage sozinha nos quatro ramos que você escreveu, mais o
+   ramo da expiração dos 15 minutos.
+3. 📋 **ESTOURO-BUILD** — a varredura do PIX vencido e a reserva da vaga, agora com o teto de
+   cartão fechado, para o excedente não existir.
 4. 📋 **ADMIN-VISAO ondas 2, 3 e 5** — a ficha da produtora, a aba de clientes e o diretório de
    contas.
-5. 📋 **SERV3-RENOME** — as 34 frases, com o re-inventário antes.
-6. 📋 **As ondas 2 a 5 do roadmap de componentes** — conversão de cartão e botão, tela por tela.
-7. ⛔ **O deploy**, que **não sobe sem a conferência visual**. Se ela não puder ser feita aqui, ela
+5. 📋 **A fundação de moldura (Onda 0 Parte B)** — os primitivos de layout e os cartões de domínio
+   nascendo no design system, com story, teste e contraste.
+6. 📋 **SERV3-RENOME** — as 34 frases, com o re-inventário antes.
+7. 📋 **O aceite que faltava e o primeiro convite** — o overlay recolhe o consentimento quando o
+   registro falta, o termo de saúde passa a carimbar a impressão digital do texto, e o seed do
+   primeiro código sai.
+8. 📋 **As ondas 2 a 5 do roadmap de componentes** — conversão de cartão e botão, tela por tela.
+9. ⛔ **O deploy**, que **não sobe sem a conferência visual**. Se ela não puder ser feita aqui, ela
    é sua, antes de qualquer "está no ar".
 
 ## As três próximas entregas do projeto inteiro

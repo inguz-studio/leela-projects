@@ -30,6 +30,18 @@ dono e leitura item a item em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tard
 
 Nenhum épico novo precisou nascer, e uma história nova entrou: a **S1246** no E12.
 
+### A leva 7, na mesma noite — três itens que seguravam trabalho grande
+
+| Épico | O que mudou | Estado |
+|---|---|---|
+| [[LEELA-E00-fundacao-tecnica]] | **LGPD-1 decidido** — *"o aceite é obrigatório, e registrado no banco"*: quando o registro falta, o overlay do resgate recolhe o aceite junto do código | 📋 **o seed do primeiro convite DESTRAVOU** |
+| [[LEELA-E12-landing]] | a metade do termo de saúde: o aceite passa a carimbar `materialHash`, como o termo de uso já faz | 📋 |
+| [[LEELA-E20-radar-comunidade]] | a base legal do nome real de participante sai do painel — é dado de terceiro, não aceite de organizador; segue com o advogado, anotada na rodada do radar | ⏸️ sem gate sobre o radar (risco assumido pelo dono em 09/08) |
+| [[LEELA-E04-config-vendas]] | **ESTOURO-2 decidido** — teto de **15 minutos** (não 30) e a expiração devolve a pessoa à página do evento; a RN-546 sai da condição | 📋 S323-T7 destravada |
+| [[LEELA-E01-design-system]] | **CANONE-1 decidido pela opção 1** — peça que não existe nasce no DS, documentada, nunca inline; virou diretriz permanente da casa na governança de design | 📋 **Onda 0 Parte B destravada** |
+
+Com a leva 7 o painel do dono foi de 14 para **11 itens**.
+
 ## O que a rodada do redesign acrescentou (2026-08-10/11)
 
 Sete histórias novas entraram em épicos que já existiam, e nenhum épico novo precisou nascer. As
