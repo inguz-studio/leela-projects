@@ -128,7 +128,7 @@ describe('ContasRoute · a Fila é o modo padrão', () => {
     ).toBeInTheDocument();
   });
 
-  it('a Fila mostra nome, e-mail, organização, telefone e quando se cadastrou — e nada além', () => {
+  it('a Fila mostra nome, e-mail, organização, telefone, cadastro, identificação e a ação', () => {
     mocks.useFilaDeContas.mockReturnValue(
       estado<ContaProfissionalView>({ itens: [mkProfissional()] })
     );
@@ -137,28 +137,20 @@ describe('ContasRoute · a Fila é o modo padrão', () => {
     const cabecalhos = screen
       .getAllByRole('columnheader')
       .map((h) => h.textContent);
+    // A identificação vem ANTES da ação: conferir quem é a pessoa acontece no
+    // instante anterior ao clique de liberar (job story do V-4).
     expect(cabecalhos).toEqual([
       'Nome',
       'E-mail',
       'Organização',
       'Telefone',
       'Cadastro',
+      'Identificação',
       'Ação',
     ]);
     expect(screen.getByText('Marina Duarte')).toBeInTheDocument();
     expect(screen.getByText('marina@castelo.com.br')).toBeInTheDocument();
     expect(screen.getByText('(48) 99999-8888')).toBeInTheDocument();
-  });
-
-  it('a Fila NÃO tem coluna de identificação — o CPF não entra no recorte de liberação', () => {
-    mocks.useFilaDeContas.mockReturnValue(
-      estado<ContaProfissionalView>({ itens: [mkProfissional()] })
-    );
-    render(<ContasRoute />);
-
-    expect(
-      screen.queryByRole('columnheader', { name: 'Identificação' })
-    ).not.toBeInTheDocument();
   });
 
   it('campo não coletado vira traço, não célula vazia', () => {
@@ -226,6 +218,116 @@ describe('ContasRoute · sem export, CSV nem download (RN-540)', () => {
 
     expect(container.textContent ?? '').not.toMatch(PROIBIDAS);
     expect(container.querySelector('a[download]')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 2b · A coluna de CPF não existe em modo nenhum (V-4)
+//
+// A regra que barra a planilha de CPF é sobre a COLUNA vir preenchida, não sobre
+// o modo. Se a célula já nascesse com o número, a montagem da página dispararia
+// uma consulta auditada por linha — saída em massa com outro nome.
+// ---------------------------------------------------------------------------
+
+describe('ContasRoute · nenhum modo tem coluna de CPF', () => {
+  const CPF = '111.444.777-35';
+
+  it('a Fila: cabeçalho é o gesto, e nenhum CPF aparece sem clique', () => {
+    mocks.useFilaDeContas.mockReturnValue(
+      estado<ContaProfissionalView>({
+        itens: [mkProfissional({ id: 'a' }), mkProfissional({ id: 'b' })],
+      })
+    );
+    const { container } = render(<ContasRoute />);
+
+    expect(
+      screen.queryByRole('columnheader', { name: /^CPF$/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Identificação' })).toBeInTheDocument();
+    expect(container.textContent ?? '').not.toContain(CPF);
+    expect(identificar).not.toHaveBeenCalled();
+  });
+
+  it('o Diretório: idem — a coluna é o botão, nunca o número', async () => {
+    mocks.useDiretorioDeContas.mockReturnValue(
+      estado<ContaDoDiretorio>({ itens: [mkAtleta({ id: 'x' }), mkAtleta({ id: 'y' })] })
+    );
+    const { container } = render(<ContasRoute />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Diretório' }));
+
+    expect(
+      screen.queryByRole('columnheader', { name: /^CPF$/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Identificação' })).toBeInTheDocument();
+    expect(container.textContent ?? '').not.toContain(CPF);
+    expect(identificar).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 2c · A identificação na FILA (V-4 — o job story é o de quem AGE)
+//
+// "Quando eu vou liberar o acesso de alguém, eu quero ter certeza de quem é a
+// pessoa, para não liberar a conta errada." O caso de uso da spec é duas pessoas
+// com nomes parecidos — que é esta tela, no instante anterior ao clique.
+// ---------------------------------------------------------------------------
+
+describe('ContasRoute · identificação na Fila', () => {
+  beforeEach(() => {
+    mocks.useFilaDeContas.mockReturnValue(
+      estado<ContaProfissionalView>({
+        itens: [
+          mkProfissional({ id: 'uid-marina-1', nome: 'Marina Duarte' }),
+          mkProfissional({ id: 'uid-marina-2', nome: 'Marina Duarte' }),
+        ],
+      })
+    );
+  });
+
+  it('revelar uma linha chama o callable UMA vez e só para aquela conta', async () => {
+    render(<ContasRoute />);
+
+    const botoes = screen.getAllByRole('button', { name: 'Identificar' });
+    expect(botoes).toHaveLength(2);
+
+    await userEvent.click(botoes[1] as HTMLElement);
+
+    expect(identificar).toHaveBeenCalledTimes(1);
+    expect(identificar).toHaveBeenCalledWith('uid-marina-2');
+  });
+
+  it('revelado, a linha mostra o CPF — e a linha vizinha continua oculta', () => {
+    comIdentificacoes({
+      'uid-marina-1': { situacao: 'revelado', texto: '111.444.777-35', ambiguo: false },
+    });
+    render(<ContasRoute />);
+
+    expect(screen.getByText('111.444.777-35')).toBeInTheDocument();
+    // A homônima segue com o botão: a revelação é por linha, não por página.
+    expect(screen.getAllByRole('button', { name: 'Identificar' })).toHaveLength(1);
+  });
+
+  it('sem documento, a Fila mostra a CAUSA — quem vai liberar precisa saber por que não dá para conferir', () => {
+    comIdentificacoes({
+      'uid-marina-1': {
+        situacao: 'ausente',
+        causa: 'Esta conta não tem registro de identidade na plataforma.',
+      },
+    });
+    render(<ContasRoute />);
+
+    expect(
+      screen.getByText('Esta conta não tem registro de identidade na plataforma.')
+    ).toBeInTheDocument();
+  });
+
+  it('o aviso de consulta registrada aparece na Fila, antes do clique', () => {
+    render(<ContasRoute />);
+
+    expect(
+      screen.getByText(/Cada consulta de documento fica registrada/)
+    ).toBeInTheDocument();
   });
 });
 
@@ -354,9 +456,16 @@ describe('ContasRoute · documento estrangeiro sem fonte', () => {
     ).toBeInTheDocument();
   });
 
-  it('a lacuna não aparece na Fila — lá a identificação não é o trabalho', () => {
+  it('a lacuna aparece TAMBÉM na Fila — quem age é quem não pode descobrir tarde', () => {
+    mocks.useFilaDeContas.mockReturnValue(
+      estado<ContaProfissionalView>({ itens: [mkProfissional()] })
+    );
     render(<ContasRoute />);
-    expect(screen.queryByText('Documento estrangeiro')).not.toBeInTheDocument();
+
+    expect(screen.getByText('Documento estrangeiro')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Não existe campo de documento estrangeiro no modelo de dados/)
+    ).toBeInTheDocument();
   });
 });
 
