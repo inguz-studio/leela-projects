@@ -16,6 +16,7 @@ import { ToastProvider } from '@leela/design-system';
 import { PlatformShell } from './_components/PlatformShell';
 import { TenantsListRoute } from './tenants/TenantsListRoute';
 import { TenantDetailRoute } from './tenants/TenantDetailRoute';
+import { TenantFichaLayout } from './tenants/TenantFichaLayout';
 import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
 import { MacroDashboardRoute } from './macro/MacroDashboardRoute';
 import { RepassesAdminRoute } from './repasses/RepassesAdminRoute';
@@ -37,8 +38,14 @@ export function PlataformaRoutes(): JSX.Element {
         <Route element={<PlatformShell />}>
           <Route index element={<Navigate to="tenants" replace />} />
           <Route path="tenants" element={<TenantsListRoute />} />
-          <Route path="tenants/:tenantId" element={<TenantDetailRoute />} />
-          <Route path="tenants/:tenantId/termos" element={<TermsEditorRoute />} />
+          {/* ADMIN-VISAO onda 2 · S1612-T1: a ficha do tenant vira UMA rota com
+              abas (03-spec.md · Parte 1). O Resumo continua sendo a rota índice
+              e a tela dele não foi tocada; Termos já existia e entra na barra
+              como filha, sem mudar por dentro. */}
+          <Route path="tenants/:tenantId" element={<TenantFichaLayout />}>
+            <Route index element={<TenantDetailRoute />} />
+            <Route path="termos" element={<TermsEditorRoute />} />
+          </Route>
           <Route path="planos" element={<PlanosRoute />} />
           {/* ADMIN-VISAO onda 4 · S1614-T2: todos os eventos do sistema, sem
               passar por tenant. Leitura da onda 1, Rule que já existe. */}
