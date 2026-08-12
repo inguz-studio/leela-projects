@@ -1,0 +1,24 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Stack.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Stack
+
+Empilhamento vertical com ritmo de token. Fecha a escala de `gap` em seis degraus — 448 lugares do painel escreviam `flex flex-col gap-*` com sete espaços diferentes.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Stack"
+  snippet={`import { Stack } from '@leela/design-system';
+
+<Stack gap="lg">…</Stack>`}
+  contract={contract}
+/>

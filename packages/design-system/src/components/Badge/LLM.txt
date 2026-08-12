@@ -16,7 +16,8 @@ Indicador semântico de estado ou categoria em texto curto: status de evento, mo
 Não use como filtro clicável (use Chip) nem como contador em aba (SubNav/Tabs já têm pill de contador próprio). Badge não é interativo: não recebe onClick como ação primária.
 
 ## Props válidas
-- variant: 'brand' | 'heroico' | 'vulcao' | 'vitoria' | 'alerta' | 'neutro'   (default: 'neutro')
+- variant: 'brand' | 'heroico' | 'vulcao' | 'vitoria' | 'alerta' | 'neutro' | 'outline'   (default: 'neutro')
+- size: 'sm' | 'md' | 'lg'   (default: 'sm')   — 'sm' é o SELO do mockup (10px uppercase, radius xs); 'md' e 'lg' são a PÍLULA (12 e 14px, caixa normal, radius pill)
 - ...todas as props nativas de React.HTMLAttributes<HTMLSpanElement> (className, aria-label, etc.)
 
 ## Tokens consumidos (nenhum valor cru permitido)
@@ -29,19 +30,25 @@ Não use como filtro clicável (use Chip) nem como contador em aba (SubNav/Tabs 
 - --feedback-success-surface / --feedback-success-fg
 - --feedback-warning-surface / --feedback-warning-fg
 - --text-secondary
+- --border-strong / --text-primary (variante outline)
+- --radius-pill / --font-size-sm / --font-size-base / --spacing-2-5 / --spacing-0-5 / --spacing-3 / --spacing-1 (size md e lg)
 Aliases shadcn->brasa usados: bg-primary/text-primary-foreground (= action-primary/-fg) na variante brand; bg-muted (= surface-overlay) na variante neutro.
 
 ## Proibido (do/don't)
-DON'T: variant="default", variant="secondary", variant="destructive", variant="outline" — nomes do shadcn stock que NÃO existem; o enum é brand|heroico|vulcao|vitoria|alerta|neutro.
+DON'T: variant="default", variant="secondary", variant="destructive" — nomes do shadcn stock que NÃO existem; o enum é brand|heroico|vulcao|vitoria|alerta|neutro|outline.
 DON'T: variant="success", variant="danger", variant="warning", variant="info" — os nomes semânticos aqui são vitoria|vulcao|alerta|heroico.
+DON'T: <span className="rounded-ds-pill border px-3 py-1 text-sm"> para uma pílula informativa. Isso é o Badge outline reescrito — eram cinco assim na landing quando a variante voltou.
+DON'T: className="border-[var(--border-default)]" para "suavizar" o contorno. Numa pílula transparente a borda é o componente inteiro (1.4.11, >= 3:1); border-default da 1.67:1 no brasa e 1.46:1 no wine.
 DON'T: hex, rgb, px, rem em style inline.
 DO: use aria-label quando o texto do badge sozinho não der contexto suficiente.
+DO: size sm para selo de estado em tabela e cartão; size md/lg para pílula informativa em texto corrido.
 
 ## Exemplo mínimo (válido, copiável)
 <Badge>Rascunho</Badge>
 
 ## Exemplo completo (válido, copiável)
 <Badge variant="vitoria" aria-label="Evento publicado">Publicado</Badge>
+<Badge variant="outline" size="lg">21K</Badge>
 
 ## Instrução para o modelo (colar no system prompt)
 Use o componente Badge apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

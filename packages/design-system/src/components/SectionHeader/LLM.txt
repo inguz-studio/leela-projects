@@ -1,0 +1,55 @@
+# SectionHeader — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: SectionHeader
+version: 0.0.1
+generated_at: "2026-08-11"
+source: src/components/SectionHeader
+verdict: NASCEU NA ONDA 0 PARTE B (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { SectionHeader, type SectionHeaderProps } from '@leela/design-system'
+Superfície pública (landing, ADR-017): import { SectionHeader } from '@leela/design-system/server'
+
+## Quando usar
+Cabeçalho de BLOCO interno: o eyebrow de um cartão, de uma seção dentro da página, de um agrupamento de conteúdo. Título curto na tinta da marca, contexto opcional embaixo, slots à direita.
+
+## Quando NÃO usar
+Cabeçalho de PÁGINA é PageHeader (título grande, breadcrumb, ações da tela). Título de cartão isolado é CardTitle. Navegação de área é SubNav.
+
+## Props válidas
+- title: React.ReactNode   (obrigatório)
+- titleAs: 'h2' | 'h3' | 'h4'   (default: 'h2')   — NÍVEL de heading, não tamanho
+- description: React.ReactNode
+- help: React.ReactNode      — slot logo após o título (o gatilho do "?")
+- control: React.ReactNode   — slot à direita: o recorte do PRÓPRIO bloco
+- action: React.ReactNode    — slot mais à direita: o link de "ver tudo"
+- ...todas as props de React.HTMLAttributes<HTMLDivElement> exceto `title`
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --section-eyebrow-size / --section-eyebrow-weight / --section-eyebrow-spacing
+- --action-brand-tint-fg (tinta do eyebrow)
+- --layout-section-head-mb (o ritmo abaixo do cabeçalho)
+- --font-size-sm / --text-tertiary (descrição)
+- --spacing-1 / --spacing-3
+
+## Proibido (do/don't)
+DON'T: passar componente com estado/hook nos slots esperando que o SectionHeader gerencie — os slots são conteúdo, o componente é puro (é isso que o mantém utilizável em Server Component).
+DON'T: className="text-2xl" para "dar mais destaque". O eyebrow é rótulo, e um bloco que grita mais que a página é hierarquia quebrada.
+DON'T: escolher titleAs pelo tamanho. Os três níveis têm o MESMO tamanho de letra; o nível é navegação de leitor de tela.
+DO: filtro que muda só este bloco vai em `control`. Filtro compartilhado entre dois blocos muda os dois com um clique e o vizinho reflui sem ninguém pedir.
+
+## Exemplo mínimo (válido, copiável)
+<SectionHeader title="Situação dos membros" />
+
+## Exemplo completo (válido, copiável)
+<SectionHeader
+  title="Inscrições por dia"
+  titleAs="h3"
+  description="Últimos 30 dias, por data de confirmação."
+  help={<IconButton aria-label='O que "Inscrições por dia" mostra'><HelpCircle aria-hidden /></IconButton>}
+  control={<Chip active>30 dias</Chip>}
+  action={<a href="/eventos/123/inscricoes">Ver tudo</a>}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente SectionHeader apenas com as props e valores listados acima. Nunca monte um cabeçalho de bloco à mão: a anatomia é do design system e o que é interativo entra por slot.

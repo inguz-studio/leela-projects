@@ -198,6 +198,82 @@ describe('padrao-reimplementado-fora-do-ds', () => {
     ).not.toThrow();
   });
 
+  // ── Moldura (Onda 0 Parte B · CANONE-1) ─────────────────────────────────
+  //
+  // Os nomes abaixo são os que qualquer pessoa escreveria sem saber que o
+  // primitivo existe — e é justamente aqui que o reflexo falta, porque a
+  // moldura passou o projeto inteiro sem canônico. `SecaoHead` é o caso REAL:
+  // o arquivo existe em `apps/painel/src/components/SecaoHead.tsx` e o
+  // comentário dele registra que a peça nasceu duplicada.
+  it('reprova o batismo dos primitivos de moldura', () => {
+    const canoneMoldura = ['Stack', 'FormGrid', 'MetricGrid', 'SplitPanel', 'SectionHeader', 'CardDominio'];
+    expect(() =>
+      tester.run('padrao-reimplementado-fora-do-ds', padraoReimplementado, {
+        valid: [
+          // O consumidor que COMPÕE segue passando — o nome do arquivo não é
+          // evidência, e um cabeçalho com ajuda própria é composição legítima
+          // desde que o nome diga o que ele acrescenta.
+          {
+            code: 'function CabecalhoComAjuda(p) { return <SectionHeader title={p.t} help={<Ajuda/>} />; }',
+            options: [{ canone: canoneMoldura }],
+          },
+        ],
+        invalid: [
+          {
+            code: 'function Stack({ children }) { return <div className="flex flex-col">{children}</div>; }',
+            options: [{ canone: canoneMoldura }],
+            errors: [{ messageId: 'mesmoNome' }],
+          },
+          // SecaoHead.tsx:58 — achado real, na dívida do eslint.config.mjs.
+          {
+            code: 'function SecaoHead({ titulo }) { return <div><h2>{titulo}</h2></div>; }',
+            options: [{ canone: canoneMoldura }],
+            errors: [{ messageId: 'sinonimo' }],
+          },
+          {
+            code: 'const Bento = ({ a, b }) => <div className="grid">{a}{b}</div>;',
+            options: [{ canone: canoneMoldura }],
+            errors: [{ messageId: 'sinonimo' }],
+          },
+          {
+            code: 'const KpiGrid = ({ children }) => <div className="grid grid-cols-4">{children}</div>;',
+            options: [{ canone: canoneMoldura }],
+            errors: [{ messageId: 'sinonimo' }],
+          },
+          {
+            code: 'const VStack = ({ children }) => <div>{children}</div>;',
+            options: [{ canone: canoneMoldura }],
+            errors: [{ messageId: 'sinonimo' }],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  // A decisão de NÃO listar `ClubeCard`/`ComunicadoCard`/`CampanhaCard` como
+  // sinônimos do `CardDominio`, travada por teste: um sinônimo ali proibiria
+  // para sempre o wrapper legítimo de uma família de domínio, e a §5 protege
+  // exatamente esse wrapper. A dívida desses três é de SUPERFÍCIE, e quem a
+  // mede é a catraca do script, não a regra dura.
+  it('wrapper de família de domínio que COMPÕE o CardDominio passa', () => {
+    expect(() =>
+      tester.run('padrao-reimplementado-fora-do-ds', padraoReimplementado, {
+        valid: [
+          {
+            code: 'function ClubeCard({ clube }) { return <CardDominio title={clube.nome} />; }',
+            filename: 'apps/painel/src/routes/clubes/hub/ClubeCard.tsx',
+            options: [{ canone: ['Card', 'CardDominio'] }],
+          },
+          {
+            code: 'function ComunicadoCard({ c }) { return <CardDominio title={c.titulo} accent="vitoria" />; }',
+            options: [{ canone: ['Card', 'CardDominio'] }],
+          },
+        ],
+        invalid: [],
+      }),
+    ).not.toThrow();
+  });
+
   it('o KitCard que COMPÕE o Card passa — o nome do arquivo não é evidência', () => {
     // Spec §5: `KitCard.tsx` que compõe `Card` é o comportamento DESEJADO. O que
     // a regra pega é o batismo, porque é ele que faz a duplicata parecer oficial.

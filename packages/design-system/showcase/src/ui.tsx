@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Stack,
   cn,
 } from '@leela/design-system';
 
@@ -24,10 +25,17 @@ export interface SectionProps {
   className?: string;
 }
 
+/**
+ * O inventário de 2026-08-11 (§7.1) citou este arquivo como a evidência mais
+ * limpa da lacuna: *"O showroom precisou escrever o próprio Section, em
+ * `showcase/src/ui.tsx:27`, porque o design system não oferece um."* Desde a
+ * Onda 0 Parte B ele oferece — o empilhamento aqui é `Stack`, e o que sobra
+ * neste arquivo é só a tipografia de vitrine, que é do showroom mesmo.
+ */
 export function Section({ title, description, children, className }: SectionProps): JSX.Element {
   return (
-    <section className={cn('flex flex-col gap-[var(--spacing-4)]', className)}>
-      <div className="flex flex-col gap-[var(--spacing-1)]">
+    <Stack as="section" gap="lg" className={cn(className)}>
+      <Stack gap="xs">
         <h2
           className={cn(
             'font-display',
@@ -43,9 +51,9 @@ export function Section({ title, description, children, className }: SectionProp
             {description}
           </p>
         )}
-      </div>
+      </Stack>
       {children}
-    </section>
+    </Stack>
   );
 }
 

@@ -1,0 +1,24 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './SplitPanel.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# SplitPanel
+
+O bento assimétrico de dois painéis. As três proporções são token (`--layout-split-*`), não classe arbitrária — foi a classe arbitrária que produziu cinco receitas.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="SplitPanel"
+  snippet={`import { SplitPanel } from '@leela/design-system';
+
+<SplitPanel ratio="3:2">…</SplitPanel>`}
+  contract={contract}
+/>

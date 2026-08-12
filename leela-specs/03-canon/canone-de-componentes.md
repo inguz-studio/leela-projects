@@ -89,13 +89,24 @@ trabalho do `Field`, e cada tela vinha refazendo à mão.
 | Miniatura com proporção | `Thumb` |
 | Retrato de pessoa | `Avatar` |
 | Separador | `Divider` |
-| Rótulo de estado ou categoria | `Badge` |
+| Rótulo de estado ou categoria | `Badge` — `variant` semântico (`brand`, `heroico`, `vulcao`, `vitoria`, `alerta`, `neutro`); `size` separa o selo (`sm`) da pílula (`md`, `lg`) |
+| Pílula informativa de contorno | `Badge` com `variant="outline"` |
 | Marcador interativo ou removível | `Chip` — `Badge` informa, `Chip` responde |
 
 **Superfície com elevação é `Card`.** `<div>`, `<section>` ou `<article>` com
 `rounded-[var(--card-radius)]` + `bg-[var(--surface-raised)]` + `p-[var(--spacing-*)]` é a anatomia
 do `Card` reescrita, e é divergência mesmo com todos os tokens corretos. Esta linha sozinha responde
 por 192 das 223 divergências medidas.
+
+O `Card` tem `as` (`div` · `article` · `section` · `li` · `aside`) e o `CardTitle` tem `as`
+(`h2`/`h3`/`h4`). As duas props são de **semântica, nunca de visual**: o `className` é byte a byte o
+mesmo em qualquer tag. Elas existem porque a conversão para o canônico não pode apagar um marco de
+navegação — `<div>` filho direto de `<ul>` quebra a lista, e `<div aria-label>` sem `role` não é
+landmark nenhum. `asChild` do Radix resolveria e está barrado na landing pelo ADR-017.
+
+A variante `outline` do `Badge` usa `border-strong`, não `border-default`: numa pílula transparente
+a borda é o componente inteiro, o que a tira da isenção de frame decorativo e a põe sob a 1.4.11
+(≥ 3:1). `border-default` dá 1.67:1 no brasa e 1.46:1 no wine.
 
 Na landing, `Card` entra por `@leela/design-system/server` — entrada server-safe e Radix-free do
 ADR-017, sem custo de bundle público.
@@ -107,21 +118,56 @@ ADR-017, sem custo de bundle público.
 | Evento | `CardEvento` |
 | Desafio | `CardDesafio` |
 | Evento em lista | `EventRow` |
-| Clube, comunicado, campanha, parceria, afiliação | 🔨 **nasce no DS por composição** — CANONE-1 decidido em 11/08 (Onda 0 Parte B) |
+| Clube, comunicado, campanha, parceria, afiliação | `CardDominio` — composição do `Card`, com slots `leading` / `badges` / `description` / `meta` / `actions` / `footer` / `accent` |
+
+**Uma peça para as cinco famílias, e a razão está medida.** As cinco foram lidas linha a linha
+antes do código (`ClubeCard.tsx:67`, `ComunicadosList.tsx:58`, `CampanhasList.tsx:81`,
+`ParceriasView.tsx:55`, `MinhasAfiliacoesPage.tsx:65`) e têm **a mesma anatomia**: mídia opcional à
+esquerda, título com selos, resumo curto, linha de metadados, ações no canto, acento lateral de
+estado em duas e rodapé de botões em três. O que muda é o conteúdo dos slots, não a montagem.
+Publicar cinco componentes com o mesmo corpo seria criar cinco motores para manter em sincronia —
+a lição que o `ConfirmModal` custou.
+
+Família nova com a mesma anatomia (publicação, aviso, o que vier) é `CardDominio` com outros slots,
+e entra aqui como linha, não como componente.
 
 ## 6. Slot, bento e grade composta
 
 | Padrão | Canônico |
 |---|---|
-| Grade de formulário · grade de indicadores · bento assimétrico · empilhamento com ritmo · cabeçalho de bloco interno | 🔨 **nasce no DS** — CANONE-1 decidido em 11/08 (Onda 0 Parte B) |
+| Empilhamento com ritmo | `Stack` — `gap` em sete degraus fechados, `align`, `as` |
+| Grade de formulário (1 → 2/3 colunas) | `FormGrid` — `columns` 2 ou 3, `from` `sm`/`md`/`lg`, `gap` |
+| Grade de indicadores (1 → xs:2 → lg:N) | `MetricGrid` — `columns` 2, 3 ou 4, `gap` |
+| Bento assimétrico de dois painéis | `SplitPanel` — `ratio` `3:2`/`7:3`/`1:3`, `gap` |
+| Cabeçalho de bloco interno | `SectionHeader` — `title`, `titleAs`, `description` e os slots `help` / `control` / `action` |
 
-O DS publica 50 componentes e nenhum era layout. **A decisão voltou em 11/08** (leva 7): peça que
-não existe nasce no design system, documentada, antes de ser usada — diretriz permanente do dono,
-escrita em `04-engenharia/governanca-design.md`. Até os primitivos existirem, layout composto
-continua sendo **finding de processo, não de tela**; a partir deles, é divergência como qualquer
-outra. As três
-famílias reais em uso (grade de formulário 1→2/3 colunas, grade de indicadores 2→4, bento
-assimétrico `[Nfr_Mfr]`) estão medidas, com as 23 receitas que as implementam, no inventário §7.1.
+**O DS publicava 50 componentes e nenhum era layout.** Consequência medida: 106 ocorrências de
+`grid grid-cols-*` no painel, com **23 assinaturas distintas**, para o que são três famílias
+(inventário §7.1). A CANONE-1 foi decidida em 11/08 (leva 7) com a frase do dono: *"Se um componente
+nao existe, precisamos documentar e padronizar o componente para nao ficar refazendo ele."* As cinco
+peças acima nasceram na Onda 0 Parte B, com story, teste e esta linha no mesmo commit.
+
+**A escala de cada peça é FECHADA, e é esse o serviço que ela presta.** Um primitivo que
+reexportasse a régua inteira do Tailwind não teria fechado nada. Três consequências que valem como
+regra:
+
+- `Stack` publica sete degraus e **`--spacing-5` ficou de fora**: é o único da lista sem papel
+  declarado na moldura (`--layout-*` usa 2, 4 e 6) e sobreviveu como escolha de tela.
+- `MetricGrid` **não tem prop de breakpoint**. A diferença entre `md:` e `lg:` na última coluna era
+  gosto; o ponto de partida (1 ou 2 colunas) tem decisão escrita no preset (REDESIGN-V2 · item 6:
+  abaixo de 480px o rótulo do KPI corta) e a escada a executa.
+- `SplitPanel` lê a proporção de **token** (`--layout-split-3-2`, `-7-3`, `-1-3`), não de classe
+  arbitrária — foi a classe arbitrária que produziu cinco receitas para uma família. Uma quarta
+  proporção entra por token novo em `tokens/component.json` e linha aqui, no mesmo commit.
+
+`Grid` e `Surface` **não** são nomes disponíveis: já são sinônimos reservados de `Table` e `Card` na
+regra 2 do gate. Layout composto deixou de ser finding de processo e virou divergência como
+qualquer outra — a catraca `grade-crua` do `scripts/gate-canon.mjs` mede as instâncias que ainda
+montam moldura à mão, e ela só desce.
+
+Fora das famílias, os **casos próprios** seguem legítimos e sem canônico: grade de calendário
+(`grid-cols-7`), cohort e planos. Eles não são família; forçá-los num primitivo seria inventar
+generalidade que a medição não achou.
 
 ## 7. Tabela e lista
 
@@ -172,6 +218,19 @@ quatro vias de fechamento do DoD de Tela: cancelar, X, overlay, Esc.
 | Padrão | Canônico |
 |---|---|
 | Retorno de ação de escrita | `Toast` / `ToastProvider` / `useToast` — obrigatório em toda escrita; `danger` persiste até dismiss manual |
+| Aviso em bloco, no fluxo da página | `Alert` — `tone` `info`/`vitoria`/`alerta`/`vulcao`, slots `title` / `icon` / `actions`, e o canal de ARIA em `live` |
+
+**`Toast` flutua e some; `Alert` fica no fluxo.** A escolha é do papel, não do estilo: retorno de
+escrita é `Toast`, estado que a pessoa precisa ler antes de seguir é `Alert`, erro de campo é o
+`errorMessage` do controle, tela inteira de erro é `SystemStateScreen`.
+
+**O canal de ARIA do `Alert` é prop, e o default é `none`.** Os três avisos do checkout escolheram
+canais diferentes com a razão escrita no topo de cada arquivo, e estavam certos: `role="alert"` para
+o desfecho final que muda o que fazer, `role="status"` com `aria-live="polite"` para a espera que
+não pode atropelar o anúncio de erro ao lado. Aviso que já estava na tela quando ela carregou não é
+live region — anunciar conteúdo estático a cada render é ruído, e ruído treina a pessoa a ignorar o
+canal. `role` e `aria-live` saem de uma prop só porque `role="alert"` com `aria-live="polite"` é
+contradição que o navegador resolve do jeito dele, e o defeito não aparece em teste nenhum.
 
 ## 12. Indicador e dado
 
