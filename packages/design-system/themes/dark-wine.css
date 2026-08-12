@@ -241,6 +241,7 @@
   --badge-spacing: 0.04em;
   --badge-gap: var(--spacing-1);
   --badge-icon-size: 10px;
+  --alert-icon-size: 18px;
   --chip-height: 32px;
   --chip-radius: var(--radius-pill);
   --chip-font-size: var(--font-size-base);

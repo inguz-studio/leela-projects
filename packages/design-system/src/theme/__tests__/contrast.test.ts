@@ -335,6 +335,33 @@ describe('Regressões do REVIEW-E01', () => {
     }
   });
 
+  // ── Alert (Onda 0 Parte B · encaminhado pela lane CKPIX-FLOW) ────────────
+  //
+  // O aviso em bloco usa os quatro tons inteiros: `--feedback-*-fg` sobre
+  // `--feedback-*-surface` no texto e `--feedback-*` como borda sobre a
+  // página. Os oito pares já rodam na matriz genérica; o caso existe com nome
+  // para que quem for enxugar a matriz saiba QUEM depende deles.
+  it('ALERT: os quatro tons passam AA — texto ≥ 4.5:1 e borda ≥ 3:1, nos três temas', () => {
+    const tons = ['feedback-info', 'feedback-success', 'feedback-warning', 'feedback-danger'];
+    for (const [nome, tokens] of themes) {
+      for (const tom of tons) {
+        const texto = contrastRatio(
+          resolveMatrixColor(tokens, `${tom}-fg`),
+          resolveMatrixColor(tokens, `${tom}-surface`),
+        );
+        expect(texto, `${nome}: ${tom}-fg sobre ${tom}-surface = ${texto.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+
+        for (const fundo of ['surface-base', 'surface-raised'] as const) {
+          const borda = contrastRatio(
+            resolveMatrixColor(tokens, tom),
+            resolveMatrixColor(tokens, fundo),
+          );
+          expect(borda, `${nome}: ${tom} sobre ${fundo} = ${borda.toFixed(2)}:1`).toBeGreaterThanOrEqual(3.0);
+        }
+      }
+    }
+  });
+
   it('BADGE-OUTLINE: o texto da pílula ≥ 4.5:1 sobre base e raised, nos três temas', () => {
     for (const [nome, tokens] of themes) {
       for (const fundo of ['surface-base', 'surface-raised'] as const) {

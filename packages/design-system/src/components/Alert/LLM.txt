@@ -1,0 +1,61 @@
+# Alert — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Alert
+version: 0.0.1
+generated_at: "2026-08-11"
+source: src/components/Alert
+verdict: NASCEU NA ONDA 0 PARTE B (CANONE-1) — encaminhado pela lane CKPIX-FLOW; cânone escrito no mesmo commit
+
+## Import canônico
+import { Alert, type AlertProps } from '@leela/design-system'
+Superfície pública (landing, ADR-017): import { Alert } from '@leela/design-system/server'
+
+## Quando usar
+Aviso em BLOCO, dentro do fluxo da página: ícone + título + corpo num par de cor semântica. Estado do pedido, desfecho de pagamento, orientação que a pessoa precisa ler antes de seguir.
+
+## Quando NÃO usar
+Retorno de ação de escrita é Toast (flutuante, some sozinho) — obrigatório em toda escrita. Erro de um campo é `errorMessage` do Input/Field. Tela cheia de erro ou estado de sistema é SystemStateScreen. Lista ou bloco sem dado é EmptyState. Bloco de conteúdo sem cor de estado é Card.
+
+## Props válidas
+- tone: 'info' | 'vitoria' | 'alerta' | 'vulcao'   (default: 'info')
+- title: React.ReactNode
+- titleAs: 'h2' | 'h3' | 'h4'   (default: 'h3')   — NÍVEL de heading, não tamanho
+- icon: React.ReactNode   (default: o ícone do tom; `null` remove)
+- live: 'alert' | 'status' | 'none'   (default: 'none')
+- actions: React.ReactNode   — CTA abaixo do corpo
+- children: React.ReactNode   — o corpo
+- ...todas as props de React.HTMLAttributes<HTMLDivElement> exceto `title` e `role`
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --feedback-info / -surface / -fg
+- --feedback-success / -surface / -fg
+- --feedback-warning / -surface / -fg
+- --feedback-danger / -surface / -fg
+- --radius-lg / --spacing-5 / --spacing-3 / --spacing-2 / --spacing-1 / --spacing-0-5
+- --alert-icon-size / --font-size-md-plus / --font-size-base / --font-weight-bold
+
+## Proibido (do/don't)
+DON'T: <section className="flex gap-3 rounded-ds-lg border border-feedback-warning bg-feedback-warning-surface p-5"> — é este componente reescrito. Eram quatro assim no checkout quando a peça nasceu.
+DON'T: role="alert" + aria-live="polite" juntos. É contradição, o navegador resolve do jeito dele e o defeito não aparece em teste nenhum. Os dois saem de UMA prop (`live`).
+DON'T: live="alert" em aviso que já estava na tela quando ela carregou. Anunciar conteúdo estático a cada render é ruído, e ruído treina a pessoa a ignorar o canal.
+DON'T: props de tamanho (size, padding, radius). As quatro cópias divergiam em raio, padding, gap e tipografia do título; nenhuma diferença era decisão, e o componente tem UMA forma.
+DO: live="alert" para desfecho final que muda o que a pessoa precisa fazer. live="status" para espera e progresso — ele não atropela o anúncio de erro que divide a tela.
+DO: icon={<Mail />} quando o tom é um e o gesto é outro (o aviso é `info`, mas o que ele pede é olhar o e-mail).
+DO: titleAs="h2" quando o aviso é o assunto da tela; h3 dentro de um bloco que já tem título.
+
+## Exemplo mínimo (válido, copiável)
+<Alert>Confira a caixa de entrada do e-mail que você informou na compra.</Alert>
+
+## Exemplo completo (válido, copiável)
+<Alert
+  tone="alerta"
+  titleAs="h2"
+  live="alert"
+  title="Este pedido não foi concluído"
+  actions={<Button variant="secondary">Começar nova compra</Button>}
+>
+  A cobrança não foi confirmada e este pedido não vale mais. Nenhum ingresso será emitido por ele.
+</Alert>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Alert apenas com as props e valores listados acima. Nunca monte um aviso em bloco à mão com border/bg/text de feedback: a peça existe, e a escolha do canal de ARIA (`live`) é decisão de acessibilidade, não de estilo.

@@ -282,7 +282,12 @@ export const SINONIMOS_PADRAO = {
   Card: ['Cartao', 'Painel', 'Box', 'Surface', 'Tile'],
   Table: ['DataTable', 'Tabela', 'Grid'],
   EmptyState: ['Vazio', 'SemDados', 'NoData'],
-  Toast: ['Notificacao', 'Snackbar', 'Alert'],
+  // `Alert` SAIU daqui em 11/08 e virou nome canônico próprio: no shadcn, de
+  // onde este DS puxa a proveniência, `alert` é o aviso em BLOCO e o flutuante
+  // é `toast`. Enquanto o bloco não existia, mapear `Alert` para `Toast` era a
+  // melhor aproximação; agora seria mandar a pessoa para o componente errado.
+  Toast: ['Notificacao', 'Snackbar'],
+  Alert: ['Callout', 'Aviso', 'Banner', 'InlineAlert', 'Notice'],
   Tooltip: ['Hint', 'Dica'],
   Stack: ['VStack', 'Empilhamento', 'Pilha'],
   FormGrid: ['GradeDeFormulario', 'FieldGrid', 'FormularioGrid'],

@@ -213,6 +213,11 @@ export type { SectionHeaderProps } from './components/SectionHeader';
 // UMA peça para as cinco famílias — elas têm a mesma anatomia, e cinco corpos
 // iguais seriam cinco motores para manter em sincronia (a lição do
 // ConfirmModal).
+// Aviso em bloco (Onda 0 Parte B · encaminhado pela lane CKPIX-FLOW): o
+// barrel tinha 78 componentes e nenhum era Alert/Callout/Banner, e o checkout
+// repetia a mesma forma QUATRO vezes a mao.
+export { Alert, alertVariants } from './components/Alert';
+export type { AlertProps, AlertTone, AlertLive } from './components/Alert';
 export { CardDominio } from './components/CardDominio';
 export type { CardDominioProps, CardDominioAccent } from './components/CardDominio';
 

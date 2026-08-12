@@ -1,0 +1,28 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Alert.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Alert
+
+O aviso em bloco: ícone, título e corpo num par de cor semântica. O barrel tinha 78 componentes e nenhum era aviso — o checkout repetia a mesma forma quatro vezes à mão, com cinco divergências entre as cópias e nenhuma delas sendo decisão.
+
+O canal de ARIA (`live`) é prop porque os três arquivos originais escolheram canais diferentes, cada um com a razão escrita, e estavam certos. O default é `none`: aviso que já estava na tela quando ela carregou não é live region.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Alert"
+  snippet={`import { Alert } from '@leela/design-system';
+
+<Alert tone="alerta" live="alert" title="Este pedido não foi concluído">
+  A cobrança não foi confirmada e este pedido não vale mais.
+</Alert>`}
+  contract={contract}
+/>

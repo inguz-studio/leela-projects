@@ -50,6 +50,8 @@ export { SplitPanel, splitPanelVariants } from './components/SplitPanel';
 export type { SplitPanelProps, SplitPanelElement } from './components/SplitPanel';
 export { SectionHeader } from './components/SectionHeader';
 export type { SectionHeaderProps } from './components/SectionHeader';
+export { Alert, alertVariants } from './components/Alert';
+export type { AlertProps, AlertTone, AlertLive } from './components/Alert';
 export { CardDominio } from './components/CardDominio';
 export type { CardDominioProps, CardDominioAccent } from './components/CardDominio';
 

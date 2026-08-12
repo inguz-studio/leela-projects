@@ -64,6 +64,10 @@
     "gap":           "{spacing.1}",
     "icon-size":     "10px"
   },
+  "alert": {
+    "$description": "Aviso em bloco (Alert). Icone 18 — a medida que os quatro avisos do checkout ja usavam a mao (size={18} em AvisoPedidoEncerrado, AvisoPedidoEmConfirmacao, ProcessandoPagamento e DesfechoPosPagamento). Padding, raio e tipografia saem dos tokens gerais; so o icone tinha numero proprio, e por isso e o unico que vira token de componente.",
+    "icon-size":     "18px"
+  },
   "chip": {
     "height":        "32px",
     "radius":        "{radius.pill}",

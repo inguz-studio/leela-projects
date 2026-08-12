@@ -218,6 +218,19 @@ quatro vias de fechamento do DoD de Tela: cancelar, X, overlay, Esc.
 | Padrão | Canônico |
 |---|---|
 | Retorno de ação de escrita | `Toast` / `ToastProvider` / `useToast` — obrigatório em toda escrita; `danger` persiste até dismiss manual |
+| Aviso em bloco, no fluxo da página | `Alert` — `tone` `info`/`vitoria`/`alerta`/`vulcao`, slots `title` / `icon` / `actions`, e o canal de ARIA em `live` |
+
+**`Toast` flutua e some; `Alert` fica no fluxo.** A escolha é do papel, não do estilo: retorno de
+escrita é `Toast`, estado que a pessoa precisa ler antes de seguir é `Alert`, erro de campo é o
+`errorMessage` do controle, tela inteira de erro é `SystemStateScreen`.
+
+**O canal de ARIA do `Alert` é prop, e o default é `none`.** Os três avisos do checkout escolheram
+canais diferentes com a razão escrita no topo de cada arquivo, e estavam certos: `role="alert"` para
+o desfecho final que muda o que fazer, `role="status"` com `aria-live="polite"` para a espera que
+não pode atropelar o anúncio de erro ao lado. Aviso que já estava na tela quando ela carregou não é
+live region — anunciar conteúdo estático a cada render é ruído, e ruído treina a pessoa a ignorar o
+canal. `role` e `aria-live` saem de uma prop só porque `role="alert"` com `aria-live="polite"` é
+contradição que o navegador resolve do jeito dele, e o defeito não aparece em teste nenhum.
 
 ## 12. Indicador e dado
 

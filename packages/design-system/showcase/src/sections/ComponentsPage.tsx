@@ -5,6 +5,7 @@
 
 import * as React from 'react';
 import {
+  Alert,
   Avatar,
   Badge,
   BarChart,
@@ -1145,8 +1146,34 @@ export function ComponentsPage(): JSX.Element {
       </Section>
 
       {/* ── Feedback ──────────────────────────────────────────────────── */}
-      <Section title="Feedback" description="Toast, Skeleton e Tooltip.">
+      <Section title="Feedback" description="Alert, Toast, Skeleton e Tooltip.">
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
+          <DemoCard
+            title="Alert"
+            description="O aviso em BLOCO — Toast flutua e some, Alert fica no fluxo. Nasceu na Onda 0 Parte B porque o checkout repetia a mesma forma quatro vezes à mão, com cinco divergências entre as cópias e nenhuma delas sendo decisão. O canal de ARIA é prop (`live`) porque os três avisos originais escolheram canais diferentes, cada um com a razão escrita, e estavam certos; o default é `none`, porque aviso que já estava na tela não é live region."
+          >
+            <Stack gap="md">
+              <Alert tone="info" live="status" title="Estamos confirmando o seu pedido">
+                Confira a caixa de entrada do e-mail que você informou na compra — o acesso do
+                seu ingresso vai por lá.
+              </Alert>
+              <Alert tone="vitoria" title="Inscrição confirmada">
+                O acesso do seu ingresso já está na sua área.
+              </Alert>
+              <Alert tone="alerta" live="alert" title="Este pedido não foi concluído">
+                A cobrança não foi confirmada e este pedido não vale mais.
+              </Alert>
+              <Alert
+                tone="vulcao"
+                live="alert"
+                title="Cartão recusado"
+                actions={<Button variant="secondary">Revisar dados</Button>}
+              >
+                Revise os dados do cartão e tente de novo.
+              </Alert>
+            </Stack>
+          </DemoCard>
+
           <DemoCard
             title="Toast"
             description="Fila com auto-dismiss em 4s; a variante danger persiste até o fechamento manual."
