@@ -104,26 +104,38 @@ convite escrito); a tela continua sem prometer um mecanismo de entrada que não 
 (11/08):** o merge do redesign saiu (`b51cdcd9`) e a retenção caiu. O território é `apps/landing` e
 `functions/`, que o merge não encostou, então nada aqui precisa ser re-endereçado.
 
-### SERV-3-RENOME · "Serviço" para fora, "Serviço da plataforma" para dentro — ✅ destravado, fila (11/08)
+### SERV-3-RENOME · "Serviço" para fora, "Serviço" para dentro também — ✅ PAGO em 11-12/08
 
 **Território.** 34 strings em três aplicações; RN-495 em [[LEELA-E12-landing]]; tarefas 4a, 4b e 4c
 de `02-rodadas/2026-08-05-metricas-e-servico/04-fila-codigo.md`. **No ar hoje:** sim, o comprador já
 lê "Taxa de serviço" no checkout.
 
-**O conserto.** O rótulo encurta para "Serviço" onde o público é externo, comprador e organizador, e
+**⚠️ Correção de registro (a razão pela qual esta entrada estava desatualizada).** A linha abaixo
+("fica 'Serviço da plataforma' no super-admin") era a recomendação de 09/08. O **adendo da noite** de
+11/08 (`03-leva6-tarde.md`, verbatim do dono: *"é somente quando falar da taxa Leela, que chamaremos
+'serviço' para referenciar o que é essa cobrança"*) e o próprio `LEELA-E12-landing.md` **já haviam
+derrubado essa recomendação antes desta lane começar**: "Serviço" vale em toda superfície, inclusive
+o super-admin, sem sufixo — a desambiguação contra gateway/juros vem da própria regra (só a taxa
+Leela se chama "Serviço"). A lane SERV3-RENOME seguiu a versão corrente (RN-495 com alcance), não
+esta nota estale.
+
+~~**O conserto.** O rótulo encurta para "Serviço" onde o público é externo, comprador e organizador, e
 fica "Serviço da plataforma" no super-admin, onde a palavra ainda precisa separar esta cobrança das
-outras que a mesma tela mostra.
+outras que a mesma tela mostra.~~ *(superado pelo adendo da noite — ver acima)*
 
 **Aceite.** Nenhuma tela de comprador ou de organizador diz "Taxa de serviço" nem "taxa Leela"; o
 super-admin distingue esta cobrança das demais sem ambiguidade; as 34 ocorrências são varridas de uma
 vez, porque trocá-las duas vezes é o desperdício que a pergunta ao dono evitou; nenhum identificador
 técnico, campo de documento ou nome de variável muda junto, pela mesma disciplina da QUALIF-3.
 
-**Ordem.** Sai da retenção com esta rodada. Sonnet. ✅ **Destravado — fila (11/08):** o merge do
-redesign saiu (`b51cdcd9`). ⚠️ Antes de varrer as 34 strings, refazer o inventário na main mergeada:
-as telas de marcas, assessorias e afiliações mudaram de endereço (`routes/marcas/*` e as entradas de
-clubs foram para `routes/parcerias/*`), então a contagem de 09/08 aponta para caminhos que não
-existem mais.
+**✅ PAGO em 11-12/08 (lane SERV3-RENOME).** Re-inventário fresco na main mergeada (não os 34 de
+09/08, que miravam caminhos que o rename de Parcerias havia mudado — na prática nenhum sobrevivia no
+inventário original, mas a régua de código mudou desde 08/05 de qualquer forma): **24 arquivos, 26
+strings de usuário**. Commits `37e5c0ca`/`07bb351e`/`4488dbe2`, merge `--no-ff` em `f1f5e95c` na
+main, pushed. Gates verdes (painel 2646/2646, landing confirmada limpa por isolamento, tsc/lint 0).
+Intocado de propósito: campo "Taxa Be Hero" e fallback "após taxa Leela" (Frente 1/S908, tarefa de
+suprimir, card separado ainda aberto). Detalhe completo, tabela arquivo:linha e veredito por string
+em `.nirvana/handoffs/leela-serv3-renome-20260811.md`. ⛔ Nenhum deploy.
 
 ### JUROS-ALINHAMENTO · **CANCELADO pela correção do dono de 09/08** — era exemplo, não decisão
 
