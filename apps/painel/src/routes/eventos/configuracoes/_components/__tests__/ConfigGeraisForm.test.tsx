@@ -96,7 +96,7 @@ describe('ConfigGeraisForm (S304-T2)', () => {
 
   it('sem venda: ligar a taxa persiste taxaModo=repassada (RN-347)', async () => {
     const { onSalvar } = setup({ evento: fakeEvento({ qtdInscritos: 0 }) });
-    const taxa = screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' });
+    const taxa = screen.getByRole('switch', { name: 'Repassar o Serviço ao comprador' });
     expect(taxa).toBeEnabled();
     await userEvent.click(taxa);
     await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
@@ -115,7 +115,7 @@ describe('ConfigGeraisForm (S304-T2)', () => {
     const { onSalvar } = setup({
       evento: fakeEvento({ qtdInscritos: 5, taxaModo: 'repassada' }),
     });
-    const taxa = screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' });
+    const taxa = screen.getByRole('switch', { name: 'Repassar o Serviço ao comprador' });
     expect(taxa).toBeDisabled();
     // Reflete o modo vigente do evento (repassada → ligado).
     expect(taxa).toBeChecked();
