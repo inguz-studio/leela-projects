@@ -11,6 +11,7 @@ import {
   Breadcrumb,
   Button,
   CardDesafio,
+  CardDominio,
   CardEvento,
   Checkbox,
   Chip,
@@ -28,9 +29,11 @@ import {
   Field,
   FileInput,
   FilterMenu,
+  FormGrid,
   IconButton,
   Input,
   KpiCard,
+  MetricGrid,
   Modal,
   PageHeader,
   Pagination,
@@ -43,7 +46,10 @@ import {
   SearchInput,
   Select,
   Sidebar,
+  SectionHeader,
   Skeleton,
+  SplitPanel,
+  Stack,
   Stepper,
   SubNav,
   Switch,
@@ -161,6 +167,147 @@ export function ComponentsPage(): JSX.Element {
 
   return (
     <>
+      {/* ── Moldura ───────────────────────────────────────────────────── */}
+      <Section
+        title="Moldura"
+        description="Stack, FormGrid, MetricGrid, SplitPanel e SectionHeader — as peças que nasceram na Onda 0 Parte B (CANONE-1). O DS publicava 50 componentes e nenhum era layout: 106 lugares do painel montavam moldura à mão em 23 receitas para três famílias. Cada peça abaixo fecha a escala de uma delas."
+      >
+        <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
+          <DemoCard
+            title="Stack"
+            description="Empilhamento vertical com ritmo. Sete degraus fechados; --spacing-5 ficou de fora de propósito (é o único sem papel declarado na moldura)."
+          >
+            <Stack gap="md">
+              {(['xs', 'sm', 'md', 'lg'] as const).map((gap) => (
+                <Stack key={gap} gap="xs">
+                  <span className="text-[length:var(--font-size-sm)] uppercase tracking-[var(--section-eyebrow-spacing)] text-[var(--text-tertiary)]">
+                    gap={gap}
+                  </span>
+                  <Stack gap={gap}>
+                    <div className="rounded-ds-sm bg-[var(--surface-overlay)] px-[var(--spacing-3)] py-[var(--spacing-1)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+                      um
+                    </div>
+                    <div className="rounded-ds-sm bg-[var(--surface-overlay)] px-[var(--spacing-3)] py-[var(--spacing-1)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+                      dois
+                    </div>
+                  </Stack>
+                </Stack>
+              ))}
+            </Stack>
+          </DemoCard>
+
+          <DemoCard
+            title="FormGrid"
+            description="A grade de formulário: uma coluna no estreito, duas ou três a partir de um degrau. Aposentou oito receitas. Campo de linha inteira entra por col-span-full no filho."
+          >
+            <FormGrid>
+              <Input label="Nome do evento" placeholder="Meia Floripa" />
+              <Input label="Cidade" placeholder="Florianópolis" />
+              <div className="col-span-full">
+                <Input label="Observações" placeholder="col-span-full" />
+              </div>
+            </FormGrid>
+          </DemoCard>
+
+          <DemoCard
+            title="MetricGrid"
+            description="A grade de indicadores, na escada fixa do preset: 1 coluna abaixo de 480px, 2 a partir de xs, N a partir de lg. Executa a decisão do REDESIGN-V2 item 6 — abaixo de 480 o rótulo do KPI corta."
+          >
+            <MetricGrid>
+              <KpiCard label="Inscritos" value="1.284" hint="vs. 7 dias" />
+              <KpiCard label="Pagos" value="1.102" />
+              <KpiCard label="Pendentes" value="182" tone="danger" />
+              <KpiCard label="Receita" value="R$ 42.180,00" />
+            </MetricGrid>
+          </DemoCard>
+
+          <DemoCard
+            title="SplitPanel"
+            description="O bento assimétrico de dois painéis. As três proporções medidas são token (--layout-split-3-2 / -7-3 / -1-3), não classe arbitrária: foi a classe arbitrária que produziu cinco receitas."
+          >
+            <Stack gap="md">
+              {(['3:2', '7:3', '1:3'] as const).map((ratio) => (
+                <Stack key={ratio} gap="xs">
+                  <span className="text-[length:var(--font-size-sm)] uppercase tracking-[var(--section-eyebrow-spacing)] text-[var(--text-tertiary)]">
+                    ratio={ratio}
+                  </span>
+                  <SplitPanel ratio={ratio} gap="sm">
+                    <div className="rounded-ds-sm bg-[var(--surface-overlay)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+                      principal
+                    </div>
+                    <div className="rounded-ds-sm bg-[var(--surface-overlay)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+                      apoio
+                    </div>
+                  </SplitPanel>
+                </Stack>
+              ))}
+            </Stack>
+          </DemoCard>
+
+          <DemoCard
+            title="SectionHeader"
+            description="O cabeçalho de BLOCO interno — o PageHeader é de página. A anatomia é do design system; o que é interativo entra por slot (help, control, action), e é isso que mantém a peça pura e utilizável em Server Component."
+          >
+            <Stack gap="lg">
+              <SectionHeader title="Situação dos membros" />
+              <SectionHeader
+                title="Inscrições por dia"
+                titleAs="h3"
+                description="Últimos 30 dias, por data de confirmação."
+                help={
+                  <IconButton aria-label='O que "Inscrições por dia" mostra'>
+                    {dsIcon(Bell)}
+                  </IconButton>
+                }
+                control={<Chip active>30 dias</Chip>}
+                action={
+                  <span className="text-[length:var(--section-link-size)] text-[var(--text-tertiary)]">
+                    Ver tudo
+                  </span>
+                }
+              />
+            </Stack>
+          </DemoCard>
+
+          <DemoCard
+            title="CardDominio"
+            description="O cartão de entidade em lista: clube, comunicado, campanha, parceria e afiliação. UMA peça para as cinco famílias — elas têm a mesma anatomia, e cinco corpos iguais seriam cinco motores para manter em sincronia (a lição do ConfirmModal). A superfície vem do Card, composta, nunca reescrita."
+          >
+            <Stack gap="md">
+              <CardDominio
+                title="Clube Vento Sul"
+                leading={<Avatar name="Clube Vento Sul" size="lg" />}
+                badges={<Badge variant="brand">Corrida</Badge>}
+                meta={<span>312 membros · 4 desafios</span>}
+                actions={
+                  <IconButton aria-label="Ações de Clube Vento Sul">
+                    {dsIcon(MoreVertical)}
+                  </IconButton>
+                }
+              />
+              <CardDominio
+                title="Retirada de kit começa quinta"
+                accent="vitoria"
+                badges={<Badge variant="vitoria">Enviado</Badge>}
+                description="A retirada acontece na loja parceira, das 10h às 20h, mediante documento com foto. Quem não retirar até sábado pega no dia da prova."
+                meta={<span>WhatsApp + e-mail · 1.102 alcançados</span>}
+              />
+              <CardDominio
+                title="Meia Floripa 2026"
+                description="Comissão 12% · cupom VENTO12 · janela de 30 dias"
+                actions={<Badge variant="heroico">Convite pendente</Badge>}
+                footer={
+                  <>
+                    <Button variant="ghost">Recusar</Button>
+                    <Button variant="primary">Aceitar</Button>
+                  </>
+                }
+              />
+            </Stack>
+          </DemoCard>
+        </div>
+      </Section>
+
       {/* ── Ações ─────────────────────────────────────────────────────── */}
       <Section title="Ações" description="Button, IconButton e DropdownMenu.">
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
@@ -708,15 +855,37 @@ export function ComponentsPage(): JSX.Element {
         </DemoCard>
 
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
-          <DemoCard title="Badge" description="As seis variantes semânticas.">
-            <div className="flex flex-wrap items-center gap-[var(--spacing-2)]">
-              <Badge variant="brand">brand</Badge>
-              <Badge variant="heroico">heroico</Badge>
-              <Badge variant="vulcao">vulcao</Badge>
-              <Badge variant="vitoria">vitoria</Badge>
-              <Badge variant="alerta">alerta</Badge>
-              <Badge variant="neutro">neutro</Badge>
-            </div>
+          <DemoCard
+            title="Badge"
+            description="As seis variantes semânticas, mais a `outline` devolvida na Onda 0 Parte B — a esteira shadcn→brasa a tinha dropado, e a landing pagou com cinco pílulas escritas à mão. O eixo `size` separa o SELO (sm: 10px uppercase, radius xs) da PÍLULA (md/lg: caixa normal, radius pill): a mesma peça em outro papel."
+          >
+            <Stack gap="md">
+              <div className="flex flex-wrap items-center gap-[var(--spacing-2)]">
+                <Badge variant="brand">brand</Badge>
+                <Badge variant="heroico">heroico</Badge>
+                <Badge variant="vulcao">vulcao</Badge>
+                <Badge variant="vitoria">vitoria</Badge>
+                <Badge variant="alerta">alerta</Badge>
+                <Badge variant="neutro">neutro</Badge>
+                <Badge variant="outline">outline</Badge>
+              </div>
+              {(['sm', 'md', 'lg'] as const).map((size) => (
+                <div key={size} className="flex flex-wrap items-center gap-[var(--spacing-2)]">
+                  <span className="w-[var(--spacing-12)] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                    {size}
+                  </span>
+                  <Badge variant="outline" size={size}>
+                    21K
+                  </Badge>
+                  <Badge variant="outline" size={size}>
+                    Camiseta
+                  </Badge>
+                  <Badge variant="vitoria" size={size}>
+                    Publicado
+                  </Badge>
+                </div>
+              ))}
+            </Stack>
           </DemoCard>
 
           <DemoCard
