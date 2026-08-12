@@ -846,3 +846,27 @@ export type {
   ListarCrmClientesOptions,
   ListarCrmClientesResult,
 } from './crm';
+
+// ---------------------------------------------------------------------------
+// Diretório de contas do painel master (ADMIN-VISAO onda 5 · S1615-T1 ·
+// RN-540): leitura paginada de `profissionais` + `atletas`, campos mínimos,
+// sem Rule nova e sem `collectionGroup`. CPF NÃO sai daqui — `pessoas` segue
+// fechada e o documento de identificação só existe pelo callable auditado
+// `consultarDocumentoDaConta` (V-4), uma conta por chamada.
+// ---------------------------------------------------------------------------
+export {
+  DIRETORIO_CONTAS_PAGE_SIZE,
+  DIRETORIO_CONTAS_PAGE_SIZE_MAX,
+  listarProfissionaisPaginado,
+  listarAtletasPaginado,
+} from './platform/diretorioContas';
+export type {
+  ContaAtletaView,
+  ContaDoDiretorio,
+  ContaProfissionalView,
+  DiretorioContasCursor,
+  DiretorioContasOptions,
+  ListarContasResult,
+  ListarProfissionaisOptions,
+  PapelDaConta,
+} from './platform/diretorioContas';
