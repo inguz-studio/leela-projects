@@ -16,6 +16,7 @@ function mkLote(over: Partial<Lote> & { modalidade: string; ordem: number }): Lo
     quantidadeLimite: 300,
     preco: 60,
     vendidos: 0,
+    reservas: 0,
     criadoEm: ts(new Date('2025-11-01T00:00:00Z')),
     atualizadoEm: ts(new Date('2025-11-01T00:00:00Z')),
     ...over,

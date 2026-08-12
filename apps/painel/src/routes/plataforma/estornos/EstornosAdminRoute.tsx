@@ -293,7 +293,7 @@ export function EstornosAdminRoute(): JSX.Element {
                   'A vaga NÃO volta ao lote sozinha',
                   ...(confirmFila.item.devolucao && confirmFila.item.devolucao.taxaRetida > 0
                     ? [
-                        `O comprador NÃO recebe ${formatBRL(confirmFila.item.devolucao.taxaRetida)} de taxa de serviço (fora da janela de arrependimento — RN-374)`,
+                        `O comprador NÃO recebe ${formatBRL(confirmFila.item.devolucao.taxaRetida)} de Serviço (fora da janela de arrependimento — RN-374)`,
                       ]
                     : []),
                 ]

@@ -85,6 +85,57 @@ export function isFormaPagamento(value: unknown): value is FormaPagamento {
 export const PIX_EXPIRACAO_SEGUNDOS = 30 * 60;
 
 /**
+ * TETO DA RESERVA DE VAGA DO PENDENTE DE CARTÃO em segundos (RN-546 ·
+ * ESTOURO-2, decidido pelo dono em 2026-08-11): **15 minutos**.
+ *
+ * Sem retoque, a frase dele: *"devolveremos a vaga após o checkout expirar,
+ * (dentro do time de 15 minutos). Se expirou os 15 minutos, o pedido nao é
+ * mais reservado."*
+ *
+ * POR QUE O CARTÃO PRECISA DE TETO E O PIX NÃO: o PIX tem vencimento
+ * natural (`pixExpiraEm`, carimbado na criação) e a varredura da RN-545 o
+ * executa. O cartão não tem vencimento nenhum — o pedido nasce `'pendente'`,
+ * a confirmação normalmente chega em segundos, e um webhook perdido deixaria
+ * o pedido pendente para sempre. Sob a RN-543, "para sempre" é uma vaga
+ * presa que ninguém consegue soltar.
+ *
+ * O NÚMERO É O DO CARRINHO, NÃO O DO PIX: 15 minutos é
+ * `CARRINHO_PRAZO_SEGUNDOS` (RN-158), o mesmo relógio do checkout. A spec
+ * havia PROPOSTO 30 (o número do PIX); o dono escolheu ancorar no prazo do
+ * checkout, e a escolha dele é a que vale. Os dois valores continuam
+ * separados de propósito — são dois relógios com dois donos, e fundi-los
+ * faria mudar o prazo do PIX mexer no estoque do cartão.
+ *
+ * O QUE VENCE COM O TETO É A RESERVA, NÃO O PEDIDO: nada é cancelado no
+ * gateway (cancelar cobrança de cartão em processamento é mexer em dinheiro
+ * em voo). A vaga volta; o pedido continua vivo; e se a confirmação chegar
+ * depois, ela entra — pago nunca é recusado (RN-498), e o excedente
+ * eventual aparece pelo caminho que a RN-498 já exige.
+ */
+export const RESERVA_CARTAO_TETO_SEGUNDOS = 15 * 60;
+
+/**
+ * A reserva de vaga deste pedido de CARTÃO já venceu pelo teto? (RN-546)
+ *
+ * CONTRATO DE TELA: é este predicado que responde "reserva expirada", e ele
+ * é exato no instante em que a pessoa olha — não espera a varredura passar
+ * (que carimba o fato até 5 minutos depois, para a trilha). Tela que
+ * precise do estado imediato usa o predicado; quem audita lê o carimbo.
+ *
+ * Só morde CARTÃO e só em pedido `'pendente'`: PIX tem `pixExpiraEm` e morre
+ * pela porta dele; pedido em estado final não reserva nada. @pure
+ */
+export function reservaDeCartaoExpirada(
+  pedido: { formaPagamento?: unknown; status?: unknown; criadoEmMillis?: unknown },
+  agoraMillis: number
+): boolean {
+  if (pedido.formaPagamento !== 'cartao_credito') return false;
+  if (pedido.status !== 'pendente') return false;
+  if (typeof pedido.criadoEmMillis !== 'number') return false;
+  return agoraMillis >= pedido.criadoEmMillis + RESERVA_CARTAO_TETO_SEGUNDOS * 1000;
+}
+
+/**
  * Motivo TIPADO da recusa de uma SEGUNDA cobrança PIX enquanto a primeira
  * está pendente e dentro do prazo (S1209-PIXBE-T2 · RN-157). Viaja no
  * `details` do erro `failed-precondition` de `createInscricaoCharge`.
@@ -133,6 +184,88 @@ export const MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO = 'pix_anterior_nao_encerrado';
  * encontra a cobrança órfã em vez de criar a segunda).
  */
 export const MOTIVO_GATEWAY_SEM_RESPOSTA = 'gateway_sem_resposta';
+
+/**
+ * Motivo TIPADO do cancelamento por PRAZO VENCIDO — o valor que vai para
+ * `canceladoMotivo` no pedido e no pagamento quando um PIX pendente passa de
+ * `pixExpiraEm` sem ser pago (RN-157 · RN-560 (ramo 2)).
+ *
+ * POR QUE ELE PRECISA DE NOME. A máquina de status não tem estado "vencido"
+ * (premissa CK2-4: reusar a máquina vigente), então o PIX que venceu vira
+ * `cancelado` — o MESMO valor de um cancelamento por qualquer outra causa. O
+ * status sozinho, portanto, não distingue "o prazo venceu" de "a cobrança foi
+ * cancelada", e uma tela que dissesse "o PIX foi cancelado depois que o prazo
+ * venceu" por cima de um `cancelado` qualquer estaria afirmando uma causa que
+ * não apurou. É este campo que autoriza a frase.
+ *
+ * DOIS ESCRITORES, UM LITERAL. Hoje quem escreve é o `expirarPixPendente`
+ * (callable disparada pelo timer do comprador); a varredura periódica da
+ * RN-545 (`varrerPixVencidos`) escreve o MESMO valor, pela RN-544, que mantém
+ * a transição `pendente → cancelado` em vez de inventar estado novo. Os dois
+ * caminhos convergem aqui de propósito: a tela do checkout reage ao CAMPO, não
+ * a quem o escreveu, e é por isso que ela não precisa saber se a varredura já
+ * subiu.
+ *
+ * TRÊS PORTAS, NA VERDADE (lane ESTOURO-BUILD, RN-544/RN-545): além do
+ * callable do comprador e da varredura agendada, existe o webhook — e ele
+ * usa motivo PRÓPRIO. O `'failed'` do OVERDUE do Asaas leva o pedido a
+ * `'falhou'`, não a `'cancelado'`, porque ali a plataforma não decidiu nada:
+ * o gateway avisou. Os dois desfechos ficam distintos de propósito, e o
+ * predicado abaixo é onde essa distinção está decidida.
+ *
+ * O VALOR NÃO MUDOU e não vai mudar: `'pix_expirado'` é o que a porta do
+ * comprador grava desde a CK2-T5 — nomear não migra dado, e nenhum doc já
+ * gravado precisa ser reescrito.
+ */
+export const MOTIVO_CANCELAMENTO_PIX_EXPIRADO = 'pix_expirado';
+
+/**
+ * Motivos de cancelamento que o par pedido+pagamento pode carregar. Lista
+ * de UM hoje: cancelar por prazo é o único caminho automático de
+ * cancelamento da plataforma. A lista existe para o próximo motivo entrar
+ * sem virar literal solto de novo.
+ */
+export type MotivoCancelamentoPedido = typeof MOTIVO_CANCELAMENTO_PIX_EXPIRADO;
+
+/** Lista canônica de motivos de cancelamento — única fonte para validação/UI. */
+export const MOTIVOS_CANCELAMENTO_PEDIDO: readonly MotivoCancelamentoPedido[] = [
+  MOTIVO_CANCELAMENTO_PIX_EXPIRADO,
+];
+
+/** Type guard de MotivoCancelamentoPedido. @pure */
+export function isMotivoCancelamentoPedido(
+  value: unknown
+): value is MotivoCancelamentoPedido {
+  return (
+    typeof value === 'string' &&
+    (MOTIVOS_CANCELAMENTO_PEDIDO as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Este pedido/pagamento morreu pelo PRAZO do PIX? (RN-157 · RN-545)
+ *
+ * A pergunta que a tela faz, num predicado só, para não reimplementar a
+ * conjunção (`status` E `canceladoMotivo`) em cada superfície — e para o
+ * caso ambíguo ficar decidido num lugar: `'cancelado'` SEM motivo é
+ * cancelamento de outra origem (ou doc anterior ao carimbo) e responde
+ * `false`. Aceita `pedido` e `pagamento` porque os dois carregam o par de
+ * campos com o MESMO significado, gravados na MESMA transação.
+ *
+ * O que ela NÃO cobre, de propósito: `'falhou'` do webhook (OVERDUE do
+ * gateway, ~1 dia depois) é outro desfecho — a plataforma não decidiu, o
+ * gateway avisou —, e a spec mantém os dois distintos. Tela que queira
+ * tratar os dois iguais faz a disjunção explícita. @pure
+ */
+export function canceladoPorPrazoPix(doc: {
+  status?: unknown;
+  canceladoMotivo?: unknown;
+}): boolean {
+  return (
+    doc.status === 'cancelado' &&
+    doc.canceladoMotivo === MOTIVO_CANCELAMENTO_PIX_EXPIRADO
+  );
+}
 
 /**
  * Ciclo de vida do pagamento — espelho PT do ChargeStatus do gateway

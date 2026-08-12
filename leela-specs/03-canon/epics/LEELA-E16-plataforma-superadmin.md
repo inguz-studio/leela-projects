@@ -2204,3 +2204,62 @@ um listener, um nome na allowlist e uma linha de copy.
 revogar) segue aberto, então a `S1616-T5` continua retida. O **LGPD-1** segue aberto, e agora ele
 carrega uma frente a mais: com o V-2 e o V-4 decididos como foram, a superfície de PII do painel
 master é maior do que era quando o item foi escrito.
+
+---
+
+## Delta a fila ganha recusa e revogação (leva 8 do dono · 2026-08-12)
+
+Fecha o **ADMIN-USUARIOS-2**, que estava no painel desde 10/08 como a pergunta que a decisão de
+09/08 não alcançava: o que se faz com um cadastro que não se quer aprovar, e o que acontece se
+quiser desfazer um acesso já concedido. Registro completo em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §8.
+
+Na íntegra: *"admin usuários - aprovar cadastro, reusar e revogar devem existir já"*
+
+### A leitura, declarada porque tem uma correção dentro
+
+**"Reusar" é lido como recusar.** É a leitura que o item pedia, é a única das duas que faz
+sentido ao lado de "aprovar" e "revogar", e ela fica escrita aqui como leitura e não como fato.
+**Se o dono corrigir, reabre barato** — nada foi construído em cima.
+
+Com essa leitura, ele decidiu **além** dos dois defaults propostos. O default da recusa era
+"fila sem recusa por ora"; o default da revogação era "não nasce nesta fase". Os dois caem.
+
+### RN-552 nasce na forma da resposta
+
+A RN-552 foi consumida em 10/08 como **condicionada ao ADMIN-USUARIOS-2**, com o número
+reservado para não virar buraco (mesmo desenho da RN-546). Ele respondeu, e ela nasce agora.
+
+**As três operações existem: aprovar, recusar e revogar.** Aprovar já estava especificado pelas
+RN-547 a RN-551 e não muda uma linha. As duas novas herdam as invariantes que a própria RN-552
+já tinha cravado antes da resposta, e elas continuam valendo exatamente como estavam escritas:
+
+- **Mesmo rastro da aprovação.** Recusa e revogação registram quem, quando, sobre quem e por
+  qual porta, no livro `auditoriaAcessos` que a Onda 1 abriu — é a RN-551, sem exceção nova.
+- **Revogação nunca apaga dado.** No máximo **suspende o tenant** pelo `transitionTenant`, que é
+  o lifecycle que já existe. Das duas opções que o item oferecia, é a única compatível com essa
+  invariante.
+
+**Defaults do maestro nas sub-decisões que a fala não alcança, todos vetáveis.** A **recusa nasce
+com estado próprio e sem comunicação automática à pessoa**: a opção de avisar existia no item e é
+a mais honesta, mas ela decide copy, tom e canal, e inventar os três sem caso real é o tipo de
+coisa que depois ninguém desfaz sem parecer grosseria. Uma linha dele acrescenta o aviso. E a
+**revogação de organizador com vendas vivas não nasce nesta fase**: a cascata dela toca dinheiro
+de terceiro, e isso não sai por default de esteira.
+
+### O que destrava
+
+A **`S1616-T5`** sai da retenção e entra na fila de build, com card próprio em
+`02-rodadas/2026-08-12-decisoes-dono/04-fila-cards.md` §Card 2. A tela da fila (S1615) continua
+na onda 5 da ADMIN-VISAO, e nascer com o gesto de recusa agora é o que evita o remendo quando a
+fila tiver volume.
+
+### O que continua preso no dono, neste épico
+
+Só o **LGPD-1** — e ele fechou na leva 7 de 11/08. A frase que o retinha (*"o aceite é
+obrigatório, e registrado no banco"*) já está registrada, então a metade de PII da onda 5
+**não olha mais para um item aberto do painel**. Deste épico, nada mais depende dele.
+
+### Painel, na mesma aterrissagem
+
+**ADMIN-USUARIOS-2 saiu** do [[DECISOES-ABERTAS]], e nenhum item entrou no lugar.

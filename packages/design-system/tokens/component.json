@@ -6,7 +6,7 @@
     "legend-pct-w":  "{spacing.10}"
   },
   "layout": {
-    "$description": "Moldura da pagina do mockup be-hero (`.main` 32px 40px 48px, grid gap 24) e ritmos internos: colunas/section 16, section-head margin 14, listas de rows 8. Toolbar fecha com padding-bottom 16 sobre hairline.",
+    "$description": "Moldura da pagina do mockup be-hero (`.main` 32px 40px 48px, grid gap 24) e ritmos internos: colunas/section 16, section-head margin 14, listas de rows 8. Toolbar fecha com padding-bottom 16 sobre hairline. As tres fracoes split-* sao as proporcoes do bento assimetrico de dois paineis medidas no painel (inventario 2026-08-11 secao 7.1): 3fr_2fr (4x), 7fr_3fr (3x), 1fr_3fr (1x). Elas viram token para a proporcao ser decisao do sistema, e nao de cada tela — o SplitPanel do DS le daqui.",
     "page-pt":         "{spacing.8}",
     "page-px":         "{spacing.10}",
     "page-pb":         "{spacing.12}",
@@ -16,7 +16,10 @@
     "section-head-mb": "{spacing.3-5}",
     "grid-gap":        "{spacing.4}",
     "list-gap":        "{spacing.2}",
-    "toolbar-pb":      "{spacing.4}"
+    "toolbar-pb":      "{spacing.4}",
+    "split-3-2":       "3fr 2fr",
+    "split-7-3":       "7fr 3fr",
+    "split-1-3":       "1fr 3fr"
   },
   "btn": {
     "$description": "Alturas 32/36/48 e px 12/14/20 do mockup `.btn`; radius sm 6.",
@@ -60,6 +63,10 @@
     "spacing":       "0.04em",
     "gap":           "{spacing.1}",
     "icon-size":     "10px"
+  },
+  "alert": {
+    "$description": "Aviso em bloco (Alert). Icone 18 — a medida que os quatro avisos do checkout ja usavam a mao (size={18} em AvisoPedidoEncerrado, AvisoPedidoEmConfirmacao, ProcessandoPagamento e DesfechoPosPagamento). Padding, raio e tipografia saem dos tokens gerais; so o icone tinha numero proprio, e por isso e o unico que vira token de componente.",
+    "icon-size":     "18px"
   },
   "chip": {
     "height":        "32px",
@@ -203,11 +210,14 @@
     "fallback-icon-size": "{spacing.5}"
   },
   "section": {
-    "$description": "Section head do mockup `.section-head`/`.h3`/`.section-link`: titulo 24px display italic -.01em; link 12px tertiary com chevron 14 (hover brand).",
+    "$description": "Section head do mockup `.section-head`/`.h3`/`.section-link`: titulo 24px display italic -.01em; link 12px tertiary com chevron 14 (hover brand). O eyebrow do CABECALHO DE BLOCO (SectionHeader, HIFI-REC) e 11px/700 uppercase .08em na tinta da marca — media que estava escrita a mao no painel e virou token na Onda 0 Parte B.",
     "title-size":     "{font.size.xl}",
     "title-spacing":  "-0.01em",
     "link-size":      "{font.size.sm}",
-    "link-icon-size": "14px"
+    "link-icon-size": "14px",
+    "eyebrow-size":    "{font.size.xs-plus}",
+    "eyebrow-weight":  "{font.weight.bold}",
+    "eyebrow-spacing": "0.08em"
   },
   "subnav": {
     "height":        "48px",

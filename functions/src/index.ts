@@ -211,6 +211,13 @@ export { expirarPixPendente } from './checkout/expirarPixPendente';
 // 15 min sem virar pedido. O cron NÃO decide a venda — quem recusa a
 // conclusão fora do prazo é o gate transacional de createInscricaoCharge.
 export { expirarCarrinhosAbandonados } from './checkout/expirarCarrinhosAbandonados';
+// Varredura do PIX VENCIDO (S322-T2 · RN-545 · ADR-015): o executor
+// automático que faltava ao prazo da RN-157 — `expirarPixPendente` é onCall
+// do dono (só roda se o comprador reabrir a tela) e o OVERDUE do Asaas chega
+// com granularidade de DIA. Cron de minuto EXPLÍCITO (`3-58/5`), efeito por
+// item REUSANDO `expirarPixPendenteCore` com o chamador de sistema:
+// gateway-primeiro e fail-safe herdados, sem segunda máquina de cancelamento.
+export { varrerPixVencidos } from './checkout/varrerPixVencidos';
 // Checkout — REENVIO dos e-mails de um pedido (F2 · P0 do DIAG-PIXREAL): a
 // ferramenta que faltava quando o provedor RECUSA a entrega e o pedido fica
 // pago, com ingresso emitido, sem ninguém conseguir reentregar a mensagem (o

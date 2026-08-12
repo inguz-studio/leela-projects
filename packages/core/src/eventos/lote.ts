@@ -83,6 +83,33 @@ export interface Lote {
    */
   vendidos: number;
   /**
+   * ∑ Vagas RESERVADAS por pedidos `'pendente'` (RN-543 · S323-T1) —
+   * escrita EXCLUSIVA de Cloud Function, mesmo regime do `vendidos`.
+   *
+   * A decisão do dono (ESTOURO-1): *"se um pedido está com pagamento
+   * pendente, a vaga não está disponível para compra."* A vaga sai do
+   * estoque quando a COBRANÇA NASCE, não quando ela paga — e volta quando o
+   * pendente morre.
+   *
+   * DUAS DIFERENÇAS DELIBERADAS EM RELAÇÃO A `vendidos`, e as duas
+   * importam:
+   *
+   *   1. NÃO É RATCHET. `vendidos` só sobe (`max(atual, tally)` no
+   *      `virarLote`); `reservas` sobe E desce, porque reserva expira.
+   *      Monotônico aqui seria o defeito: a primeira reserva vencida
+   *      travaria a vaga para sempre.
+   *   2. NÃO DISPARA VIRADA NEM CARIMBO. `loteEsgotado`,
+   *      `motivoEncerramento` e o ratchet do `virarLote` continuam lendo SÓ
+   *      `vendidos` (RN-300 intocada). Um lote com as últimas vagas
+   *      reservadas fica INDISPONÍVEL para compra sem estar ENCERRADO — se
+   *      as reservas morrerem, as vagas voltam sem reabrir nada, porque
+   *      nada foi carimbado. É o que elimina o risco de regressão de preço
+   *      que a decisão #1 do `virarLote` já recusou para o estorno.
+   *
+   * Ausente = 0 (leitura Postel — docs anteriores à RN-543 não têm o campo).
+   */
+  reservas: number;
+  /**
    * CARIMBO de virada (S300-T2 · ADR-012): quando a Function OBSERVOU o
    * encerramento do lote (auditoria/UI). Ausente = nunca encerrado. O estado
    * ativo/encerrado que o checkout consome segue DERIVADO
@@ -104,9 +131,43 @@ export interface Lote {
  */
 export const CAMPOS_FUNCTION_LOTE = [
   'vendidos',
+  'reservas',
   'encerradoEm',
   'encerradoMotivo',
 ] as const;
+
+/**
+ * Motivo TIPADO da recusa quando o lote realmente VENDEU tudo (RN-543).
+ * Viaja no `details` do `failed-precondition` de `createInscricaoCharge`.
+ *
+ * Mora no core pela mesma razão de `MOTIVO_PIX_PENDENTE_ATIVO`: é contrato
+ * entre servidor e tela. Esperar não resolve — o lote acabou.
+ */
+export const MOTIVO_LOTE_ESGOTADO = 'lote_esgotado';
+
+/**
+ * Motivo TIPADO da recusa quando as últimas vagas estão RESERVADAS por
+ * pagamentos pendentes de outras pessoas (RN-543 · RN-544).
+ *
+ * A diferença para `MOTIVO_LOTE_ESGOTADO` é a instrução ao comprador, e por
+ * isso os dois não podem compartilhar o literal: esgotado é definitivo;
+ * aqui as vagas podem voltar em minutos, porque um pendente que não paga
+ * morre pela varredura da RN-545 e devolve a vaga. Dizer "esgotado" nos dois
+ * casos seria mandar embora quem só precisava esperar cinco minutos.
+ */
+export const MOTIVO_VAGAS_EM_PAGAMENTO = 'vagas_em_pagamento';
+
+/** Mensagem canônica da recusa por lote vendido — a tela pode sobrepor. */
+export const MSG_LOTE_ESGOTADO =
+  'As vagas deste lote acabaram.';
+
+/**
+ * Mensagem canônica da recusa por vaga reservada. Diz as três coisas que o
+ * comprador precisa: não é dele a culpa, não é definitivo, e há prazo.
+ */
+export const MSG_VAGAS_EM_PAGAMENTO =
+  'As últimas vagas deste lote estão em pagamento por outras pessoas. ' +
+  'Se elas não forem pagas, as vagas voltam em alguns minutos.';
 
 // ---------------------------------------------------------------------------
 // Validações puras (shape de um lote isolado)
@@ -215,9 +276,63 @@ export function validarLotesModalidade(
 // Derivações puras — virada RN-300 / preço vigente RN-301
 // ---------------------------------------------------------------------------
 
-/** Lote esgotado por quantidade? (vendidos ≥ limite — metade da RN-300) @pure */
+/**
+ * Lote esgotado por quantidade? (vendidos ≥ limite — metade da RN-300)
+ *
+ * ⛔ LÊ SÓ `vendidos`, e isso é a fronteira 1 da RN-543: reserva NÃO encerra
+ * lote. Somar `reservas` aqui faria a virada e o carimbo (RN-300) dispararem
+ * por vaga que ainda pode voltar — e o carimbo é monotônico, então a reserva
+ * vencida deixaria um lote encerrado para sempre por uma venda que nunca
+ * houve. Quem soma a reserva é o GATE DE COMPRA (`cabeNaCapacidade`), não a
+ * virada. @pure
+ */
 export function loteEsgotado(lote: Pick<Lote, 'vendidos' | 'quantidadeLimite'>): boolean {
   return lote.vendidos >= lote.quantidadeLimite;
+}
+
+/**
+ * Vagas que ainda podem ser COMPRADAS agora (RN-543): o limite menos o que
+ * já foi vendido e o que está reservado por pagamento pendente. Nunca
+ * negativa — excedente já existente (RN-498) aparece como 0 disponível, não
+ * como número negativo na tela. @pure
+ */
+export function vagasDisponiveis(
+  lote: Pick<Lote, 'vendidos' | 'reservas' | 'quantidadeLimite'>
+): number {
+  return Math.max(0, lote.quantidadeLimite - lote.vendidos - lote.reservas);
+}
+
+/**
+ * Cabem `linhas` vagas novas neste lote? (RN-543 — o gate de compra)
+ *
+ * `vendidos + reservas + linhas > quantidadeLimite` recusa. É a aritmética
+ * que impede a segunda cobrança pela mesma última vaga, e ela roda DENTRO da
+ * transação que cria a cobrança — nenhuma janela entre checar e gravar.
+ * Multi-inscrito no mesmo lote conta cada linha. @pure
+ */
+export function cabeNaCapacidade(
+  lote: Pick<Lote, 'vendidos' | 'reservas' | 'quantidadeLimite'>,
+  linhas: number
+): boolean {
+  return lote.vendidos + lote.reservas + linhas <= lote.quantidadeLimite;
+}
+
+/**
+ * A recusa é porque o lote VENDEU tudo, ou porque as últimas vagas estão em
+ * pagamento por outra pessoa? (RN-543 · insumo do estado honesto da S323-T5)
+ *
+ * A conta é "sem as reservas, caberia?": se `vendidos + linhas` já estoura o
+ * limite, o lote está esgotado de verdade e nenhuma reserva morrendo muda
+ * isso. Se só estoura COM as reservas, as vagas podem voltar em minutos — e
+ * a tela tem o direito de dizer isso em vez do "esgotado" seco.
+ *
+ * Só faz sentido quando `cabeNaCapacidade` já respondeu `false`. @pure
+ */
+export function recusaPorReserva(
+  lote: Pick<Lote, 'vendidos' | 'reservas' | 'quantidadeLimite'>,
+  linhas: number
+): boolean {
+  return lote.vendidos + linhas <= lote.quantidadeLimite;
 }
 
 /**
@@ -342,6 +457,7 @@ export function parseLote(id: string, data: Record<string, unknown>): Lote {
   const quantidadeLimite = data['quantidadeLimite'];
   const preco = data['preco'];
   const vendidos = data['vendidos'];
+  const reservas = data['reservas'];
 
   if (typeof tenantId !== 'string' || tenantId.length === 0) {
     throw new Error(`Lote ${id}: campo "tenantId" inválido (ADR-009)`);
@@ -372,6 +488,16 @@ export function parseLote(id: string, data: Record<string, unknown>): Lote {
   if (vendidos !== undefined && (typeof vendidos !== 'number' || !Number.isInteger(vendidos) || vendidos < 0)) {
     throw new Error(`Lote ${id}: "vendidos" deve ser inteiro ≥ 0 (∑ de Function)`);
   }
+  // `reservas` (RN-543) segue a MESMA leitura Postel do `vendidos`: ausente
+  // em doc anterior à regra normaliza para 0; presente e inválido LANÇA —
+  // contador de vaga corrompido decide venda, e adivinhar aqui seria vender
+  // a mesma vaga duas vezes em silêncio.
+  if (
+    reservas !== undefined &&
+    (typeof reservas !== 'number' || !Number.isInteger(reservas) || reservas < 0)
+  ) {
+    throw new Error(`Lote ${id}: "reservas" deve ser inteiro ≥ 0 (∑ de Function)`);
+  }
 
   // Carimbos de virada (S300-T2) — opcionais; presentes e inválidos lançam
   // (trilha de auditoria corrompida em dado comercial é fail-fast).
@@ -400,6 +526,7 @@ export function parseLote(id: string, data: Record<string, unknown>): Lote {
     quantidadeLimite: quantidadeLimite as number,
     preco,
     vendidos: typeof vendidos === 'number' ? vendidos : 0,
+    reservas: typeof reservas === 'number' ? reservas : 0,
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };

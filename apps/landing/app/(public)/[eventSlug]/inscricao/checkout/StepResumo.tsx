@@ -381,13 +381,13 @@ export function StepResumo({
             {taxaRepassada ? (
               taxaServico > 0 ? (
                 <div className="flex items-center justify-between">
-                  <dt className="text-text-secondary">Taxa de serviço ({meioDaTaxa})</dt>
+                  <dt className="text-text-secondary">Serviço ({meioDaTaxa})</dt>
                   <dd className="text-text-primary">{formatarPreco(taxaServico)}</dd>
                 </div>
               ) : null
             ) : (
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-text-secondary">Taxa de serviço</dt>
+                <dt className="text-text-secondary">Serviço</dt>
                 <dd className="whitespace-nowrap text-text-secondary">inclusa no valor</dd>
               </div>
             )}

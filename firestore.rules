@@ -1153,6 +1153,27 @@ service cloud.firestore {
         }
 
         /**
+         * `reservas` (∑ de Function — RN-543) nasce 0/ausente: cliente não
+         * inventa reserva. Molde EXATO do `vendidos`, e pela mesma razão —
+         * o contador decide se a vaga está disponível para compra, então
+         * quem o escreve decide venda.
+         */
+        function reservasZeradoNoCreate() {
+          return request.resource.data.get('reservas', 0) == 0;
+        }
+
+        /**
+         * Update de cliente não TOCA `reservas` (só o checkout reserva e só
+         * as portas da RN-544 liberam). Separado de `vendidosIntocado` de
+         * propósito: são duas regras com dois donos, e fundi-las esconderia
+         * qual delas quebrou quando uma quebrar.
+         */
+        function reservasIntocado() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['reservas']);
+        }
+
+        /**
          * Carimbos de VIRADA (`encerradoEm`/`encerradoMotivo` — S300-T2)
          * nascem AUSENTES: cliente não cria lote pré-encerrado (forjaria a
          * trilha RN-300 e a UI de status).
@@ -1200,6 +1221,7 @@ service cloud.firestore {
                           && faceMinimaVendaPagaOk()
                           && modalidadeExisteNoEventoPai()
                           && vendidosZeradoNoCreate()
+                          && reservasZeradoNoCreate()
                           && viradaZeradaNoCreate())
                       || isPlatformAdmin();
         allow update: if (isTenantWriter(resource.data.tenantId)
@@ -1209,12 +1231,22 @@ service cloud.firestore {
                           && (!precoTocadoNoUpdate() || faceMinimaVendaPagaOk())
                           && modalidadeExisteNoEventoPai()
                           && vendidosIntocado()
+                          && reservasIntocado()
                           && viradaIntocada()
                           && loteComercialImutavelSeVendido())
                       || isPlatformAdmin();
+        // DELETE com reserva viva é proibido (RN-543): apagar o lote sob um
+        // pedido pendente destruiria o contador que a liberação vai
+        // decrementar — e a liberação vive DENTRO da transação que confirma
+        // o pagamento. Um doc sumido ali derrubaria a confirmação de uma
+        // compra paga, que é o pior desfecho possível desta frente. O
+        // organizador espera o pendente morrer (minutos, pela varredura da
+        // RN-545) ou paga; `platform_admin` segue podendo, porque lá o
+        // apagar é ato deliberado com dono.
         allow delete: if (isTenantWriter(resource.data.tenantId)
                           && tenantAtivo(resource.data.tenantId)
-                          && resource.data.get('vendidos', 0) == 0)
+                          && resource.data.get('vendidos', 0) == 0
+                          && resource.data.get('reservas', 0) == 0)
                       || isPlatformAdmin();
       }
 

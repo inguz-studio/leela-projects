@@ -37,11 +37,18 @@
 import * as admin from 'firebase-admin';
 import { https } from 'firebase-functions/v1';
 import {
+  cabeNaCapacidade,
   computeSaleState,
   isCodigoCupomValido,
   isFormaPagamento,
+  loteAtivo,
   meioDaForma,
+  MOTIVO_LOTE_ESGOTADO,
+  MOTIVO_VAGAS_EM_PAGAMENTO,
+  MSG_LOTE_ESGOTADO,
+  MSG_VAGAS_EM_PAGAMENTO,
   normalizarCodigoCupom,
+  recusaPorReserva,
   resolverTaxaMeio,
   roundMoney,
   type FormaPagamento,
@@ -260,6 +267,46 @@ export async function cotarInscricaoCheckoutCore(
     inscritos: input.itens,
     ...(input.cupomCodigo !== undefined ? { cupomCodigo: input.cupomCodigo } : {}),
   });
+
+  // ── RN-543 · o estado HONESTO da vaga, já na cotação (S323-T5) ──────────
+  //
+  // O gate que decide de verdade é o da transação de cobrança — este aqui
+  // não o substitui e nem tenta: entre a cotação e o pagar cabe outra venda,
+  // e a autoridade tem de ficar onde não há janela. O que ele faz é chegar
+  // ANTES: dizer ao comprador que não há vaga enquanto ele ainda está na
+  // vitrine, em vez de deixá-lo preencher o formulário inteiro para levar a
+  // recusa na cara do cartão.
+  //
+  // E ele responde com o motivo TIPADO certo. Sem isto, "esgotado" e "as
+  // últimas vagas estão em pagamento por outra pessoa" chegariam à tela como
+  // a mesma mensagem — e são instruções opostas: uma manda embora, a outra
+  // pede cinco minutos.
+  const linhasPorModalidade = new Map<string, number>();
+  for (const item of insumos.itens) {
+    linhasPorModalidade.set(
+      item.modalidade,
+      (linhasPorModalidade.get(item.modalidade) ?? 0) + 1
+    );
+  }
+  for (const [modalidade, linhas] of linhasPorModalidade) {
+    const lotes = insumos.itens.find((i) => i.modalidade === modalidade)
+      ?.lotesDaModalidade;
+    if (lotes === undefined || lotes.length === 0) continue; // modalidade legada
+    const ativo = loteAtivo(lotes, agora());
+    // Sem lote ativo a venda está fechada, e quem já diz isso com a
+    // mensagem certa é o `computeSaleState` logo abaixo — não duplicamos.
+    if (ativo === null) continue;
+    if (cabeNaCapacidade(ativo, linhas)) continue;
+    const porReserva = recusaPorReserva(ativo, linhas);
+    throw new https.HttpsError(
+      'failed-precondition',
+      porReserva ? MSG_VAGAS_EM_PAGAMENTO : MSG_LOTE_ESGOTADO,
+      {
+        motivo: porReserva ? MOTIVO_VAGAS_EM_PAGAMENTO : MOTIVO_LOTE_ESGOTADO,
+        modalidade,
+      }
+    );
+  }
 
   let sale: SaleState;
   try {

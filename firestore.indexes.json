@@ -121,6 +121,20 @@
       ]
     },
     {
+      "collectionGroup": "pagamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pixExpiraEm",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
@@ -282,6 +296,20 @@
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "lotes",
+      "fieldPath": "reservas",
+      "indexes": [
+        {
+          "queryScope": "COLLECTION",
+          "order": "ASCENDING"
+        },
+        {
+          "queryScope": "COLLECTION_GROUP",
+          "order": "ASCENDING"
+        }
+      ]
+    },
     {
       "collectionGroup": "lotes",
       "fieldPath": "fimEm",

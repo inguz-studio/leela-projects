@@ -1,0 +1,47 @@
+# SplitPanel — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: SplitPanel
+version: 0.0.1
+generated_at: "2026-08-11"
+source: src/components/SplitPanel
+verdict: NASCEU NA ONDA 0 PARTE B (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { SplitPanel, type SplitPanelProps } from '@leela/design-system'
+Superfície pública (landing, ADR-017): import { SplitPanel } from '@leela/design-system/server'
+
+## Quando usar
+Dois painéis lado a lado em proporção desigual — o "bento" de gráfico principal + coluna de apoio. Empilha no estreito e abre a partir de `lg`, que é o ponto de colapso do shell.
+
+## Quando NÃO usar
+Painéis de mesma largura são FormGrid columns={2}. Três ou mais blocos são FormGrid/MetricGrid. Um bloco só é Stack.
+
+## Props válidas
+- ratio: '3:2' | '7:3' | '1:3'   (default: '3:2')   — principal : apoio, na ordem dos filhos
+- gap: 'sm' | 'md' | 'lg'   (default: 'md')
+- as: 'div' | 'section'   (default: 'div')
+- ...todas as props de React.HTMLAttributes<HTMLDivElement>
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --layout-split-3-2 / --layout-split-7-3 / --layout-split-1-3
+- --layout-list-gap / --layout-grid-gap / --layout-main-gap
+
+## Proibido (do/don't)
+DON'T: className="lg:grid-cols-[2fr_1fr]" para uma quarta proporção. O conjunto é fechado nas três medidas; uma quarta entra por token novo em tokens/component.json + linha no cânone, no MESMO commit.
+DON'T: className="md:grid-cols-2" para abrir antes. Abaixo de `lg` sobram menos de 784px de conteúdo e dois painéis não cabem.
+DO: exatamente dois filhos, na ordem principal → apoio.
+
+## Exemplo mínimo (válido, copiável)
+<SplitPanel>
+  <Card>…gráfico…</Card>
+  <Card>…alertas…</Card>
+</SplitPanel>
+
+## Exemplo completo (válido, copiável)
+<SplitPanel as="section" ratio="7:3" gap="lg" aria-label="Resumo do evento">
+  <Card>…inscrições por dia…</Card>
+  <Card>…alertas…</Card>
+</SplitPanel>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente SplitPanel apenas com as props e valores listados acima. A proporção é token do sistema; nunca escreva a fração em classe arbitrária numa tela.

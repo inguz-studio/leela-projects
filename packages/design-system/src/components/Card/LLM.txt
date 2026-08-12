@@ -16,14 +16,14 @@ Contêiner genérico de superfície (composicional, estilo shadcn): Card > CardH
 Não use para cards de domínio: eventos usam CardEvento e desafios usam CardDesafio. Para diálogos use Modal.
 
 ## Props válidas
-Todos os subcomponentes aceitam somente props nativas HTML (nenhuma prop própria, nenhum variant):
-- Card: React.HTMLAttributes<HTMLDivElement> (div)
+Os subcomponentes aceitam props nativas HTML. As duas únicas props próprias são de SEMÂNTICA (`as`), nunca de visual — o className é byte a byte o mesmo em qualquer tag:
+- Card: React.HTMLAttributes<HTMLDivElement> + as?: 'div' | 'article' | 'section' | 'li' | 'aside' (default 'div')
 - CardHeader: React.HTMLAttributes<HTMLDivElement> (div)
-- CardTitle: React.HTMLAttributes<HTMLHeadingElement> (h3)
+- CardTitle: React.HTMLAttributes<HTMLHeadingElement> + as?: 'h2' | 'h3' | 'h4' (default 'h3')
 - CardDescription: React.HTMLAttributes<HTMLParagraphElement> (p)
 - CardContent: React.HTMLAttributes<HTMLDivElement> (div)
 - CardFooter: React.HTMLAttributes<HTMLDivElement> (div)
-Tipos exportados no barrel (aliases das props nativas, sem prop própria): CardProps, CardHeaderProps, CardTitleProps, CardDescriptionProps, CardContentProps, CardFooterProps.
+Tipos exportados no barrel: CardElement, CardProps, CardHeaderProps, CardTitleProps, CardDescriptionProps, CardContentProps, CardFooterProps.
 
 ## Tokens consumidos (nenhum valor cru permitido)
 - --spacing-1 / --spacing-6
@@ -35,7 +35,11 @@ Aliases shadcn->brasa usados: bg-card (= surface-raised), text-card-foreground (
 DON'T: props variant, elevation, padding — NÃO existem; ajuste via className com tokens.
 DON'T: CardAction ou CardMedia — não existem neste DS.
 DON'T: hex, rgb, px, rem em style inline.
-DO: siga a ordem CardHeader > CardContent > CardFooter; CardTitle já é h3 semântico.
+DON'T: usar `as` para mudar aparência. Ele muda a TAG, e só: a semântica é a razão de existir dele.
+DON'T: <Card> solto dentro de <ul> — use as="li". <div> filho direto de lista quebra a semântica.
+DON'T: converter <section aria-label> para <Card> sem as="section". Um <div> com aria-label e sem role não é landmark nenhum, e a conversão silenciosa apaga um marco de navegação de leitor de tela.
+DO: siga a ordem CardHeader > CardContent > CardFooter; CardTitle é h3 por default e desce por `as`.
+DO: cartão de ENTIDADE (clube, comunicado, campanha, parceria, afiliação) é CardDominio, que já compõe este Card com os slots certos.
 
 ## Exemplo mínimo (válido, copiável)
 <Card>

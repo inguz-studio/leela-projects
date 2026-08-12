@@ -59,6 +59,10 @@ function lote(partial: Partial<LoteVenda> & { id: string; preco: number }): Lote
     inicioEm: ts('2026-02-01T00:00:00-03:00'),
     fimEm: ts('2026-04-01T00:00:00-03:00'),
     vendidos: 0,
+    // RN-543: o contador de reserva entrou no LoteVenda. Ele não participa
+    // de preço nenhum — estas suítes provam dinheiro, e o 0 é a prova de
+    // que nada mudou nelas.
+    reservas: 0,
     quantidadeLimite: 100,
     ...partial,
   };

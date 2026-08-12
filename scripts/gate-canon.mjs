@@ -30,6 +30,21 @@
 //   node scripts/gate-canon.mjs              # verifica contra o baseline
 //   node scripts/gate-canon.mjs --atualizar  # regrava o baseline (só se desceu)
 //   node scripts/gate-canon.mjs --relatorio  # lista arquivo:linha de cada contagem
+//   node scripts/gate-canon.mjs --remedir "razão"   # regrava APÓS a régua mudar
+//
+// Sobre o `--remedir`, que nasceu na Onda 0 Parte B: `--atualizar` recusa
+// quando uma contagem sobe, e essa recusa é o coração da catraca. Só que ela
+// tem um ponto cego — quando o INSTRUMENTO fica melhor, o número sobe sem que
+// o código tenha piorado. Foi o que aconteceu no dia em que `SecaoHead` virou
+// sinônimo de `SectionHeader`: a mesma árvore, uma régua mais longa, 2 → 3.
+//
+// Sem porta declarada, o único caminho seria editar o JSON à mão — que é
+// exatamente o "conserte o baseline em vez do código" que este script existe
+// para impedir, e que não deixaria rastro nenhum. Com ela, remedir exige uma
+// RAZÃO em texto, a razão fica versionada dentro do próprio baseline, e o ato
+// aparece sozinho no diff da revisão. É o mesmo desenho da porta única de
+// exceção da governança §8: não se proíbe o caso legítimo, obriga-se ele a
+// aparecer.
 // =============================================================================
 
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -45,6 +60,10 @@ const CANONE_DOC = join(RAIZ, 'leela-specs/03-canon/canone-de-componentes.md');
 
 const atualizar = process.argv.includes('--atualizar');
 const relatorio = process.argv.includes('--relatorio');
+/** `--remedir "razão"` — a porta declarada para quando a RÉGUA muda. */
+const iRemedir = process.argv.indexOf('--remedir');
+const remedir = iRemedir >= 0;
+const razaoDaRemedicao = remedir ? (process.argv[iRemedir + 1] ?? '').trim() : '';
 
 let failures = 0;
 const fail = (msg) => {
@@ -294,21 +313,30 @@ const ehBotaoCruEstilizado = (attrs) =>
 const contagens = {
   'superficie-crua': {},
   'botao-cru-estilizado': {},
+  'grade-crua': {},
   'receita-de-grid': {},
   'padrao-orfao': {},
 };
 const detalhes = {
   'superficie-crua': [],
   'botao-cru-estilizado': [],
+  'grade-crua': [],
   'receita-de-grid': [],
   'padrao-orfao': [],
 };
-/** Assinaturas distintas de grade — mede a AUSÊNCIA de cânone de layout (§6). */
+/**
+ * Assinaturas distintas de grade. Até 11/08 esta contagem media a AUSÊNCIA de
+ * cânone de layout (§6): 23 receitas para três famílias, e nada contra o quê
+ * reprovar. A CANONE-1 fechou o vazio — `Stack`, `FormGrid`, `MetricGrid`,
+ * `SplitPanel` e `SectionHeader` nasceram no DS na Onda 0 Parte B —, então ela
+ * passa a medir a DÍVIDA: quantas receitas ainda existem escritas à mão.
+ */
 const receitasDeGrid = {};
 
 for (const { app, dir } of APPS) {
   contagens['superficie-crua'][app] = 0;
   contagens['botao-cru-estilizado'][app] = 0;
+  contagens['grade-crua'][app] = 0;
   contagens['padrao-orfao'][app] = 0;
   receitasDeGrid[app] = new Set();
 
@@ -329,21 +357,42 @@ for (const { app, dir } of APPS) {
       }
     }
     // Padrão órfão: `<details>`/`<summary>` (acordeão sem canônico) — a regra
-    // dura NÃO os reprova (spec §5/§6): enquanto a decisão CANONE-1 não voltar,
-    // a instância é permitida e CONTADA.
+    // dura NÃO os reprova (spec §5/§6): enquanto a decisão não voltar, a
+    // instância é permitida e CONTADA. O acordeão é o que sobrou desta lista
+    // depois da CANONE-1: layout composto SAIU dela em 11/08, porque agora tem
+    // canônico e por isso vira dívida com catraca (`grade-crua`), e não mais
+    // finding de processo.
     for (const t of tagsDeAbertura(fonte, ['details'])) {
       contagens['padrao-orfao'][app] += 1;
       detalhes['padrao-orfao'].push(`${caminho}:${t.linha}  <details> (acordeão sem canônico)`);
     }
-    // Receitas de grade (§6 · mede a AUSÊNCIA de cânone de layout). O que
-    // interessa não é quantas contagens de coluna existem, é quantas RECEITAS
-    // distintas foram inventadas — e receita é o conjunto de tokens
-    // `grid-cols-*` de um mesmo bloco de classes, COM os modificadores
-    // responsivos. `grid-cols-1 sm:grid-cols-2` é uma receita, não duas.
+    // ── Grade escrita à mão ────────────────────────────────────────────────
+    //
+    // DUAS contagens do mesmo fato, e cada uma responde uma pergunta que a
+    // outra não responde:
+    //
+    //   `grade-crua`      quantas INSTÂNCIAS ainda montam moldura na mão. É o
+    //                     tamanho da dívida, e o que as ondas 1 a 5 derrubam.
+    //   `receita-de-grid` quantas RECEITAS distintas foram inventadas. É a
+    //                     diversidade, e o que denuncia tela reinventando a
+    //                     fração mesmo com o primitivo publicado.
+    //
+    // Receita é o conjunto de tokens `grid-cols-*` de um mesmo bloco de
+    // classes, COM os modificadores responsivos: `grid-cols-1 sm:grid-cols-2`
+    // é uma receita, não duas.
+    //
+    // Os primitivos do DS ficam FORA da contagem por construção — o script só
+    // varre `apps/`, e é lá que a moldura à mão é dívida. Dentro do design
+    // system a classe de grade é o produto.
     for (const bloco of fonte.matchAll(/(?:className|class)=(?:"([^"]*)"|\{`([^`]*)`\}|'([^']*)')/g)) {
       const classes = bloco[1] ?? bloco[2] ?? bloco[3] ?? '';
       const tokens = [...classes.matchAll(/(?:[\w-]+:)*grid-cols-[\w[\]().,_%+-]+/g)].map((t) => t[0]);
-      if (tokens.length > 0) receitasDeGrid[app].add([...new Set(tokens)].sort().join(' '));
+      if (tokens.length > 0) {
+        receitasDeGrid[app].add([...new Set(tokens)].sort().join(' '));
+        contagens['grade-crua'][app] += 1;
+        const linha = fonte.slice(0, bloco.index).split('\n').length;
+        detalhes['grade-crua'].push(`${caminho}:${linha}  ${[...new Set(tokens)].sort().join(' ')}`);
+      }
     }
   }
   contagens['receita-de-grid'][app] = receitasDeGrid[app].size;
@@ -362,7 +411,8 @@ for (const [regra, achados] of Object.entries(achadosPorRegra)) {
 
 // ── comparação com o baseline ────────────────────────────────────────────────
 const anterior = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : null;
-const atual = { medidoEm: new Date().toISOString().slice(0, 10), contagens };
+const hoje = new Date().toISOString().slice(0, 10);
+const atual = { medidoEm: hoje, contagens };
 
 if (relatorio) {
   console.log('\nRELATÓRIO · arquivo:linha por contagem\n');
@@ -395,17 +445,57 @@ if (!anterior) {
   }
 }
 
+/** Toda contagem que subiu em relação ao baseline, com o antes e o depois. */
+function subidas() {
+  if (!anterior) return [];
+  const lista = [];
+  for (const [nome, porApp] of Object.entries(contagens)) {
+    for (const [escopo, n] of Object.entries(porApp)) {
+      const base = anterior.contagens?.[nome]?.[escopo];
+      if (base !== undefined && n > base) lista.push({ chave: `${nome}.${escopo}`, de: base, para: n });
+    }
+  }
+  return lista;
+}
+
 if (atualizar) {
-  const desceu =
-    !anterior ||
-    Object.entries(contagens).every(([nome, porApp]) =>
-      Object.entries(porApp).every(([escopo, n]) => n <= (anterior.contagens?.[nome]?.[escopo] ?? Infinity)),
+  const acima = subidas();
+  if (acima.length > 0) {
+    fail(
+      `\`--atualizar\` recusado: ${acima.map((s) => `${s.chave} ${s.de}→${s.para}`).join(', ')} SUBIU. ` +
+        'Conserte o código, não o baseline. Se foi a RÉGUA que mudou, use `--remedir "razão"`.',
     );
-  if (!desceu) {
-    fail('`--atualizar` recusado: alguma contagem SUBIU. Conserte o código, não o baseline.');
   } else {
+    // A remedição anterior segue no arquivo: ela é histórico, não estado.
+    if (anterior?.remedicoes) atual.remedicoes = anterior.remedicoes;
     writeFileSync(BASELINE, `${JSON.stringify(atual, null, 2)}\n`, 'utf8');
     pass(`baseline regravado em ${rel(BASELINE)}`);
+  }
+}
+
+if (remedir) {
+  if (razaoDaRemedicao.length < 20 || razaoDaRemedicao.startsWith('--')) {
+    fail(
+      '`--remedir` exige uma RAZÃO em texto (mín. 20 caracteres) — ela é gravada no baseline e ' +
+        'aparece no diff. Ex.: --remedir "SecaoHead virou sinônimo de SectionHeader na Onda 0 Parte B"',
+    );
+  } else {
+    const acima = subidas();
+    atual.remedicoes = [
+      ...(anterior?.remedicoes ?? []),
+      {
+        data: hoje,
+        razao: razaoDaRemedicao,
+        subiram: acima.map((s) => `${s.chave}: ${s.de} → ${s.para}`),
+      },
+    ];
+    writeFileSync(BASELINE, `${JSON.stringify(atual, null, 2)}\n`, 'utf8');
+    pass(`baseline REMEDIDO em ${rel(BASELINE)} — razão gravada no arquivo`);
+    if (acima.length > 0) {
+      console.log(
+        `  ! subiram por mudança de régua: ${acima.map((s) => `${s.chave} ${s.de}→${s.para}`).join(', ')}`,
+      );
+    }
   }
 }
 

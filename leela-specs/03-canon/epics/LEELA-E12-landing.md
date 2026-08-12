@@ -4004,6 +4004,49 @@ Três fronteiras, escritas para a lane de build não redescobri-las:
 - **Nada aqui cria pedido, inscrito ou cobrança em ponto novo** (RN-440 intocada), e a tela continua
   sendo aviso e nunca garantia de emissão (RN-421).
 
+#### O mecanismo, decidido com registro (lane CKPIX-FLOW · 11/08)
+
+A fronteira acima mandava a esteira escolher e registrar. Escolhido: **assinatura do doc do pedido
+(`onSnapshot`)**, por `observarPedido` novo em `packages/api-client/src/pedidos.ts`, ao lado do
+`getPedido` que a S1225-T3 já usava. Três razões, e a terceira é a que fecha:
+
+- a Rule da RN-469 **já autoriza** o comprador a ler o próprio pedido, doc a doc, e o `allow read`
+  avalia igual no `getDoc` e no listener — nenhuma permissão nova;
+- o custo é **uma leitura por mudança real**, contra uma por janela no polling: um PIX de 30 minutos
+  consultado a cada 5 s são 360 leituras por checkout abandonado, contra 1 aqui;
+- a cadência do polling seria **chute**, porque o webhook não tem hora marcada. Um número escolhido
+  no escuro é o que esta regra veio tirar da tela.
+
+A leitura de carregamento e o botão "Atualizar estado do pedido" da S1225-T3 **ficam**, como rede:
+assinatura cai (Rules, rede, aba suspensa por horas), e é o botão que sobra entre o comprador e o
+escuro do incidente de 04/08.
+
+Duas coisas que a implementação teve de acertar e valem para quem mexer depois:
+
+- **`falhou` num PIX é vencimento, e é prova, não palpite.** O mapa `WEBHOOK_EVENT_TO_CHARGE`
+  (`functions/src/payments/asaasProvider.ts`) tem três eventos que viram `failed`; dois são de cartão
+  por definição. Sobra `PAYMENT_OVERDUE` — o mesmo fato que a varredura da RN-545 carimba como
+  `pix_expirado` pelo outro caminho. Sem essa leitura, o vencimento que chega pelo gateway contaria
+  ao comprador uma história diferente do que chega pela nossa varredura.
+- **O `canceladoMotivo` era escrito e descartado.** `expirarPixPendente` grava a causa desde a CK2-4
+  e `parsePedido` a jogava fora — o doc carregava a razão e nenhuma tela podia lê-la. O campo entrou
+  no contrato do core por leitura Postel, com a constante `MOTIVO_CANCELAMENTO_PIX_EXPIRADO` como
+  ponto de encontro com a lane ESTOURO-BUILD. Sem ele, o ramo 2 teria de adivinhar a causa a partir
+  do `status`, que não distingue "o prazo venceu" de qualquer outro cancelamento.
+
+**O quinto ramo** (RN-546 · ESTOURO-2, leva 7) entra pela mesma porta e sai por outra: reserva
+vencida devolve a pessoa à **página do evento**, não à área do cliente — ali não houve compra, e o
+que ela precisa é escolher de novo. A tela está construída e testada; o predicado que a acende
+(`reservaDoPedidoExpirou`) responde `false` até a ESTOURO-BUILD definir o campo, porque a RN-546 é
+explícita em que o **pedido continua vivo** — a expiração da reserva não é transição de `status`, e
+chutar o nome do campo produziria um ramo que nunca acende ou que acende no doc errado.
+
+⛔ **Fica aberto para o dono, e não é da esteira:** o "área do cliente **logado**" da frase dele. O
+checkout cria sessão **anônima** e nunca a promove; `/minha-conta` é inalcançável por sessão anônima
+por decisão anterior (RN-451); e a conta nasce fora de banda pelo `contaSemFriccao`, com link por
+e-mail. Quem comprou pela primeira vez cai na porta de entrada — agora com o aviso explicando por
+que saiu do checkout, mas ainda tendo de entrar. Fechar isso é frente própria.
+
 ### RN-561 (nova, dona) · o endereço completo é exigido por segurança e cadastro, e a razão fica escrita
 
 Na íntegra: *"ck endereço, nao mude nada, mantém pedindo o endereço, pois isso pe importante para
@@ -4041,3 +4084,152 @@ que ela buscava vem da própria regra, porque só a taxa Leela se chama Serviço
 de merge, que vale mais que a pressa: o inventário é de 09/08 e mira caminhos que o rename de
 Parcerias mudou, então **re-inventariar antes de trocar**. Os campos continuam intocados pela mesma
 razão de sempre: renome é de texto, nunca de dado financeiro.
+
+---
+
+## Delta o aceite de saúde passa a ser auditável (leva 7 do dono · 2026-08-11)
+
+O **LGPD-1** foi decidido na noite de 11/08, na íntegra: *"o aceite é obrigatório, e registrado no
+banco."* A frente do resgate mora no [[LEELA-E00-fundacao-tecnica]] (o overlay recolhe o aceite
+quando o registro falta, e o seed do primeiro convite destrava). **A frente que mora aqui é o termo
+de saúde**, e ela vinha da mesma conversa jurídica desde 09/08.
+
+Hoje o pedido guarda, do aceite de saúde, **a versão e a hora, e nada mais**. O texto é montado na
+hora da leitura e o nome da produtora entra nele vindo do perfil vigente — então trocar o nome da
+produtora reescreve, para trás, perante quem cada pessoa declarou estar apta. A assimetria é o que
+denunciava o buraco: o **termo de uso** guarda `materialHash`, a impressão digital do texto aceito,
+e o de saúde não guardava.
+
+"Registrado no banco" alcança os dois. O aceite de saúde passa a **carimbar `materialHash` como o
+termo de uso já faz**, e o texto ganha versão nova quando muda — que é a primeira das três saídas
+que o painel listava. As outras duas ficam escritas como recusadas: congelar o texto inteiro dentro
+do pedido guarda mais do que a prova exige, e deixar como está transformaria em acidente o que
+agora é decisão.
+
+**Efeito prático hoje, medido:** nulo. Os três aceites que sobrevivem à limpeza são compras de
+teste do dono (`8CDHM`, `Q57PA`, `N4FHP`). O preço subia com cada venda real, e é por isso que a
+regra entra antes do volume.
+
+**Onde vive:** `aceites.saude` no documento do pedido, `paragrafosDoTermoSaude` em
+`AceitesCompra.tsx` e `resolverOrganizadorPublico` em `apps/landing/lib/leitor.ts`. Medição em
+`.nirvana/handoffs/leela-limpeza-prod-20260806.md §T9`. A **PB-11 continua aberta** e é outra
+pergunta: ela é sobre o retry carimbar a versão que a pessoa não leu, não sobre o que se guarda do
+texto.
+
+---
+
+## Delta a leva 8 do dono — a conta nasce no fim da compra, e a lista muda de fonte (2026-08-12)
+
+Formaliza os quatro itens deste épico que o dono decidiu na manhã de 12/08: **CKLOGIN-1**,
+**PB-11**, **ARENA-1** e **ARENA-4**. As palavras dele estão na íntegra em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`, e a tabela de modalidades derivada
+está em `02-rodadas/2026-08-12-decisoes-dono/02-tabela-modalidades.md`.
+
+### Regras de negócio novas (faixa RN-562 a RN-564, RN-567)
+
+- **RN-562 · A sessão do checkout vira conta ao confirmar o pagamento.** Na íntegra:
+  *"Ok, promova a sessao ao confirmar o pagamento."* A sessão anônima criada pelo checkout é
+  promovida a conta logada no instante em que o pagamento é confirmado — uma vez, e nunca em
+  cobrança pendente. A **RN-451 não muda**: a área do cliente continua inalcançável por sessão
+  anônima; o que muda é que a sessão deixa de ser anônima no fim de uma compra paga. **A
+  fronteira de autenticação das RN-476 a RN-480 é re-provada no mesmo ato**, com teste que
+  compara o desfecho campo a campo — é o custo que o item declarou e o dono aceitou, e não é
+  regressão opcional. A conta promovida herda o tipo de participante que o `contaSemFriccao` já
+  cria; a RN-480 fica intocada (nenhuma das portas cria conta profissional). A regra **não
+  escolhe o mecanismo** da promoção: isso é decisão de engenharia com registro dentro da lane de
+  build. Nenhuma senha é pedida dentro do checkout — a terceira opção do item caiu quando ele
+  escolheu a primeira. **Consome:** RN-451, RN-476 a RN-480, RN-560. **História:** S1247.
+
+- **RN-563 · A lista física deriva do catálogo de esportes do Strava, e o frescor é obrigação
+  recorrente.** Na íntegra: *"Essa listagem deve ser baseada nas modaliades disponiveis no
+  strava (para as fisicas), ja a mental e espiritual voce já deveria ter as opções...."* A parte
+  **física** da lista de interesses deixa de derivar só do catálogo interno e passa a derivar
+  dos tipos de esporte do Strava; **mental e espiritual continuam saindo da RN-114** (3 pilares,
+  16 ações). A regra **não revoga a RN-553**: a derivação por função pura sobre constantes do
+  core continua sendo o desenho, com as mesmas três proibições — nenhuma cópia literal em
+  consumidor, nenhuma leitura de Firestore para obter a lista, nenhuma edição por organizador ou
+  participante. O que muda é de onde vem a parte física dessas constantes. **Gate de frescor:**
+  cada consulta à lista oficial registra **URL e data**; a consulta desta rodada foi em
+  **2026-08-12**, contra `https://developers.strava.com/swagger/sport_type.json` (56 valores do
+  enum `SportType`, autoridade dos identificadores) e
+  `https://support.strava.com/en-us/articles/15402005-supported-sport-types-on-strava` (52
+  tipos em 5 grupos, nomes humanos). A página `developers.strava.com/docs/reference/` **não**
+  enumera o tipo, e quem for por ela sai com três exemplos. **Termo órfão da fonte externa é
+  declarado**, nunca silencioso: a derivação sabe quais termos não vêm do Strava e diz isso,
+  para o gate seguinte não os tratar como termo removido. **Consome:** RN-553, RN-114 (E05,
+  intocada). **História:** S1245.
+
+- **RN-564 · Uma lista, três consumidores.** Na íntegra: *"é o mesmo que devemos perguntar num
+  onboardins de novos usuários. e entra como preferencias do perfil também"*. A mesma derivação
+  serve os **interesses da Arena**, o **onboarding de usuário novo** e as **preferências do
+  perfil**. Amplia a RN-556, que fica citada e **não revogada** — as quatro fronteiras que ela
+  mediu seguem de pé: nada de social, radar intocado, agregados de desafio intocados, vitrine e
+  evento intocados. Consumidor novo **importa a derivação**, nunca cria a própria: duas listas
+  divergindo é o custo que o ARENA-2 existiu para evitar, e três consumidores multiplicam esse
+  custo em vez de somá-lo. **Consome:** RN-553, RN-556, RN-563. **Histórias:** S1248, S1249.
+
+- **RN-567 · No replay, a prova carimba a vigente, e a divergência fica registrada.** Na
+  íntegra: *"3 - em vigor."* O comportamento que valia por default do maestro passa a valer por
+  decisão dele. No replay de uma cobrança de pedido que já nasceu, a prova de aceite carimba a
+  política **vigente no momento do carimbo**, e a divergência com a versão exibida **não recusa
+  a compra**. A regra nomeia a consequência que ele aceitou de olhos abertos, porque regra que
+  esconde o próprio custo é regra que alguém conserta por engano depois: o documento pode
+  guardar uma prova que aponta para um texto que não estava na tela da pessoa. **A conferência
+  na criação não afrouxa** — pedido que nasce com versão divergente continua recusado. **Default
+  vetável:** a divergência passa a ser **registrada** no pedido, em vez de sumir, o que separa
+  "prova errada" de "prova errada e rastreável". **Onde vive:**
+  `aceitesVersaoExibida.integration` e o caminho de replay de `createInscricaoCharge`.
+
+### RN-557 nasce na forma da resposta — o vocabulário exposto
+
+A RN-557 foi consumida em 10/08 como **condicionada ao ARENA-4**, com o número reservado para
+não virar buraco (mesmo desenho da RN-546 e da RN-552). Ele respondeu, e ela nasce agora.
+
+O vocabulário exposto é a tabela de **50 termos em 3 pilares** de
+`02-rodadas/2026-08-12-decisoes-dono/02-tabela-modalidades.md`: 41 no Físico, 5 no Mental e 4 no
+Espiritual. Contra os 56 tipos do Strava, a tabela propõe **16 cortes** (o bloco de neve e gelo,
+os três virtuais, dois aparelhos de academia, a fisioterapia e três sem prática no Brasil), **2
+fusões novas** (bicicleta elétrica; canoagem e caiaque) e **3 acréscimos declarados** — beach
+tennis, que o Strava não tem e é a modalidade de crescimento mais visível no Brasil; triatlo,
+que é modalidade do clube e não existe no enum; e sono e descanso, que vem da tabela de 10/08
+com o rótulo já reescrito.
+
+As **cinco fusões da tabela de 10/08 sobrevivem inteiras** dentro do mapeamento novo: Corrida,
+Caminhada, Ciclismo, Natação e Yoga e alongamento continuam juntando a ação do catálogo, a
+modalidade do clube e agora o tipo do Strava sob um rótulo só. As **9 modalidades do clube** e
+as **16 ações do catálogo** estão todas cobertas. A **RN-554 fica intocada** pela fusão: o
+rótulo é apresentação, o identificador é contrato.
+
+A tabela continua **vetável barato** enquanto a tela de interesses não nascer. Ela crava o
+vocabulário de partida, não o vocabulário para sempre.
+
+### ARENA-1 · o dado nasce guardado, e a abertura tem endereço
+
+Na íntegra: *"a ideia é que isso vire um 'tinder' depois, com essas informações. quando
+desenvolvermos a versão mobile."* Hoje vale o default: só a própria pessoa vê. A **RN-471
+continua governando** o default restrito e a **RN-472 fica intocada** — os gêneros de pessoas
+nunca ficam visíveis por default, e essa régua é justamente a que a conexão vai ter de respeitar
+quando existir. A visão de conexão e descoberta entre participantes está registrada como
+**direção de produto** no [[LEELA-E13-app-atleta]], que é o épico da versão mobile. **Nada se
+constrói agora.**
+
+O que a visão obriga desde já, sem construir nada: o dado de Arena nasce com o campo de
+visibilidade **por pessoa** previsto no modelo, mesmo que hoje só aceite um valor. Mudar
+visibilidade depois de existir dado de gente real é retrabalho caro, e o item dizia isso antes
+de ser decidido. Isso é desenho de modelo, não feature.
+
+### Histórias novas
+
+| História | O que entrega | Espera |
+|---|---|---|
+| **LEELA-S1247** · A sessão do checkout vira conta ao pagar | promoção da sessão anônima no pagamento confirmado (T1) + re-prova da fronteira de autenticação (T2) + o aviso do caminho do e-mail sai da porta (T3) | nada |
+| **LEELA-S1248** · O onboarding pergunta os interesses | o passo de interesses no onboarding de usuário novo, consumindo a derivação | `S1245-T1` |
+| **LEELA-S1249** · As preferências do perfil leem a mesma lista | as preferências lendo a mesma derivação, com o que a pessoa já escolheu no onboarding | `S1245-T1` |
+
+A `S1245-T2` (a lista exposta com o corte) **destrava** com a RN-557 na forma final. Fila com os
+seis cards em `02-rodadas/2026-08-12-decisoes-dono/04-fila-cards.md`.
+
+### Painel, na mesma aterrissagem
+
+**Quatro itens deste épico saíram** do [[DECISOES-ABERTAS]]: CKLOGIN-1, PB-11, ARENA-1 e
+ARENA-4. Nenhum entrou no lugar. A conta do painel cai de **12 para 4**.

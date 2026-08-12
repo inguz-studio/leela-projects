@@ -14,6 +14,10 @@ import {
   // query e o parse já são audit trail, não se reinventa leitor de dinheiro.
   getLeelaDb,
   getPedido,
+  // CKPIX-1 · RN-560 — o canal que a revogação da RN-470 pede. O mesmo
+  // `parsePedido` do `getPedido`, agora em tempo real: quem escreve o desfecho
+  // é o webhook, num instante que ninguém nesta tela controla.
+  observarPedido,
   loginAnonimo,
   type ConfirmarPagamentoSandboxResult,
   type CotarInscricaoCheckoutResult,
@@ -57,9 +61,23 @@ import { StepResumo, type LinhaResumo } from './StepResumo';
 import { StepPagamento, type CartaoForm } from './StepPagamento';
 import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
 import { pedidoEncerradoSemPagamento } from './AvisoPedidoEncerrado';
+import {
+  AvisoPixVencido,
+  AvisoReservaExpirada,
+  LevandoParaDestino,
+} from './DesfechoPosPagamento';
+import {
+  classificarDesfecho,
+  destinoDoDesfecho,
+  MS_ATE_DESTINO,
+  reservaDoPedidoExpirou,
+  type DesfechoPedido,
+} from './desfechoPedido';
 import { CheckoutStepper } from './CheckoutStepper';
 import { LeelaWordmark } from './LeelaWordmark';
 import { mascaraCep, mascaraTelefone } from './cep';
+import { guardarAvisoDaArea } from '@/lib/areaDoCliente';
+import { irPara } from '@/lib/navegacao';
 import { lerCupomCapturado } from '../../CupomTracker';
 
 // Copy humana do erro de sessão (BC-2): o comprador NUNCA vê jargão de infra
@@ -67,6 +85,22 @@ import { lerCupomCapturado } from '../../CupomTracker';
 // console. Uma frase, ação clara, sem beco sem saída.
 const COPY_ERRO_AUTH =
   'Não conseguimos preparar seu pagamento. Verifique sua conexão e tente de novo.';
+// CKPIX-1 · RN-560 (ramo 3) — o ramo 3 do dono, na frase dele: *"cartao recusado, da
+// mensagem de erro e fala para revisar os dados de cartao, e volta para o
+// checkout."*
+//
+// O que ela NÃO diz, e a ausência é o cuidado: não diz por que o cartão foi
+// recusado. Quem recusa é o emissor, o motivo não volta ao lojista e inventar
+// um ("sem limite", "dados errados") seria contar ao comprador uma história que
+// ninguém apurou. Ela diz o fato — não passou — e a única ação que está ao
+// alcance dele: conferir os dados e tentar de novo.
+//
+// E não diz "nada foi cobrado", pela razão que o `AvisoPedidoEncerrado` já
+// registra: uma tentativa de cartão pode deixar pré-autorização, e afirmar que
+// a conta ficou intocada é exatamente o tipo de garantia que esta tela não tem
+// como sustentar.
+const COPY_CARTAO_RECUSADO =
+  'O pagamento não foi aprovado. Revise os dados do cartão e tente de novo.';
 // S1217-T4 · RN-439: uma frase, o fato e a ação. Nada sobre o que mudou no
 // texto novo nem sobre quando ele foi publicado — a tela não recebeu esses
 // dados do servidor, e não é ela quem os contaria.
@@ -403,6 +437,16 @@ export function CheckoutFlow({
   // pendente e cobrança real no Asaas para quem só queria ver o preço.
   const [forma, setForma] = useState<FormaUI | null>(null);
   /**
+   * CKPIX-1 · a forma da tela lida SEM entrar em dependência de efeito. Ela é
+   * o desempate de última instância na classificação do desfecho (o espelho
+   * `pedido.formaPagamento`, escrito pelo servidor, tem precedência), e pô-la
+   * como dependência faria a assinatura do pedido cair e renascer toda vez que
+   * alguém alternasse entre PIX e cartão — reconexão de listener por uma
+   * informação que ele nem usa para decidir.
+   */
+  const formaRef = useRef<FormaUI | null>(null);
+  formaRef.current = forma;
+  /**
    * A forma que a COTAÇÃO assume enquanto ninguém escolheu: PIX à vista. O
    * preço não depende dela para ser mostrado — o bloco de totais exibe essa
    * composição e cada opção carrega o próprio total no rótulo (S1216-T4), então
@@ -537,6 +581,18 @@ export function CheckoutFlow({
   const [codigoPedido, setCodigoPedido] = useState<string | null>(null);
   const [consultandoPedido, setConsultandoPedido] = useState(false);
   const [pedidoEmConfirmacao, setPedidoEmConfirmacao] = useState(false);
+  // CKPIX-1 · o ramo em que o pedido caiu, já traduzido para o que a TELA faz
+  // (`desfechoPedido.ts`). É estado próprio, e não uma derivação de
+  // `statusPedidoConsultado`, porque três dos quatro ramos do dono compartilham
+  // status com outro ramo: `falhou` é cartão recusado OU PIX vencido, e
+  // `cancelado` é PIX vencido OU encerrado sem causa. O status sozinho não
+  // nomeia nenhum deles.
+  const [desfecho, setDesfecho] = useState<DesfechoPedido>('pendente');
+  // RN-560/RN-546 · a saída desta tela está armada — para a área do cliente ou
+  // para a página do evento, conforme o ramo. Separado do `desfecho` de
+  // propósito: é ele que acende o loader, e a separação deixa o ramo 3 (que NÃO
+  // sai da tela) usar o mesmo canal de classificação sem herdar a navegação.
+  const [saindoDoCheckout, setSaindoDoCheckout] = useState(false);
   // REV-S1225 · a consulta do GESTO falhou. Engolir a falha para não derrubar
   // a tela é certo; engoli-la SEM DIZER NADA transforma "Atualizar estado do
   // pedido" num botão que pisca e não faz nada — e devolve o comprador ao
@@ -1428,17 +1484,90 @@ export function CheckoutFlow({
     if (c) await confirmar(c.pedidoId);
   }, [gerarCobranca, confirmar]);
 
-  // ── S1225-T3 · a tela consulta o PRÓPRIO pedido (RN-469 + RN-470) ──────────
+  // ── CKPIX-1 · o desfecho do pagamento vira tela, venha por onde vier ───────
+  //
+  // ESTE É O ÚNICO LUGAR QUE DECIDE O QUE A TELA FAZ COM UM PEDIDO. Três
+  // caminhos trazem o mesmo doc — o listener (RN-560), a consulta de
+  // carregamento e o gesto "Atualizar estado do pedido" (S1225-T3) — e as três
+  // entram por aqui de propósito. Duas cópias da regra divergiriam no primeiro
+  // conserto, e a que divergisse contaria ao comprador uma história diferente
+  // sobre o mesmo dinheiro.
+  //
+  // A classificação em si é pura e mora fora (`desfechoPedido.ts`), com a
+  // tabela dos quatro ramos e a prova de por que `falhou` num PIX é vencimento.
+  const aplicarPedido = useCallback(
+    (pedido: { status: string; canceladoMotivo?: string; formaPagamento?: string; codigoPedido?: string } | null): void => {
+      if (pedido === null) return;
+      // S1228-T2 · o código da compra é captado ANTES da porta do status:
+      // `codigoPedido` é imutável e não depende de desfecho nenhum, então
+      // prendê-lo ao ramo seria perder o código por um motivo alheio a ele.
+      if (pedido.codigoPedido !== undefined) setCodigoPedido(pedido.codigoPedido);
+      setStatusPedidoConsultado(pedido.status);
+
+      const ramo = classificarDesfecho({
+        status: pedido.status,
+        canceladoMotivo: pedido.canceladoMotivo,
+        formaPagamento: pedido.formaPagamento,
+        formaNaTela: formaRef.current,
+        reservaExpirada: reservaDoPedidoExpirou(pedido),
+      });
+      setDesfecho(ramo);
+
+      if (ramo === 'pago') {
+        // Ramos 1 e 4 (RN-560) — o desfecho chegou. A tela de confirmação
+        // desenha o resto, e o efeito de saída leva a pessoa à conta dela.
+        setPedidoEmConfirmacao(false);
+        setStep(3);
+        return;
+      }
+      if (ramo === 'pix_vencido' || ramo === 'reserva_expirada') {
+        // Ramos 2 (RN-560) e 5 (RN-546) — o prazo venceu, de um jeito ou de
+        // outro. O aviso de cada um fica na tela e a saída é armada; para ONDE
+        // ela vai é o `destinoDoDesfecho` quem decide, e os dois destinos são
+        // diferentes por decisão do dono.
+        setPedidoEmConfirmacao(false);
+        return;
+      }
+      if (ramo === 'cartao_recusado') {
+        // Ramo 3 (RN-560) — "volta para o checkout". E voltar não é só `setStep(2)`:
+        // este pedido está TERMINAL (`falhou` não transiciona), então tentar de
+        // novo por cima dele seria replay de uma compra morta — a chave de
+        // idempotência devolveria o mesmo pedido recusado, e o botão "Pagar"
+        // viraria um controle que não faz nada. A tentativa seguinte precisa de
+        // cobrança NOVA, e é isto que o bloco abaixo prepara.
+        setPedidoEmConfirmacao(false);
+        setConfirmacao(null);
+        setCodigoPedido(null);
+        setStatusPedidoConsultado(null);
+        chaveRef.current = undefined;
+        definirCharge(null);
+        setErroConfirmar(COPY_CARTAO_RECUSADO);
+        setStep(2);
+        return;
+      }
+      if (ramo === 'encerrado') {
+        // REV-S1225 · terminal sem causa apurada — o `AvisoPedidoEncerrado`
+        // desenha, exatamente como antes desta lane.
+        setPedidoEmConfirmacao(false);
+      }
+    },
+    [definirCharge],
+  );
+
+  // ── S1225-T3 · a tela consulta o PRÓPRIO pedido (RN-469) ───────────────────
   //
   // O incidente de 04/08: o PIX real foi pago, o webhook materializou `pago` em
   // dez segundos, e a tela do comprador não tinha COMO saber — as Rules negavam
-  // a ele a leitura do próprio pedido (`firestore.rules`, TODO E12) e não há
+  // a ele a leitura do próprio pedido (`firestore.rules`, TODO E12) e não havia
   // `onSnapshot` nem polling em `apps/landing`. A S1225-T1 abriu a leitura; é
   // aqui que ela vira resposta na tela.
   //
-  // Duas ocasiões, e SÓ duas (RN-470: v1 sem polling nem listener obrigatórios):
+  // ⚠️ A RN-470 (v1 sem listener) foi REVOGADA pelo dono em 11/08 e o listener
+  // abaixo é o canal principal. Estas duas ocasiões FICAM, como rede:
   //   · o carregamento — quem fechou o app e voltou vê o estado de agora;
   //   · o gesto explícito — "Atualizar estado do pedido".
+  // Quando a assinatura cai (Rules, rede, aba suspensa por horas), o botão é o
+  // que sobra entre o comprador e o escuro do incidente de 04/08.
   //
   // A leitura é ACESSÓRIA por construção: qualquer falha (Rules, rede, parse)
   // é engolida com log no console. Uma consulta que quebra não pode derrubar a
@@ -1459,34 +1588,16 @@ export function CheckoutFlow({
         // REV-5C · a cobrança trocou enquanto esta leitura estava no ar.
         if (pedidoNaTelaRef.current !== pedidoId) return;
         // S1228-T2 · o código da compra vem DE GRAÇA nesta leitura — o mesmo
-        // doc, o mesmo `parsePedido`, nenhuma chamada a mais. Ele é captado
-        // ANTES da porta do status: `codigoPedido` é imutável e não depende de
-        // desfecho nenhum, então prendê-lo ao ramo do `status` seria perder o
-        // código por um motivo que não tem nada a ver com ele.
-        if (pedido?.codigoPedido !== undefined) setCodigoPedido(pedido.codigoPedido);
-        const status = pedido?.status ?? null;
-        if (status === null) return;
-        setStatusPedidoConsultado(status);
-        if (status === 'pago') {
-          // O desfecho chegou: a tela de confirmação sabe desenhar o resto.
-          setPedidoEmConfirmacao(false);
-          setStep(3);
-          return;
-        }
-        // REV-S1225 · o desfecho também pode ter chegado NEGATIVO. `falhou` e
-        // `cancelado` são TERMINAIS (`TRANSICOES_STATUS_PEDIDO` do core): não
-        // há confirmação em curso a anunciar, e prometer o e-mail do ingresso
-        // sobre um pedido morto é a mentira que esta rodada veio matar. Quem
-        // desenha esse estado é o `AvisoPedidoEncerrado`, por
-        // `statusPedidoConsultado`.
-        if (pedidoEncerradoSemPagamento(status)) {
-          setPedidoEmConfirmacao(false);
-          return;
-        }
+        // doc, o mesmo `parsePedido`, nenhuma chamada a mais. Quem o capta (e
+        // classifica o resto) é o `aplicarPedido`, o mesmo que o listener usa.
+        if (pedido === null) return;
+        aplicarPedido(pedido);
         // Ainda não pago e ainda vivo. "Estamos confirmando o seu pedido" só
         // aparece depois do GESTO: na chegada, o comprador pode nem ter pagado
         // ainda, e a frase afirmaria uma confirmação em curso que não existe.
-        if (origem === 'gesto') setPedidoEmConfirmacao(true);
+        if (origem === 'gesto' && !pedidoEncerradoSemPagamento(pedido.status) && pedido.status !== 'pago') {
+          setPedidoEmConfirmacao(true);
+        }
       } catch (err) {
         if (typeof console !== 'undefined') {
           console.error('[checkout] Falha ao consultar o estado do pedido.', err);
@@ -1502,7 +1613,7 @@ export function CheckoutFlow({
         if (montadoRef.current && origem === 'gesto') setConsultandoPedido(false);
       }
     },
-    [authPronto, charge],
+    [authPronto, charge, aplicarPedido],
   );
 
   // Consulta de CARREGAMENTO: uma por cobrança, silenciosa. Roda quando já há
@@ -1515,6 +1626,87 @@ export function CheckoutFlow({
     // mudam (são as suas ÚNICAS dependências), então este efeito dispara uma
     // vez por cobrança — não é loop e não é polling disfarçado.
   }, [authPronto, charge, forma, consultarPedido]);
+
+  // ── CKPIX-1 · RN-560 · a assinatura do próprio pedido ───────────────
+  //
+  // O QUE ELA PAGA. A RN-470 dizia que a tela era passiva: o desfecho só
+  // chegava se o comprador clicasse. O dono revogou isso em 11/08 — *"a tela
+  // precisa receber o webhook de volta do gateway de pagamento"*. Quem escreve
+  // o desfecho é o servidor, num instante que ninguém aqui controla; a tela
+  // OBSERVA o registro dele.
+  //
+  // MECANISMO: `onSnapshot` sobre o doc do pedido, e não polling. A Rule da
+  // RN-469 já autoriza a leitura doc a doc e vale igual no listener (o
+  // `allow read` é o mesmo), então não há permissão nova a pedir. O listener
+  // custa uma leitura por MUDANÇA; o polling, uma por janela — num PIX de 30
+  // minutos a 5 s isso são 360 leituras por checkout abandonado. E a cadência
+  // do polling seria chute: o webhook não tem hora marcada.
+  //
+  // VALE PARA OS DOIS MEIOS, e essa é a mudança de fronteira. A leitura da
+  // S1225-T3 era só PIX porque o cartão resolvia o desfecho na própria chamada
+  // de pagar (CHECKOUT-FIX-0803). Com gateway real isso deixou de ser verdade:
+  // a recusa do emissor volta por webhook, e o ramo 3 do dono depende dela.
+  //
+  // FALHA É ACESSÓRIA, como toda leitura desta tela: a assinatura que cai vira
+  // log e nada some do checkout. O botão "Atualizar estado do pedido" continua
+  // ali, e é ele que sobra.
+  useEffect(() => {
+    if (!authPronto || charge === null) return undefined;
+    const pedidoId = charge.pedidoId;
+    const cancelar = observarPedido(getLeelaDb(), pedidoId, {
+      next: (pedido) => {
+        if (!montadoRef.current) return;
+        // REV-5C · a cobrança trocou enquanto este evento estava no ar. A
+        // régua é a mesma que protege as leituras pontuais.
+        if (pedidoNaTelaRef.current !== pedidoId) return;
+        aplicarPedido(pedido);
+      },
+      error: (err) => {
+        if (typeof console !== 'undefined') {
+          console.error('[checkout] A assinatura do pedido caiu.', err);
+        }
+      },
+    });
+    return cancelar;
+  }, [authPronto, charge, aplicarPedido]);
+
+  // ── CKPIX-1 · RN-560 e RN-546 · a saída do checkout ────────────────────────
+  //
+  // Quatro dos cinco ramos terminam fora desta tela, e o dono foi explícito em
+  // todos: PIX confirmado e cartão aceito vão para a área do cliente, o PIX
+  // vencido vai "também para a área do cliente" levando o aviso junto, e a
+  // reserva expirada volta "novamente para a tela de landing page" — a página
+  // do evento. Só o cartão recusado fica, porque o lugar dele é aqui.
+  //
+  // O AVISO ATRAVESSA POR `sessionStorage`, não por query string: `/minha-conta`
+  // tem invariante escrita e testada de que nada de perfil viaja na URL, e o
+  // fato de alguém ter tido um PIX vencido, num link colado em conversa, é da
+  // mesma família do que ela proíbe (`lib/areaDoCliente.ts` registra o
+  // raciocínio inteiro).
+  //
+  // O TEMPORIZADOR É LIMPO NO CLEANUP, e isso não é cerimônia: sem ele, a tela
+  // desmontada ainda navegaria — a pessoa que voltou ao evento pelo link do
+  // rodapé seria arrancada dali segundos depois, por um efeito de uma árvore
+  // que já não existe.
+  useEffect(() => {
+    const destino = destinoDoDesfecho(desfecho, evento.slug);
+    if (destino === null) return undefined;
+    setSaindoDoCheckout(true);
+    if (desfecho === 'pix_vencido') guardarAvisoDaArea('pix-vencido');
+    const timer = setTimeout(() => {
+      if (montadoRef.current) irPara(destino);
+    }, MS_ATE_DESTINO);
+    return () => clearTimeout(timer);
+  }, [desfecho, evento.slug]);
+
+  // O destino de AGORA e a frase que o nomeia. O `href` do link de escape e o
+  // href que o temporizador abre saem da MESMA função — um botão "Ir agora" que
+  // levasse a outro lugar seria a pior versão possível deste bloco.
+  const destinoAtual = destinoDoDesfecho(desfecho, evento.slug);
+  const fraseDaSaida =
+    desfecho === 'reserva_expirada'
+      ? 'Levando você de volta para o evento…'
+      : 'Levando você para a sua conta…';
 
   // ── S1228-T2 · o código da compra no caminho que NÃO é PIX ────────────────
   //
@@ -1655,6 +1847,12 @@ export function CheckoutFlow({
       // balcão abrir a compra errada.
       setCodigoPedido(null);
       setPedidoEmConfirmacao(false);
+      // CKPIX-1 · o ramo do pedido ANTERIOR não governa a cobrança nova. Sem
+      // esta linha, um `pix_vencido` sobrevivente manteria o aviso do prazo (e
+      // o temporizador de saída) por cima de um código PIX recém-nascido — a
+      // tela mandaria embora quem acabou de pedir para ficar.
+      setDesfecho('pendente');
+      setSaindoDoCheckout(false);
       setErroConsultaPedido(false);
       setErroCharge(null);
       setErroConfirmar(null);
@@ -2052,6 +2250,29 @@ export function CheckoutFlow({
               pedidoEncerrado={pedidoEncerradoSemPagamento(statusPedidoConsultado)}
               erroConsultaPedido={erroConsultaPedido}
             />
+            {/* CKPIX-1 · RN-560 (ramo 2) e RN-546 (ramo 5). Ficam FORA do
+                `StepPagamento` de propósito: aquele componente desenha o
+                INSTRUMENTO de pagamento, e aqui não há mais instrumento — a
+                cobrança morreu com o prazo, ou a vaga voltou para o evento. O
+                `AvisoPedidoEncerrado` que o `StepPagamento` já mostra continua
+                respondendo pelo terminal SEM causa apurada; estes respondem
+                pelos terminais COM causa, cada um com a causa dele. */}
+            {desfecho === 'pix_vencido' ? <AvisoPixVencido /> : null}
+            {desfecho === 'reserva_expirada' ? <AvisoReservaExpirada /> : null}
+            {saindoDoCheckout && destinoAtual !== null ? (
+              <LevandoParaDestino href={destinoAtual} frase={fraseDaSaida} />
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* CKPIX-1 · RN-560, ramos 1 e 4 — "mostra mensagem de sucesso e depois
+            já loader redirecinando". A mensagem de sucesso é a própria
+            `StepConfirmacao`, que já existe e já carrega o código da compra
+            (RN-475); o loader entra ACIMA dela, onde o olho já está, e não no
+            rodapé de uma tela que a pessoa acabou de começar a ler. */}
+        {step === 3 && charge && saindoDoCheckout && destinoAtual !== null ? (
+          <div className="mb-6">
+            <LevandoParaDestino href={destinoAtual} frase={fraseDaSaida} />
           </div>
         ) : null}
 

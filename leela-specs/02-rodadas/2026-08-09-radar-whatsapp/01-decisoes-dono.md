@@ -79,3 +79,27 @@ desenho volta à mesa antes de a tela ser refeita.
 **O que estas quatro decisões não cobrem.** Elas resolvem população, fonte do nome, correção do
 nome e apetite de risco. Não decidem hospedagem no F2 (segue com o sócio, RN-530), nem prazo de
 retenção diferente dos 400 dias (segue com o advogado, RN-524).
+
+## +2026-08-11 (leva 7) · a frente jurídica do radar sai do painel e passa a morar aqui
+
+O **LGPD-1 foi decidido pelo dono** na noite de 11/08 — *"o aceite é obrigatório, e registrado no
+banco"* — e saiu do painel de decisões. Aquele item carregava quatro frentes, e três fecharam com a
+frase: o aceite do organizador que faltava no resgate, o carimbo auditável do termo de saúde e o
+contrato da Arena, que já estava escrito na RN-472.
+
+**A quarta frente não fechou, porque nunca foi a mesma pergunta.** A base legal do **nome real de
+participante de comunidade** exposto ao organizador é tratamento de **dado de terceiro** — de gente
+que não aceitou termo nenhum da Leela —, e não se resolve com um aceite de organizador. Ela segue
+com o advogado, exatamente como estava, e passa a viver **aqui**, na rodada do radar, em vez de
+continuar como item de painel do dono: o painel carrega o que espera decisão dele, e esta espera
+parecer de terceiro.
+
+**O que isso muda no radar, na prática:** nada. O F0 (um número observando uma comunidade de teste
+do dono) nunca dependeu disso, e o risco do F1 foi **assumido pelo dono** na decisão 12 acima, sem
+gate sobre o radar. O que continua valendo é a condição de reabertura já escrita: parecer do
+advogado quando sair, incidente envolvendo dado de participante, ou a chegada do F2 multi-locação.
+
+**O que precisa existir junto do parecer**, quando ele vier: a base legal declarada do tratamento e
+o termo que o organizador aceita ao ligar o radar (RN-529 já exige o termo como pré-condição de
+ligar; o que falta é o conteúdo jurídico dele). Registro da decisão em
+`02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §Leva 7`.

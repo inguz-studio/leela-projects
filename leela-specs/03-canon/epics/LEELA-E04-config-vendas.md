@@ -2343,7 +2343,9 @@ RN-300 intocada; indisponível ≠ encerrado); **reserva não é dinheiro** (RN-
 por teste na fila); **a RN-498 continua inteira** (pago nunca recusado; excedente residual segue
 visível). Falsificação: lote de 20 com 19 confirmados + 1 reserva viva recusa a 21ª cobrança sem
 criar docs; a reserva morrendo, a mesma tentativa passa; nenhum carimbo nasce em nenhum dos dois
-estados. **Estado:** regra selada, código não construído (S323).
+estados. **Estado:** ✅ construída e gateada (S323-T1/T2, lane ESTOURO-RESUME, 12/08) —
+`reservaLote.ts` + `firestore.rules` (ataque de cliente sobre `reservas` verde) +
+`createInscricaoCharge.ts:1963`. Sem deploy.
 
 ### RN-544 (nova, dona · 2026-08-10) · a reserva morre por uma das três portas, e a vaga volta
 
@@ -2358,7 +2360,10 @@ A vaga volta **para o lote da linha**, sem fila de espera; lote encerrado por da
 (RN-300); encerrado por quantidade com reserva viva é irrepresentável pelo desenho; estorno segue
 não devolvendo vaga (decisão #1 do `virarLote`). Falsificação: expirar pela varredura e reenviar
 o mesmo OVERDUE decrementa **uma vez**; lote encerrado por data não volta a vender quando a
-reserva morre. **Estado:** regra selada, código não construído (S323).
+reserva morre. **Estado:** ✅ construída e gateada (S323-T3/T4, lane ESTOURO-RESUME, 12/08) —
+as 4 saídas via `liberarNaTx` (`expirarPixPendente.ts`, `webhookPagamento.ts` ×2) e a recontagem
+absoluta (`recontarReservasCore`), provadas em `reservaVaga.integration.test.ts` (P3/P4/P6/P9).
+Sem deploy.
 
 ### RN-545 (nova, dona · 2026-08-10) · o vencimento do PIX tem varredura agendada, com minuto explícito
 
@@ -2377,9 +2382,35 @@ de alerta na plataforma (pendência do CTO), o log é casável pela doutrina de 
 acorda ninguém — a spec não finge o contrário. Falsificação: pendente vencido flipa em até uma
 rodada com o gateway cancelado antes dos docs; reprocessar no-opa; trocar a expressão por
 `every 5 minutes` derruba o teste. **Materializa a RN-157; é pré-requisito da RN-543.**
-**Estado:** regra selada, código não construído (S322).
+**Estado:** ✅ construída e gateada (S322-T1..T4, lane ESTOURO-RESUME, 12/08) —
+`functions/src/checkout/varrerPixVencidos.ts`, provada em `varrerPixVencidos.integration.test.ts`
+e `varrerPixVencidosAgendamento.test.ts`. Sem deploy — functions sobem na próxima fase.
 
-### RN-546 (nova, dona · 2026-08-10 · condicionada ao ESTOURO-2) · o pendente de cartão reserva com teto próprio
+### RN-546 (nova, dona · 2026-08-10 · **decidida pelo dono em 11/08, leva 7**) · o pendente de cartão reserva por 15 minutos, e a expiração devolve a pessoa à página do evento
+
+> **A condição caiu.** Na íntegra: *"o pendente de cartão, caso um pagamento de erro, devolveremos
+> a vaga após o checkout expirar, (dentro do time de 15 minutos). Se expirou os 15 minutos, o
+> pedido nao é mais reservado, e damos um refresh, levanto novamente para a tela de landing
+> page."* O enunciado vigente é este:
+>
+> 1. **O teto é de 15 minutos**, e não os 30 do default proposto. O número é o do carrinho, não o
+>    do PIX — o dono amarrou a reserva de cartão ao tempo do checkout, que é a régua que a pessoa
+>    já vê na tela.
+> 2. **Expirado o teto, o pedido deixa de reservar vaga.** A vaga volta ao estoque pela mesma
+>    varredura, por recontagem, e o **pedido continua vivo** — nada é cancelado no gateway, porque
+>    dinheiro em voo não se toca. Confirmação atrasada entra, e o excedente eventual aparece pelo
+>    caminho que a RN-498 já exige.
+> 3. **A tela dá refresh e leva de volta à página do evento** (landing). É comportamento novo de
+>    tela: a expiração deixa de ser um estado parado e vira uma saída. Ela entra como **ramo novo
+>    do fluxo pós-pagamento** — a mesma família da RN-560, e por isso o trabalho de tela mora na
+>    lane CKPIX-FLOW, enquanto o contador e a liberação moram na ESTOURO-BUILD.
+>
+> **A `S323-T7` deixa de estar retida.** O ESTOURO-2 saiu do painel em 11/08.
+
+O texto abaixo é o enunciado condicionado como ele nasceu em 10/08, mantido legível porque é ele
+que explica de onde vinha o número 30 e por que a pergunta subiu ao dono.
+
+#### Enunciado original (10/08 · condicionado)
 
 A letra do dono não distingue meio, e o pedido de cartão também nasce `'pendente'` — mas cartão
 não tem vencimento natural (não há `pixExpiraEm` dele), e um webhook perdido deixaria a vaga
@@ -2395,10 +2426,18 @@ nenhuma linha de cartão entra antes da resposta (S323-T7).
 
 **S322 · a varredura do PIX vencido** — 4 tarefas (`S322-T1` a `S322-T4`), backend só, sobe
 primeiro e sozinha. **S323 · a reserva do pedido pendente** — 7 tarefas (`S323-T1` a `S323-T7`,
-a T7 retida pelo ESTOURO-2), **depende da S322 no ar e provada**. Job stories, Given/When/Then e
+**a T7 destravada em 11/08**, com o número do dono: 15 minutos, não 30), **depende da S322 no ar e
+provada**. A frente foi **priorizada** na leva 6, pelo princípio que ele ratificou — *"não podemos
+ter excedentes de ingressos jamais"* — e virou a lane ESTOURO-BUILD. Job stories, Given/When/Then e
 territórios em `02-rodadas/2026-08-10-estouro-reserva/03-spec.md` e `04-fila-codigo.md`.
-**Nada construído.** ⚔ contador de vaga dentro da transação do dinheiro: rota opus, review
-antagonista (dupla na S323), lane própria, sem carona em deploy.
+✅ **As 11 tarefas construídas, auditadas e gateadas em 12/08 (lane ESTOURO-RESUME)** —
+declaração conferida contra o código por grep/teste, não tomada de herança; gates do zero
+verdes (tsc, eslint, suíte de functions, ataque de Rules sobre `reservas`); mergeada em
+`main`. ⛔ Sem deploy. **Pendente, fora do território backend**: o painel do organizador
+ainda não exibe `reservas` (parte da S323-T5) e o stub `reservaDoPedidoExpirou` da
+CKPIX-FLOW segue esperando ser ligado ao predicado `reservaDeCartaoExpirada` do core —
+os dois são território `apps/**`. Handoff `.nirvana/handoffs/leela-estouro-resume-20260812.md`.
+⚔ contador de vaga dentro da transação do dinheiro: rota opus, review antagonista aplicada.
 
 ## Delta a tela de lotes e a lista de modalidades, pela leva 3 do dono (2026-08-11 · AJUSTES-DONO · D-1008-R12 e R13)
 

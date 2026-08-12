@@ -354,8 +354,28 @@ cadastro, o doc é recriado mais adiante pelo resgate do convite, e nasce **sem*
 `consentimentoLgpd` — a pessoa marcou o checkbox, o registro nunca existiu. Preencher esse
 campo por dedução carimbaria um consentimento que ninguém registrou, que é exatamente a
 prova fabricada que a RN-412 recusa. Por isso a lacuna subiu como decisão do dono
-(**LGPD-1** no painel) em vez de ser consertada por conta própria, e o **seed do primeiro
-convite fica retido** até ela fechar.
+(**LGPD-1** no painel) em vez de ser consertada por conta própria, e o seed do primeiro
+convite ficou retido até ela fechar.
+
+**+2026-08-11 (leva 7) · o dono decidiu, e a lacuna tem conserto.** Na íntegra: *"LGPD-1 - o
+aceite é obrigatório, e registrado no banco."* Duas consequências, e nenhuma delas fabrica
+prova:
+
+1. **Nenhum organizador fica ativo sem aceite registrado.** O caminho escolhido é o primeiro
+   dos três do painel — **recoletar no resgate**: quando o registro de consentimento falta, o
+   overlay do convite pede o aceite **junto do código**, e o carimbo nasce ali, do jeito que
+   esta regra já manda (versão vigente, finalidade, instante do servidor). Custa uma linha na
+   tela e um campo na chamada de `resgatarConviteOrganizador`. As outras duas saídas ficam
+   escritas como recusadas: recusar a ativação trancaria gente legítima na porta, e marcar-e-
+   varrer não resolveria, só pararia de esconder.
+2. **O seed do primeiro código de convite DESTRAVA.** Era a única coisa retida por este item, e
+   ela sai junto do trabalho do aceite — o convite não deve nascer antes de a porta saber
+   recolher o consentimento que faltou.
+
+Registro em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §Leva 7`. A metade de termo
+de saúde da mesma decisão mora no [[LEELA-E12-landing]], e a frente do radar saiu do painel:
+o nome real de participante de grupo é dado de terceiro, não aceite de organizador, e a base
+legal segue com o advogado, anotada na rodada do radar.
 
 ### RN-448 · acesso único por precedência: uma conta, uma casa · ⚠ SUPERADA pela RN-449
 

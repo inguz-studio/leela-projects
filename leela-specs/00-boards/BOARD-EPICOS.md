@@ -1,7 +1,7 @@
 ---
 tags: [leela, kanban, epicos, visao-alto-nivel]
 aliases: [Board de épicos, Visão de épicos, Onde o produto está]
-atualizado: 2026-08-11
+atualizado: 2026-08-12
 ---
 
 # 🗺️ Visão de épicos — onde o produto está
@@ -14,6 +14,26 @@ atualizado: 2026-08-11
 > quem e as três próximas entregas de cada frente — veja [[VISAO-DE-PROJETO]].** Este board
 > continua sendo o mapa de uma linha por épico; aquele é a visão que o dono pediu em 11/08.
 
+## O que a leva 8 do dono destravou (2026-08-12, de manhã)
+
+Oito itens saíram do painel numa leva só, e a conta caiu de 12 para 4. As palavras dele e a
+leitura item a item estão em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`; a tabela
+de modalidades derivada do Strava está em `.../02-tabela-modalidades.md`.
+
+| Épico | O que mudou | Estado |
+|---|---|---|
+| [[LEELA-E12-landing]] | **RN-562** — a sessão anônima do checkout vira conta logada ao confirmar o pagamento (CKLOGIN-1), com a fronteira de autenticação das RN-476 a RN-480 **re-provada** no mesmo ato; história nova **S1247** | 📋 **destravado, sem build** — card 1 da fila; o custo da re-prova é tarefa própria (S1247-T2), não regressão opcional |
+| [[LEELA-E12-landing]] | **RN-563** — a lista física deriva das modalidades de esporte do **Strava**, com gate de frescor recorrente; **RN-564** — uma lista, **três** consumidores (Arena + onboarding + preferências); **RN-557** nasce na forma da resposta com a tabela de 50 termos (ARENA-4); histórias novas **S1248** e **S1249** | 📋 **`S1245-T2` destravada** — a tabela segue vetável barato até a tela nascer; onboarding e preferências são escopo NOVO |
+| [[LEELA-E12-landing]] | **RN-567** — no replay, a prova de aceite carimba a política vigente e a divergência fica registrada (PB-11 ratificado: *"3 - em vigor."*) | 📋 prioridade baixa — o comportamento já vale; o que nasce é o registro da divergência |
+| [[LEELA-E12-landing]] · [[LEELA-E13-app-atleta]] | **ARENA-1 fechado**: hoje só a própria pessoa vê, RN-471 e **RN-472 intocadas**; a visão de conexão entre participantes vira **direção de produto** no épico do app | ✅ decidido · 🧊 **nada se constrói agora** — a abertura vem com a versão mobile |
+| [[LEELA-E16-plataforma-superadmin]] | **RN-552 nasce na forma da resposta**: aprovar, **recusar** e **revogar** existem, com o rastro da RN-551 nas três e a revogação suspendendo o tenant sem apagar dado (ADMIN-USUARIOS-2) | 📋 **`S1616-T5` destravada** — recusa sem comunicação automática e sem revogação de organizador com venda viva, os dois vetáveis |
+| [[LEELA-E19-crm]] | **RN-565** — o e-mail de cada participante passa a ser guardado (CRM-3); **RN-566** — a localização entra como agregado sem identidade e o endereço fica **fora** da ficha (CRM-2), o que tira a **P-CKMOD-1** da espera; **CRM-1** ratifica as quatro visões de dado pronto, sem consumir RN | 📋 **COL-T1, tarefas 2a-2d e Frentes 1 e 3 destravadas**; a **`S1904-T3`** sai da espera do CRM-1 |
+
+**O que continua com o dono, deste ato.** O **CRM-4** — o que se pede ao participante depois da
+compra, e em troca de quê. Ele respondeu com uma pergunta, o esclarecimento foi dado e a resposta
+não voltou; o item ficou no painel intacto, e o card do CRM desta leva **não o antecipa**. E o
+**item 12** (domínio público), com as duas ações que só ele executa (69 e JUROS-1).
+
 ## O que a leva 6 do dono destravou (2026-08-11, à noite)
 
 Onze itens saíram do painel de decisões numa leva só, e o efeito nos épicos é este. Palavras do
@@ -21,14 +41,26 @@ dono e leitura item a item em `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tard
 
 | Épico | O que mudou | Estado |
 |---|---|---|
-| [[LEELA-E12-landing]] | **RN-560** — a tela do pagamento reage sozinha nos quatro ramos (CKPIX-1) e **revoga a RN-470**; **RN-561** — o endereço fica, com a razão escrita (CKENDERECO-1); história nova **S1246** | 📋 lane CKPIX-FLOW, ainda sem código |
-| [[LEELA-E12-landing]] · [[LEELA-E11-analytics]] | **SERV-3 decidido**: "Serviço" nomeia exatamente a cobrança da Leela em toda superfície; a RN-495 ganha alcance e o renome das 34 strings destrava | 📋 lane SERV3-RENOME · ⚠️ re-inventariar antes de trocar |
+| [[LEELA-E12-landing]] | **RN-560** — a tela do pagamento reage sozinha nos quatro ramos (CKPIX-1) e **revoga a RN-470**; **RN-561** — o endereço fica, com a razão escrita (CKENDERECO-1); história nova **S1246** | 🔄 lane CKPIX-FLOW — **os cinco ramos construídos e provados em 11/08** (RN-560 + RN-546; mecanismo: assinatura `onSnapshot` do doc do pedido, com registro no handoff). Falta a linha da RN-561 no passo de dados, e o ramo 5 espera o campo de reserva da ESTOURO-BUILD. ⚠️ sem deploy |
+| [[LEELA-E12-landing]] · [[LEELA-E11-analytics]] | **SERV-3 decidido**: "Serviço" nomeia exatamente a cobrança da Leela em toda superfície; a RN-495 ganha alcance | ✅ **PAGO em 11-12/08** — lane SERV3-RENOME; re-inventário fresco (24 arquivos/26 strings, não 34 — a régua mudou desde 08/05), merge `f1f5e95c` na main, pushed; nenhum deploy. Handoff `leela-serv3-renome-20260811.md` |
 | [[LEELA-E16-plataforma-superadmin]] | os cinco vetáveis **V-1 a V-5** fecham juntos; **RN-542 não nasce** (responsável é o owner), a **RN-540** passa a mostrar CPF por callable auditado, a **RN-549** nasce ratificando a RN-510 | 📋 **ondas 2, 3 e 5 destravadas** |
 | [[LEELA-E04-config-vendas]] | *"não podemos ter excedentes de ingressos jamais"* prioriza a reserva de vaga (RN-543 a RN-546), especificada em 10/08 e sem uma linha escrita | 📋 lane ESTOURO-BUILD |
 | [[LEELA-E09-financeiro-profissional]] · [[LEELA-E11-analytics]] | **TICKET-1 ratificado** — compra estornada fora do denominador do ticket médio por decisão, não por default | ✅ já implementado; o que mudou é quem manda mexer |
 | [[LEELA-E03-operacao-evento]] | **SEMKIT-1 e SEMKIT-2** eram resíduo: decididos no lote 1 de 09/08, o reparo ficou sem objeto na purga de 10/08 | ✅ nada fica com o dono |
 
 Nenhum épico novo precisou nascer, e uma história nova entrou: a **S1246** no E12.
+
+### A leva 7, na mesma noite — três itens que seguravam trabalho grande
+
+| Épico | O que mudou | Estado |
+|---|---|---|
+| [[LEELA-E00-fundacao-tecnica]] | **LGPD-1 decidido** — *"o aceite é obrigatório, e registrado no banco"*: quando o registro falta, o overlay do resgate recolhe o aceite junto do código | 📋 **o seed do primeiro convite DESTRAVOU** |
+| [[LEELA-E12-landing]] | a metade do termo de saúde: o aceite passa a carimbar `materialHash`, como o termo de uso já faz | 📋 |
+| [[LEELA-E20-radar-comunidade]] | a base legal do nome real de participante sai do painel — é dado de terceiro, não aceite de organizador; segue com o advogado, anotada na rodada do radar | ⏸️ sem gate sobre o radar (risco assumido pelo dono em 09/08) |
+| [[LEELA-E04-config-vendas]] | **ESTOURO-2 decidido** — teto de **15 minutos** (não 30) e a expiração devolve a pessoa à página do evento; a RN-546 sai da condição | 📋 S323-T7 destravada |
+| [[LEELA-E01-design-system]] | **CANONE-1 decidido pela opção 1** — peça que não existe nasce no DS, documentada, nunca inline; virou diretriz permanente da casa na governança de design | 📋 **Onda 0 Parte B destravada** |
+
+Com a leva 7 o painel do dono foi de 14 para **11 itens**.
 
 ## O que a rodada do redesign acrescentou (2026-08-10/11)
 
@@ -39,7 +71,7 @@ decisões da leva 3, 4 e 5 (D-1008-R4 a R19) estão em
 | Épico | História nova | O que ela resolve | Estado |
 |---|---|---|---|
 | [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
-| [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | 📋 destravada — o merge saiu em 11/08, o inventário mede a main |
+| [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | ✅ Onda 0 Partes A+B pagas 12/08 (lane FUNDACAO-RESUME) — construído, aguardando deploy |
 | [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 |

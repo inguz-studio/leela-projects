@@ -69,7 +69,7 @@ describe('TermsEditor', () => {
   it('input inválido → erros inline, sem onSave', async () => {
     const onSave = vi.fn();
     render(<TermsEditor {...baseProps} terms={mkTerms({ platformFeePct: 10.5 })} onSave={onSave} />);
-    const fee = screen.getByLabelText('Taxa da plataforma (%)');
+    const fee = screen.getByLabelText('Serviço (%)');
     await userEvent.clear(fee);
     await userEvent.type(fee, '150');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar termos' }));

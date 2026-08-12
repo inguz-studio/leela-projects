@@ -93,7 +93,7 @@ function overrideDoForm(
     if (!temPct && !temFixo) continue; // herda a global
     if (!temPct || !temFixo) {
       erros.push(
-        `Exceção de taxa (${ROTULO_MEIO[meio]}): preencha percentual E valor fixo, ou deixe os dois vazios para herdar a tabela global.`
+        `Exceção do Serviço (${ROTULO_MEIO[meio]}): preencha percentual E valor fixo, ou deixe os dois vazios para herdar a tabela global.`
       );
       continue;
     }
@@ -207,7 +207,7 @@ export function TermsEditor({
     <div className="flex flex-col gap-[var(--spacing-6)]">
       <PageHeader
         title="Termos comerciais"
-        subtitle="Economia do tenant — taxa, parcelamento e mensalidade"
+        subtitle="Economia do tenant — Serviço, parcelamento e mensalidade"
         badges={<Badge variant="neutro">{versaoLabel}</Badge>}
       />
 
@@ -232,7 +232,7 @@ export function TermsEditor({
           type="number"
           inputMode="decimal"
           step="0.1"
-          label="Taxa da plataforma (%)"
+          label="Serviço (%)"
           value={values.platformFeePct}
           onChange={(e) => set('platformFeePct', e.target.value)}
           disabled={readOnly || saving}
@@ -298,7 +298,7 @@ export function TermsEditor({
             mudar aqui nunca reprecifica pedido feito. */}
         <fieldset className="flex flex-col gap-[var(--spacing-4)]">
           <legend className="mb-[var(--spacing-2)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            Exceção de taxa por meio de pagamento
+            Exceção do Serviço por meio de pagamento
           </legend>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
             Condição negociada por contrato. Linha vazia herda a tabela global da plataforma;

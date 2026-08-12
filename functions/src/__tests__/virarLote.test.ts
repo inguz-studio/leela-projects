@@ -196,8 +196,17 @@ describe('parseLote — carimbos encerradoEm/encerradoMotivo', () => {
     atualizadoEm: fakeTs,
   };
 
-  it('CAMPOS_FUNCTION_LOTE cobre contador E carimbos (espelho das Rules)', () => {
-    expect(CAMPOS_FUNCTION_LOTE).toEqual(['vendidos', 'encerradoEm', 'encerradoMotivo']);
+  it('CAMPOS_FUNCTION_LOTE cobre os DOIS contadores E os carimbos (espelho das Rules)', () => {
+    // `reservas` entrou com a RN-543 e tem de estar aqui: esta lista é o
+    // espelho declarado das Security Rules, e contador de vaga fora dela
+    // seria contador que o cliente escreve. A falha deste caso é o aviso de
+    // que alguém adicionou campo de Function sem trancar a Rule.
+    expect(CAMPOS_FUNCTION_LOTE).toEqual([
+      'vendidos',
+      'reservas',
+      'encerradoEm',
+      'encerradoMotivo',
+    ]);
   });
 
   it('roundtrip com carimbos presentes', () => {

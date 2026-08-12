@@ -140,15 +140,15 @@ export function PoliticaVendasForm({
             switch para desligar o art. 49. O que se decide é o de fora. */}
         <Switch
           id="pol-devolve-taxa-fora"
-          label="Devolver também a taxa de serviço fora da janela de arrependimento"
+          label="Devolver também o Serviço fora da janela de arrependimento"
           checked={values.devolveTaxaForaDaJanela}
           disabled={disabled}
           onCheckedChange={(checked) => set('devolveTaxaForaDaJanela', checked)}
         />
         <p className="text-[length:var(--font-size-sm)] text-[color:var(--color-text-muted)]">
-          Dentro da janela de arrependimento a taxa de serviço volta ao comprador
+          Dentro da janela de arrependimento o Serviço volta ao comprador
           sempre, junto com o valor da inscrição (CDC art. 49). Fora dela, com
-          esta opção desligada, volta só o valor da inscrição e a taxa fica retida.
+          esta opção desligada, volta só o valor da inscrição e o Serviço fica retido.
         </p>
       </Bloco>
 

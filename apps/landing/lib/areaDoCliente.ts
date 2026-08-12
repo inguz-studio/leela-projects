@@ -59,3 +59,53 @@ export function ctaMeusPedidos(): DestinoPosEntrada | null {
   if (!AREA_CLIENTE_NO_AR) return null;
   return { href: ROTA_AREA_CLIENTE, rotulo: 'Ver meus ingressos' };
 }
+
+// ---------------------------------------------------------------------------
+// O aviso que ATRAVESSA a navegação (RN-560 (ramo 2))
+//
+// O dono decidiu que o PIX vencido "redireciona AVISANDO que o pix foi
+// cancelado após o prazo vencer, e leva também para a área do cliente". O aviso
+// e o destino são um gesto só: quem chega na área sem saber por que saiu do
+// checkout leva o susto que a decisão veio evitar.
+//
+// POR QUE NÃO QUERY STRING. `/minha-conta` tem uma invariante escrita e testada
+// — "NADA DE PERFIL NA URL" (`AreaDoCliente.tsx`) — sustentada por
+// `Referrer-Policy: no-referrer`, `no-store` e `noindex`. Um `?aviso=` não
+// carrega identidade, mas carrega o FATO de que aquela pessoa teve um PIX
+// vencido, e esse fato num link colado em conversa é da mesma família do que a
+// invariante proíbe. `sessionStorage` é da aba, morre com ela, não viaja em
+// header nenhum e não sobrevive a um link compartilhado.
+//
+// LEITURA DESTRUTIVA de propósito: o aviso é de UMA chegada. Deixá-lo no
+// armazenamento faria a área repetir "seu PIX venceu" em toda visita da sessão,
+// muito depois de a pessoa já ter comprado de novo.
+// ---------------------------------------------------------------------------
+
+/** Avisos que o checkout pode entregar à área do cliente. */
+export type AvisoDaArea = 'pix-vencido';
+
+const CHAVE_AVISO = 'leela.aviso-area';
+
+/** Guarda o aviso para a PRÓXIMA renderização da área. Falha em silêncio. */
+export function guardarAvisoDaArea(aviso: AvisoDaArea): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(CHAVE_AVISO, aviso);
+  } catch {
+    // Armazenamento bloqueado (aba anônima com restrição, quota): o
+    // redirecionamento continua valendo. Perder o aviso é ruim; perder o
+    // destino por causa do aviso seria pior.
+  }
+}
+
+/** Lê e APAGA o aviso pendente. `null` quando não há nada a dizer. */
+export function consumirAvisoDaArea(): AvisoDaArea | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const bruto = window.sessionStorage.getItem(CHAVE_AVISO);
+    if (bruto !== null) window.sessionStorage.removeItem(CHAVE_AVISO);
+    return bruto === 'pix-vencido' ? 'pix-vencido' : null;
+  } catch {
+    return null;
+  }
+}

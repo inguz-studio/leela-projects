@@ -35,7 +35,7 @@ export const PLATFORM_NAV: PlatformNavItem[] = [
   // S1608-T2 · RN-413: os códigos que liberam conta de organizador.
   { id: 'convites', label: 'Convites', href: '/plataforma/convites' },
   // TAXAFLEX (S1606 · RN-178): tabela GLOBAL de taxa por meio de pagamento
-  { id: 'taxa', label: 'Taxa', href: '/plataforma/taxa' },
+  { id: 'taxa', label: 'Serviço', href: '/plataforma/taxa' },
   { id: 'repasses', label: 'Repasses', href: '/plataforma/repasses' },
   // T4 · decisão 43-b: o suporte age no tenant alheio por AQUI, não pegando
   // emprestado um login de organizador.

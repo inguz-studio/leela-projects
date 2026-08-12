@@ -36,6 +36,14 @@ const ensureLeela = vi.fn();
 vi.mock('@leela/api-client', () => ({
   loginAnonimo: (...a: unknown[]) => loginAnonimo(...a),
   cotarInscricaoCheckout: (...a: unknown[]) => cotarInscricaoCheckout(...a),
+  // CKPIX-FLOW · RN-560 — a assinatura do pedido nasceu nesta rodada. Esta
+  // suíte não a exercita, então o stub é um no-op que devolve o cancelador:
+  // sem ele o efeito quebra a árvore por uma função que o mock não conhece.
+  observarPedido: () => () => undefined,
+  // CKPIX-FLOW · a assinatura do pedido pede o handle de banco em toda
+  // cobrança, e não só no PIX como a leitura da S1225-T3 pedia.
+  getLeelaDb: () => ({ __db: true }),
+  getPedido: () => Promise.resolve(null),
   createInscricaoCharge: (...a: unknown[]) => createInscricaoCharge(...a),
   confirmarPagamentoSandbox: (...a: unknown[]) => confirmarPagamentoSandbox(...a),
   expirarPixPendente: vi.fn(),
