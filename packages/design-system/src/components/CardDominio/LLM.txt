@@ -1,0 +1,61 @@
+# CardDominio — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: CardDominio
+version: 0.0.1
+generated_at: "2026-08-11"
+source: src/components/CardDominio
+verdict: NASCEU NA ONDA 0 PARTE B (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { CardDominio, type CardDominioProps } from '@leela/design-system'
+Superfície pública (landing, ADR-017): import { CardDominio } from '@leela/design-system/server'
+
+## Quando usar
+Cartão de ENTIDADE em lista: clube, comunicado, campanha, parceria, afiliação — e qualquer família nova com a mesma anatomia (mídia opcional à esquerda, título com selos, resumo curto, linha de metadados, ações no canto, acento de estado, rodapé de botões).
+
+## Quando NÃO usar
+Evento é CardEvento (tem mídia 16/10 e badge sobreposto). Desafio é CardDesafio. Evento em lista é EventRow. Indicador numérico é KpiCard. Bloco de conteúdo genérico, sem entidade por trás, é Card puro.
+
+## Props válidas
+- title: React.ReactNode   (obrigatório)
+- titleAs: 'h2' | 'h3' | 'h4'   (default: 'h3')
+- leading: React.ReactNode    — Avatar / Thumb / ícone à esquerda
+- badges: React.ReactNode     — selos ao lado do título
+- description: React.ReactNode
+- meta: React.ReactNode       — a linha de metadados sob a descrição
+- actions: React.ReactNode    — canto superior direito (DropdownMenu, IconButton, Badge)
+- footer: React.ReactNode     — rodapé, alinhado à direita
+- children: React.ReactNode   — corpo livre (MetricGrid, Table, lista)
+- accent: 'none' | 'brand' | 'vitoria' | 'alerta' | 'vulcao' | 'heroico' | 'neutro'   (default: 'none')
+- clamp: boolean   (default: true)   — corta a descrição em duas linhas
+- as: 'div' | 'article' | 'section' | 'li' | 'aside'   (default: 'article')
+- ...todas as props de React.HTMLAttributes<HTMLDivElement> exceto `title`
+
+## Tokens consumidos (nenhum valor cru permitido)
+- a superfície inteira vem do Card (--card / --card-foreground / --border / --elevation-1 / --card-blur / --spacing-6)
+- --border-brand / --feedback-success / --feedback-warning / --feedback-danger / --feedback-heroico / --border-strong (acento lateral)
+- --font-size-md (título) / --font-size-sm + --text-tertiary (meta) / --spacing-2 / --spacing-4
+
+## Proibido (do/don't)
+DON'T: style={{ borderLeftColor: 'var(--...)' }} para pintar estado. Use `accent` — o conjunto é fechado e cada braço é token. Cor por objeto de estilo inline é por onde valor cru entra sem o gate de marca ver.
+DON'T: className="rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-5)]" para "ajustar a superfície". Isso é o Card reescrito por dentro do design system, que é o defeito que o ConfirmModal custou.
+DON'T: declarar um `ClubeCard`/`ComunicadoCard`/`CampanhaCard` novo com corpo próprio. Se a família é nova mas a anatomia é a mesma, ela é este componente com outros slots.
+DO: dentro de <ul>, as="li". <div> filho direto de lista quebra a semântica.
+DO: titleAs="h4" quando o cartão vive dentro de um bloco que já tem h3.
+
+## Exemplo mínimo (válido, copiável)
+<CardDominio title="Clube Vento Sul" />
+
+## Exemplo completo (válido, copiável)
+<CardDominio
+  as="li"
+  title="Retirada de kit começa quinta"
+  accent="vitoria"
+  badges={<Badge variant="vitoria">Enviado</Badge>}
+  description="A retirada acontece na loja parceira, das 10h às 20h, mediante documento com foto."
+  meta={<><span>WhatsApp + e-mail</span><span aria-hidden>·</span><span>1.102 alcançados</span></>}
+  actions={<IconButton aria-label="Ações do comunicado"><MoreVertical /></IconButton>}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente CardDominio apenas com as props e valores listados acima. Nunca reconstrua a anatomia do cartão de entidade num <article> cru: eram sete assim quando o cânone foi escrito, e cada um deles nasceu porque não havia o que importar.

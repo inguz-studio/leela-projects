@@ -1,0 +1,48 @@
+# Stack — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Stack
+version: 0.0.1
+generated_at: "2026-08-11"
+source: src/components/Stack
+verdict: NASCEU NA ONDA 0 PARTE B (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { Stack, type StackProps } from '@leela/design-system'
+Superfície pública (landing, ADR-017): import { Stack } from '@leela/design-system/server'
+
+## Quando usar
+Empilhar blocos em coluna com ritmo. É o contêiner por baixo de quase toda tela: seções de uma página, campos de um formulário, itens de uma lista.
+
+## Quando NÃO usar
+Não use para colunas — a grade de formulário é FormGrid, a de indicadores é MetricGrid, o bento de dois painéis é SplitPanel. Não use como cartão: Stack não tem superfície, elevação nem padding; uma pilha com fundo é <Card> com um <Stack> dentro, nessa ordem.
+
+## Props válidas
+- gap: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'   (default: 'lg')
+- align: 'stretch' | 'start' | 'center' | 'end'   (default: 'stretch')
+- as: 'div' | 'section' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form' | 'fieldset'   (default: 'div')
+- ...todas as props de React.HTMLAttributes<HTMLDivElement> (className, aria-*, data-*)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-0 / --spacing-1 / --spacing-3 / --spacing-8
+- --layout-list-gap (gap="sm") / --layout-stack-gap (gap="lg", o default) / --layout-main-gap (gap="xl")
+
+## Proibido (do/don't)
+DON'T: gap={4}, gap="spacing-4", gap="24px" — o eixo é a escala fechada de sete degraus.
+DON'T: className="flex flex-col gap-[var(--spacing-5)]" para fugir da escala. --spacing-5 ficou de fora de propósito: é o único sem papel declarado na moldura. Precisa dele? Vira degrau no componente, com registro, no mesmo commit.
+DON'T: className="bg-... rounded-... p-..." para transformar a pilha em cartão. Isso é o Card reescrito, e é divergência mesmo com todos os tokens certos.
+DO: as="ul" quando a pilha é lista de verdade, com <li> nos filhos.
+
+## Exemplo mínimo (válido, copiável)
+<Stack>
+  <p>Primeiro</p>
+  <p>Segundo</p>
+</Stack>
+
+## Exemplo completo (válido, copiável)
+<Stack as="ul" gap="sm" align="start" aria-label="Comunicados">
+  <li>Retirada de kit</li>
+  <li>Alteração de percurso</li>
+</Stack>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Stack apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca escreva `flex flex-col gap-*` à mão numa tela: se o ritmo que você precisa não é um dos sete degraus, o degrau novo nasce no componente e no cânone, nunca na tela.

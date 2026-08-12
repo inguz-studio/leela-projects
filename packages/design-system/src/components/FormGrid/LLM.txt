@@ -1,0 +1,52 @@
+# FormGrid — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: FormGrid
+version: 0.0.1
+generated_at: "2026-08-11"
+source: src/components/FormGrid
+verdict: NASCEU NA ONDA 0 PARTE B (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { FormGrid, type FormGridProps } from '@leela/design-system'
+Superfície pública (landing, ADR-017): import { FormGrid } from '@leela/design-system/server'
+
+## Quando usar
+Grade de campos de formulário: uma coluna no aparelho estreito, duas ou três a partir de um degrau. Serve qualquer bloco de itens de largura parecida (campos, cartões pequenos, células de resumo).
+
+## Quando NÃO usar
+Indicadores/KPIs são MetricGrid (a escada é outra, e a razão está no preset). Dois painéis de larguras diferentes são SplitPanel. Uma coluna só é Stack.
+
+## Props válidas
+- columns: 2 | 3   (default: 2)
+- from: 'sm' | 'md' | 'lg'   (default: 'sm')   — o degrau em que a grade abre
+- gap: 'sm' | 'md' | 'lg'   (default: 'md')
+- as: 'div' | 'section' | 'fieldset' | 'form' | 'ul'   (default: 'div')
+- ...todas as props de React.HTMLAttributes<HTMLDivElement>
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --layout-list-gap (gap="sm") / --layout-grid-gap (gap="md", o default) / --layout-main-gap (gap="lg")
+
+## Proibido (do/don't)
+DON'T: columns={4} — quatro colunas é grade de indicador, e o componente dela é MetricGrid.
+DON'T: className="grid-cols-2" para forçar duas colunas no estreito. A coluna única embaixo é contrato do sistema mobile-first, não default configurável.
+DON'T: className="sm:grid-cols-2" num <div> em vez de usar o componente. Foram oito receitas assim que esta peça aposentou.
+DO: campo que ocupa a linha inteira leva className="col-span-full" NO FILHO — vale para qualquer contagem de coluna e qualquer degrau.
+
+## Exemplo mínimo (válido, copiável)
+<FormGrid>
+  <Input label="Nome" />
+  <Input label="Cidade" />
+</FormGrid>
+
+## Exemplo completo (válido, copiável)
+<FormGrid as="fieldset" columns={3} from="md" gap="lg">
+  <Input label="PP" />
+  <Input label="M" />
+  <Input label="GG" />
+  <div className="col-span-full">
+    <Input label="Observações" />
+  </div>
+</FormGrid>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente FormGrid apenas com as props e valores listados acima. Nunca escreva `grid grid-cols-*` à mão numa tela: as três famílias de grade têm componente publicado (FormGrid, MetricGrid, SplitPanel), e o que não couber nas três é decisão de cânone, não classe de tela.

@@ -36,6 +36,23 @@ export type {
 export { CardEvento } from './components/CardEvento';
 export type { CardEventoProps } from './components/CardEvento';
 
+// Moldura (Onda 0 Parte B · CANONE-1). As cinco peças são puras — react + cva
+// + cn, zero hook e zero Radix — então entram na entrada server-safe e a
+// landing as consome sem boundary de cliente e sem custo de bundle público. O
+// `server-safety.test.ts` caminha o grafo e reprova se isso deixar de valer.
+export { Stack, stackVariants } from './components/Stack';
+export type { StackProps, StackElement } from './components/Stack';
+export { FormGrid, formGridVariants } from './components/FormGrid';
+export type { FormGridProps, FormGridElement } from './components/FormGrid';
+export { MetricGrid, metricGridVariants } from './components/MetricGrid';
+export type { MetricGridProps, MetricGridElement } from './components/MetricGrid';
+export { SplitPanel, splitPanelVariants } from './components/SplitPanel';
+export type { SplitPanelProps, SplitPanelElement } from './components/SplitPanel';
+export { SectionHeader } from './components/SectionHeader';
+export type { SectionHeaderProps } from './components/SectionHeader';
+export { CardDominio } from './components/CardDominio';
+export type { CardDominioProps, CardDominioAccent } from './components/CardDominio';
+
 export { DateBadge } from './components/DateBadge';
 export type { DateBadgeProps } from './components/DateBadge';
 
