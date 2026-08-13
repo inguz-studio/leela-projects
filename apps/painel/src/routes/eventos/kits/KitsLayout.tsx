@@ -1,7 +1,14 @@
 // =============================================================================
 // KitsLayout — sub-nav interna da seção Kits (S205-T2): Cadastro | Distribuição
-// | Estoque | Entrega. "Entrega" aponta para o balcão (S204). Repassa o evento
-// do Outlet às rotas-filhas. Sob o EventoLayout (header + sub-nav do evento).
+// | Estoque. Repassa o evento do Outlet às rotas-filhas. Sob o EventoLayout
+// (header + sub-nav do evento).
+//
+// S1257 (leva 11 · 12/08) — SAIU o quarto item, "Credenciamento". Ele tinha o
+// MESMO `href` da aba de Credenciamento do menu secundário do evento
+// (`_lib/subnav.ts`), sem tela própria e sem versão resumida: era um atalho de
+// saída, e `active` era `false` em toda rota porque o destino vive fora da
+// árvore de Kits. Quem credencia sai pelo menu do evento, como já faz para
+// Inscritos e Financeiro. A régua é a da RN-399 — uma porta só por destino.
 // =============================================================================
 
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
@@ -26,7 +33,6 @@ export function KitsLayout(): JSX.Element {
       { id: 'cadastro', label: 'Cadastro', href: base, active: ativa === 'cadastro' },
       { id: 'distribuicao', label: 'Distribuição', href: `${base}/distribuicao`, active: ativa === 'distribuicao' },
       { id: 'estoque', label: 'Estoque', href: `${base}/estoque`, active: ativa === 'estoque' },
-      { id: 'entrega', label: 'Credenciamento', href: `/eventos/${slug}/credenciamento`, active: false },
     ],
     navigate,
     pathname,

@@ -85,10 +85,11 @@ function ComContextoDoEvento({ ctx }: { ctx: EventoOutletContext }): JSX.Element
 /**
  * Monta uma casca terciária do evento sob o Outlet context que ela espera.
  *
- * A rota é `*` de propósito: o laço do gate CLICA em todas as âncoras, e uma
- * delas sai da própria seção (a aba "Entrega" de Kits aponta para
- * `/eventos/{slug}/entrega`). Com um padrão estreito, esse clique desmontaria a
- * casca e os cliques seguintes falhariam por ordem da tabela, não por defeito.
+ * A rota é `*` de propósito: o laço do gate CLICA em todas as âncoras, e até a
+ * S1257 uma delas saía da própria seção (a aba "Credenciamento" de Kits, que
+ * apontava para fora da árvore de Kits). Com um padrão estreito, esse clique
+ * desmontaria a casca e os cliques seguintes falhariam por ordem da tabela, não
+ * por defeito — o `*` continua valendo para as demais cascas.
  * Nenhuma dessas cascas lê `useParams` — o slug vem do context.
  */
 function montarSobContexto(rota: string, elemento: JSX.Element): void {
@@ -239,7 +240,9 @@ const SUPERFICIES: SuperficieNav[] = [
   {
     nome: 'sub-abas de Kits',
     landmark: 'Seções de kits',
-    ancoras: 4,
+    // 3 e não 4 desde a S1257: o item "Credenciamento" saiu daqui — ele
+    // repetia o `href` da aba do menu secundário do evento.
+    ancoras: 3,
     atual: 'Cadastro',
     montar: () =>
       montarSobContexto(`/eventos/${SLUG}/kits`, <KitsLayout />),
