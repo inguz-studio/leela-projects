@@ -601,16 +601,44 @@ distribuição geográfica cobrir participantes, e não só compradores, na fati
 verdade. **O campo derivado precisa ser marcado como derivado**, e a tela declara a cobertura, do
 mesmo jeito que o cohort já declara quantos confirmados estão sem nascimento.
 
-### Degrau 2 · logo depois da compra, com contrapartida imediata
+### ⛔ Degrau 2 · MORTO em 12/08 pela decisão do dono (CRM-4 · leva 9)
 
-A tela de pós-pagamento e a área do cliente acabaram de nascer. É ali, com o ingresso na mão e a
+> **Este degrau não existe.** O dono fechou o CRM-4 na tarde de 12/08 e a fala matou a tela
+> inteira, na íntegra: *"se ja pegamos o endereço nao precisamos perguntar mais nada … nao existe
+> isso de 'confirme para o kit chegar certo' ja falei que nao enviaremos nada."* **Nenhuma
+> pergunta pós-compra nasce.** O texto abaixo fica legível e **marcado**, em vez de apagado, pela
+> mesma disciplina que o índice de RNs aplica às regras superadas: é ele que explica por que a
+> contrapartida existia e por que ela era falsa, e apagá-lo faria alguém reescrevê-la daqui a três
+> meses achando que era ideia nova. A regra que fecha a premissa é a **RN-569**
+> ([[LEELA-E03-operacao-evento]]): a casa não envia nada, e nenhuma superfície promete envio. O
+> registro está em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 9.
+
+~~A tela de pós-pagamento e a área do cliente acabaram de nascer. É ali, com o ingresso na mão e a
 ansiedade resolvida, que um pedido custa menos. Cabem: tamanho de camiseta quando o kit exige e não
-foi escolhido, contato de emergência quando o evento pede, e a confirmação do endereço de entrega.
+foi escolhido, contato de emergência quando o evento pede, e a confirmação do endereço de entrega.~~
 
-A contrapartida é imediata e verdadeira: **confirme para o kit chegar certo.** Nenhum desses
-campos justifica uma tela própria; eles moram na confirmação que a pessoa já vai abrir.
+~~A contrapartida é imediata e verdadeira: **confirme para o kit chegar certo.** Nenhum desses
+campos justifica uma tela própria; eles moram na confirmação que a pessoa já vai abrir.~~
 
-### Degrau 3 · entre um evento e outro, com o motivo dito em voz alta
+**Por que a frase era falsa, e não só cara.** O kit é **retirada**, no balcão, na janela do
+evento — a RN-205 modela retirada como presença e a RN-399 já tinha tirado a palavra "entrega" do
+vocabulário do comprador. Não existe envio no produto. A contrapartida prometia a quem
+respondesse um benefício que a casa não tem como cumprir, e é essa a razão de a morte deste
+degrau ser mais forte que um veto de escopo: ele não foi adiado, foi corrigido.
+
+**E a confirmação de endereço morre com ele, por decisão explícita.** O endereço completo do
+comprador entra no checkout pela RN-561, com a razão que o dono escreveu em 11/08. *"Nao pediremo
+endereço novamente pois ja temos ele, basta salvamos as informações."*
+
+### ⚠ Degrau 3 · vive, mas não aqui — o banner da área do cliente (RN-571)
+
+> **O degrau 3 não morreu; mudou de casa.** A mesma fala de 12/08 deu destino a ele: *"na area do
+> cliente podemos colocar um banner/alerta convidando o usuário para concluir o cadastro."* A
+> coleta de perfil passa a viver num **banner de convite** na área do cliente, nunca numa tela
+> pós-compra e nunca como bloqueio — é a **RN-571**, no [[LEELA-E12-landing]]. O texto abaixo
+> continua valendo como conteúdo e como motivo; o que mudou foi a superfície.
+
+#### O conteúdo do degrau 3, preservado
 
 Interesses nos pilares, tipos de experiência, mini bio. Isto é a Arena Social, e ninguém preenche
 perfil sem motivo — então o motivo tem de estar escrito na tela: **receba primeiro as experiências
@@ -636,6 +664,11 @@ descreva" ao lado transforma a V8 de impossível em barata, e é a única coleta
 não custa nada a quem compra.
 
 ### O FormBuilder é a casa natural dos degraus 2 a 4
+
+> **+12/08 (leva 9):** com o degrau 2 morto, sobra o que o FormBuilder sempre foi — pergunta **do
+> organizador, por evento**. A fronteira da RN-185 fica ainda mais nítida: ele não é o caminho de
+> volta para a tela pós-compra que o dono acabou de recusar, e nenhuma pergunta da casa entra por
+> ele. O degrau 3 mudou de casa (RN-571) e o degrau 4 segue sem dono novo.
 
 O FormBuilder está em **Posição 2 da fila de construção** e permite ao organizador montar as
 próprias perguntas, com resposta gravada no inscrito e nunca no pedido (RN-185). Isso significa que

@@ -1577,3 +1577,26 @@ trabalho de servidor, fora desta história.
 não existe — quantos registros houve, por ação e por período, legíveis pelo organizador. O
 agregado que existe guarda média de pontos por pilar, nunca a ação que formou o ponto. Sem esta
 história, os três blocos ficam em "em breve" para sempre.
+
+## Direção registrada · o slug do club passa a ser editável (leva 10 do dono · 2026-08-12)
+
+**Decisão direcional, sem build agora.** Na íntegra: *"Outro ponto importante, é deixarmos o
+usuários editarem a página deles, quanto ao nome de slug, caso o slug esteja disponivel, Isso
+vale para eventos, clubs e para a propria página também. Registre essa decisão para seguirmos
+depois."* Registro único, com as perguntas abertas inteiras, em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 10. **Não consome número de RN**
+— o mecanismo não está decidido, e a regra escrita antes dele cravaria o que a spec futura ainda
+precisa responder.
+
+**O que a decisão dá por resolvido:** o dono do club pode trocar o slug dele, com a
+disponibilidade como condição.
+
+**O que este épico obriga a spec futura a responder.** Aqui também **`clubes/{clubId}` tem
+`docId = slug`**, então vale a mesma leitura do evento: é migração da subárvore, não edição de
+campo. O que é próprio deste épico é o **código de convite**: o club distribui entrada por
+`codigoConvite` e por link, e a spec precisa dizer se o convite já espalhado em grupo de WhatsApp
+continua chegando ao club depois do renome — convite morto por troca de endereço é a falha que
+custa membro, e ela é silenciosa. A rota `/clubs/[slug]` e as seis abas dependem do mesmo
+identificador.
+
+**Onde entra na fila:** card do backlog, ancorado nos três épicos por superfície.

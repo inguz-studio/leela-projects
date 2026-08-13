@@ -4233,3 +4233,73 @@ seis cards em `02-rodadas/2026-08-12-decisoes-dono/04-fila-cards.md`.
 
 **Quatro itens deste épico saíram** do [[DECISOES-ABERTAS]]: CKLOGIN-1, PB-11, ARENA-1 e
 ARENA-4. Nenhum entrou no lugar. A conta do painel cai de **12 para 4**.
+
+## Delta a leva 9 do dono — a senha na primeira entrada, e o cadastro que se conclui por convite (2026-08-12)
+
+Formaliza os dois itens deste épico que o dono decidiu na tarde de 12/08, ao fechar o **CRM-4**.
+As palavras dele estão na íntegra em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`
+§Leva 9. O terceiro efeito daquela fala — a casa não envia nada — é regra do
+[[LEELA-E03-operacao-evento]] e chega aqui como consumo, não como definição.
+
+### Regras de negócio novas (faixa RN-570 a RN-571)
+
+- **RN-570 · A primeira entrada na área do cliente conduz à definição da senha.** Na íntegra:
+  *"quando a pessoa entra na área do cliente pela primeira vez, podemos enviar para ela definir a
+  senha deça."* Quem chega logada pela promoção da **RN-562** tem conta e não tem senha, e o
+  caminho da senha deixa de depender de a pessoa abrir um e-mail. Na **primeira** entrada na área
+  do cliente, a pessoa é conduzida à definição da senha. A **RN-453 não é revogada**: o link de
+  e-mail continua existindo e continua terminando na `/definir-senha` da landing, com os três
+  estados distinguíveis que ela já descreve. O que esta regra acrescenta é o **segundo gatilho**,
+  dentro da sessão, para quem nunca precisou do e-mail porque já entrou. **A senha continua fora
+  do checkout** — a RN-562 registrou isso quando ele escolheu a primeira opção, e este gatilho
+  acontece depois do dinheiro, nunca antes. **Consome:** RN-451, RN-453, RN-562, RN-155.
+  **História:** S1247, tarefa nova.
+
+  **Defaults do maestro, vetáveis, nas sub-decisões que a fala não alcança.** *"Podemos enviar
+  para ela definir a senha"* fecha o gatilho e não fecha a força dele: a condução nasce como
+  **passo que se pode adiar**, e não como parede — quem quiser ver os próprios ingressos primeiro
+  vê, e o convite volta na entrada seguinte enquanto a senha não existir. É a mesma leitura que a
+  **RN-510** cravou ao derrubar o overlay bloqueante da RN-416, e derrubá-la custa uma linha dele.
+  A condução some no instante em que a senha existe, e não é oferecida a quem entrou por senha.
+
+- **RN-571 · O banner de conclusão de cadastro é convite, nunca bloqueio.** Na íntegra: *"e na
+  area do cliente podemos colocar um banner/alerta convidando o usuário para concluir o
+  cadastro."* A coleta complementar de perfil — o que a escada do CRM chamava de degrau 3 — passa
+  a morar num **banner na área do cliente**, e não em tela pós-compra. Ele **convida** e nunca
+  impede: fechar o banner não tranca nada, e nenhuma tela da área do cliente fica atrás dele.
+  Nasce da mesma família da RN-510, que já tinha decidido que aviso de conta é experiência e não
+  segurança. **O banner não pede endereço** — ele já foi coletado no checkout pela RN-561, e
+  repetir o pedido é exatamente a pergunta que o CRM-4 matou. **Consome:** RN-451, RN-510,
+  RN-561, RN-471 (o que a Arena guarda), RN-564 (a lista que ele oferece). **História:** S1250.
+
+  **Defaults do maestro, vetáveis.** O banner não inventa contrapartida nova: a razão dita na tela
+  é a que a RN-564 já sustenta — a pessoa escolhe os interesses uma vez e eles servem os três
+  consumidores. Copy final é decisão de produto e não sai de esteira; o que a regra crava é que
+  ela **não pode prometer envio de coisa nenhuma** (RN-569) nem contrapartida que a casa não
+  entrega. E o banner nasce **um**, não uma fila de avisos: se um segundo convite quiser espaço na
+  área do cliente, ele disputa o mesmo lugar em vez de empilhar.
+
+### O que a leva 9 fecha e este épico apenas consome
+
+O **CRM-4** fechou sem que nenhuma pergunta pós-compra nasça. O degrau 2 da escada — a tela de
+confirmação com contrapartida — **morre**, e com ele a frase-exemplo que a spec do CRM carregava.
+A regra que nomeia a premissa corrigida é a **RN-569**, no [[LEELA-E03-operacao-evento]], e este
+épico é consumidor dela em todas as superfícies do comprador: checkout, pós-pagamento, área do
+cliente e página do evento. O registro completo está no [[LEELA-E19-crm]] e em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 9.
+
+### Histórias novas
+
+| História | O que entrega | Espera |
+|---|---|---|
+| **LEELA-S1250** · O banner convida a concluir o cadastro | o banner de convite na área do cliente, com a coleta de interesses lendo a derivação da RN-564 e nenhum pedido de endereço | `S1245-T1` (a derivação) |
+
+E a **S1247 ganha a `S1247-T4`**: a condução à definição de senha na primeira entrada. Ela entra
+na história que já existe em vez de virar história solta, porque é o desfecho do mesmo fluxo que
+a RN-562 abriu — a conta que nasce no fim da compra chega sem senha, e é esta tarefa que fecha a
+lacuna. Fila em `02-rodadas/2026-08-12-decisoes-dono/04-fila-cards.md`.
+
+### Painel, na mesma aterrissagem
+
+**O CRM-4 sai** do [[DECISOES-ABERTAS]] pelo [[LEELA-E19-crm]], que é o épico dono do item.
+Nenhum item deste épico entra no lugar.

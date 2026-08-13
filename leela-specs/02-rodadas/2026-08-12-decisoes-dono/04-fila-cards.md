@@ -139,3 +139,117 @@ O comportamento já vale; o que este card entrega é a parte que a ratificação
   [[LEELA-E13-app-atleta]] e na spec da Arena, não uma lane.
 - **Nada de CRM-4.** A escada de coleta pós-compra continua sem resposta do dono.
 - **Nada do item 12.** O marcador `{DOMINIO_LEELA}` segue onde estava.
+
+---
+
+# Adendo · os cards das levas 9 e 10 (lane REGISTRO-CRM4-LEVA9)
+
+> Mesma régua da seção acima: **nenhuma linha de código nesta lane**, épico → história → tarefa, e
+> nenhum card nasce sem o épico na frente. As falas do dono estão nos adendos de
+> [[01-decisoes-dono]].
+
+## Card 7 · [E12] A senha se define na primeira entrada, e não só pelo e-mail
+
+**Decisão-fonte:** CRM-4, 12/08 tarde — *"quando a pessoa entra na área do cliente pela primeira
+vez, podemos enviar para ela definir a senha deça."*
+**Regra:** RN-570 · **História:** S1247 (tarefa nova) · **Épico:** [[LEELA-E12-landing]]
+
+A RN-562 faz a conta nascer no fim da compra. A conta nasce **sem senha**, e até aqui o único
+caminho da senha era o link de e-mail da RN-453 — que exige que a pessoa saia do produto, abra a
+caixa e volte. Este card fecha a lacuna do lado de dentro.
+
+| Tarefa | O que entrega |
+|---|---|
+| S1247-T4 | a condução à definição de senha na **primeira** entrada na área do cliente, adiável e não bloqueante, sumindo no instante em que a senha existe e nunca oferecida a quem entrou por senha |
+
+**Por que é tarefa da S1247 e não história própria:** é o desfecho do mesmo fluxo que a T1 abre.
+Separar em história daria a duas lanes a chance de construir metade cada uma, e a metade sem a
+outra é uma conta logada que não sabe entrar de novo.
+**Prioridade:** alta, e amarrada à T1 — a T1 sem esta tarefa entrega uma conta que a pessoa não
+consegue reabrir sozinha.
+**Espera:** a `S1247-T1`. Não faz sentido antes da promoção da sessão.
+**Vetável do dono:** a condução nasce **adiável**. Uma linha dele a torna obrigatória, e o custo do
+veto está escrito: a RN-416 já custou duas contas reais paradas numa parede em 06/08.
+
+## Card 8 · [E12] O banner convida a concluir o cadastro
+
+**Decisão-fonte:** CRM-4, 12/08 tarde — *"na area do cliente podemos colocar um banner/alerta
+convidando o usuário para concluir o cadastro."*
+**Regra:** RN-571 · **História:** S1250 · **Épico:** [[LEELA-E12-landing]]
+
+É a casa nova do que a escada do CRM chamava de degrau 3. Sai da tela pós-compra, que morreu, e
+vira convite numa superfície que a pessoa já visita por vontade própria.
+
+| Tarefa | O que entrega |
+|---|---|
+| S1250-T1 | o banner de convite na área do cliente: convida, não bloqueia, fechar não tranca nada e nenhuma tela fica atrás dele |
+| S1250-T2 | a coleta de interesses lendo a **derivação** da RN-564, nunca uma cópia da lista |
+
+**Prioridade:** média. Não bloqueia venda nem acesso, e o valor dele depende de haver gente
+entrando na área do cliente — o que a RN-562 acabou de destravar.
+**Espera:** a `S1245-T1`, que é a derivação no core. Consumidor que cola a própria cópia da lista é
+o defeito que a RN-553 existe para impedir.
+**O que fica de fora, de propósito:** **endereço**. A RN-561 já o coletou no checkout, e repetir o
+pedido é exatamente a pergunta que o CRM-4 matou.
+**⛔ Restrição de copy, não sugestão:** o banner **não promete envio** (RN-569) e **não inventa
+contrapartida** — a razão dita na tela é a que a RN-564 já sustenta.
+
+## Card 9 · [E03 · E05 · E16] O slug da própria página passa a ser editável
+
+**Decisão-fonte:** leva 10, 12/08 tarde — *"deixarmos o usuários editarem a página deles, quanto ao
+nome de slug, caso o slug esteja disponivel … Registre essa decisão para seguirmos depois."*
+**Regra:** nenhuma, por desenho · **Card:** SLUG-1 · **Épicos:** [[LEELA-E03-operacao-evento]]
+(evento), [[LEELA-E05-clubs]] (club), [[LEELA-E16-plataforma-superadmin]] (produtor)
+
+⚠️ **Card de BACKLOG, retido de propósito.** As palavras dele são *"para seguirmos depois"*, e há
+quatro perguntas abertas que vêm antes de qualquer linha de código. Quem puxar este card sem
+respondê-las vai desenhar um input editável para uma operação que é migração.
+
+**O fato que dimensiona o card:** nas três superfícies o slug é o **`docId`** —
+`eventos/{eventoId}`, `clubes/{clubId}` e `tenantId == slug == docId`. Trocar o slug move o
+documento e a subárvore inteira. É migração, não edição de campo.
+
+| Antes de virar história, a spec precisa responder |
+|---|
+| **1 · destino dos links antigos** — redireciona ou morre? A RN-201 gera URL **e QR** na publicação, e QR impresso e PDF de ingresso baixado **não se reimprimem**. A RN-234 já é a máquina de redirecionamento da casa |
+| **2 · colisão e reserva** — o slug liberado volta ao pool na hora? Se sim, um terceiro captura o endereço de um evento com QR na rua |
+| **3 · limite ou janela de renomes** — sempre, ou só antes da primeira venda, como a edição de modalidades da RN-500? |
+| **4 · o que é "a propria página"** — o slug do tenant, o `/@handle` de `perfis/{handle}`, ou os dois? |
+
+**Prioridade:** nenhuma até as quatro respostas. Não é fila de execução.
+**O que este card já resolve, sem construir nada:** o card **renomear DEPOIS** da ponte
+(`S1234-T5`), separado e sem dono desde 11/08, **ganha dono** — é esta decisão, e ela supersede a
+premissa *"depois do código não existe renomear"*.
+**Não entra no painel:** decisão tomada não é pendência.
+
+## Card 10 · [E03] O gate que impede a terceira reintrodução da premissa de envio
+
+**Decisão-fonte:** não é decisão do dono — é **default vetável da esteira**, nascido da varredura
+da leva 9.
+**Regra:** RN-569 (a prova dela) · **Épico:** [[LEELA-E03-operacao-evento]]
+
+⚠️ **Este card é proposta, não ordem.** Ele está aqui porque a premissa foi corrigida **duas
+vezes** — 05/08 e 12/08 — e porque a segunda reintrodução aconteceu numa spec escrita no **mesmo
+dia** da primeira correção. Correção por edit não impede a terceira vez.
+
+| Tarefa | O que entrega |
+|---|---|
+| SEMENVIO-T1 | gate de vocabulário sobre copy renderizada, começando em **aviso**: promessa de envio físico ao comprador vira flag com o arquivo e a linha, no molde do `leela-canon` da RN-558 |
+
+**Prioridade:** baixa em urgência, alta em durabilidade. Nada está quebrado hoje — a varredura
+achou **zero** promessas na copy dos apps.
+**O custo do veto, escrito:** sem gate, a quarta ocorrência será encontrada por um comprador, e não
+por nós.
+**O que o gate NÃO pode fazer:** acusar "entrega" no balcão, "enviaremos" de e-mail e as citações
+de benchmark. A RN-569 lista as quatro famílias legítimas, e um gate que não as conhece vira ruído
+que alguém desliga na primeira semana.
+
+## O que estas levas deixaram explicitamente fora da fila
+
+- **Nenhum card de copy em código.** A varredura da leva 9 procurou promessa de envio na copy
+  renderizada dos apps e achou **zero**. O desenho previa card nomeado para cada achado; não houve
+  achado.
+- **O degrau 4 da escada** — a pergunta de satisfação depois do evento — **não foi decidido** pela
+  fala. Ele não virou tela, não virou card e não foi recusado. Fica como estava.
+- **A Arena Social continua fora de build**, pela mesma razão da leva 8.
+- **O item 12** segue onde estava.
