@@ -615,8 +615,14 @@ na copy renderizada dos apps.**
 |---|---|---|---|
 | 1 | `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md:610` | *"A contrapartida é imediata e verdadeira: **confirme para o kit chegar certo.**"* | **CORRIGIDO nesta lane.** Degrau 2 marcado como morto, texto legível e riscado, com a razão e o ponteiro para a RN-569 |
 | 2 | mesmo arquivo, `:608` | *"…e a confirmação do **endereço de entrega**."* | **CORRIGIDO nesta lane**, no mesmo bloco marcado — e é o mais insidioso dos quatro, porque não usa a palavra envio e mesmo assim pressupõe destino |
-| 3 | `01-produto/DECISOES-ABERTAS.md:63` | *"É ali que confirmar o **endereço de entrega** custa quase nada"* | **SAI COM O ITEM.** É texto do CRM-4, que esta lane remove do painel na segunda fase (a trava de ordem está no fim deste adendo) |
-| 4 | `01-produto/DECISOES-ABERTAS.md:67` | *"contrapartida imediata e verdadeira — **'confirme para o kit chegar certo'**"* | **SAI COM O ITEM**, mesma razão |
+| 3 | `01-produto/DECISOES-ABERTAS.md`, item CRM-4, linha do caso de uso | *"ali confirmar o **endereço de entrega** custa quase nada"* | **REMOVIDO com o item**, na segunda fase desta lane |
+| 4 | mesmo item, linha das opções | *"contrapartida imediata e verdadeira — **'confirme para o kit chegar certo'**"* | **REMOVIDO com o item**, mesma razão |
+
+> **Sobre as linhas dos dois do painel:** a varredura as achou nas linhas 63 e 67, e a lane
+> LIMPEZA-PAINEL-FORMATO reescreveu o arquivo inteiro no intervalo, levando-as para 29 e 32 com o
+> texto encurtado e a frase intacta. Elas estão citadas por **item e papel na estrutura**, e não por
+> número de linha, porque número de linha de um arquivo que outra lane está reescrevendo é
+> referência que nasce morta.
 
 Os quatro têm a mesma origem: os dois do painel são a citação dos dois da spec. **Uma frase
 escrita uma vez em 05/08 apareceu em quatro lugares em sete dias**, e é isso que a regra existe
@@ -690,13 +696,22 @@ por um comprador, e não por nós.
 
 ## A conta do painel, depois desta leva
 
-**4 → 3.** Sai o **CRM-4**. Ficam três: o **item 12** em "Decisões que dependem de você", e o
-**69** e o **JUROS-1** em "Ações que só você pode executar". Contados à mão contra as duas seções
-do painel, no formato novo.
+**5 → 4.** Sai o **CRM-4**. Ficam quatro, contados à mão contra as duas seções do painel no
+formato novo: o **item 12** e o **MODALIDADES-1** em "Decisões que dependem de você", e o **69** e
+o **JUROS-1** em "Ações que só você pode executar".
+
+**Por que a conta parte de 5 e não de 4**, que é o número que a leva 8 registrou de manhã: o
+**MODALIDADES-1** subiu ao painel canônico pela primeira vez na tarde de 12/08, pela lane
+REGISTRO-S316-PAINEL (commit `b8480223`), no intervalo entre as duas levas. A leva 8 fechou em 4 e
+estava certa na hora em que escreveu; a conta desta lane é refeita à mão contra o arquivo, e não
+herdada do número anterior — que é a única forma de a contagem não derivar.
 
 ⚠️ **Trava de ordem cumprida.** O painel estava sendo reescrito pela lane LIMPEZA-PAINEL-FORMATO
-enquanto esta lane trabalhava. Rodada, varredura, épicos, cards e RNs foram feitos primeiro, e o
-painel só foi tocado depois de a limpeza aterrissar na main.
+enquanto esta lane trabalhava. Rodada, varredura, épicos, cards e RNs foram feitos e commitados
+primeiro (`dac2654a`); o painel só foi tocado depois de a limpeza aterrissar na main
+(`c1796608`, `9e0dd727`, `b56fe822`). O item foi removido **no formato novo**: cabeçalho de três
+linhas intacto, nada de narrativa de fechamento no arquivo, e o histórico deste fechamento vive
+aqui, na rodada, que é onde o contrato do painel manda ele viver.
 
 ---
 

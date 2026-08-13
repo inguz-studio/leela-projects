@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **5 itens abertos, contados à mão:** 3 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **4 itens abertos, contados à mão:** 2 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -21,17 +21,6 @@ Todo endereço do produto ainda é o marcador `{DOMINIO_LEELA}`, e o remetente d
 - **Job story:** quando eu divulgo a página do meu evento, eu quero um endereço que eu não tenha vergonha de colar e que continue funcionando depois, para não ter de reeditar cada post no dia em que o site mudar de casa.
 - **O que fica com você:** cravar o domínio público da Leela.
 - **Onde aterrissa:** env dos dois apps, substituição do marcador nas specs e verificação DKIM/SPF/DMARC na Brevo. Puxa junto o item 66 e o placeholder `contato@leela.app`, que a porta de entrada do organizador já usa como CTA de "Falar com o time Leela".
-
-### CRM-4 · o que se pede ao participante depois da compra, e em troca de quê
-
-**Nada novo entra no checkout** — ele é a única tela onde o dinheiro entra, e cada campo a mais é venda perdida. O que existe é uma escada para fora dele, e ela precisa de você porque cada degrau é uma promessa feita a quem responde. Em 12/08 você leu e respondeu com uma pergunta (*"como assim em troca de que?"*), o esclarecimento foi dado no chat e a sua resposta ainda não voltou, então o item fica aqui intacto.
-
-- **Caso de uso:** a Ana acabou de pagar e está na tela de confirmação com o ingresso na mão — ali confirmar o endereço de entrega custa quase nada, e ali perguntar a renda dela seria uma invasão.
-- **Job story:** quando eu acabei de pagar e estou aliviada, eu quero responder só o que me devolve alguma coisa na hora, para sentir que estou completando a minha compra em vez de preencher pesquisa dos outros.
-- **O que fica com você:** dizer até que degrau a gente sobe, e qual contrapartida é dita em voz alta.
-- **Opções:** **degraus 1 e 2 agora** (**default proposto** — degrau 1 é conserto sem atrito nenhum: guardar o e-mail que já se pede, guardar o código de município que o consultor de CEP já devolve e a gente descarta, e copiar cidade e UF do endereço quando o participante é o próprio comprador; degrau 2 é a confirmação logo depois da compra, com contrapartida imediata e verdadeira — "confirme para o kit chegar certo") · subir também o degrau 3, o perfil de interesses, que é a Arena Social — e ele **destravou em 12/08**, porque os dois itens ARENA que o seguravam foram decididos na leva 8: o dado nasce guardado (ARENA-1) e a lista de interesses passou a derivar das modalidades do Strava, com a tabela pronta para o seu corte fino (ARENA-4) · subir tudo, incluindo a pergunta de satisfação depois do evento, que depende do canal de e-mail travado na chave do Brevo.
-- **O que a esteira recusa pedir, em qualquer degrau:** renda, profissão, estado civil e número de filhos. São os campos que todo formulário de evento pede, que nenhum organizador abre depois, e que cada um obriga a guardar, justificar e expurgar dado pessoal sem que nenhuma decisão melhore.
-- **Onde aterrissa:** `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md` §Parte 7; tarefas `COL-T2` e `V2-T3` em `03-fila-proposta.md`.
 
 ### MODALIDADES-1 · visibilidade agora ou editor completo na tela de lotes
 
