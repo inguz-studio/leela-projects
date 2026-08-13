@@ -62,11 +62,21 @@ export function PublicHeader(): React.JSX.Element {
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2" aria-label="Ações">
+          {/* S1255-T6 (rodada 2026-08-12-copy-landing · achado L3) · o wordmark
+              e este link apontavam os DOIS para `/`: dois alvos, um destino,
+              rótulos diferentes. Quem clicava esperando a lista recebia a home
+              inteira, hero incluído. O link passa a apontar para a âncora que
+              já existe, que é o comportamento que o rótulo promete.
+
+              O rótulo virou "Experiências" na mesma passada (D-0802-1, e a
+              dobra de destino já se chama "Experiências abertas"). O `id` do
+              alvo continua `eventos`: identificador não é o que a pessoa lê —
+              mesma régua da RN-399. */}
           <Link
-            href="/"
+            href="/#eventos"
             className="hidden rounded-ds-sm px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:inline-block"
           >
-            Eventos
+            Experiências
           </Link>
           {/* S1221-T1: "Entrar" deixou de ser link para OUTRA origem (o painel)
               e virou o overlay da própria landing — a pessoa entra sem perder
@@ -84,12 +94,16 @@ export function PublicHeader(): React.JSX.Element {
           </a>
           {/* Placeholder pré-existente. Sobe de `sm` para `lg`: com os dois
               rótulos de conta ao lado, um quarto item quebrava a linha do
-              header em tablet. */}
-          <span
-            className="hidden rounded-ds-pill border border-border-default px-3 py-1.5 text-sm font-medium text-text-tertiary lg:inline-block"
-            title="Em breve"
-          >
-            Baixar o app
+              header em tablet.
+
+              S1255-T1 (rodada 2026-08-12-copy-landing · achado G3) · o rótulo
+              era "Baixar o app" e o aviso "Em breve" morava num `title`, que só
+              existe no hover. No celular, onde não há hover, a pessoa lia uma
+              oferta, tocava e não acontecia nada — sem aviso, sem destino, sem
+              explicação. O rótulo passa a dizer o estado, a promessa sai do
+              modo imperativo, e o `title` some junto porque virou redundante. */}
+          <span className="hidden rounded-ds-pill border border-border-default px-3 py-1.5 text-sm font-medium text-text-tertiary lg:inline-block">
+            App em breve
           </span>
         </nav>
       </div>
