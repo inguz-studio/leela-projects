@@ -459,3 +459,68 @@ card do CRM desta leva **não o antecipa**, mesmo tocando território vizinho.
 
 **CRM-1, CRM-2 e CRM-3 saíram** do [[DECISOES-ABERTAS]]. Nenhum entrou no lugar. O **CRM-4**
 continua onde estava.
+
+---
+
+## Delta o CRM-4 fecha — nenhuma pergunta pós-compra, e a premissa de envio morre (leva 9 do dono · 2026-08-12)
+
+O último item de CRM que estava preso no dono desde 05/08 **fechou na tarde de 12/08**, algumas
+horas depois de a leva 8 registrar que ele seguia aberto. Registro completo, com a fala na
+íntegra e a varredura de envio, em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`
+§Leva 9.
+
+**Fala do dono, na íntegra:** *"crm-4 -> se ja pegamos o endereço nao precisamos perguntar mais
+nada. e quando a pessoa entra na área do cliente pela primeira vez, podemos enviar para ela
+definir a senha deça. Nao pediremo endereço novamente pois ja temos ele, basta salvamos as
+informações. e na area do cliente podemos colocar um banner/alerta convidando o usuário para
+concluir o cadastro. nao existe isso de 'confirme para o kit chegar certo' ja falei que nao
+enviaremos nada."*
+
+### O que sobrevive da escada, e o que morre
+
+**O degrau 1 fica, e passa a ser o único mecanismo automático.** *"Basta salvarmos as
+informações"* é a frase que o define: o que a pessoa já digitou se guarda, e nada novo se
+pergunta. São as três coisas que a spec já listava — o e-mail de cada participante, já decidido
+no **CRM-3** e vivendo na **RN-565**; o código IBGE do município, que o consultor de CEP devolve
+e o código descarta; e a cópia de cidade e UF do endereço do pedido para os campos do
+participante **quando o participante é o próprio comprador**, marcada como derivada, com a tela
+declarando a cobertura. Nenhuma das três pede nada a ninguém, e é por isso que as três
+sobrevivem a uma decisão que matou o resto.
+
+**O degrau 2 morre inteiro.** A tela de confirmação pós-compra com contrapartida não nasce. Com
+ela morre a frase-exemplo que a spec carregava — *"confirme para o kit chegar certo"* —, e morre
+pela razão mais forte possível: ela era **falsa**. A casa não envia nada, e a contrapartida que
+a esteira escreveu prometia uma coisa que o produto não faz. A regra que nomeia isso é a
+**RN-569**, no [[LEELA-E03-operacao-evento]], e este épico é consumidor dela.
+
+**A confirmação de endereço morre junto, e por decisão explícita.** *"Se ja pegamos o endereço
+nao precisamos perguntar mais nada"* e *"nao pediremo endereço novamente pois ja temos ele"*. O
+endereço completo do comprador entra no checkout pela **RN-561**, com a razão que ele mesmo
+escreveu em 11/08 — segurança e cadastro —, e pedir de novo depois seria atrito sobre dado que já
+está no banco. A **P-CKMOD-1 e a RN-566 não mudam**: o endereço segue fora da ficha individual e
+o agregado sem identidade segue autorizado.
+
+**Os degraus 3 e 4 não nascem como tela pós-compra.** O degrau 3, o perfil de interesses, ganha
+casa nova: o **banner na área do cliente**, que é a **RN-571** no [[LEELA-E12-landing]]. O degrau
+4, a pergunta de satisfação depois do evento, continua dependendo do canal e **não foi decidido
+nesta fala** — ele não vira tela pós-compra e não vira promessa; fica como estava, sem dono novo.
+
+**O degrau 5 fica exatamente como estava**, e a decisão o reforça: renda, profissão, estado civil
+e número de filhos seguem recusados em qualquer momento.
+
+### O que isso não muda
+
+**Nenhuma regra de CRM é revogada.** A RN-565, a RN-566 e a minimização da RN-172 seguem
+inteiras. **Nenhuma contrapartida nova foi inventada** — a decisão tirou uma promessa de circulação
+e não pôs outra no lugar, e o banner da RN-571 se sustenta na razão que a RN-564 já dá.
+O **FormBuilder** continua sendo a casa natural de pergunta por evento, com a fronteira da
+RN-185 intocada: resposta de FormBuilder é por evento e não constrói perfil cross-evento.
+
+### O que fica com o dono, neste épico
+
+**Nada.** Com o CRM-4 fechado, os quatro itens de CRM do painel saíram. É a primeira vez desde
+05/08 que este épico não tem item pendurado no [[DECISOES-ABERTAS]].
+
+### Painel, na mesma aterrissagem
+
+**O CRM-4 sai.** Nenhum item entra no lugar.

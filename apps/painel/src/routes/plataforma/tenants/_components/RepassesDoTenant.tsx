@@ -28,7 +28,9 @@ import {
   CardTitle,
   CardDescription,
   CardFooter,
+  FormGrid,
   KpiCard,
+  MetricGrid,
   Skeleton,
   Table,
   type TableColumn,
@@ -61,7 +63,7 @@ export const AVISO_PAGO_MANUAL =
 function CardsDeSaldo({ saldo }: { saldo: SaldoRepasse }): JSX.Element {
   return (
     <div className="flex flex-col gap-[var(--spacing-4)]">
-      <div className="grid grid-cols-2 gap-[var(--spacing-4)] sm:grid-cols-4">
+      <MetricGrid columns={4}>
         <KpiCard label="Vendido bruto" value={formatBRL(saldo.vendidoBruto)} />
         <KpiCard
           label="Retido"
@@ -74,9 +76,9 @@ function CardsDeSaldo({ saldo }: { saldo: SaldoRepasse }): JSX.Element {
           value={formatBRL(saldo.comprometido)}
           hint="Em repasses solicitados, aprovados ou pagos"
         />
-      </div>
+      </MetricGrid>
 
-      <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+      <FormGrid>
         <KpiCard
           label="Eventos sem termo comercial"
           value={formatInt(saldo.eventosSemTermo)}
@@ -88,7 +90,7 @@ function CardsDeSaldo({ saldo }: { saldo: SaldoRepasse }): JSX.Element {
           causa="A Function grava zero neste campo sempre: a fonte por transação que a janela D+N exige não existe ainda (pendência do L2-T1). O cálculo puro já está pronto e esperando o insumo."
           icon={<Timer aria-hidden />}
         />
-      </div>
+      </FormGrid>
     </div>
   );
 }

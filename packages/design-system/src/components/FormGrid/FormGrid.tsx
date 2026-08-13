@@ -60,7 +60,12 @@ const formGridVariants = cva('grid grid-cols-1', {
 // Props
 // ---------------------------------------------------------------------------
 
-export type FormGridElement = 'div' | 'section' | 'fieldset' | 'form' | 'ul';
+// `dl` entrou na FIX-CANON-MAIN de 12/08: par rótulo/valor com `<dt>`/`<dd>`
+// (agrupados em `<div>`, filho válido de `dl` pela spec) é a mesma anatomia de
+// "grade de campos de largura parecida" que esta peça já serve — só que com
+// outra tag semântica. "Layout não decide semântica" é o motivo do `as` prop
+// existir; recusar `dl` forçaria a tela a reescrever a classe à mão de novo.
+export type FormGridElement = 'div' | 'section' | 'fieldset' | 'form' | 'ul' | 'dl';
 
 export interface FormGridProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'color'>,

@@ -96,3 +96,117 @@ As três histórias novas nascem no [[LEELA-E12-landing]], e as duas de interess
 consomem o **contrato** da `S1245-T1`, que é a derivação no core. Nenhuma delas nasce antes
 dela, pela mesma razão que a S1226 não nascia antes da S1245: consumidor que cola a própria
 cópia da lista é o defeito que a RN-553 existe para impedir.
+
+---
+
+# Adendo · o que as levas 9 e 10 acrescentam ao corpus (lane REGISTRO-CRM4-LEVA9)
+
+> Mesmo desenho da seção acima: **delta apenas**. O texto canônico de cada regra mora no épico
+> dono. As palavras do dono estão nos adendos de [[01-decisoes-dono]].
+
+## Faixa consumida: RN-569 a RN-571
+
+⚠️ **Esta lane bateu numa colisão de numeração e a desfez antes do fecho.** Ela abriu com a faixa
+livre em **568**, que era o que o [[indice-de-regras-de-negocio]] anunciava, e escreveu as três
+regras nessa numeração. A conferência refeita **no momento do commit** — e não a do começo da
+rodada — achou a **RN-568 já consumida pela lane CONFORMIDADE-CONTROLES**, que aterrissou na main
+no intervalo (commit `4f43eb37`). As três foram renumeradas de 568-570 para **569-571** durante a
+própria aterrissagem, **sem deixar buraco**. É o terceiro caso da mesma família, depois do 483-485
+e do 516, e o segundo com desfecho bom, depois da SPEC-ADMIN-VISAO em 09/08. Duas lanes de
+registro no mesmo dia é o normal deste projeto, não a exceção.
+
+A conferência final foi por grep de `RN-569` a `RN-573` sobre o corpus inteiro fora do índice:
+**zero definições** fora das desta rodada. **A próxima livre passa a ser a 572.**
+
+E a conta do índice foi refeita duas vezes na mesma aterrissagem: a linha da CONFORMIDADE-CONTROLES
+não tinha sido refeita por ela, então esta lane a repara (298 → 299) antes de somar as próprias
+três (→ **302**). Mesma disciplina que a SERV1-BUILD aplicou pela ROADMAP-COMPONENTES na véspera.
+
+| RN | Enunciado curto | Épico dono | Item do dono |
+|---|---|---|---|
+| **RN-569** | **A casa não envia nada.** Kit é retirada no balcão, e nenhuma superfície que a pessoa lê promete, sugere ou pressupõe envio, entrega em domicílio, despacho ou postagem. A regra declara o que **não** proíbe: entregar no balcão (RN-205/RN-222), "enviaremos" sobre e-mail, a logística do próprio organizador e o registro de benchmark. | [[LEELA-E03-operacao-evento]] | CRM-4 |
+| **RN-570** | A **primeira entrada** na área do cliente conduz à definição da senha — segundo gatilho, ao lado do link de e-mail da RN-453, que **não é revogada**. Nasce como passo **adiável**, não como parede. | [[LEELA-E12-landing]] | CRM-4 |
+| **RN-571** | O banner de conclusão de cadastro na área do cliente **convida e nunca bloqueia**, e **não pede endereço** — a RN-561 já o coletou. Não inventa contrapartida: a razão dita é a que a RN-564 sustenta. | [[LEELA-E12-landing]] | CRM-4 |
+
+## O que estas levas decidem e **não** consomem número
+
+- **O CRM-4 fecha sem consumir número.** Recusar tela pós-compra é veto de escopo de fila, como
+  o CRM-1 foi. O que virou regra foi a **premissa** por trás da tela, e ela é a RN-569.
+- **A leva 10 inteira não consome número.** O slug editável nas três superfícies é **direção de
+  produto**, no mesmo desenho do ARENA-1: o mecanismo não está decidido, e regra escrita antes do
+  mecanismo cravaria o que a spec futura precisa responder. Fica registrado aqui porque decisão do
+  dono que não aparece nesta seção parece rodada que esqueceu de registrar.
+
+## O que muda de estado sem virar regra
+
+**A premissa da ponte é superada.** Em 11/08 o painel registrou, ao fechar o PONTE-NOME-1, que
+*"depois do código não existe renomear"*. Era medição verdadeira e virou premissa de desenho. A
+leva 10 a **supersede**: o "depois" passa a existir por ordem do dono. O conserto na origem
+continua certo e continua barato — o que muda é que ele deixa de ser o único caminho, e o card
+**renomear DEPOIS** (`S1234-T5` no [[V1-KANBAN]]), separado e sem dono desde 11/08, **ganha dono**.
+A premissa fica **marcada, não apagada**, no [[LEELA-E16-plataforma-superadmin]].
+
+## O que as regras novas NÃO fazem
+
+- **A RN-569 não renomeia dado nem função.** `registrarEntrega`, `kitEntregueEm` e o id de área de
+  permissão `entrega` seguem intocados, exatamente como a RN-399 já tinha decidido: a régua é o que
+  a **pessoa lê**. Quem for cumprir a regra mexendo em identificador está consertando a coisa errada.
+- **A RN-570 não revoga a RN-453** e não traz a senha para dentro do checkout. A RN-562 fechou isso
+  na leva 8, e este gatilho acontece depois do dinheiro.
+- **A RN-571 não cria coleta nova nem lista nova.** Ela dá superfície ao que a RN-564 já deriva.
+- **Nenhuma das três toca a RN-565, a RN-566 ou a minimização da RN-172.** O que o CRM guarda não
+  mudou nesta leva; mudou o que ele pergunta, que passou a ser nada.
+
+## Histórias
+
+| História | O que entrega | Estado |
+|---|---|---|
+| **S1247-T4** · A senha na primeira entrada | tarefa **nova dentro da história que já existe** (RN-570) — não vira história solta, porque é o desfecho do mesmo fluxo que a T1 abre | acrescentada à S1247 |
+| **S1250** · O banner convida a concluir o cadastro | o banner de convite na área do cliente, lendo a derivação da RN-564 e sem pedir endereço (RN-571) | nova, espera a S1245-T1 |
+| **SLUG-1** · O slug editável nas três superfícies | card de **backlog**, direcional, ancorado em E03, E05 e E16; **não entra em execução** — as quatro perguntas abertas vêm antes | novo, retido por desenho |
+
+---
+
+# Adendo · a área de kits perde a redundância e ganha nomes de gente (lane REGISTRO-LEVA11-KITS-IA)
+
+> Mesmo desenho das seções acima: **delta apenas**. O texto canônico da regra mora no épico
+> dono. A fala do dono está no adendo "Leva 11" de [[01-decisoes-dono]].
+
+## Faixa consumida: RN-572
+
+Das três decisões da leva 11, só uma consome número. A conferência foi refeita imediatamente
+antes do commit, por grep de `RN-572` a `RN-576` sobre o corpus inteiro fora do índice: **zero
+definições**. **A próxima livre passa a ser a 573.**
+
+| RN | Enunciado curto | Épico dono | Item do dono |
+|---|---|---|---|
+| **RN-572** | A aba índice de Kits troca o rótulo "Cadastro" por "Gerenciamento" — o conteúdo já é gestão de kits e catálogo (criar, editar, configurar patrocínio), não só cadastro inicial. O `id` interno e a rota não mudam, mesma régua da RN-399. | [[LEELA-E03-operacao-evento]] | item 3 da leva 11 (rótulo da aba Cadastro) |
+
+## O que esta leva decide e **não** consome número
+
+- **A duplicata de credenciamento dentro de Kits sai (item 1).** É remoção de item de navegação
+  redundante, não regra de negócio: o vocabulário e a identidade do credenciamento já são
+  governados pela RN-399, e o item removido é um `href` idêntico ao da aba do menu secundário,
+  sempre inativo — sem conteúdo próprio a preservar.
+- **Distribuição e a leitura de retirada de Estoque unificam (item 2).** A decisão de unificar
+  está tomada, mas o desenho é vetável (nome da aba, o que cada metade vira, hierarquia interna)
+  — mesmo desenho da leva 10 (slug editável): regra escrita antes do desenho responder cravaria o
+  que o card de build ainda precisa perguntar. Se o veto fechar como reorganização pura de tela, a
+  build não deve precisar de RN nem nessa hora.
+
+## O que a regra nova NÃO faz
+
+- **A RN-572 não muda `kitEntregueEm`, `registrarEntrega` nem o id de área de permissão
+  `entrega`.** Nenhum deles é tocado por esta leva — o rótulo trocado é só o de
+  `KitsLayout.tsx:26`, e o `id: 'cadastro'` da aba índice de Kits segue intocado, mesma régua que
+  a RN-399 já cravou para o credenciamento.
+- **A RN-572 não muda o que a aba faz.** Ela só nomeia o que a aba já fazia — criar e editar kits
+  e itens do catálogo — com o nome que fecha com o conteúdo.
+
+## Histórias
+
+| História | O que entrega | Estado |
+|---|---|---|
+| **S1257** · A sub-nav de Kits para de duplicar Credenciamento | remove o 4º item (sempre inativo) da sub-nav interna de Kits | nova, backlog |
+| **S1258** · Distribuição e a leitura de retirada de Estoque viram uma aba só | desenho vetável da aba unificada + implementação depois do veto | nova, backlog — T1 é o vetável |
+| **S1259** · A aba índice de Kits vira "Gerenciamento" | RN-572: troca de rótulo, sem tocar id nem rota | nova, backlog |

@@ -2558,3 +2558,105 @@ mecanismo de origem já está resolvido — é projeção, não cálculo novo.
 vagas, ocupação, "Inscrições" da Análise). O defeito era só onde a contagem virava **denominador
 de dinheiro**, e havia exatamente um lugar assim no painel inteiro. A T2 vira, então, revisão de
 rótulo caso a caso — não troca cega das dezenove telas.
+
+## Delta a casa não envia nada — kit é retirada (leva 9 do dono · 2026-08-12)
+
+Este delta nasce de uma **correção de premissa, feita pela segunda vez**. A primeira foi em
+05/08, quando o dono revogou a RN-211 e a lane SPEC-SEM-KIT registrou que o kit não vende
+desconto. A segunda é esta, e ela é mais funda: não é sobre preço de kit, é sobre a operação
+inteira. Registro completo em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 9.
+
+### RN-569 (nova, dona) · a casa não envia nada, e nenhuma superfície promete envio
+
+Na íntegra, com a ênfase dele: *"nao existe isso de 'confirme para o kit chegar certo' ja falei
+que nao enviaremos nada."*
+
+**O enunciado.** O produto **não faz envio físico**. O kit se retira, no balcão, na janela de
+retirada do evento — é o que a RN-205 já modela como retirada igual a presença, e é o que a
+RN-399 já tinha cravado no vocabulário ao trocar "entrega" por "credenciamento". Nenhuma
+superfície que a pessoa lê pode prometer, sugerir ou pressupor que a casa envia, entrega em
+domicílio, despacha, posta ou faz chegar qualquer coisa física a comprador ou participante.
+Isso vale para copy de tela, e-mail, PDF e qualquer artefato que saia do produto.
+
+**O que a regra não proíbe, e precisa estar escrito para ninguém consertar o que está certo:**
+
+- **"Entrega do kit" no balcão continua legítima.** É o gesto de entregar em mão, na retirada. A
+  RN-205, a RN-222, o `registrarEntrega` e o carimbo `kitEntregueEm` seguem intocados. A régua é
+  a mesma da RN-399: o que muda é o que a **pessoa lê**, não o que o dado se chama.
+- **"Enviaremos" sobre e-mail continua legítimo.** O acesso do ingresso vai por e-mail, e o
+  próprio dono escreveu isso em 04/08. Envio de mensagem não é envio de coisa.
+- **A logística do organizador não é a nossa.** Um organizador pode ter entregado kit antes do
+  dia da prova por conta própria, e a RN-222 existe justamente para o QR da largada tratar esse
+  caso. Descrever a possibilidade do organizador não é a casa prometer envio.
+- **Registro de benchmark não é promessa.** As citações em `05-discovery/` descrevem o que os
+  concorrentes fazem, na data em que foram coletadas, e não se mexe nelas — mesma disciplina que
+  a revogação da RN-211 aplicou.
+
+**Onde a regra morde.** A varredura da lane sobre `leela-specs/` e sobre a copy renderizada dos
+apps está inteira em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 9, ocorrência
+a ocorrência e com veredito por linha. O que ela achou de promessa viva foi corrigido no mesmo
+ato; o que vive em código de app virou card nomeado, porque esta lane não altera código.
+
+**Consumidores:** [[LEELA-E12-landing]] (checkout, pós-pagamento, área do cliente, página do
+evento), [[LEELA-E19-crm]] (a escada de coleta), [[LEELA-E13-app-atleta]] e [[LEELA-E06-marketing]]
+(copy de campanha). **Consome:** RN-205, RN-222, RN-399.
+
+**Condição de reabertura.** O dono decidir que a casa passa a enviar alguma coisa. Aí a regra cai
+inteira e abre um escopo que hoje não existe em lugar nenhum do produto — frete no checkout,
+endereço validado como destino, rastreio e a base de custo disso. Os dois benchmarks de
+`05-discovery/` já mediram que isso é lacuna declarada, e não acidente.
+
+## Direção registrada · o slug do evento passa a ser editável (leva 10 do dono · 2026-08-12)
+
+**Decisão direcional, sem build agora.** Na íntegra: *"Outro ponto importante, é deixarmos o
+usuários editarem a página deles, quanto ao nome de slug, caso o slug esteja disponivel, Isso
+vale para eventos, clubs e para a propria página também. Registre essa decisão para seguirmos
+depois."* As três superfícies estão registradas cada uma no seu épico; o registro único, com as
+perguntas abertas inteiras, está em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`
+§Leva 10. **Não consome número de RN** — o mecanismo não está decidido, e escrever a regra antes
+disso cravaria o que a spec futura ainda precisa responder. Mesmo desenho do ARENA-1.
+
+**O que a decisão dá por resolvido:** o organizador pode trocar o slug do próprio evento, e a
+condição é a disponibilidade — *"caso o slug esteja disponivel"*.
+
+**O que este épico obriga a spec futura a responder, e que a fala não alcança.** O fato que mais
+pesa mora aqui: **`eventos/{eventoId}` tem `docId = slug`**. Trocar o slug não é editar um campo,
+é **mover o documento e toda a subárvore** — `inscritos`, agregados, e cada referência por
+`eventoId` que vive fora dele. É migração, não edição, e a spec precisa dizer isso antes de
+alguém prometer um campo editável na tela. E há um segundo fato só deste épico: a **RN-201** gera
+URL pública **e QR automaticamente** na publicação. QR já impresso em cartaz e PDF de ingresso já
+baixado carregam o endereço antigo e **não se reimprimem**, o que faz o destino do link velho
+deixar de ser cortesia e virar requisito. A **RN-234** já é a máquina de redirecionamento da casa
+— ela nasceu na virada de `entrega` para `credenciamento`, com teste orientado a tabela e guarda
+anti-laço — e é o candidato natural, não um mecanismo novo.
+
+## Delta a área de kits perde a redundância e ganha nomes de gente (leva 11 do dono · 2026-08-12)
+
+Três decisões sobre a IA da área de kits/credenciamento. Registro completo, com a medição
+arquivo:linha das superfícies citadas, em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 11.
+
+**A duplicata de credenciamento dentro de Kits sai.** O item `entrega` da sub-nav interna de
+Kits (`KitsLayout.tsx:29`) é um `href` idêntico ao da aba "Credenciamento" do menu secundário do
+evento (`_lib/subnav.ts:43`), sempre `active: false`. Sai o item; Kits volta a 3 abas. **Não
+consome RN** — a identidade do credenciamento já é da RN-399.
+
+**Distribuição e a leitura de retirada de Estoque unificam, com desenho vetável.** Decidido que
+as duas viram uma aba só; o nome, o que cada metade vira e a hierarquia interna ficam vetáveis
+dentro do card de build (S1258). **Não consome RN agora** — mesmo desenho da direção do slug
+editável (leva 10): regra escrita antes do desenho responder cravaria pergunta em aberto.
+
+### RN-572 (nova, dona = E03) · a aba índice de Kits se chama Gerenciamento, o identificador não muda
+
+Na íntegra: *"aba de cadastro também, poderia virar 'gerenciamento'."*
+
+A sub-nav interna de Kits troca o rótulo "Cadastro" por "Gerenciamento" na rota-índice
+(`KitsLayout.tsx:26`), porque o conteúdo dela já é gestão de kits e catálogo de itens (criar,
+editar, configurar patrocínio via `KitEditorPage` e `ItemKitModal`), não só cadastro inicial. O
+`id: 'cadastro'` interno e a rota (`/eventos/:slug/kits`) **não mudam** — mesma régua da RN-399:
+o que muda é o que a pessoa lê, não o que o código identifica.
+
+**Onde aterrissa.** Cards de build no [[V1-KANBAN]]: S1257 (duplicata), S1258 (unificação,
+vetável) e S1259 (RN-572, rótulo). Nenhum construído por esta lane.
+
+**Onde entra na fila:** card do backlog, ancorado nos três épicos por superfície.

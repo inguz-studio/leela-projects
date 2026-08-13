@@ -1,11 +1,16 @@
 ---
-tags: [leela, decisoes, dono, rodada, leva8]
+tags: [leela, decisoes, dono, rodada, leva8, leva9, leva10, crm, envio, slug]
 trace: leela-redesign-v2-20260810
-lane: REGISTRO-LEVA8
+lane: REGISTRO-LEVA8 (levas 8) · REGISTRO-CRM4-LEVA9 (levas 9 e 10, adendos no fim do arquivo)
 data: 2026-08-12
 ---
 
 # Decisões do dono — 12/08 manhã (leva 8)
+
+> **Este arquivo tem três levas.** A leva 8 é a rodada da manhã e ocupa o corpo principal. As
+> **levas 9 e 10** chegaram na tarde do mesmo dia e estão nos **adendos no fim do arquivo**,
+> escritos pela lane REGISTRO-CRM4-LEVA9. Se você veio atrás do **CRM-4**, ele **fechou** — a
+> seção "O que esta leva não fecha", mais abaixo, é o estado da manhã e está marcada.
 
 > Registradas no mesmo ato. As palavras do dono estão citadas na íntegra em cada item, e
 > nada aqui foi parafraseado antes de ser citado. Onde a fala não alcança uma sub-decisão,
@@ -344,15 +349,25 @@ a sub-decisão que ficou fora de propósito.
 
 ## O que esta leva não fecha
 
-### CRM-4 · segue ABERTO, e não vai ser decidido por default
+### ~~CRM-4 · segue ABERTO~~ → ⚠️ FECHADO na mesma tarde (ver adendo · Leva 9)
 
-A segunda metade da pergunta dele sobre o CRM era sobre os campos que se incentiva as pessoas a
+> **Estado superado no mesmo dia.** A resposta dele veio no chat algumas horas depois, e o CRM-4
+> **fechou**: nenhuma pergunta pós-compra nasce, o degrau 2 morre e a premissa de envio vira a
+> RN-569. O texto abaixo fica marcado em vez de apagado porque ele é a leitura correta da manhã e
+> explica por que a lane da manhã se recusou a decidir por default. Registro completo no **adendo
+> · Leva 9**, no fim deste arquivo.
+
+~~A segunda metade da pergunta dele sobre o CRM era sobre os campos que se incentiva as pessoas a
 responder com o tempo. A proposta é uma escada para fora do checkout, com contrapartida
-declarada em cada degrau. Ele leu e respondeu com uma pergunta: *"como assim em troca de que?"*
+declarada em cada degrau. Ele leu e respondeu com uma pergunta:~~ *"como assim em troca de que?"*
 
-O esclarecimento foi dado no chat e **a resposta dele ainda não veio**. O item continua no
+~~O esclarecimento foi dado no chat e **a resposta dele ainda não veio**. O item continua no
 painel, com o texto intacto. Decidir por ele aqui seria transformar uma pergunta dele numa
-resposta nossa, e cada degrau dessa escada é uma promessa feita a quem responde.
+resposta nossa, e cada degrau dessa escada é uma promessa feita a quem responde.~~
+
+**E a recusa da manhã se provou certa.** A pergunta dele não pedia esclarecimento melhor: era
+recusa da premissa. Se a lane da manhã tivesse fechado o item por default, teria cravado uma
+contrapartida falsa numa spec — que é exatamente o defeito que a leva 9 veio corrigir.
 
 ### Item 12 · domínio público, segue aberto
 
@@ -411,7 +426,469 @@ rodada. O caminho é emendar o contrato no topo do painel, não voltar a escreve
 
 | Arquivo | O que carrega |
 |---|---|
-| `01-decisoes-dono.md` | este registro — as oito falas, leitura, efeito, onde aterrissa e reabertura |
+| `01-decisoes-dono.md` | este registro — as oito falas da leva 8, mais os **adendos das levas 9 e 10** no fim do arquivo, cada um com leitura, efeito, onde aterrissa e reabertura |
 | [[02-tabela-modalidades]] | o gate de frescor do Strava, a tabela PT-BR derivada e os cortes propostos |
-| [[03-rns-delta]] | a faixa consumida e o que cada regra faz, apontando para o épico dono |
-| [[04-fila-cards]] | os cards novos que esta leva manda para a fila |
+| [[03-rns-delta]] | a faixa consumida e o que cada regra faz, apontando para o épico dono — com **adendo** para a faixa RN-569 a RN-571 e a colisão de numeração desfeita |
+| [[04-fila-cards]] | os cards novos que esta leva manda para a fila — com **adendo** para os quatro cards das levas 9 e 10 |
+
+A **varredura de promessas de envio** não ganhou arquivo próprio: ela é curta o bastante para caber
+no registro, e separá-la a tiraria do lugar onde a decisão que a motivou está escrita. Ela vive no
+adendo · Leva 9, §9.5, com método, as 4 promessas vivas, as 26 ocorrências que ficam por família e
+o resultado da varredura de código.
+
+---
+
+# Adendo · Leva 9 — 12/08 tarde (o CRM-4 fecha, e a premissa de envio morre de vez)
+
+> Registrado no mesmo ato, algumas horas depois de a leva 8 escrever que o CRM-4 seguia aberto.
+> Ele não seguiu: a resposta veio no chat na mesma tarde. A fala está citada na íntegra e nada
+> aqui foi parafraseado antes de ser citado.
+>
+> **O que esta leva fecha:** o último item de CRM do painel, e com ele o desenho inteiro da
+> escada de coleta. Um degrau vive, um morre, um muda de casa e um fica onde estava.
+>
+> **O que ela corrige:** uma premissa que a esteira violou pela **segunda** vez. Essa metade é a
+> mais importante do adendo, e ela tem varredura própria mais abaixo.
+
+**Fala do dono, na íntegra:** *"crm-4 -> se ja pegamos o endereço nao precisamos perguntar mais
+nada. e quando a pessoa entra na área do cliente pela primeira vez, podemos enviar para ela
+definir a senha deça. Nao pediremo endereço novamente pois ja temos ele, basta salvamos as
+informações. e na area do cliente podemos colocar um banner/alerta convidando o usuário para
+concluir o cadastro. nao existe isso de 'confirme para o kit chegar certo' ja falei que nao
+enviaremos nada."*
+
+## 9.1 · CRM-4 · FECHADO — nenhuma pergunta pós-compra, e o degrau 2 morre
+
+**Leitura.** A pergunta que ele tinha feito na leva 8 — *"como assim em troca de que?"* — não
+pedia esclarecimento melhor. Era recusa da premissa: a contrapartida do degrau 2 só existia
+porque a esteira supôs um envio que não existe. Com o envio fora, o degrau perde o argumento e a
+tela perde a razão de ser.
+
+**O degrau 1 fica, e vira o único mecanismo automático.** *"Basta salvarmos as informações"* é o
+enunciado dele. Guardar o que a pessoa já digitou, sem perguntar nada: o e-mail de cada
+participante, já decidido no CRM-3 e vivendo na RN-565; o código IBGE do município, que o
+consultor de CEP devolve e o código descarta; e a cópia de cidade e UF do endereço do pedido para
+os campos do participante quando o participante é o próprio comprador, marcada como derivada e com
+a tela declarando a cobertura. As três custam zero de atrito, e é por isso que sobrevivem a uma
+decisão que matou o resto.
+
+**O degrau 2 morre inteiro**, e a frase-exemplo morre junto. *"Nao existe isso de 'confirme para
+o kit chegar certo'."* Não é veto de escopo: é correção de fato. A contrapartida prometia entrega
+de kit, e a casa não entrega kit — o kit se retira no balcão. Ela era falsa, e promessa falsa não
+se adia, se apaga.
+
+**A confirmação de endereço morre junto, por decisão explícita.** *"Se ja pegamos o endereço nao
+precisamos perguntar mais nada"* e *"nao pediremo endereço novamente pois ja temos ele"*. O
+endereço completo entra no checkout pela RN-561, com a razão que ele escreveu em 11/08 — segurança
+e cadastro. Pedir de novo é atrito sobre dado que já está no banco.
+
+**Os degraus 3 e 4 não nascem como tela pós-compra.** O 3 muda de casa e vira o item 9.3 deste
+adendo. O 4, a pergunta de satisfação depois do evento, **não foi decidido nesta fala** e fica
+como estava — sem dono novo, sem promessa nova, dependendo do canal. Registrar isso importa
+porque a fala fechou o item inteiro do painel, e um leitor futuro poderia ler o fechamento como se
+o degrau 4 tivesse sido recusado. Não foi: ele não foi tocado.
+
+**O degrau 5 fica exatamente como estava**, e a decisão o reforça.
+
+**Efeito.** O item **não consome número de RN**: recusar tela pós-compra é veto de escopo de fila,
+como o CRM-1 foi. O que virou regra foi a premissa por trás dela, no item 9.4.
+
+**Onde aterrissa.** [[LEELA-E19-crm]], delta próprio; §Parte 7 de
+`02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md`, com o degrau 2 **marcado e não
+apagado**, pela mesma disciplina que o índice de RNs aplica a regra superada — é o texto morto que
+explica por que a contrapartida existia, e apagá-lo faria alguém reescrevê-la em três meses
+achando que era ideia nova.
+
+**Condição de reabertura.** Ele querer pedir alguma coisa depois da compra. Nenhum degrau foi
+apagado do desenho, e o degrau 4 nem sequer foi respondido.
+
+## 9.2 · A primeira entrada na área do cliente define a senha — RN-570
+
+**Fala, na parte que decide:** *"quando a pessoa entra na área do cliente pela primeira vez,
+podemos enviar para ela definir a senha deça."*
+
+**Leitura.** Amarra direto com a **RN-562** da leva 8, e é o desfecho dela. A sessão do checkout
+é promovida a conta logada ao confirmar o pagamento; então a pessoa chega logada, com conta e
+**sem senha**. Até aqui o único caminho da senha era o link de e-mail da RN-453, que exige que ela
+abra a caixa. A fala acrescenta o gatilho que faltava, dentro da própria sessão.
+
+**Efeito.** Nasce a **RN-570**. A **RN-453 não é revogada**: o link de e-mail continua existindo,
+continua terminando na `/definir-senha` da landing e continua com os três estados distinguíveis
+que ela descreve. O que a regra nova acrescenta é o **segundo gatilho**. E a senha **continua fora
+do checkout** — isso foi decidido na leva 8, quando ele escolheu a primeira opção do CKLOGIN-1, e
+este gatilho acontece depois do dinheiro, nunca antes.
+
+**Defaults do maestro, vetáveis.** *"Podemos enviar para ela definir a senha"* fecha o gatilho e
+não fecha a força dele. A condução nasce como **passo adiável**, e não como parede: quem quiser ver
+os próprios ingressos primeiro vê, e o convite volta na entrada seguinte enquanto a senha não
+existir. É a leitura que a RN-510 cravou ao derrubar o overlay bloqueante da RN-416, com duas
+contas reais paradas nele em 06/08 como medição. Uma linha dele transforma em obrigatório. A
+condução some quando a senha existe, e não é oferecida a quem entrou por senha.
+
+**Onde aterrissa.** RN-570 em [[LEELA-E12-landing]], ao lado da RN-562 e da RN-453. **Não vira
+história solta:** entra na **S1247**, que é a história da promoção da sessão, como **`S1247-T4`**.
+A razão está escrita porque ela é o critério: é o mesmo fluxo — a conta que nasce no fim da compra
+chega sem senha, e esta tarefa fecha a lacuna que a T1 abre. **Construir não é desta lane.**
+
+**Condição de reabertura.** A re-prova da fronteira de autenticação da `S1247-T2` achar que a
+conta promovida sem senha abre um caminho que as RN-476 a RN-480 fecharam. Aí o gatilho volta ao
+dono junto com o achado, e não se conserta fronteira de auth em silêncio.
+
+## 9.3 · O banner convida a concluir o cadastro — RN-571
+
+**Fala, na parte que decide:** *"e na area do cliente podemos colocar um banner/alerta convidando
+o usuário para concluir o cadastro."*
+
+**Leitura.** É aqui que o degrau 3 passa a viver. A coleta complementar de perfil sai da tela
+pós-compra, que morreu, e vira **convite numa superfície que a pessoa já visita por vontade
+própria**. A palavra dele é **convidando**, e ela decide a força: convite, nunca bloqueio.
+
+**Efeito.** Nasce a **RN-571**, na mesma família da RN-510 — aviso de conta é experiência, não
+segurança. Fechar o banner não tranca nada, e nenhuma tela da área do cliente fica atrás dele. E o
+banner **não pede endereço**: ele já foi coletado pela RN-561, e repetir o pedido é exatamente a
+pergunta que o item 9.1 matou.
+
+**Defaults do maestro, vetáveis.** O banner **não inventa contrapartida nova** — e isso está
+escrito como restrição, não como escolha de redação. A razão dita na tela é a que a **RN-564** já
+sustenta: a pessoa escolhe os interesses uma vez, e eles servem os três consumidores. Copy final é
+decisão de produto e não sai de esteira; o que a regra crava é que ela não pode prometer envio
+(RN-569) nem contrapartida que a casa não entrega. E o banner nasce **um**, não uma fila: se um
+segundo convite quiser espaço, ele disputa o mesmo lugar em vez de empilhar.
+
+**Onde aterrissa.** RN-571 em [[LEELA-E12-landing]]; história nova **S1250**; a coleta lê a
+derivação da RN-564, nunca uma cópia da lista. **Nenhuma linha de código nesta lane.**
+
+**Condição de reabertura.** O banner virar bloqueio por pressão de conversão. Aí ele reabre o
+item, porque a palavra dele foi *convidando*, e a RN-416 já custou duas contas reais paradas.
+
+## 9.4 · ⛔ CORREÇÃO DE PREMISSA, segunda cobrança — a casa NÃO ENVIA NADA (RN-569)
+
+**Fala, na parte que corrige:** *"nao existe isso de 'confirme para o kit chegar certo' **ja
+falei** que nao enviaremos nada."*
+
+**"Já falei" é o dado mais importante deste adendo.** A primeira vez foi em **05/08**, quando ele
+revogou a RN-211 e a lane SPEC-SEM-KIT registrou que o kit não vende desconto. Aquela correção
+tratou de preço; esta trata da operação inteira, e ela chega porque a esteira reintroduziu a
+premissa numa spec escrita **no mesmo dia** da primeira correção. Uma premissa que volta depois de
+corrigida não se conserta com um edit: ela vira regra, ou volta uma terceira vez.
+
+**Efeito.** Nasce a **RN-569**, no [[LEELA-E03-operacao-evento]], que é o épico dono do kit e da
+retirada. Precedente de forma: a **RN-399**, que também é regra de vocabulário e também mora no
+E03 com consumidores em outros épicos. **O enunciado:** o produto não faz envio físico; o kit se
+retira no balcão, na janela do evento; e nenhuma superfície que a pessoa lê pode prometer,
+sugerir ou pressupor que a casa envia, entrega em domicílio, despacha ou posta qualquer coisa.
+
+**O que a regra NÃO proíbe**, escrito na própria regra porque a palavra "entrega" tem dois
+sentidos no produto e o sentido certo é fácil de consertar por engano: entregar o kit no balcão
+segue legítimo (RN-205, RN-222, `registrarEntrega`, `kitEntregueEm` — a régua da RN-399 é o que a
+**pessoa lê**, não o nome do dado); "enviaremos" sobre e-mail segue legítimo, porque envio de
+mensagem não é envio de coisa; a logística do próprio organizador não é a nossa; e registro de
+benchmark não é promessa.
+
+**Onde aterrissa.** RN-569 no [[LEELA-E03-operacao-evento]], com [[LEELA-E12-landing]],
+[[LEELA-E19-crm]], [[LEELA-E13-app-atleta]] e [[LEELA-E06-marketing]] como consumidores.
+
+**Condição de reabertura.** Ele decidir que a casa passa a enviar. A regra cai inteira e abre um
+escopo que hoje não existe em lugar nenhum — frete no checkout, endereço validado como destino,
+rastreio e o custo disso. Os dois benchmarks de `05-discovery/` já mediram que isso é lacuna
+declarada, e não acidente.
+
+## 9.5 · A varredura de promessas de envio, ocorrência a ocorrência
+
+**Método, para a lista ser falsificável.** Duas varreduras independentes. A primeira sobre
+`leela-specs/**/*.md`, por `kit chegar`, `chegue certo`, `chegar certo`, `entrega do kit`,
+`enviaremos`, `receber o kit`, `envio do kit`, `enviar o kit`, `endereço de entrega`, `frete`,
+`correios`, `chegar em casa` e variações de acento e conjugação. A segunda sobre a **copy
+renderizada** dos apps — `apps/landing`, `apps/painel`, `apps/mobile`, `packages/core/src`,
+`packages/design-system/src`, `packages/api-client/src`, `functions/src` e `functions/scripts` —,
+com o conjunto acima mais `sedex`, `transportadora`, `rastreio`, `remessa`, `postagem`,
+`encomenda`, `domicílio`, `receba em casa`, `na sua porta`, `shipping`, `delivery`,
+`enderecoEntrega`, `shippingAddress` e `deliveryAddress`. Excluídos dos dois lados: `node_modules`,
+`dist`, `.next` e artefatos de build.
+
+**O resultado, em uma linha: 30 ocorrências nas specs, 4 delas promessas vivas; e ZERO promessas
+na copy renderizada dos apps.**
+
+### As 4 promessas vivas, e o que foi feito com cada uma
+
+| # | Onde | O que diz | Veredito |
+|---|---|---|---|
+| 1 | `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md:610` | *"A contrapartida é imediata e verdadeira: **confirme para o kit chegar certo.**"* | **CORRIGIDO nesta lane.** Degrau 2 marcado como morto, texto legível e riscado, com a razão e o ponteiro para a RN-569 |
+| 2 | mesmo arquivo, `:608` | *"…e a confirmação do **endereço de entrega**."* | **CORRIGIDO nesta lane**, no mesmo bloco marcado — e é o mais insidioso dos quatro, porque não usa a palavra envio e mesmo assim pressupõe destino |
+| 3 | `01-produto/DECISOES-ABERTAS.md`, item CRM-4, linha do caso de uso | *"ali confirmar o **endereço de entrega** custa quase nada"* | **REMOVIDO com o item**, na segunda fase desta lane |
+| 4 | mesmo item, linha das opções | *"contrapartida imediata e verdadeira — **'confirme para o kit chegar certo'**"* | **REMOVIDO com o item**, mesma razão |
+
+> **Sobre as linhas dos dois do painel:** a varredura as achou nas linhas 63 e 67, e a lane
+> LIMPEZA-PAINEL-FORMATO reescreveu o arquivo inteiro no intervalo, levando-as para 29 e 32 com o
+> texto encurtado e a frase intacta. Elas estão citadas por **item e papel na estrutura**, e não por
+> número de linha, porque número de linha de um arquivo que outra lane está reescrevendo é
+> referência que nasce morta.
+
+Os quatro têm a mesma origem: os dois do painel são a citação dos dois da spec. **Uma frase
+escrita uma vez em 05/08 apareceu em quatro lugares em sete dias**, e é isso que a regra existe
+para interromper.
+
+### As 26 ocorrências que FICAM, por família e com a razão
+
+**Família A · "entrega" é o balcão (2).** `03-canon/epics/LEELA-E03-operacao-evento.md:1112` e
+`06-backlog/backlog/LEELA-S208.md:20`, a mesma frase de critério de aceite: *"um kit entregue
+antecipadamente (correios ou retirada dias antes)"*. **Ficam.** Descrevem a logística do
+**organizador**, que pode ter distribuído kit antes da prova por conta própria, e são a razão de
+existir da RN-222 — o QR da largada que só carimba presença. A casa não promete nada ali. Apagar
+a frase mataria o caso de teste da regra.
+
+**Família B · "enviaremos" é e-mail, e é fala do dono (4).**
+`02-rodadas/2026-07-28-decisoes/01-decisoes.md:31`,
+`02-rodadas/2026-07-28-ingresso-qr/01-decisoes-delta.md:18`,
+`02-rodadas/2026-08-04-pos-pagamento/01-decisoes-dono.md:18` e
+`03-canon/epics/LEELA-E12-landing.md:2880`. **Ficam, e são intocáveis por duas razões somadas.**
+Falam de envio de QR e de acesso de ingresso **por e-mail**, que a RN-569 declara legítimo; e são
+**citações do próprio dono na íntegra**, que não se editam por definição — corrigir a palavra de
+alguém dentro de aspas é falsificar registro, não consertar spec.
+
+**Família C · benchmark é registro do que se sabia na data (17).**
+`05-discovery/benchmark-cheers.md` (linhas 50, 65, 78, 88, 102, 107, 163, 164, 168),
+`05-discovery/benchmark-ticketing-br.md` (38, 86, 97, 98, 150, 179, 193) e
+`05-discovery/decisoes-escopo-2026-07-04.md:58`. **Ficam.** Descrevem o que **concorrentes** fazem
+— a Cheers com toggle de frete, a Minhas Inscrições com kit pelos Correios — e o precedente é
+explícito: a revogação da RN-211 registrou que *"as citações em `05-discovery/` não foram tocadas:
+benchmark é registro do que se sabia na data"*. Duas delas, aliás, **já diziam a verdade antes**
+de alguém a esquecer: `benchmark-cheers.md:78` (*"O Leela V1 assume retirada no balcão; não há
+opção de envio de produto"*) e `benchmark-ticketing-br.md:179` (*"O E12 assume só retirada no
+balcão"*). A premissa estava escrita e medida; o que faltou foi lê-la.
+
+**Família D · outras, sem promessa (3).** `00-boards/BOARD-HISTORICO.md:139` lista frete entre
+decisões comerciais pendentes de julho — registro histórico de board, e o item está pendente, não
+prometido. `02-rodadas/2026-08-05-crm-estrategia/02-spec-crm-estrategia.md:376` cita *"tabela
+estática dos Correios"* como fonte de **faixa de CEP**: Correios como base de dados, nunca como
+transportadora. `99-arquivo/next-trail/STORIES-next.md:45` fala de *"receber o kit certo"* e *"Kit
+errado na entrega"* — está em `99-arquivo/`, e "entrega" ali é o balcão.
+
+### A copy renderizada dos apps: zero promessas, e nenhum card nasce daqui
+
+A segunda varredura procurou promessa de envio na copy que a pessoa lê, e **não achou nenhuma**.
+`frete` e `correios` não aparecem uma única vez em copy de tela, e-mail ou PDF. Como esta lane não
+altera código, o desenho previa que cada achado virasse card nomeado: **nenhum card nasceu, porque
+não havia o que corrigir.**
+
+O que a varredura achou foram **acertos**, e vale registrá-los porque é a prova de que o produto
+construído sempre soube o que a spec esqueceu: a etapa de endereço do checkout diz *"Endereço do
+responsável pela inscrição"* e nunca "de entrega"; a seção pública diz **"Retirada do kit"** com
+janelas e documento; o passo do kit diz *"Retirado nas janelas do evento, mediante documento"*; e
+o e-mail de compra manda apresentar o QR no credenciamento. Os únicos "enviamos" da copy são de
+e-mail, e os únicos "entregar" são do balcão do organizador.
+
+**Duas ocorrências que não são copy e ficaram nomeadas de propósito**, para a próxima varredura não
+as reencontrar como se fossem achado novo: `functions/src/__tests__/qrCheckin.integration.test.ts`
+tem um comentário que cita correios como cenário da RN-222 — é a fixture legítima da família A —, e
+`packages/design-system/src/components/Radio/Radio.stories.tsx` usa "Entrega do kit" como rótulo de
+exemplo de Storybook, que não renderiza para pessoa nenhuma.
+
+### O que a varredura mediu sobre o mecanismo, e o que a esteira propõe
+
+**A premissa nunca foi desconhecida — ela foi ignorada por quem escreveu depois.** Estava medida em
+dois benchmarks desde julho, estava no modelo desde a RN-205 e estava no vocabulário desde a
+RN-399. Correção por edit não impede a terceira vez, e regra sem prova tampouco. A esteira propõe,
+como **default vetável e não como decisão dele**, que a RN-569 nasça com o mesmo tipo de prova que
+a RN-558 trouxe: um gate de vocabulário sobre copy, começando em aviso. O card está na fila,
+nomeado, e derrubá-lo custa uma linha — o custo do veto é que a quarta ocorrência será encontrada
+por um comprador, e não por nós.
+
+## A conta do painel, depois desta leva
+
+**5 → 4.** Sai o **CRM-4**. Ficam quatro, contados à mão contra as duas seções do painel no
+formato novo: o **item 12** e o **MODALIDADES-1** em "Decisões que dependem de você", e o **69** e
+o **JUROS-1** em "Ações que só você pode executar".
+
+**Por que a conta parte de 5 e não de 4**, que é o número que a leva 8 registrou de manhã: o
+**MODALIDADES-1** subiu ao painel canônico pela primeira vez na tarde de 12/08, pela lane
+REGISTRO-S316-PAINEL (commit `b8480223`), no intervalo entre as duas levas. A leva 8 fechou em 4 e
+estava certa na hora em que escreveu; a conta desta lane é refeita à mão contra o arquivo, e não
+herdada do número anterior — que é a única forma de a contagem não derivar.
+
+⚠️ **Trava de ordem cumprida.** O painel estava sendo reescrito pela lane LIMPEZA-PAINEL-FORMATO
+enquanto esta lane trabalhava. Rodada, varredura, épicos, cards e RNs foram feitos e commitados
+primeiro (`dac2654a`); o painel só foi tocado depois de a limpeza aterrissar na main
+(`c1796608`, `9e0dd727`, `b56fe822`). O item foi removido **no formato novo**: cabeçalho de três
+linhas intacto, nada de narrativa de fechamento no arquivo, e o histórico deste fechamento vive
+aqui, na rodada, que é onde o contrato do painel manda ele viver.
+
+---
+
+# Adendo · Leva 10 — 12/08 tarde (o slug editável nas três superfícies)
+
+> Uma decisão só, **direcional**, despejada logo depois da leva 9. Ela não dispara build: as
+> palavras dele são *"para seguirmos depois"*. Registrada aqui com as perguntas que a spec futura
+> precisa responder antes de qualquer linha de código.
+
+**Fala do dono, na íntegra:** *"Outro ponto importante, é deixarmos o usuários editarem a página
+deles, quanto ao nome de slug, caso o slug esteja disponivel, Isso vale para eventos, clubs e para
+a propria página também. Registre essa decisão para seguirmos depois."*
+
+## 10.1 · DECIDIDO, direcional — o usuário edita o slug da própria página
+
+**Leitura.** Duas coisas ficam decididas e uma fica adiada de propósito. Decidido: o usuário
+**pode** trocar o slug da própria página, e isso vale nas **três** superfícies que ele nomeou —
+**evento**, **club** e **a própria página do produtor**. Decidida também a condição: *"caso o slug
+esteja disponivel"*. Adiado por ordem dele: o **quando**, porque *"para seguirmos depois"* é
+instrução de sequência, não de escopo.
+
+**Efeito.** **Não consome número de RN**, e isso é deliberado. O mecanismo não está decidido, e
+regra escrita antes do mecanismo cravaria justamente o que a spec futura precisa responder. É o
+mesmo desenho do **ARENA-1** na leva 8: o que nasce é direção de produto registrada no épico, não
+regra. **Nenhuma linha de código, e nenhum item novo no painel** — decisão tomada não é pendência.
+
+### O fato técnico que a spec futura não pode ignorar
+
+Vale escrever antes das perguntas, porque ele muda o tamanho de todas elas. **Nas três
+superfícies, o slug é o `docId`**: `eventos/{eventoId}` com `docId = slug`, `clubes/{clubId}` com
+`docId = slug`, e no produtor `tenantId == slug == docId`. Trocar o slug **não é editar um campo**
+— é mover o documento e a subárvore inteira que pende dele. É migração, e quem escrever a spec
+precisa dizer isso antes de alguém desenhar um input editável na tela de configurações.
+
+### As perguntas que a spec futura precisa responder
+
+1. **Destino dos links antigos.** O slug anterior redireciona, ou morre? Por quanto tempo? É a
+   pergunta mais cara das quatro por uma razão física: a **RN-201** gera URL pública **e QR** na
+   publicação do evento, e **QR impresso em cartaz e PDF de ingresso já baixado não se
+   reimprimem**. Link velho que morre transforma material impresso em lixo. A **RN-234** já é a
+   máquina de redirecionamento da casa — nasceu na virada de `entrega` para `credenciamento`, com
+   teste orientado a tabela e guarda anti-laço — e é o candidato natural, não mecanismo novo.
+2. **Política de colisão e de reserva.** *"Caso o slug esteja disponivel"* define a condição de
+   entrada e não diz o que acontece com o slug **liberado**. Se ele volta ao pool na hora, um
+   terceiro pode capturar o endereço de um evento cujo QR está na rua — que é sequestro de
+   audiência, não coincidência. Reserva por prazo, reserva permanente ou pool imediato são três
+   respostas diferentes com custos diferentes.
+3. **Limite ou janela de renomes.** Quantas vezes, e até quando. Antes da primeira venda, como a
+   edição de modalidades da RN-500? Sempre? Uma vez por período? A resposta muda se o renome é
+   operação barata de rascunho ou migração cara de evento vivo.
+4. **O que exatamente é "a propria página".** A leitura da esteira é o endereço público do
+   produtor, hoje amarrado ao `tenantId`. Mas o `/@handle` público é **outro registro**
+   (`perfis/{handle}`, digitado pela pessoa), e onde a decisão tocar os dois ela precisa ser
+   confirmada, não presumida.
+
+### ⛔ O conflito declarado: esta decisão supersede a premissa da ponte
+
+É a parte que mais muda de estado, e por isso ela não fica só aqui. Em 11/08, ao fechar o
+**PONTE-NOME-1**, o painel registrou a razão do conserto na origem com estas palavras: *"o
+conserto na origem, porque **depois do código não existe renomear**"*. A frase era **medição
+verdadeira** — a PONTE-REV mediu em 08/08 que as Rules só deixam criar `profissionais/{uid}`, que
+`tenants` é `create, update: if isPlatformAdmin()` e que não existe callable de renome — e virou
+premissa de desenho.
+
+**A decisão do dono derruba a premissa.** O "depois" passa a existir por ordem dele. O conserto na
+origem **não é revogado**: perguntar o nome da produtora na porta continua certo e continua sendo
+o caminho barato. O que muda é que ele deixa de ser o **único**. E o card **renomear DEPOIS**, que
+estava separado e sem dono desde 11/08 (registrado na `S1234-T5` do [[V1-KANBAN]]), **ganha
+dono**: é esta decisão. A premissa fica **marcada, não apagada**, porque é ela que explica por que
+a porta pergunta o nome — apagá-la faria alguém desfazer o conserto da origem achando que o renome
+o dispensa. Ele não dispensa: renomear é caro, e a origem certa continua de graça.
+
+**Onde aterrissa.** Direção registrada em [[LEELA-E03-operacao-evento]] (slug do evento),
+[[LEELA-E05-clubs]] (slug do club) e [[LEELA-E16-plataforma-superadmin]] (slug do produtor, com o
+conflito da ponte escrito lá). Card no backlog, ancorado nos três, em [[04-fila-cards]] e no
+[[V1-KANBAN]]. **Não entra no painel** — é decisão tomada, não pendência.
+
+**Condição de reabertura.** A spec futura descobrir que o redirecionamento não cobre o QR impresso.
+Aí a decisão volta ao dono com o custo medido, porque *"o slug está disponível"* foi dito sem que
+ninguém tivesse posto na mesa o preço do endereço que já saiu de casa.
+
+---
+
+# Adendo · Leva 11 — 12/08 (a área de kits perde a redundância e ganha nomes de gente)
+
+> Registro da lane REGISTRO-LEVA11-KITS-IA (trace `leela-redesign-v2-20260810`). Três decisões
+> dele sobre a IA da área de kits e credenciamento de um evento, cada uma com a medição da
+> superfície citada antes do veredito. Nenhuma constrói nesta lane.
+
+**Fala do dono, na íntegra (12/08):** *"reparei que credenciamento aparece dentro de kits, só que
+já temos credenciamento no menu secundário. Ficou redundante e sem necessidade. Distribuição e
+'retiradas dos kits' poderiam ser unificados, e aba de cadastro também, poderia virar
+'gerenciamento'."*
+
+## 11.1 · DECIDIDO — a duplicata de credenciamento dentro de Kits sai
+
+**Medição.** Dois pontos dizem "Credenciamento" na navegação de um evento:
+
+- **Dentro de Kits** — `apps/painel/src/routes/eventos/kits/KitsLayout.tsx:29`, quarto item da
+  sub-nav interna da seção Kits: `{ id: 'entrega', label: 'Credenciamento', href:
+  '/eventos/${slug}/credenciamento', active: false }`. `active` é sempre `false` — o item nunca
+  acende, porque a rota que ele abre está fora da árvore de Kits. É um atalho de saída, não uma
+  sub-tela de Kits.
+- **No menu secundário do evento** — `apps/painel/src/routes/eventos/_lib/subnav.ts:43`: `{ id:
+  'entrega', label: 'Credenciamento', segmento: 'credenciamento' }`, a aba real da SubNav do
+  evento (§2.14), com o destaque de aba ativa calculado por `abaAtiva()` (mesmo arquivo, linha 60).
+
+**Achado.** Não há divergência de conteúdo entre as duas. O item dentro de Kits não é atalho com
+tela própria nem versão resumida: é um `href` idêntico para a mesma rota
+`/eventos/:slug/credenciamento` que a aba do menu secundário já abre, e o rótulo "Credenciamento"
+nas duas pontas já está cravado pela RN-399. A remoção é limpa — nada fica sem destino.
+
+**Efeito.** Sai o item de `KitsLayout.tsx:29`; Kits volta a ter 3 abas internas (Cadastro,
+Distribuição, Estoque). Quem quer credenciar sai da área de Kits pelo menu secundário do evento,
+como já faz para Inscritos, Financeiro etc. **Não consome número de RN** — é remoção de item de
+navegação duplicado, não regra de negócio nova; a identidade e o vocabulário do credenciamento já
+estão cravados pela RN-399, e esta decisão só aplica a régua dela (uma porta só) dentro de Kits.
+
+## 11.2 · DECIDIDO com desenho vetável — Distribuição e a leitura de retirada de Estoque unificam
+
+**Medição — anatomia das duas abas hoje.**
+
+- **Distribuição** (`KitsLayout.tsx:27`, rota `kits/distribuicao` → `DistribuicaoPage` →
+  `DistribuicaoView.tsx`): tela presentational pura, sem KPI e sem tabela. Duas seções de barra de
+  progresso — "Retiradas por kit" (`DistribuicaoView.tsx:46`) e "Retiradas por modalidade"
+  (`:59`) —, cada linha com retirados/total/percentual (`LinhaProgresso`, `:86-108`).
+- **Estoque** (`KitsLayout.tsx:28`, rota `kits/estoque` → `EstoquePage` → `EstoqueView.tsx`): tela
+  maior, cinco blocos — alertas de kit esgotado/SKU em baixa (`:433-468`); 4 KPIs incluindo
+  "Retirados" (`:480`, hint "presença registrada"); matriz Kit×modalidade com coluna
+  Retirados/confirmados por célula (`:511-517`, caption "Retiradas e saldo por kit e
+  modalidade"); tabela de SKU por tamanho — vendido/físico/a encomendar/estado/alerta/entregues
+  (`:281-384`); EmptyState de movimentações (`:575-578`).
+
+**Achado — onde mora a redundância que ele leu.** Não existe no código uma terceira aba chamada
+"Retirada dos kits" ao lado de Distribuição — o rótulo é dele, lido do **conteúdo**, não de um
+rótulo de aba. O dado de retirada aparece em **três leituras dentro de Kits**: as duas seções
+inteiras de Distribuição, o KPI "Retirados" de Estoque e a coluna Retirados/confirmados da matriz
+de Estoque — três cortes do mesmo número (presença registrada), sem uma leitura única. É essa
+sobreposição, e não uma tela isolada, que sustenta "ficou redundante".
+
+**Efeito.** Fica **decidido que Distribuição e a metade de retirada de Estoque unificam** numa aba
+só. **Vetável** é o desenho: nome da aba, o que cada metade vira (progresso por kit/modalidade de
+um lado, controle de estoque físico/SKU do outro) e a hierarquia interna — proposta da esteira
+dentro do card de build (S1258), não decisão fechada aqui.
+
+**Efeito no RN.** **Não consome número agora** — mesmo desenho da leva 10 (slug editável): a
+decisão de unificar está tomada, mas o desenho concreto é vetável, e cravar regra antes dele
+responder cravaria o que o card ainda precisa perguntar. Se o veto fechar como reorganização pura
+de tela (sem mudar o que um dado significa), a build não deve precisar de RN nem nessa hora — é
+decisão de UI, não de negócio; se o veto criar comportamento novo, quem constrói registra o número
+na própria aterrissagem daquela lane.
+
+## 11.3 · DECIDIDO — a aba Cadastro vira Gerenciamento
+
+**Medição — o que a aba faz hoje.** `KitsCadastroPage.tsx` → `KitsCadastroView.tsx`, rota-índice
+de Kits (`KitsLayout.tsx:26`, rótulo atual "Cadastro"). Três seções: resumo com 3 KPIs — kits
+configurados, itens no catálogo, marcas ativadas (`:58-62`); "Kits do evento" (`:65`), com cards de
+kit e botão "+ Adicionar kit" que abre `KitEditorPage` em tela cheia (`/kits/novo`,
+`/kits/editar/:kitId` — rotas próprias, `EventosRoutes.tsx:128-129`); "Catálogo de itens" (`:93`),
+com CRUD completo por modal (`ItemKitModal`), badges de tipo/origem (RN-212/RN-213) e bloco de
+patrocinador com toggle "Exibir logo ao atleta" (RN-214).
+
+**Achado.** A aba já faz mais que cadastrar: cria **e** edita kits (por rota própria) e itens (por
+modal), com KPIs de resumo e configuração de patrocínio — é gestão do inventário de kits e itens
+do evento, não só o registro inicial. O nome novo fecha com o conteúdo; não é troca de rótulo
+vazio.
+
+**Efeito.** Rótulo de `KitsLayout.tsx:26` muda de "Cadastro" para "Gerenciamento". O `id` interno
+(`'cadastro'`, usado no cálculo de aba ativa) **não muda** — mesma régua da RN-399: o que muda é o
+que a pessoa lê, não o identificador. **Consome RN-572** (dona = E03), enunciado no épico e no
+delta da rodada.
+
+## Onde aterrissa
+
+- Épico dono das três: [[LEELA-E03-operacao-evento]].
+- Cards de build no [[V1-KANBAN]], padrão épico → história → tarefa: **S1257** (item 11.1),
+  **S1258** (item 11.2, com a proposta da aba unificada como vetável dentro do card) e **S1259**
+  (item 11.3). Build não é desta lane.
+- RN-572 consolidada no épico e no delta da rodada (`03-rns-delta.md`); índice atualizado.
+  Próxima livre passa a ser **573**.

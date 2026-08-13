@@ -20,7 +20,7 @@ Indicadores/KPIs são MetricGrid (a escada é outra, e a razão está no preset)
 - columns: 2 | 3   (default: 2)
 - from: 'sm' | 'md' | 'lg'   (default: 'sm')   — o degrau em que a grade abre
 - gap: 'sm' | 'md' | 'lg'   (default: 'md')
-- as: 'div' | 'section' | 'fieldset' | 'form' | 'ul'   (default: 'div')
+- as: 'div' | 'section' | 'fieldset' | 'form' | 'ul' | 'dl'   (default: 'div') — `dl` serve par rótulo/valor (`<dt>`/`<dd>` agrupados em `<div>`, filho válido de `dl`)
 - ...todas as props de React.HTMLAttributes<HTMLDivElement>
 
 ## Tokens consumidos (nenhum valor cru permitido)

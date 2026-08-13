@@ -2263,3 +2263,50 @@ obrigatório, e registrado no banco"*) já está registrada, então a metade de 
 ### Painel, na mesma aterrissagem
 
 **ADMIN-USUARIOS-2 saiu** do [[DECISOES-ABERTAS]], e nenhum item entrou no lugar.
+
+## Direção registrada · o slug da página do produtor passa a ser editável (leva 10 do dono · 2026-08-12)
+
+**Decisão direcional, sem build agora.** Na íntegra: *"Outro ponto importante, é deixarmos o
+usuários editarem a página deles, quanto ao nome de slug, caso o slug esteja disponivel, Isso
+vale para eventos, clubs e para a propria página também. Registre essa decisão para seguirmos
+depois."* Registro único, com as perguntas abertas inteiras, em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 10. **Não consome número de RN**
+— o mecanismo não está decidido, e a regra escrita antes dele cravaria o que a spec futura ainda
+precisa responder.
+
+### Esta decisão supersede a premissa da ponte, e o card renomear-depois ganha dono
+
+É a parte que mais muda de estado, e por isso ela fica escrita aqui e não só no registro da
+rodada. Em 11/08, ao fechar o **PONTE-NOME-1**, o painel registrou a razão do conserto na origem
+com estas palavras: *"o conserto na origem, porque **depois do código não existe renomear**"*. A
+frase era medição verdadeira do produto — a PONTE-REV mediu em 08/08 que as Rules só deixam
+**criar** `profissionais/{uid}`, que `tenants` é `create, update: if isPlatformAdmin()` e que não
+existe callable que renomeie —, e ela virou premissa de desenho.
+
+**A decisão do dono derruba a premissa.** O "depois" passa a existir por ordem dele. O conserto na
+origem **não é revogado**: perguntar o nome da produtora na porta continua certo e continua sendo
+o caminho barato. O que muda é que ele deixa de ser o **único** caminho, e o card **renomear
+DEPOIS**, que estava separado e sem dono desde 11/08 (registrado na S1234-T5 do [[V1-KANBAN]]),
+**ganha dono**: é esta decisão. A premissa fica **marcada, não apagada** — é ela que explica por
+que a porta pergunta o nome, e apagá-la faria alguém desfazer o conserto da origem achando que o
+renome o dispensa. Ele não dispensa: renomear é caro e a origem certa continua sendo de graça.
+
+### O que este épico obriga a spec futura a responder
+
+O fato duro é o mesmo dos outros dois, e aqui ele é o mais amarrado: **`tenantId == slug ==
+docId`**. Trocar o slug do produtor é migração de tenant, e tenant é a fronteira de isolamento de
+todo o resto — evento, venda, dinheiro e papel. Três consequências próprias deste épico:
+
+- **O slug viaja em link que já saiu de casa.** A URL do convite de assessoria carrega
+  `?tenantId=`, e ela vai por e-mail a terceiro. Convite emitido antes do renome precisa de
+  destino declarado.
+- **O `/@handle` público é outro registro** (`perfis/{handle}`, com o handle digitado pela
+  pessoa), e não se confunde com o slug do tenant. A spec precisa dizer se a fala do dono cobre
+  os dois ou só o slug — a leitura da esteira é que *"a propria página também"* fala do endereço
+  público do produtor, e onde essa leitura toca o `perfis/{handle}` ela precisa ser confirmada, não
+  presumida.
+- **Escrita hoje é privilégio de admin de plataforma.** Qualquer caminho de renome pelo usuário
+  abre escrita onde hoje só o super-admin escreve, e isso é decisão de superfície de segurança,
+  não detalhe de implementação.
+
+**Onde entra na fila:** card do backlog, ancorado nos três épicos por superfície.

@@ -42,7 +42,9 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  FormGrid,
   KpiCard,
+  MetricGrid,
   PageHeader,
   Skeleton,
 } from '@leela/design-system';
@@ -158,22 +160,19 @@ export function FinanceiroTab({
                 recompute; até lá, não há TPV nem serviço medido para mostrar.
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+              <MetricGrid columns={2}>
                 <KpiCard label="TPV" value={formatBRL(rollup.gmv)} hint="Valor de face confirmado" />
                 <KpiCard
                   label="Serviço acumulado"
                   value={formatBRL(rollup.receitaLeela)}
                   hint="Taxa da Leela sobre o GMV confirmado, na taxa do termo vigente deste tenant"
                 />
-              </div>
+              </MetricGrid>
             )}
           </section>
         )}
 
-        <section
-          aria-label="O que ainda não tem fonte"
-          className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2"
-        >
+        <FormGrid as="section" aria-label="O que ainda não tem fonte">
           <EmBreveV3
             titulo="Custos operacionais"
             causa="O custo do gateway por venda ainda não existe no sistema: platform/config.custoGateway e o carimbo do custo na venda nascem na S1610, que está especificada e não foi construída."
@@ -184,7 +183,7 @@ export function FinanceiroTab({
             causa="Faturamento gerado é o TPV menos os custos operacionais menos os repasses dos organizadores. O custo operacional não tem fonte hoje, e mostrar o TPV ou o serviço com este rótulo seria um número fingindo ser o total."
             icon={<Wallet aria-hidden />}
           />
-        </section>
+        </FormGrid>
 
         {repasses}
       </div>
