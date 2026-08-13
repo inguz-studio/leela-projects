@@ -2331,10 +2331,25 @@ export function CheckoutFlow({
 
       {/* Frente 2: logo (wordmark) no rodapé do checkout — recolor por token,
           nunca a variante box. */}
+      {/* S1252-T1 (rodada 2026-08-12-copy-landing · achado B3) · a única linha
+          de confiança do checkout afirmava que o pagamento é "processado no
+          ambiente Leela", e não é: quem processa é o gateway (RN-157, RN-176,
+          `functions/src/checkout/createInscricaoCharge.ts`). Linha de confiança
+          que quebra quando alguém a confere é pior que linha nenhuma.
+
+          A frase nova diz o fato que a casa sustenta, e ele foi MEDIDO nesta
+          lane, não presumido: os campos do cartão vivem só no estado da tela
+          (`CheckoutFlow.tsx`, `useState<CartaoForm>`) e `CreateChargeParams`
+          não carrega nenhum deles — nada de cartão viaja para o backend da
+          Leela nem é persistido.
+
+          ⛔ NOMEAR o provedor na tela segue VETÁVEL do dono (V5 em
+          `02-rodadas/2026-08-12-copy-landing/02-vetaveis.md`) e NÃO foi
+          decidido aqui. Esta é a saída honesta que não decide por ele. */}
       <footer className="mt-16 flex flex-col items-center gap-2 border-t border-border-subtle pt-8">
         <LeelaWordmark className="h-5 w-auto text-text-brand" />
         <p className="text-[length:var(--font-size-sm)] text-text-tertiary">
-          Inscrição segura · pagamento processado no ambiente Leela
+          Inscrição segura · seus dados de pagamento não ficam com a Leela
         </p>
       </footer>
     </div>

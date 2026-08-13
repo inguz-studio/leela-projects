@@ -1,0 +1,61 @@
+# CheckboxField — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: CheckboxField
+version: 0.0.1
+generated_at: "2026-08-12"
+source: src/components/CheckboxField
+verdict: NASCEU NA ONDA C0 (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { CheckboxField, type CheckboxFieldProps } from '@leela/design-system'
+Landing (ADR-017): pelo boundary `app/_ds/ds.ts`, como o Checkbox que ela compõe. Não entra na entrada server-safe — o Checkbox tem useRef/useEffect para o indeterminate.
+
+## Quando usar
+Todo checkbox com rótulo visível ao lado. Os dezessete pares medidos no inventário 2026-08-12 §7 são esta peça.
+
+## Quando NÃO usar
+Checkbox de célula de tabela, com `aria-label` e sem rótulo visível, continua sendo Checkbox puro — é o certo ali. Liga/desliga com efeito imediato é Switch. Rótulo ACIMA do controle é Field. Escolha exclusiva é Radio/RadioCard.
+
+## Props válidas
+- label: ReactNode   (obrigatório)   — aceita link dentro
+- description: ReactNode   — entra por aria-describedby
+- errorMessage: string     — liga aria-invalid e role="alert"
+- id: string    — opcional; sem ele a peça gera e fia o htmlFor
+- className: string   — do BLOCO
+- ...todas as props do Checkbox (checked, onChange, disabled, indeterminate, name, required…)
+
+## Anatomia (o que a peça resolve, para você não repetir)
+- `<label htmlFor>` IRMÃO do controle, não envolvendo — é o dialeto que deixa o link no rótulo
+- alinhamento ao topo SEMPRE: é o único correto quando o rótulo quebra, e indistinguível do centro quando não quebra
+- `cursor-pointer` no rótulo, `cursor-not-allowed` quando desabilitado
+- dica e erro ligados por aria-describedby; erro com role="alert"
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-2 / --spacing-0-5 / --font-size-sm / --font-size-xs
+- --text-primary / --text-tertiary / --text-danger
+
+## Proibido (do/don't)
+DON'T: `<label className="flex items-center gap-2"><Checkbox />texto</label>`. São onze cópias, e o alinhamento ao centro quebra no rótulo de duas linhas.
+DON'T: montar `<div>` + `<label htmlFor="x">` + `<Checkbox id="x">` à mão — o fiamento é da peça.
+DON'T: passar `aria-label` junto com `label`; o rótulo visível já nomeia o controle e os dois brigam.
+DO: passar `errorMessage` em vez de pintar o texto de vermelho na tela — erro que só existe visualmente não chega a quem usa leitor de tela.
+
+## Exemplo mínimo (válido, copiável)
+<CheckboxField
+  label="Receber avisos por e-mail"
+  checked={avisos}
+  onChange={(e) => setAvisos(e.target.checked)}
+/>
+
+## Exemplo completo (válido, copiável)
+<CheckboxField
+  label={<>Li e aceito os <a href="/termos">termos da compra</a> e a política de cancelamento.</>}
+  description="Você pode cancelar em até 7 dias."
+  errorMessage={erro ? 'É preciso aceitar os termos para continuar.' : undefined}
+  checked={aceite}
+  disabled={enviando}
+  onChange={(e) => setAceite(e.target.checked)}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use CheckboxField sempre que houver rótulo visível ao lado de um checkbox. Nunca envolva o Checkbox num label à mão: o alinhamento, o cursor e a ligação de dica e erro são da peça.

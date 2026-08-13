@@ -1,0 +1,33 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './FilterChips.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# FilterChips
+
+A faceta de UM filtro. A peça conta as opções e escolhe o desenho: fileira de `Chip` abaixo de quatro valores, `FilterMenu` (empilhável) ou `Combobox` (exclusiva) a partir de quatro. O limiar do cânone §1 fica fechado por construção — a tela não escolhe, e por isso não erra.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## O limiar
+
+<Canvas of={Stories.AcimaDoLimiar} />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="FilterChips"
+  snippet={`import { FilterChips } from '@leela/design-system';
+
+<FilterChips
+  label="Filtrar por status"
+  options={[{ id: 'rascunho', label: 'Rascunho' }, { id: 'enviado', label: 'Enviado' }]}
+  selected={status}
+  onChange={setStatus}
+/>`}
+  contract={contract}
+/>

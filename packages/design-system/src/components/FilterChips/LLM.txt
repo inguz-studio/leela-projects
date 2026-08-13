@@ -1,0 +1,69 @@
+# FilterChips — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: FilterChips
+version: 0.0.1
+generated_at: "2026-08-12"
+source: src/components/FilterChips
+verdict: NASCEU NA ONDA C0 (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { FilterChips, type FilterChipsProps, type FilterChipsOption } from '@leela/design-system'
+Só painel: a peça compõe FilterMenu e Combobox, que são Radix. A superfície pública (ADR-017) não tem faceta.
+
+## Quando usar
+A faceta de UM filtro de lista ou tabela: status, canal, origem, tipo, papel. Sempre que a tela for desenhar uma fileira de Chips ligada a um estado de filtro, é esta peça.
+
+## Quando NÃO usar
+A barra que hospeda busca, facetas e contador é FilterBar. Alternância entre recortes com PAINEL próprio é Tabs. Escolha que vira dado de formulário é Select (ou Combobox com busca) dentro de um Field — filtro nunca é Select, e esta peça nunca renderiza um.
+
+## Props válidas
+- label: string   (obrigatório)   — nomeia o grupo e o gatilho do menu
+- options: Array<{ id: string; label: string; count?: number }>   (obrigatório)
+- selected: string[]   (obrigatório)   — vazio = sem filtro
+- onChange: (next: string[]) => void   (obrigatório)
+- multiple: boolean   (default: false)   — empilhável × exclusiva
+- allLabel: string   (default: 'Todos')
+- allCount: number    — o total do recorte, mostrado no estado sem seleção
+- className: string
+
+## O que a peça decide sozinha (não passe prop para isso)
+- menos de 4 opções  → fileira de Chip dentro de role="group" com aria-label
+- 4+ e multiple      → FilterMenu (itens menuitemcheckbox)
+- 4+ e exclusiva     → Combobox (a régua já estava no cabeçalho do FilterMenu)
+- chip de "Todos"    → existe em faceta exclusiva, não existe em empilhável
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-2 (o gap da fileira). O resto é dos componentes compostos.
+
+## Proibido (do/don't)
+DON'T: montar `<div role="group" aria-label="Filtrar por X">` + Chip.map() na tela. São doze cópias medidas, e a montagem é o que diverge — não o Chip.
+DON'T: usar Select para filtrar. O cânone §1 escreve "filtro nunca é Select", e a regra `leela-canon/filtro-fora-do-canone` reprova.
+DON'T: passar `selected` com mais de um id quando `multiple` é false.
+DO: passar `count` quando a contagem existir — a peça formata "Rascunho · 12" igual em todas as telas.
+
+## Exemplo mínimo (válido, copiável)
+<FilterChips
+  label="Filtrar por status"
+  options={[{ id: 'rascunho', label: 'Rascunho' }, { id: 'enviado', label: 'Enviado' }]}
+  selected={status}
+  onChange={setStatus}
+/>
+
+## Exemplo completo (válido, copiável)
+<FilterChips
+  label="Filtrar por canal"
+  multiple
+  allLabel="Todos os canais"
+  allCount={64}
+  options={[
+    { id: 'email', label: 'E-mail', count: 30 },
+    { id: 'push', label: 'Push', count: 21 },
+    { id: 'whatsapp', label: 'WhatsApp', count: 9 },
+    { id: 'sms', label: 'SMS', count: 4 },
+  ]}
+  selected={canais}
+  onChange={setCanais}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use FilterChips para qualquer faceta de filtro. Nunca conte as opções na tela para escolher entre chips e dropdown: a peça conta e escolhe, e é isso que fecha o limiar do cânone.

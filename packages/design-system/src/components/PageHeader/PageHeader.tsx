@@ -52,6 +52,18 @@ function PageHeader({
         // coluna e a metadata quebra 1 palavra/linha em 390. Desktop (`lg`) fica
         // `flex-nowrap`, layout de linha única idêntico ao anterior.
         'flex flex-wrap items-center gap-[var(--spacing-4)] lg:flex-nowrap',
+        // `min-h` sozinho não segura a altura: o header é item de um flex
+        // COLUNA com altura definida (a área de rolagem do shell), e ali
+        // `flex-shrink:1` comprime a caixa até o próprio `min-height` enquanto
+        // o conteúdo continua precisando de mais. Abaixo de `lg` o slot de
+        // ações embrulha (`basis-full`) e o conteúdo passa de 96px para
+        // 135-157px — a caixa ficava em 96 e a linha embrulhada era PINTADA
+        // POR CIMA do primeiro bloco da página (medido em 12/08: 61px de
+        // vazamento em 320/375, 39px em 768; a régua de data da Visão Geral
+        // caía sobre o eyebrow do cartão "Próximo evento"). `shrink-0` devolve
+        // a altura ao conteúdo. Em `lg` nada muda: lá o conteúdo já cabe nos
+        // 96px e a caixa continua idêntica.
+        'shrink-0',
         'min-h-[var(--header-height)]',
         'px-[var(--spacing-6)]',
         // Congruência mockup `.page-head` (T7, fecha Directive da T6): o
@@ -74,12 +86,23 @@ function PageHeader({
             className={cn(
               // `.h1` do mockup: display italic bold 40px ls -.01em (T7).
               'font-display italic',
-              'text-[length:var(--header-title-size)]',
+              // Degrau responsivo do §4 do handoff-v2 (`< md`), que a régua
+              // nunca tinha implementado: o título de página ficava em 40px
+              // até em 320px. O tamanho é decisão do DS e mora no par de
+              // tokens `--header-title-size{,-compact}` — a tela não escolhe.
+              'text-[length:var(--header-title-size-compact)]',
+              'md:text-[length:var(--header-title-size)]',
               'tracking-[var(--header-title-spacing)]',
               'font-[var(--font-weight-bold)]',
               'text-[var(--text-primary)]',
               'min-w-0',
-              'truncate',
+              // `truncate` só a partir de `md`. Abaixo dele a caixa do header
+              // cresce com o conteúdo (o `shrink-0` acima), então cortar o
+              // título com reticências deixou de ser necessário — e era o que
+              // sobrava do defeito: reduzir o corpo para 2rem e ainda entregar
+              // "Meia Marato…" não resolve a queixa, só a encolhe. Em `md`+ o
+              // corte continua protegendo a linha única de 96px.
+              'md:truncate',
             )}
           >
             {title}

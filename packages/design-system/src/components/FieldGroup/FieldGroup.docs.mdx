@@ -1,0 +1,34 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './FieldGroup.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# FieldGroup
+
+O grupo de campos. O cânone tinha `Field` para um controle e nada para o grupo — o painel montou onze `<fieldset>` à mão, e cada um reconsertou à sua maneira os defaults que o navegador impõe.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## O que o navegador atrapalha
+
+`min-inline-size: min-content` no `fieldset` (que impede o grupo de encolher e empurra a página para a rolagem horizontal) e `padding-inline: 2px` na `legend` (que desalinha a legenda de todo rótulo da tela). Os dois ficam consertados aqui, uma vez.
+
+## A legenda é sempre visível
+
+Uma tela põe `<legend className="sr-only">` e desenha um `<span>` visível ao lado: o mesmo rótulo escrito duas vezes, que diverge no primeiro conserto. Grupo que não merece rótulo visível provavelmente não é grupo.
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="FieldGroup"
+  snippet={`import { FieldGroup } from '@leela/design-system';
+
+<FieldGroup legend="Notificações">
+  <CheckboxField label="Avisar quando alguém se inscrever" checked={a} onChange={...} />
+</FieldGroup>`}
+  contract={contract}
+/>

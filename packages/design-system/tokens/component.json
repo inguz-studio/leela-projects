@@ -86,9 +86,10 @@
     "thickness":     "1px"
   },
   "header": {
-    "$description": "Page-head do mockup: h1 display italic bold 40px ls -.01em, flat sobre o fundo (`.page-head` nao tem surface raised). Tile do drill do evento (`.ev-header .thumb` 72px, icone 30px) — gradiente por modalidade.",
+    "$description": "Page-head do mockup: h1 display italic bold 40px ls -.01em, flat sobre o fundo (`.page-head` nao tem surface raised). Tile do drill do evento (`.ev-header .thumb` 72px, icone 30px) — gradiente por modalidade. `title-size-compact` paga o degrau responsivo do H1 declarado em `leela-specs/02-rodadas/2026-08-09-redesign-ds/handoff-v2/README.md` §4 (`< md: H1 2.5rem -> 1.875rem`), que nunca tinha sido implementado: o titulo de pagina ficava em 40px ate em 320px. O contrato pedia 1.875rem, degrau que NAO existe na escala (`xl-plus` 1.75 e `2xl` 2 sao equidistantes dele); vale `2xl`, um degrau cheio abaixo do `3xl`, porque inventar 1.875rem violaria a regra de zero valor fora de token. Quem consome o par e o H1 de pagina: compacto por padrao, `title-size` a partir de `md`.",
     "height":        "96px",
     "title-size":    "{font.size.3xl}",
+    "title-size-compact": "{font.size.2xl}",
     "title-spacing": "-0.01em",
     "tile-size":      "72px",
     "tile-icon-size": "30px"

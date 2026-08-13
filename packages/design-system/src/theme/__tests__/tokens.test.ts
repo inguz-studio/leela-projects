@@ -336,3 +336,32 @@ describe('Chaves $doc não vazam para o output', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// RESPONSIVO-FIX (12/08) — o par que paga o degrau do H1 do §4 do handoff-v2
+// ---------------------------------------------------------------------------
+
+describe('Degrau responsivo do título de página', () => {
+  it('o par title-size/title-size-compact existe e aponta para degraus da escala', () => {
+    expect(resolvePath(comp, ['header', 'title-size'])).toBe('{font.size.3xl}');
+    expect(resolvePath(comp, ['header', 'title-size-compact'])).toBe('{font.size.2xl}');
+  });
+
+  it('o compacto é MENOR que o cheio nos 3 temas (senão o degrau é decorativo)', () => {
+    for (const prims of [brasa, wine, darkWine]) {
+      const cheio = parseFloat(resolvePath(prims, ['font', 'size', '3xl']) as string);
+      const compacto = parseFloat(resolvePath(prims, ['font', 'size', '2xl']) as string);
+      expect(compacto).toBeLessThan(cheio);
+    }
+  });
+
+  it('os dois viram var no CSS e valor resolvido no RN', () => {
+    const css = generateCSS('brasa', brasa, sem, comp, { rootFallback: true });
+    expect(css).toContain('--header-title-size: var(--font-size-3xl);');
+    expect(css).toContain('--header-title-size-compact: var(--font-size-2xl);');
+    const rn = generateRNTheme(brasa, sem, comp);
+    // RN não tem media query: recebe valor real, nunca sintaxe só-CSS.
+    expect(rn['header-title-size-compact']).toBe('2rem');
+    expect(rn['header-title-size-compact']).not.toMatch(/clamp|vw|calc/);
+  });
+});

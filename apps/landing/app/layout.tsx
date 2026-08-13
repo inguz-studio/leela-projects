@@ -28,12 +28,17 @@ export const metadata: Metadata = {
   // Origem canônica para resolver URLs relativas de canonical/OG (S1205-T1).
   // Placeholder por env até o domínio real ser fixado (ação externa).
   metadataBase: new URL(baseUrl()),
+  // S1256-T3/T4 (rodada 2026-08-12-copy-landing): esta descrição é o texto que
+  // alimenta busca e preview de link em TODA rota sem descrição própria —
+  // inclusive a página do evento e a do produtor. Enquanto ela falava de
+  // corrida, o snippet do Google anunciava corrida na página de um retiro.
+  // Corrida agora aparece como instância, nunca como a categoria (D-0802-1).
   title: {
-    default: 'Leela — inscrições para corridas',
+    default: 'Leela — inscrições para experiências de bem-estar',
     template: '%s · Leela',
   },
   description:
-    'A plataforma onde você encontra corridas de rua, escolhe seu percurso e garante sua inscrição em minutos.',
+    'A plataforma de experiências de bem-estar: corridas, pedais, retiros e treinos de clube. Você garante sua vaga em minutos.',
 };
 
 /**

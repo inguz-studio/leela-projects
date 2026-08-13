@@ -274,6 +274,7 @@
   --divider-thickness: 1px;
   --header-height: 96px;
   --header-title-size: var(--font-size-3xl);
+  --header-title-size-compact: var(--font-size-2xl);
   --header-title-spacing: -0.01em;
   --header-tile-size: 72px;
   --header-tile-icon-size: 30px;

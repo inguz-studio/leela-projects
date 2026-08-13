@@ -1,7 +1,7 @@
 ---
-tags: [leela, decisoes, dono, rodada, leva8, leva9, leva10, crm, envio, slug]
+tags: [leela, decisoes, dono, rodada, leva8, leva9, leva10, leva11, leva13, crm, envio, slug, copy]
 trace: leela-redesign-v2-20260810
-lane: REGISTRO-LEVA8 (levas 8) · REGISTRO-CRM4-LEVA9 (levas 9 e 10, adendos no fim do arquivo)
+lane: REGISTRO-LEVA8 (leva 8) · REGISTRO-CRM4-LEVA9 (levas 9 e 10) · REGISTRO-LEVA11-KITS-IA (leva 11) · COPY-APPLY (leva 13) — os adendos ficam no fim do arquivo, em ordem
 data: 2026-08-12
 ---
 
@@ -892,3 +892,80 @@ delta da rodada.
   (item 11.3). Build não é desta lane.
 - RN-572 consolidada no épico e no delta da rodada (`03-rns-delta.md`); índice atualizado.
   Próxima livre passa a ser **573**.
+
+---
+
+# Adendo · Leva 13 — 12/08 noite (a home fala de ecossistema, e a copy é no tom dele)
+
+> Registro da lane COPY-APPLY (trace `leela-copy-landing-20260812`). Uma decisão só, e ela fecha o
+> vetável mais antigo do produto: a home pública, reservada a ele desde 02/08 pelo D-0802-1 §2.
+> **Esta é a única leva do dia em que o registro e a construção andaram juntos** — a fala fechou a
+> direção, a mesma lane aplicou a copy, e o delta foi entregue fechado para a review antagonista.
+
+**Fala do dono, na íntegra (12/08, antes de dormir):** *"Quanto á copy, quero que seja no meu tom
+de voz. Lembre-se que a leela nao é sobre corridas apenas. O objetivo é ser um acossistema de
+experiencias de bem-estar e nao se esqueça dos 3 pilares."*
+
+## 13.1 · DECIDIDO — a home é ecossistema de experiências de bem-estar, com os 3 pilares
+
+**Leitura, em três partes, porque a frase decide três coisas.**
+
+**(a) A direção da home fecha, e ela não é nenhuma das quatro de 02/08.** O material de 02/08 punha
+quatro direções na mesa esperando ele apontar uma. Ele não apontou: fechou a **direção** e mandou a
+copy nascer dentro dela. Ecossistema de experiências de bem-estar, com os três pilares presentes, e
+**nunca reduzida a corridas**. A frase `Ache sua próxima corrida e garanta a inscrição em minutos.`
+morre com esta fala.
+
+**(b) O tom é o dele, e tom não se adivinha.** *"Quero que seja no meu tom de voz"* é instrução de
+método, não elogio. A lane extraiu uma **régua de tom de cinco linhas das fontes do próprio dono**
+antes de escrever qualquer string — o material de 02/08 que originou o D-0802-1, as falas dele
+registradas nas rodadas e o rodapé que ele aprovou (*"sem enrolação"*) —, e cada string nova foi
+conferida contra ela. A régua vive em `02-rodadas/2026-08-12-copy-landing/04-apply.md`, e ela
+reprovou duas propostas da própria review antes de virarem código.
+
+**(c) Os três pilares entram com as palavras canônicas.** *"Nao se esqueça dos 3 pilares"* é
+explícito, e os pilares já têm nome no produto desde a **RN-114**: Físico, Mental, Espiritual. A
+home usa esses, e não sinônimos, para falar a mesma língua da Arena, do onboarding de usuário novo
+e das preferências do perfil, que a **RN-564** já amarrou aos mesmos três.
+
+**Efeito.**
+
+- **O vetável V1 da rodada de copy FECHA.** Registro em
+  `02-rodadas/2026-08-12-copy-landing/02-vetaveis.md`, com ponteiro para esta leva. A história
+  **S1256** deixa de esperar o dono e foi **aplicada na mesma noite**.
+- **O H1 novo, na íntegra:** `Físico, mental, espiritual. Ache sua próxima experiência e garanta a
+  vaga em minutos.` Ele conserva o esqueleto que já estava no ar, porque a frase dele nunca foi o
+  problema: o problema era o substantivo.
+- **A descrição do root layout entra junto**, e ela é a peça que a rodada de 02/08 não tinha. É o
+  texto que alimenta busca e preview de link em **toda** rota sem descrição própria, inclusive a do
+  evento e a do produtor: trocar só o `<title>` deixaria o snippet do Google anunciando corrida na
+  página de um retiro.
+- **Não consome número de RN**, e isso é deliberado. Fechar a direção de uma superfície é decisão
+  de vocabulário dentro do D-0802-1, que já é a regra viva. Escrever uma regra nova aqui duplicaria
+  a que existe. **A próxima livre continua sendo a 573.**
+
+**Defaults do maestro, vetáveis, nas sub-decisões que a fala não alcança.** A fala fecha a direção e
+não fecha a redação, então cada peça abaixo custa uma linha para derrubar, e todas estão na íntegra
+em `04-apply.md`: o **eyebrow** virou `Experiências de bem-estar`, declarando a categoria em vez de
+uma instância; a **subline** carrega as instâncias (`Corrida, pedal, retiro, treino de clube`),
+porque "experiência" sozinha não faz ninguém se reconhecer, e elas atravessam os três pilares em
+vez de listar quatro maneiras de correr; o **CTA do hero** virou `Ver experiências` e o rótulo do
+card virou `Ver experiência →`, que nomeia o destino real; e o `<title>` virou
+`Leela — inscrições para experiências de bem-estar`.
+
+**O que a decisão NÃO alcançou, e segue com ele.** Os outros quatro vetáveis da rodada de copy
+continuam intactos e nenhum foi decidido por default: **V2** (organizador × profissional ×
+produtora), **V3** (`0 membros ativos` no card do club), **V4** (`Club` em inglês) e **V5** (nomear
+o Asaas na tela do checkout). A aplicação acrescentou um quinto, o **V6**, que ela descobriu ao
+pagar o achado M4: "modalidade" tem dois sentidos vivos no produto e os dois tiles agora ficam lado
+a lado na seção Sobre.
+
+**Onde aterrissa.** `02-rodadas/2026-08-12-copy-landing/04-apply.md` (régua de tom, os 13 defeitos
+pagos e a home peça por peça); `02-vetaveis.md` do mesmo diretório (V1 fechado, V6 aberto);
+histórias **S1252 a S1256** no [[V1-KANBAN]] e no [[V1-CHECKLIST]]; épico [[LEELA-E12-landing]].
+A **S1251 continua aberta e não é desta lane**: ela é o deploy do renome do Serviço, e **nenhum
+deploy aconteceu aqui**.
+
+**Condição de reabertura.** Ele ler a home no ar e o tom não ser o dele. É o único juiz que
+importa, e é por isso que a régua de cinco linhas ficou escrita: reabrir vira ajuste de linha, e
+não redescoberta do tom a cada rodada.

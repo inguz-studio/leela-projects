@@ -15,6 +15,7 @@ import {
   CardDominio,
   CardEvento,
   Checkbox,
+  CheckboxField,
   Chip,
   Combobox,
   DEFAULT_SIDEBAR_SECTIONS,
@@ -28,7 +29,10 @@ import {
   DropdownMenu,
   EmptyState,
   Field,
+  FieldGroup,
   FileInput,
+  FilterBar,
+  FilterChips,
   FilterMenu,
   FormGrid,
   IconButton,
@@ -44,6 +48,7 @@ import {
   Radio,
   RadioCard,
   RadioGroup,
+  ResultCount,
   SearchInput,
   Select,
   Sidebar,
@@ -161,6 +166,13 @@ export function ComponentsPage(): JSX.Element {
   const [periodoVendas, setPeriodoVendas] = React.useState<DateRange | undefined>(undefined);
   const [buscaGlobal, setBuscaGlobal] = React.useState('');
   const [flatKit, setFlatKit] = React.useState<string | string[]>('');
+  // Onda C0 (CANONE-1) — as cinco peças de controle e montagem.
+  const [facetaStatus, setFacetaStatus] = React.useState<string[]>([]);
+  const [facetaCanais, setFacetaCanais] = React.useState<string[]>(['email']);
+  const [buscaBarra, setBuscaBarra] = React.useState('');
+  const [aceiteTermos, setAceiteTermos] = React.useState(false);
+  const [avisoInscricao, setAvisoInscricao] = React.useState(true);
+  const [avisoResumo, setAvisoResumo] = React.useState(false);
 
   function toggleFiltro(id: string): void {
     setFiltros((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
@@ -304,6 +316,139 @@ export function ComponentsPage(): JSX.Element {
                   </>
                 }
               />
+            </Stack>
+          </DemoCard>
+        </div>
+      </Section>
+
+      {/* ── Filtro e montagem de controle ──────────────────────────────── */}
+      <Section
+        title="Filtro e montagem de controle"
+        description="FilterBar, FilterChips, ResultCount, CheckboxField e FieldGroup — as cinco peças da Onda C0 (CANONE-1). A medição de 12/08 encontrou 134 ocorrências nas seis famílias de controle: a procedência do CONTROLE está certa (zero campo cru, zero checkbox nativo, zero combobox artesanal), e o que foi recriado 59 vezes é o que fica EM VOLTA dele."
+      >
+        <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
+          <DemoCard
+            title="FilterChips"
+            description="A faceta de um filtro. A peça conta as opções e escolhe o desenho: fileira de Chip abaixo de quatro valores, FilterMenu (empilhável) ou Combobox (exclusiva) a partir de quatro. Doze telas montaram isso à mão, e as doze escolheram diferente."
+          >
+            <Stack gap="md">
+              <FilterChips
+                label="Filtrar por status"
+                options={[
+                  { id: 'rascunho', label: 'Rascunho', count: 3 },
+                  { id: 'agendado', label: 'Agendado', count: 7 },
+                  { id: 'enviado', label: 'Enviado', count: 41 },
+                ]}
+                allCount={51}
+                selected={facetaStatus}
+                onChange={setFacetaStatus}
+              />
+              <FilterChips
+                label="Canal"
+                multiple
+                options={[
+                  { id: 'email', label: 'E-mail' },
+                  { id: 'push', label: 'Push' },
+                  { id: 'whatsapp', label: 'WhatsApp' },
+                  { id: 'sms', label: 'SMS' },
+                ]}
+                selected={facetaCanais}
+                onChange={setFacetaCanais}
+              />
+            </Stack>
+          </DemoCard>
+
+          <DemoCard
+            title="FilterBar"
+            description="A barra que hospeda busca, facetas, contador e ação. Compõe o Toolbar — dele vêm a linha de dois lados, o refluxo abaixo de lg e a hairline. O role=search fica no SearchInput: dois landmarks de busca aninhados anunciariam duas buscas onde há uma."
+          >
+            <FilterBar
+              label="comunicados"
+              search={
+                <SearchInput
+                  aria-label="Buscar comunicado por título"
+                  placeholder="Buscar por título"
+                  value={buscaBarra}
+                  onChange={(e) => setBuscaBarra(e.target.value)}
+                  shortcutLabel={null}
+                />
+              }
+              facets={
+                <FilterChips
+                  label="Filtrar por status"
+                  options={[
+                    { id: 'rascunho', label: 'Rascunho' },
+                    { id: 'enviado', label: 'Enviado' },
+                  ]}
+                  selected={facetaStatus}
+                  onChange={setFacetaStatus}
+                />
+              }
+              count={
+                <ResultCount
+                  visiveis={12}
+                  total={40}
+                  substantivo={{ singular: 'comunicado', plural: 'comunicados' }}
+                />
+              }
+              actions={<Button variant="primary">Novo comunicado</Button>}
+            />
+          </DemoCard>
+
+          <DemoCard
+            title="ResultCount"
+            description="O contador da lista recortada. Doze escritas da mesma frase produziram três dialetos de ARIA e duas grafias, duas delas sem canal nenhum. Com temMais o total é IGNORADO: a paginação por cursor nunca computou total, e apresentá-lo seria invenção."
+          >
+            <Stack gap="xs">
+              <ResultCount
+                visiveis={12}
+                total={40}
+                substantivo={{ singular: 'comunicado', plural: 'comunicados' }}
+              />
+              <ResultCount
+                visiveis={20}
+                total={999}
+                temMais
+                substantivo={{ singular: 'venda', plural: 'vendas' }}
+              />
+              <ResultCount
+                visiveis={37}
+                substantivo={{ singular: 'inscrito', plural: 'inscritos' }}
+              />
+            </Stack>
+          </DemoCard>
+
+          <DemoCard
+            title="CheckboxField e FieldGroup"
+            description="O par rótulo + caixinha (dezessete montagens à mão, em três dialetos) e o grupo de campos (onze fieldset, cada um reconsertando os defaults do navegador). O rótulo é um label htmlFor IRMÃO, o que deixa um link viver dentro dele; o alinhamento é ao topo sempre, porque é o único correto quando o rótulo quebra em duas linhas."
+          >
+            <Stack gap="md">
+              <CheckboxField
+                label={
+                  <>
+                    Li e aceito os <strong>termos da compra</strong> e a política de cancelamento.
+                  </>
+                }
+                description="Você pode cancelar em até 7 dias."
+                checked={aceiteTermos}
+                onChange={(e) => setAceiteTermos(e.target.checked)}
+              />
+              <FieldGroup
+                legend="Notificações"
+                description="Valem para este evento. As da conta ficam no seu perfil."
+                gap="sm"
+              >
+                <CheckboxField
+                  label="Avisar quando alguém se inscrever"
+                  checked={avisoInscricao}
+                  onChange={(e) => setAvisoInscricao(e.target.checked)}
+                />
+                <CheckboxField
+                  label="Resumo semanal do evento"
+                  checked={avisoResumo}
+                  onChange={(e) => setAvisoResumo(e.target.checked)}
+                />
+              </FieldGroup>
             </Stack>
           </DemoCard>
         </div>

@@ -25,10 +25,33 @@
       "painel": 0,
       "landing": 0
     },
+    "faceta-crua": {
+      "painel": 13,
+      "landing": 0
+    },
+    "barra-de-filtro-crua": {
+      "painel": 12,
+      "landing": 0
+    },
+    "contador-de-resultado-cru": {
+      "painel": 13,
+      "landing": 0
+    },
+    "rotulo-de-checkbox-cru": {
+      "painel": 12,
+      "landing": 5
+    },
+    "grupo-de-campos-cru": {
+      "painel": 11,
+      "landing": 0
+    },
     "controle-cru-fora-do-ds": {
       "total": 3
     },
     "padrao-reimplementado-fora-do-ds": {
+      "total": 4
+    },
+    "filtro-fora-do-canone": {
       "total": 3
     }
   },
@@ -38,6 +61,13 @@
       "razao": "Onda 0 Parte B (CANONE-1): a regua mudou, nao a arvore. (1) contagem NOVA grade-crua mede as instancias de moldura escrita a mao — 104 no painel, 12 na landing —, que so passaram a ser divergencia agora que Stack/FormGrid/MetricGrid/SplitPanel/SectionHeader existem no DS; (2) padrao-reimplementado subiu 2 para 3 porque SecaoHead virou sinonimo de SectionHeader, e o arquivo ja existia intocado. Nenhuma linha de apps/ foi tocada nesta lane.",
       "subiram": [
         "padrao-reimplementado-fora-do-ds.total: 2 → 3"
+      ]
+    },
+    {
+      "data": "2026-08-13",
+      "razao": "Onda C0 (CANONE-1): a regua mudou, nao a arvore. (1) cinco contagens NOVAS medem as familias que a rodada de 12/08 inventariou e que as cinco contagens antigas nao viam — faceta-crua 13, barra-de-filtro-crua 12, contador-de-resultado-cru 13, rotulo-de-checkbox-cru 17, grupo-de-campos-cru 11; (2) filtro-fora-do-canone entra com 3, o numero real medido sem a divida de dois arquivos; (3) padrao-reimplementado subiu 3 para 4 porque FiltroStatus virou sinonimo de FilterChips, publicada nesta lane, e o arquivo (HubEventos) ja existia intocado. Nenhuma linha de apps/ foi tocada nesta lane.",
+      "subiram": [
+        "padrao-reimplementado-fora-do-ds.total: 3 → 4"
       ]
     }
   ]

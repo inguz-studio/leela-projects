@@ -1,0 +1,38 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './CheckboxField.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# CheckboxField
+
+O par rótulo + caixinha. A procedência do controle no produto é perfeita — dezenove `Checkbox` do DS, zero checkbox nativo. O que foi escrito dezessete vezes, em três dialetos, é a montagem do rótulo.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## O rótulo com link
+
+O `<label htmlFor>` irmão deixa um link viver dentro do rótulo sem que a tela precise tirá-lo de lá.
+
+<Canvas of={Stories.RotuloComLink} />
+
+## Fronteira com o `Field`
+
+`Field` é a casca de qualquer controle com rótulo **acima**. `CheckboxField` é o par com rótulo **ao lado**. São irmãs no cânone §3 — esta peça não compõe aquela, porque montar uma coluna para depois desfazê-la em linha seria carregar a anatomia errada.
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="CheckboxField"
+  snippet={`import { CheckboxField } from '@leela/design-system';
+
+<CheckboxField
+  label="Receber avisos por e-mail"
+  checked={avisos}
+  onChange={(e) => setAvisos(e.target.checked)}
+/>`}
+  contract={contract}
+/>
