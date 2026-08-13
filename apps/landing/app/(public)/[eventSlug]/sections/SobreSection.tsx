@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, MapPin, Route, Info, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Layers, Info, type LucideIcon } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
 import { Card } from '@leela/design-system/server';
 import { Dobra } from './Dobra';
@@ -20,10 +20,25 @@ export function SobreSection({ evento }: { evento: EventoPublico }): React.JSX.E
     // servido em todo evento — um retiro de respiração não tem largada.
     { rotulo: 'Início', valor: evento.horaLabel, icone: Clock },
     { rotulo: 'Local', valor: evento.local, icone: MapPin },
+    // S1254-T2 (rodada 2026-08-12-copy-landing · achado M4) · o campo conta
+    // MODALIDADES e o rótulo prometia PERCURSOS: num retiro com duas práticas,
+    // a página anunciava duas distâncias que não existem. Mesma lacuna do B2 —
+    // a varredura S1218-T3 corrigiu `ModalidadesSection` e pulou esta.
+    //
+    // O valor virou o número puro, sem repetir o rótulo logo abaixo dele: é a
+    // mesma régua que o achado L2 aplica ao estado vazio de Clubs. O ícone
+    // deixou de ser `Route` pela mesma razão do rótulo — um pictograma de
+    // trajeto é a promessa de percurso desenhada.
+    //
+    // ⛔ Fica um vetável NOVO para o dono, registrado na rodada: "modalidade"
+    // tem dois sentidos vivos no produto (a prática do evento em
+    // `modalidadeEsporte` e as opções de inscrição em `modalidades`), e os dois
+    // tiles agora ficam lado a lado. Qual dos dois fica com a palavra é escolha
+    // de vocabulário de marca, não de esteira.
     {
-      rotulo: 'Percursos',
-      valor: `${evento.modalidades.length} ${evento.modalidades.length === 1 ? 'distância' : 'distâncias'}`,
-      icone: Route,
+      rotulo: 'Modalidades',
+      valor: `${evento.modalidades.length}`,
+      icone: Layers,
     },
   ];
 

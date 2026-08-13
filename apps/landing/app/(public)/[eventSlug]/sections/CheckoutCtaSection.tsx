@@ -22,12 +22,25 @@ export function CheckoutCtaSection({ evento }: { evento: EventoPublico }): React
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 opacity-70 [background:var(--countdown-bg)]"
       />
+      {/* S1254-T1 (rodada 2026-08-12-copy-landing · achados B2 e M5) · dois
+          defeitos numa dobra só, e ela é servida a TODO evento com seções.
+          "Largar" é o gesto de uma prova, e esta mesma dobra fecha a página do
+          retiro de respiração. "Percurso" já tinha sido aposentado pela
+          varredura S1218-T3 em `ModalidadesSection` e em `StepModalidadeKit`
+          (D-0802-1 §3); esta ficou de fora, e a página falava duas línguas
+          sobre a mesma escolha.
+
+          O travessão que emendava "sem criar conta" também sai: a home usava a
+          MESMA estrutura com a MESMA pontuação, e o leitor sentia o molde antes
+          do argumento (gate de voz, Categoria 7).
+
+          O ramo fechado estava correto e não muda. */}
       <h2 className="font-display text-3xl font-extrabold tracking-tight text-text-primary">
-        {aberta ? 'Pronto para largar?' : 'Fique de olho na próxima edição'}
+        {aberta ? 'Bora garantir sua vaga?' : 'Fique de olho na próxima edição'}
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-text-secondary">
         {aberta
-          ? 'Garanta sua vaga em poucos passos — sem criar conta. Você escolhe o percurso e o kit na hora.'
+          ? 'Poucos passos e sem criar conta. Você escolhe a modalidade e o kit na hora.'
           : 'As inscrições deste evento estão encerradas. Salve o link para acompanhar novidades.'}
       </p>
       <div className="mt-8 flex flex-col items-center gap-3">

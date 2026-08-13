@@ -153,6 +153,13 @@ const AVISO_SEGUNDO_LOGIN = 'O painel vai pedir sua senha de novo — é a mesma
 /**
  * O nome do LUGAR — a palavra do dono, agora no título e não no botão
  * (PONTE-CTA-1). Os botões nomeiam os dois trabalhos.
+ *
+ * S1255-T4 (rodada 2026-08-12-copy-landing · achado M2) · o mesmo objeto
+ * aparecia capitalizado uma vez e minúsculo em outras seis, dentro do MESMO
+ * cartão. Ou é nome próprio, e é sempre `Painel Profissional`; ou é descrição,
+ * e é sempre minúsculo. É nome próprio — foi assim que a decisão do dono o
+ * estabeleceu —, então esta constante passa a ser a fonte única das ocorrências
+ * visíveis, em vez de sete literais que divergem sozinhas na próxima edição.
  */
 const NOME_DO_LUGAR = 'Painel Profissional';
 
@@ -178,7 +185,7 @@ const CTAS: readonly { intencao: IntencaoDaTravessia; rotulo: string; slot: stri
  */
 const FRASE_DA_RECUSA: Record<MotivoRecusaPromocao, string> = {
   sem_sessao: 'Sua sessão expirou. Entre de novo e tente outra vez.',
-  sessao_anonima: 'Entre com o e-mail da sua conta para conhecer o painel profissional.',
+  sessao_anonima: `Entre com o e-mail da sua conta para conhecer o ${NOME_DO_LUGAR}.`,
   conta_de_plataforma: 'Esta conta administra a plataforma e não vira conta de profissional.',
   // PONTE-ELEGIVEL-1 · a sexta. Quem cai aqui é o divulgador e a
   // ex-organizadora rebaixada de propósito: o resgate do código recusaria as
@@ -203,7 +210,7 @@ const FRASE_DA_RECUSA: Record<MotivoRecusaPromocao, string> = {
   // precisam estar na frase.
   nome_profissional_invalido:
     'Escolha um nome com dois caracteres ou mais e pelo menos uma letra de A a Z ou um número. O endereço da sua produtora é escrito só com esses caracteres.',
-  indisponivel: 'Não conseguimos abrir o painel profissional agora. Tente de novo em instantes.',
+  indisponivel: `Não conseguimos abrir o ${NOME_DO_LUGAR} agora. Tente de novo em instantes.`,
 };
 
 type FasePromocao = 'convite' | 'promovendo' | 'pronta' | 'recusada';
@@ -242,10 +249,10 @@ function PortaDeQuemJaEProfissional(): React.JSX.Element {
     <Card className={CARTAO} data-slot="porta-organizador">
       <h2 className={TITULO}>Você também organiza</h2>
       <p className={APOIO}>
-        Suas experiências, inscrições e repasses ficam no painel profissional. {AVISO_SEGUNDO_LOGIN}
+        Suas experiências, inscrições e repasses ficam no {NOME_DO_LUGAR}. {AVISO_SEGUNDO_LOGIN}
       </p>
       <a className={LINK} href={painelUrl('/entrar')} data-slot="ir-para-painel">
-        Ir para o painel profissional
+        Ir para o {NOME_DO_LUGAR}
       </a>
     </Card>
   );
@@ -283,7 +290,7 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
    * profissional pré-existente. Antes deste conserto a tela DESCARTAVA o
    * retorno da callable (`await promoverParaProfissional({…})` sem atribuição),
    * então o `jaExistia` que o servidor manda de propósito nunca era lido e a
-   * pessoa via "Pronto. O painel profissional já é seu" como quem escolheu o
+   * pessoa via "Pronto. O Painel Profissional já é seu" como quem escolheu o
    * nome. O nome dela tinha sido jogado fora sem uma palavra.
    */
   const [nomeNaoAplicado, setNomeNaoAplicado] = useState(false);
@@ -342,7 +349,7 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
   if (fase === 'pronta') {
     return (
       <Card className={CARTAO} data-slot="porta-conhecer-painel">
-        <h2 className={TITULO}>Pronto. O painel profissional já é seu</h2>
+        <h2 className={TITULO}>Pronto. O {NOME_DO_LUGAR} já é seu</h2>
         {/* A confirmação é curta e a travessia vem junto: a pessoa acabou de
             pedir para conhecer, e mandá-la procurar o caminho seria devolver
             a ela o trabalho que este cartão existe para tirar.
@@ -369,7 +376,7 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
           Para trabalhar com os seus dados, o time Leela libera seu código. {AVISO_SEGUNDO_LOGIN}
         </p>
         <a className={LINK} href={painelUrl('/entrar')} data-slot="ir-para-painel-vitrine">
-          Ir para o painel profissional
+          Ir para o {NOME_DO_LUGAR}
         </a>
       </Card>
     );
@@ -381,7 +388,7 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
           os dois TRABALHOS e carimbam intenções diferentes (PONTE-CTA-1). */}
       <h2 className={TITULO}>{NOME_DO_LUGAR}</h2>
       <p className={APOIO}>
-        O painel profissional é onde você publica experiências, vende inscrições, acompanha
+        O {NOME_DO_LUGAR} é onde você publica experiências, vende inscrições, acompanha
         repasses e toca os seus clubs. Você pode entrar e circular agora, com esta mesma conta.
         Para trabalhar com os seus dados, o time Leela libera seu código.
       </p>
