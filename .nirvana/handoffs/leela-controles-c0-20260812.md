@@ -130,7 +130,8 @@ impedir.
 | Gate | Resultado |
 |---|---|
 | DS · `vitest run` (suíte inteira) | **89 arquivos · 2066 casos**, verdes (baseline da Onda 0: 77 · 1842) |
-| Painel · `vitest run` (suíte INTEIRA, em fatias seriais) | **254 arquivos · 2855 casos** — ver a tabela por fatia |
+| Painel · `vitest run` (suíte INTEIRA, em fatias seriais) | **254 arquivos · 2855 casos**, verdes — ver a tabela por fatia |
+| Showroom · `vite build` | compila com a seção nova das cinco peças |
 | `eslint --max-warnings 0` (DS, showcase, painel, landing) | limpo |
 | `tsc --noEmit` (DS e landing) | limpo |
 | `generate-tokens` 2× | idempotente — zero diferença de conteúdo (só LF×CRLF do gerador) |
@@ -139,26 +140,25 @@ impedir.
 
 ### A suíte do painel, fatia por fatia
 
+Todas as fatias abaixo foram rodadas **depois** do rebuild `core → design-system → api-client`, que é
+o estado final da árvore. Todas verdes.
+
 | Fatia | Arquivos · casos |
 |---|---|
 | `routes/eventos` | 82 · 938 |
 | `routes/clubes` | 35 · 323 |
-| `routes/plataforma` | 45 · 433 |
+| `routes/plataforma` + `components` + `lib` + `shell` + `src/__tests__` | 69 · 780 |
 | `routes/crm` + `parcerias` + `overview` + `conta` + `onboarding` + `_system` + `__tests__` | 68 · 814 |
-| `components` + `lib` + `shell` + `src/__tests__` | 24 · 347 |
+| **total** | **254 · 2855** |
 
-**O `dist` do design system tem de ser rebuildado antes da suíte do painel, e isso custou duas
-fatias.** O painel resolve `@leela/design-system` pelo `dist`, não pelo `src`. Com o `dist` construído
-ANTES do merge da main, `clubes/_data/session.test.tsx` estourou o teto de espera do RTL três vezes
-seguidas (12s onde a mesma árvore leva 2,2s) e passava sozinho — o retrato de artefato defasado, não
-de defeito. Rebuildado `core → design-system → api-client`, a fatia fechou verde.
-
-Duas quedas restantes foram **teto de tempo sob carga**, cada uma provada verde isolada no mesmo
-estado da árvore: `clubes/_data/session.test.tsx` (8/8 sozinho) e
-`eventos/comunicacao/CampanhaEditor.test.tsx` (7/7 sozinho, 20,6s na fatia contra 4,1s sozinho). Os
-dois arquivos são da família que o próprio `vitest.config.ts` do painel nomeia no comentário do
-`testTimeout`: pesados, verdes isolados, sensíveis a contenção. Nenhuma linha desta lane entra no
-grafo deles — o único arquivo de `apps/` que a lane toca é o boundary `_ds/ds.ts` da landing.
+**O achado que custou duas rodadas de fatia, e que vale como regra: a suíte do painel julga o `dist`,
+não o `src`.** O painel resolve `@leela/design-system` pelo pacote construído. Com o `dist` de antes
+do merge da main, `clubes/_data/session.test.tsx` estourou o teto de espera do RTL **três vezes
+seguidas** — 12s onde a mesma árvore leva 2,2s — e passava sozinho; `CampanhaEditor.test.tsx` bateu
+os 20s do `testTimeout` e passava sozinho em 4,1s. Os dois são da família que o próprio
+`vitest.config.ts` do painel nomeia no comentário do `testTimeout`: pesados e sensíveis a contenção.
+Rebuildados os três pacotes, as quatro fatias fecharam verdes sem exceção. É o mesmo princípio que a
+casa já escreveu para o deploy — **artefato se julga rebuildado** —, e ele vale para a suíte também.
 
 ## O que fica para as próximas ondas
 
@@ -167,9 +167,10 @@ grafo deles — o único arquivo de `apps/` que a lane toca é o boundary `_ds/d
   `SearchInput.shortcutLabel = null`, o modo de fluxo do `Combobox` (ou o ADR do balcão) e a decisão
   sobre a peça de rótulo/valor das quatro receitas do administrativo. As três seguem escritas na
   rodada, livres para a próxima lane.
-- **Prova renderizada nos dois temas (L-019).** As cinco peças têm story com os estados, mas nenhuma
-  tela as consome ainda — a prova visual cai na primeira onda de conversão, junto com a tela que a
-  mostra.
+- **Prova renderizada nos dois temas (L-019).** As cinco peças têm story com os estados e entraram no
+  showroom (seção "Filtro e montagem de controle"), que compila. A prova COM NAVEGADOR nos dois temas
+  cai na primeira onda de conversão, junto com a tela que as mostra — esta lane não sobe tela nenhuma
+  e não faz deploy.
 - **A regra 3 não pega `EngajamentoView:461`** (`aria-label="Club analisado"`): o rótulo não declara
   papel de filtro, e a régua é justamente "o rótulo denuncia o papel". A conversão dela é da C1, por
   leitura humana.
