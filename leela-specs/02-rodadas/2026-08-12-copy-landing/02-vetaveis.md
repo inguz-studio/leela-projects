@@ -1,10 +1,16 @@
 # Vetáveis de voz × defeitos objetivos
 
-Rodada `2026-08-12-copy-landing` · lane `COPY-LANDING-REVIEW`.
+Rodada `2026-08-12-copy-landing` · lanes `COPY-LANDING-REVIEW` (a review) e `COPY-APPLY` (a
+aplicação, que fechou o V1 e abriu o V6).
 
 Este arquivo existe para o dono gastar atenção só onde ela é insubstituível. Dos 18 achados de
 `01-review.md`, **13 são defeitos objetivos** e podem seguir para aplicação sem passar por ele.
 **Cinco são voz de marca**, e nenhum deles tem resposta certa fora da cabeça dele.
+
+> **Estado em 12/08 noite.** O **V1 FECHOU** pela direção dele, registrada como **Leva 13** em
+> `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`, e a home foi aplicada na mesma noite
+> (`04-apply.md`). Os 13 defeitos objetivos foram todos pagos. **V2, V3, V4 e V5 seguem abertos e
+> intocados**, e a aplicação acrescentou o **V6**, que ela mesma descobriu ao pagar o M4.
 
 ## O critério
 
@@ -22,9 +28,21 @@ copy. A frase certa já está escrita no repositório.
 
 # Os cinco vetáveis
 
-## V1 · a home inteira (achado B1, e o L4 junto com ele)
+## ✅ V1 · a home inteira (achado B1, e o L4 junto com ele) — **FECHADO em 12/08, à noite**
 
-**Por que é dele:** D-0802-1 §2 reserva a landing ao dono, com as palavras dele. Nenhuma esteira
+> **A direção dele, na íntegra:** *"Quanto á copy, quero que seja no meu tom de voz. Lembre-se que
+> a leela nao é sobre corridas apenas. O objetivo é ser um acossistema de experiencias de bem-estar
+> e nao se esqueça dos 3 pilares."*
+>
+> Ele não escolheu uma das quatro direções de 02/08: fechou a direção e mandou a copy nascer dentro
+> dela, no tom dele. A régua de tom de 5 linhas foi extraída das fontes dele **antes** de qualquer
+> string e vive em `04-apply.md`; a home aplicada, peça por peça, está no mesmo arquivo. O registro
+> da fala é a **Leva 13** em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md`.
+>
+> O texto abaixo é o estado anterior, mantido porque é ele que explica por que a home esperou dez
+> dias e o que a esteira tinha na mão quando a resposta chegou.
+
+**Por que era dele:** D-0802-1 §2 reserva a landing ao dono, com as palavras dele. Nenhuma esteira
 mexe no eyebrow, no H1, no CTA do hero, no contador da dobra ou no estado vazio.
 
 **O que esta lane fez:** nada de copy nova. O material de decisão já existe e continua bom —
@@ -130,6 +148,48 @@ quem processa é o Asaas. Isso vai para a fila sem passar pelo dono.
 **Recomendação:** A, e por um motivo comercial. Quem compra ingresso online já foi treinado a
 procurar o nome do processador; a linha atual não dá esse nome e por isso não fecha a dúvida que
 ela existe para fechar.
+
+> **12/08, noite · o que a lane COPY-APPLY fez com este item.** O defeito foi pago pela **saída C**,
+> que é a única das três que não decide nada por ele: a tela agora diz
+> `Inscrição segura · seus dados de pagamento não ficam com a Leela`. A afirmação foi **medida**
+> antes de virar código, e não presumida — os campos do cartão vivem só no estado da tela e
+> `CreateChargeParams` não carrega nenhum deles, então nada de cartão chega ao backend da Leela nem
+> é persistido. **A pergunta continua aberta e é esta:** a tela deve nomear o Asaas? Se ele disser
+> que sim, a troca é de uma linha e a recomendação segue sendo a saída A.
+
+---
+
+## V6 · "modalidade" tem dois sentidos, e agora eles ficam lado a lado (nasceu ao pagar o M4)
+
+**Como ele apareceu.** O M4 era objetivo e foi pago: a seção Sobre rotulava `Percursos` uma
+contagem de modalidades, e num retiro com duas práticas a página anunciava duas distâncias que não
+existem. Com o rótulo certo no lugar, os dois tiles da mesma grade passaram a diferir por uma letra.
+
+**As duas coisas que hoje se chamam modalidade:**
+
+| Tile | O que ele mostra | De onde vem | Exemplo no ar |
+|---|---|---|---|
+| `Modalidade` | a **prática** do evento | `modalidadeEsporte` (`lib/leitor.ts`) | `Corrida de rua`, `Trail`, `Bem-estar` |
+| `Modalidades` | as **opções de inscrição** | `modalidades.length` | `2` |
+
+O segundo sentido não é invenção desta lane: a varredura S1218-T3 já cravou "Modalidades
+disponíveis" na `ModalidadesSection` e "Escolha a modalidade e o kit" no checkout, as duas citando
+D-0802-1. O primeiro é da LEELA-R12, que promoveu a prática a fato de destaque.
+
+**Por que é dele.** Escolher qual dos dois fica com a palavra é a mesma classe do V2: as duas estão
+certas isoladas, e juntas fazem a página parecer duas páginas. É vocabulário de marca.
+
+| Saída | O que muda | Preço |
+|---|---|---|
+| A — a **prática** cede a palavra | o tile vira `Esporte` ou `Prática` | "Esporte" reabre o D-0802-1 num retiro; "Prática" é palavra nova no produto |
+| B — as **opções** cedem a palavra | o tile de contagem vira outro rótulo | contradiz a S1218-T3, que já pôs "modalidade" na `ModalidadesSection` e no checkout |
+| C — os dois ficam | nada muda | os dois tiles seguem a uma letra de distância na mesma grade |
+
+**Recomendação:** A, com "Prática". É o único caminho que não desfaz a varredura anterior nem
+devolve a corrida ao lugar da categoria. A palavra é nova, e por isso a escolha é dele.
+
+⚠️ **Enquanto ele não responde, vale a saída C**, que é o estado aplicado. Nenhuma frase mente; o
+que sobra é a leitura mais lenta de dois tiles vizinhos.
 
 ---
 
