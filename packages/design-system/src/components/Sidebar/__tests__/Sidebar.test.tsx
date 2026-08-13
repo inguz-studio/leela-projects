@@ -242,13 +242,14 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /Eventos/ })).toHaveFocus();
   });
 
-  it('DEFAULT_SIDEBAR_SECTIONS has 6 items total (RN-233 · rodada IA-MENU)', () => {
+  it('DEFAULT_SIDEBAR_SECTIONS has 5 items total (Leva 15 tirou Configurações)', () => {
     const count = DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items).length;
-    expect(count).toBe(6);
+    expect(count).toBe(5);
   });
 
   it('DEFAULT_SIDEBAR_SECTIONS: inventário EXATO e na ordem (catálogo é contrato)', () => {
-    expect(DEFAULT_SIDEBAR_SECTIONS.map((s) => s.label)).toEqual(['OPERAÇÃO', 'CONTA']);
+    // A seção 'CONTA' morreu com o único item que ela tinha (Leva 15).
+    expect(DEFAULT_SIDEBAR_SECTIONS.map((s) => s.label)).toEqual(['OPERAÇÃO']);
     expect(DEFAULT_SIDEBAR_SECTIONS.map((s) => s.items.map((i) => [i.id, i.label]))).toEqual([
       [
         ['visao-geral', 'Visão geral'],
@@ -257,8 +258,17 @@ describe('Sidebar', () => {
         ['crm', 'CRM'],
         ['parcerias', 'Parcerias'],
       ],
-      [['configuracoes', 'Configurações']],
     ]);
+  });
+
+  it('Leva 15: `configuracoes` saiu do catálogo do DS, não só do consumidor', () => {
+    // Mesma régua do teste da RN-823 logo abaixo: remoção que fica só no app
+    // deixa o catálogo mentindo sobre o que é o menu.
+    const ids = DEFAULT_SIDEBAR_NAV_ICONS.map((e) => e.id);
+    expect(ids).not.toContain('configuracoes');
+    expect(DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items).map((i) => i.id)).not.toContain(
+      'configuracoes',
+    );
   });
 
   it('RN-823: "financeiro" e "analytics" saíram do catálogo do DS, não só do consumidor', () => {
@@ -374,7 +384,6 @@ describe('REDESIGN-V2 item 3: catálogo de ícones da nav', () => {
       clubs: 'Heart',
       crm: 'User',
       parcerias: 'Megaphone',
-      configuracoes: 'Settings',
     });
   });
 

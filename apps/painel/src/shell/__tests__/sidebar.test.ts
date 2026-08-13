@@ -30,9 +30,11 @@ describe('painelActiveId', () => {
     ['/parcerias/afiliacoes/minhas', 'parcerias'],
     ['/marcas', null],
     ['/marcas/qualquer', null],
-    // RN-233/RN-366: Configurações deixou de ser inerte e leva a `/conta`.
-    ['/conta', 'configuracoes'],
-    ['/conta/perfil-publico', 'configuracoes'],
+    // LEVA 15: Configurações saiu do menu principal (o popover do perfil já
+    // levava ao MESMO `/conta`). Mesma régua de `/marcas` acima — rota que não
+    // é destino de menu não acende item nenhum.
+    ['/conta', null],
+    ['/conta/perfil-publico', null],
     ['/health', null],
   ])('%s → %s', (pathname, esperado) => {
     expect(painelActiveId(pathname)).toBe(esperado);
@@ -40,10 +42,10 @@ describe('painelActiveId', () => {
 });
 
 describe('shellSidebarSections', () => {
-  it('RN-233: nav do produtor = 6 itens, na ordem, todos com ícone, ativo marcado', () => {
+  it('Leva 15: nav do produtor = 5 itens, na ordem, todos com ícone, ativo marcado', () => {
     const sections = shellSidebarSections('/eventos', vi.fn());
     const items = sections.flatMap((s) => s.items);
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(5);
     expect(items.map((i) => i.id)).toEqual([
       'visao-geral',
       'eventos',
@@ -51,8 +53,9 @@ describe('shellSidebarSections', () => {
       'crm',
       // D-1008-R17: "Parcerias" no MESMO slot que era de "Marcas".
       'parcerias',
-      'configuracoes',
     ]);
+    // Leva 15: o item redundante não voltou nem por outro id.
+    expect(items.map((i) => i.id)).not.toContain('configuracoes');
     expect(items.every((i) => i.icon)).toBe(true);
     expect(items.find((i) => i.id === 'eventos')?.active).toBe(true);
   });
@@ -88,10 +91,6 @@ describe('shellSidebarSections', () => {
     // afiliações (sucede o módulo Marcas — E10 · S811 seed).
     chamarOnClick(items.find((i) => i.id === 'parcerias')?.onClick);
     expect(navigate).toHaveBeenCalledWith('/parcerias');
-    // RN-233 sem exceção aberta: TODO item do menu tem destino. Configurações
-    // leva a `/conta`, onde vivem os Dados de recebimento (RN-366 · IAM-T5).
-    chamarOnClick(items.find((i) => i.id === 'configuracoes')?.onClick);
-    expect(navigate).toHaveBeenCalledWith('/conta');
   });
 
   it('RN-233: nenhum item de menu fica sem rota', () => {
@@ -114,7 +113,6 @@ describe('shellSidebarSections', () => {
     }
     // O par href↔destino é o mesmo — o link não mente sobre para onde vai.
     expect(items.find((i) => i.id === 'crm')?.href).toBe('/crm');
-    expect(items.find((i) => i.id === 'configuracoes')?.href).toBe('/conta');
   });
 
   it('clique simples: preventDefault + navigate (sem recarregar o documento)', () => {

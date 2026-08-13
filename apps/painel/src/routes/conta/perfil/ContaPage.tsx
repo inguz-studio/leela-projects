@@ -26,7 +26,6 @@ import { Avatar, Button, FileInput, Input, InputSenha, useToast } from '@leela/d
 import {
   atualizarFotoPerfil,
   atualizarNomeExibicao,
-  logout,
   problemaDoArquivoImagem,
   trocarSenha,
   uploadFotoPerfilConta,
@@ -36,6 +35,7 @@ import { ajustarProporcaoImagem } from '@/components/upload';
 import { AuthAlert } from '../auth/AuthAlert';
 import { mensagemErroTrocaSenha } from '../auth/_lib/authErrors';
 import { useContaUsuario } from './useContaUsuario';
+import { useSair } from '@/shell/sair';
 
 const SECAO = 'flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]';
 const SECAO_TITULO = 'text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]';
@@ -68,23 +68,9 @@ export function ContaPage({ recebimento }: ContaPageProps = {}): JSX.Element {
   const { user, loading } = useContaUsuario();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [saindo, setSaindo] = useState(false);
-
-  // Encerrar a sessão: única saída de logout do painel (o rodapé só levava até
-  // aqui). signOut limpa a sessão persistida do Firebase no navegador; em
-  // seguida mandamos o usuário para o login. Fail-safe: mesmo se o signOut
-  // lançar, seguimos para /entrar (a intenção do usuário é sair).
-  async function sair(): Promise<void> {
-    setSaindo(true);
-    try {
-      await logout();
-    } catch {
-      // Ignorado de propósito: navegar para o login é a saída correta de todo
-      // jeito; não retemos o usuário numa sessão que ele pediu para encerrar.
-    } finally {
-      navigate('/entrar', { replace: true });
-    }
-  }
+  // Deixou de ser a ÚNICA saída de logout na Leva 16 — o popover do perfil
+  // oferece a mesma ação, e as duas leem esta implementação (`useSair`).
+  const { sair, saindo } = useSair();
 
   // Nome: null enquanto não editado → cai no displayName atual (lida com o load
   // assíncrono da sessão sem useEffect de sincronização).

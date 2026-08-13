@@ -44,11 +44,11 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   // leva à área que reúne Marcas, Assessorias parceiras e Afiliações — as
   // duas últimas migradas de clubs. `/marcas` legado redireciona (RN-234).
   parcerias: '/parcerias',
-  // RN-233/RN-366 (IAM-T5): `Configurações` deixa de ser inerte. Passa a
-  // hospedar os Dados de recebimento — cadastro único do titular — e por isso
-  // ganha destino. A regra "item de menu sem rota é proibido" nasce sem
-  // exceção aberta.
-  configuracoes: '/conta',
+  // LEVA 15: `configuracoes` saiu do catálogo do menu principal — a rota
+  // `/conta` agora é alcançada pelo popover do perfil, que apontava para o
+  // MESMO lugar. A chave fica fora desta tabela porque a tabela mapeia ITENS
+  // DE MENU, e o item não existe mais; deixá-la aqui seria a entrada morta que
+  // o gate reprova em outras listas.
 };
 
 /** Ícone Lucide por item da nav de plataforma (nav do super-admin é própria —
@@ -97,7 +97,9 @@ export function painelActiveId(pathname: string): string | null {
   // `/financeiro`): a URL antiga só redireciona — nenhum item aceso é o
   // estado honesto para um endereço que não é mais destino de menu.
   if (pathname.startsWith('/parcerias')) return 'parcerias';
-  if (pathname.startsWith('/conta')) return 'configuracoes';
+  // `/conta` fica FORA da tabela desde a Leva 15, pela mesma regra já aplicada
+  // a `/marcas` e `/financeiro` logo acima: item aceso para uma rota que não é
+  // destino de menu nenhum acende o que não existe.
   return null;
 }
 
