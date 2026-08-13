@@ -310,12 +310,39 @@ const ehBotaoCruEstilizado = (attrs) =>
   (/rounded-ds-pill/.test(attrs) || /bg-\[var\(--action-[a-z-]+\)\]|bg-action-[a-z-]+/.test(attrs)) &&
   /px-|py-|\bp-/.test(attrs);
 
+/**
+ * Menu secundário fora do consumidor único (Leva 14).
+ *
+ * O dono, na íntegra: *"o menu secundário de clubs está coreto, mas nas outras
+ * telas, a linha esta aparecendo, aonde os seletores laranja ficam. Isso é um
+ * exemplo de que voce naoe stá retulizando e padronizando os componentes."*
+ *
+ * Terceira cobrança da classe padronização, e a razão de a catraca existir
+ * aqui: `SubNav` sempre foi UM componente do DS, e mesmo assim as onze barras
+ * do painel divergiram — cada ponto de render repetia a fiação de SPA e
+ * escolhia as próprias props (oito passavam `divider`, clubs não). Reuso de
+ * primitivo sem reuso de MONTAGEM dá gate verde com telas diferentes.
+ *
+ * Duas assinaturas, uma contagem, porque são as duas portas de volta:
+ *
+ *   (a) `<SubNav>` renderizado direto em `apps/`, fora do consumidor único.
+ *       Quem faz isso reabre a escolha de props que a unificação fechou.
+ *   (b) a barra reescrita à MÃO — `flex` com borda inferior de 2px ou no token
+ *       de marca, que é a anatomia do sublinhado da aba ativa copiada sem o
+ *       componente. Mede ZERO hoje; é armadilha para o dia em que alguém
+ *       "só precisar de umas abinhas aqui".
+ */
+const CONSUMIDOR_UNICO_DE_SUBNAV = 'apps/painel/src/components/nav/AreaSubNav.tsx';
+const SUBLINHADO_A_MAO =
+  /border-b-2|border-b-\[var\(--subnav-underline\)\]|border-b-\[var\(--border-brand\)\]|border-b-brand/;
+
 const contagens = {
   'superficie-crua': {},
   'botao-cru-estilizado': {},
   'grade-crua': {},
   'receita-de-grid': {},
   'padrao-orfao': {},
+  'menu-secundario-cru': {},
 };
 const detalhes = {
   'superficie-crua': [],
@@ -323,6 +350,7 @@ const detalhes = {
   'grade-crua': [],
   'receita-de-grid': [],
   'padrao-orfao': [],
+  'menu-secundario-cru': [],
 };
 /**
  * Assinaturas distintas de grade. Até 11/08 esta contagem media a AUSÊNCIA de
@@ -338,6 +366,7 @@ for (const { app, dir } of APPS) {
   contagens['botao-cru-estilizado'][app] = 0;
   contagens['grade-crua'][app] = 0;
   contagens['padrao-orfao'][app] = 0;
+  contagens['menu-secundario-cru'][app] = 0;
   receitasDeGrid[app] = new Set();
 
   for (const arquivo of varrer(dir)) {
@@ -365,6 +394,25 @@ for (const { app, dir } of APPS) {
     for (const t of tagsDeAbertura(fonte, ['details'])) {
       contagens['padrao-orfao'][app] += 1;
       detalhes['padrao-orfao'].push(`${caminho}:${t.linha}  <details> (acordeão sem canônico)`);
+    }
+    // ── Menu secundário fora do consumidor único (Leva 14) ─────────────────
+    if (caminho !== CONSUMIDOR_UNICO_DE_SUBNAV) {
+      for (const t of tagsDeAbertura(fonte, ['SubNav'])) {
+        contagens['menu-secundario-cru'][app] += 1;
+        detalhes['menu-secundario-cru'].push(
+          `${caminho}:${t.linha}  <SubNav> direto — use AreaSubNav`,
+        );
+      }
+    }
+    for (const bloco of fonte.matchAll(/(?:className|class)=(?:"([^"]*)"|\{`([^`]*)`\}|'([^']*)')/g)) {
+      const classes = bloco[1] ?? bloco[2] ?? bloco[3] ?? '';
+      if (SUBLINHADO_A_MAO.test(classes) && /\bflex\b/.test(classes)) {
+        contagens['menu-secundario-cru'][app] += 1;
+        const linha = fonte.slice(0, bloco.index).split('\n').length;
+        detalhes['menu-secundario-cru'].push(
+          `${caminho}:${linha}  barra de abas escrita à mão (sublinhado + flex)`,
+        );
+      }
     }
     // ── Grade escrita à mão ────────────────────────────────────────────────
     //

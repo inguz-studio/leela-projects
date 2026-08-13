@@ -1,5 +1,5 @@
 {
-  "medidoEm": "2026-08-12",
+  "medidoEm": "2026-08-13",
   "contagens": {
     "superficie-crua": {
       "painel": 107,
@@ -18,6 +18,10 @@
       "landing": 9
     },
     "padrao-orfao": {
+      "painel": 0,
+      "landing": 0
+    },
+    "menu-secundario-cru": {
       "painel": 0,
       "landing": 0
     },
