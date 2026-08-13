@@ -36,9 +36,19 @@ function badgeEstado(estado: EstadoVenda): {
   }
 }
 
-/** CTA coerente por estado: convida quando aberto, senão leva ao detalhe. */
+/**
+ * CTA coerente por estado: o rótulo nomeia o DESTINO do clique.
+ *
+ * G6 (rodada 2026-08-12-copy-landing): o rótulo aberto era "Inscreva-se" e o
+ * card leva a `/{slug}`, que é a página do evento — não o formulário, que vive
+ * em `/{slug}/inscricao`. O rótulo prometia o formulário e entregava leitura.
+ * "Ver experiência" nomeia o destino real e fala a mesma língua da dobra
+ * ("Experiências abertas", D-0802-1); "Ver evento" foi a proposta da review e
+ * foi ajustada aqui para não deixar a vitrine e o hero em vocabulários
+ * diferentes na mesma tela. O convite fica no botão que realmente inscreve.
+ */
 function ctaEstado(estado: EstadoVenda): string {
-  return estado === 'aberto' ? 'Inscreva-se' : 'Ver detalhes';
+  return estado === 'aberto' ? 'Ver experiência' : 'Ver detalhes';
 }
 
 // Home marketplace: listagem viva dos eventos publicados. Renderização
@@ -49,6 +59,11 @@ export const dynamic = 'force-dynamic';
 
 // SEO da home (S1205-T1): canonical na raiz + preview social. Título/descrição
 // herdam o default do root layout; aqui fixamos canonical e OG/Twitter.
+//
+// S1256-T3 (rodada 2026-08-12-copy-landing): o preview social dizia "corridas"
+// enquanto o rodapé da MESMA resposta HTTP dizia bem-estar. Agora o snippet e a
+// página dizem a mesma coisa, e a corrida aparece como instância — nunca como a
+// categoria (D-0802-1).
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
   openGraph: {
@@ -56,15 +71,15 @@ export const metadata: Metadata = {
     url: '/',
     siteName: 'Leela',
     locale: 'pt_BR',
-    title: 'Leela — inscrições para corridas',
+    title: 'Leela — inscrições para experiências de bem-estar',
     description:
-      'Encontre corridas de rua, escolha seu percurso e garanta sua inscrição em minutos.',
+      'Corrida, pedal, retiro, treino de clube. Ache sua próxima experiência de bem-estar e garanta a vaga em minutos.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Leela — inscrições para corridas',
+    title: 'Leela — inscrições para experiências de bem-estar',
     description:
-      'Encontre corridas de rua, escolha seu percurso e garanta sua inscrição em minutos.',
+      'Corrida, pedal, retiro, treino de clube. Ache sua próxima experiência de bem-estar e garanta a vaga em minutos.',
   },
   robots: { index: true, follow: true },
 };
@@ -79,22 +94,36 @@ export default async function HomePage(): Promise<React.JSX.Element> {
       {/* ── Hero da marca ─────────────────────────────────────────────── */}
       <section className={`border-b border-border-subtle bg-surface-sunken ${CONTAINER_GUTTER}`}>
         <div className={`${CONTAINER_LARGURA} py-16 sm:py-24`}>
+          {/* S1256-T1 · a direção do dono, fechada em 12/08: a Leela é um
+              ecossistema de experiências de bem-estar, com os 3 pilares
+              presentes, e nunca só corridas. O eyebrow declara a categoria
+              (D-0802-1), o H1 abre pelos pilares e conserva o esqueleto que já
+              estava no ar ("ache sua próxima X e garanta Y em minutos"), e a
+              subline nomeia as instâncias que fazem a pessoa se reconhecer em
+              três segundos. Os pilares usam as palavras canônicas da RN-114
+              (Físico, Mental, Espiritual) para a home falar a mesma língua da
+              Arena, do onboarding e das preferências (RN-564).
+
+              M5 pago junto: o travessão que emendava "sem criar conta" saiu, e
+              com ele o molde que se repetia na dobra de fechamento do evento. */}
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-text-brand">
-            Corrida de rua
+            Experiências de bem-estar
           </p>
           <h1 className="max-w-3xl font-display text-4xl font-extrabold leading-tight tracking-tight text-text-primary sm:text-6xl">
-            Ache sua próxima corrida e garanta a inscrição em minutos.
+            Físico, mental, espiritual. Ache sua próxima experiência e garanta a
+            vaga em minutos.
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-text-secondary">
-            Percurso, kit e retirada num lugar só. Você escolhe a distância, a
-            gente cuida do resto — sem criar conta para começar.
+            Corrida, pedal, retiro, treino de clube. Você escolhe a experiência,
+            a gente cuida da inscrição, do kit e da retirada. Sem criar conta
+            para começar.
           </p>
           <div className="mt-8">
             <Link
               href="#eventos"
               className={cn(CTA_BASE, CTA_ENABLED)}
             >
-              Ver eventos
+              Ver experiências
             </Link>
           </div>
         </div>
@@ -108,12 +137,12 @@ export default async function HomePage(): Promise<React.JSX.Element> {
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
-              Eventos abertos
+              Experiências abertas
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
               {eventos.length > 0
-                ? `${eventos.length} ${eventos.length === 1 ? 'evento disponível' : 'eventos disponíveis'}`
-                : 'Nenhum evento no ar por enquanto.'}
+                ? `${eventos.length} ${eventos.length === 1 ? 'experiência disponível' : 'experiências disponíveis'}`
+                : 'Nenhuma experiência no ar por enquanto.'}
             </p>
           </div>
         </div>
@@ -121,8 +150,8 @@ export default async function HomePage(): Promise<React.JSX.Element> {
         {eventos.length === 0 ? (
           <Card className="border-border-subtle py-16">
             <EmptyState
-              title="Ainda não há eventos publicados"
-              description="Quando um organizador publicar uma corrida, ela aparece aqui na hora."
+              title="Ainda não há experiências publicadas"
+              description="Quando um organizador publicar uma experiência, ela aparece aqui na hora."
             />
           </Card>
         ) : (

@@ -27,7 +27,12 @@ import { AreaDoCliente } from './AreaDoCliente';
 export const metadata: Metadata = {
   // Título sem nome de pessoa: título com nome vaza no histórico do navegador
   // e na aba compartilhada em tela.
-  title: 'Minha conta · Leela',
+  //
+  // S1255-T2 (rodada 2026-08-12-copy-landing · achado G2) · o valor trazia o
+  // sufixo da marca à mão e o root layout já aplica `template: '%s · Leela'`
+  // (`app/layout.tsx`). A aba do navegador mostrava "Minha conta · Leela ·
+  // Leela". O template resolve o sufixo; esta era a única rota fora do padrão.
+  title: 'Minha conta',
   robots: { index: false, follow: false, nocache: true },
 };
 

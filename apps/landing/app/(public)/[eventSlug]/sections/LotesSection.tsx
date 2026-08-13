@@ -20,9 +20,15 @@ export function LotesSection({ evento }: { evento: EventoPublico }): React.JSX.E
           <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
             {aberta ? 'Garanta o preço do lote atual' : 'Lotes encerrados'}
           </h2>
+          {/* S1255-T5 (rodada 2026-08-12-copy-landing · achado M3) · a seção
+              mostra UM número, o `precoMinimo` vigente: ela não lista os lotes,
+              não sabe o próximo preço e não sabe quantos lotes existem. A frase
+              afirmava no presente que os valores sobem, o que é falso num
+              evento de lote único e num evento com lotes de preço igual.
+              A mecânica virou condicional e o fato virou o que a página tem. */}
           <p className="mt-2 text-text-secondary">
             {aberta
-              ? 'Os valores sobem a cada lote conforme a data e as vagas. Este é o preço vigente hoje.'
+              ? 'Este é o preço vigente hoje. Quando o lote virar, por data ou por vagas, o valor muda.'
               : 'As vendas deste evento não estão mais abertas. As informações abaixo seguem disponíveis para consulta.'}
           </p>
           {aberta && evento.precoMinimo !== null ? (
