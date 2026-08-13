@@ -72,7 +72,7 @@ decisões da leva 3, 4 e 5 (D-1008-R4 a R19) estão em
 |---|---|---|---|
 | [[LEELA-E01-design-system]] | **S004** | menus, perfil, altura de botão e indicador deslizante no tema novo | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E01-design-system]] | **S005** | a revisão de componentes vira roadmap, cânone e trava | ✅ Onda 0 Partes A+B pagas 12/08 (lane FUNDACAO-RESUME) — construído, aguardando deploy |
-| [[LEELA-E01-design-system]] | **S006** | a conformidade dos controles vira medição, trava e fila | 📋 T1 a T4 pagas 12/08 (lane CONFORMIDADE-CONTROLES): 134 ocorrências medidas, 68 conformes, 7 violações, 59 sem canônico · ondas C0 a C6 livres · ⚠️ gate-canon VERMELHO na main (grade-crua 104→109) |
+| [[LEELA-E01-design-system]] | **S006** | a conformidade dos controles vira medição, trava e fila | 📋 T1 a T4 pagas 12/08 (lane CONFORMIDADE-CONTROLES): 134 ocorrências medidas, 68 conformes, 7 violações, 59 sem canônico · **T5 paga 12/08** (lane CONTROLES-C0): as cinco peças no barril + a catraca com seis policiais novos · ondas C1 a C6 livres · gate-canon VERDE |
 | [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 |
