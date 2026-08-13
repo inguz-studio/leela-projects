@@ -2630,4 +2630,33 @@ deixar de ser cortesia e virar requisito. A **RN-234** já é a máquina de redi
 — ela nasceu na virada de `entrega` para `credenciamento`, com teste orientado a tabela e guarda
 anti-laço — e é o candidato natural, não um mecanismo novo.
 
+## Delta a área de kits perde a redundância e ganha nomes de gente (leva 11 do dono · 2026-08-12)
+
+Três decisões sobre a IA da área de kits/credenciamento. Registro completo, com a medição
+arquivo:linha das superfícies citadas, em
+`02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Leva 11.
+
+**A duplicata de credenciamento dentro de Kits sai.** O item `entrega` da sub-nav interna de
+Kits (`KitsLayout.tsx:29`) é um `href` idêntico ao da aba "Credenciamento" do menu secundário do
+evento (`_lib/subnav.ts:43`), sempre `active: false`. Sai o item; Kits volta a 3 abas. **Não
+consome RN** — a identidade do credenciamento já é da RN-399.
+
+**Distribuição e a leitura de retirada de Estoque unificam, com desenho vetável.** Decidido que
+as duas viram uma aba só; o nome, o que cada metade vira e a hierarquia interna ficam vetáveis
+dentro do card de build (S1258). **Não consome RN agora** — mesmo desenho da direção do slug
+editável (leva 10): regra escrita antes do desenho responder cravaria pergunta em aberto.
+
+### RN-572 (nova, dona = E03) · a aba índice de Kits se chama Gerenciamento, o identificador não muda
+
+Na íntegra: *"aba de cadastro também, poderia virar 'gerenciamento'."*
+
+A sub-nav interna de Kits troca o rótulo "Cadastro" por "Gerenciamento" na rota-índice
+(`KitsLayout.tsx:26`), porque o conteúdo dela já é gestão de kits e catálogo de itens (criar,
+editar, configurar patrocínio via `KitEditorPage` e `ItemKitModal`), não só cadastro inicial. O
+`id: 'cadastro'` interno e a rota (`/eventos/:slug/kits`) **não mudam** — mesma régua da RN-399:
+o que muda é o que a pessoa lê, não o que o código identifica.
+
+**Onde aterrissa.** Cards de build no [[V1-KANBAN]]: S1257 (duplicata), S1258 (unificação,
+vetável) e S1259 (RN-572, rótulo). Nenhum construído por esta lane.
+
 **Onde entra na fila:** card do backlog, ancorado nos três épicos por superfície.

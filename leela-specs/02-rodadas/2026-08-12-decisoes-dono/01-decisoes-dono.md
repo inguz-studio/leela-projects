@@ -792,3 +792,103 @@ conflito da ponte escrito lá). Card no backlog, ancorado nos três, em [[04-fil
 **Condição de reabertura.** A spec futura descobrir que o redirecionamento não cobre o QR impresso.
 Aí a decisão volta ao dono com o custo medido, porque *"o slug está disponível"* foi dito sem que
 ninguém tivesse posto na mesa o preço do endereço que já saiu de casa.
+
+---
+
+# Adendo · Leva 11 — 12/08 (a área de kits perde a redundância e ganha nomes de gente)
+
+> Registro da lane REGISTRO-LEVA11-KITS-IA (trace `leela-redesign-v2-20260810`). Três decisões
+> dele sobre a IA da área de kits e credenciamento de um evento, cada uma com a medição da
+> superfície citada antes do veredito. Nenhuma constrói nesta lane.
+
+**Fala do dono, na íntegra (12/08):** *"reparei que credenciamento aparece dentro de kits, só que
+já temos credenciamento no menu secundário. Ficou redundante e sem necessidade. Distribuição e
+'retiradas dos kits' poderiam ser unificados, e aba de cadastro também, poderia virar
+'gerenciamento'."*
+
+## 11.1 · DECIDIDO — a duplicata de credenciamento dentro de Kits sai
+
+**Medição.** Dois pontos dizem "Credenciamento" na navegação de um evento:
+
+- **Dentro de Kits** — `apps/painel/src/routes/eventos/kits/KitsLayout.tsx:29`, quarto item da
+  sub-nav interna da seção Kits: `{ id: 'entrega', label: 'Credenciamento', href:
+  '/eventos/${slug}/credenciamento', active: false }`. `active` é sempre `false` — o item nunca
+  acende, porque a rota que ele abre está fora da árvore de Kits. É um atalho de saída, não uma
+  sub-tela de Kits.
+- **No menu secundário do evento** — `apps/painel/src/routes/eventos/_lib/subnav.ts:43`: `{ id:
+  'entrega', label: 'Credenciamento', segmento: 'credenciamento' }`, a aba real da SubNav do
+  evento (§2.14), com o destaque de aba ativa calculado por `abaAtiva()` (mesmo arquivo, linha 60).
+
+**Achado.** Não há divergência de conteúdo entre as duas. O item dentro de Kits não é atalho com
+tela própria nem versão resumida: é um `href` idêntico para a mesma rota
+`/eventos/:slug/credenciamento` que a aba do menu secundário já abre, e o rótulo "Credenciamento"
+nas duas pontas já está cravado pela RN-399. A remoção é limpa — nada fica sem destino.
+
+**Efeito.** Sai o item de `KitsLayout.tsx:29`; Kits volta a ter 3 abas internas (Cadastro,
+Distribuição, Estoque). Quem quer credenciar sai da área de Kits pelo menu secundário do evento,
+como já faz para Inscritos, Financeiro etc. **Não consome número de RN** — é remoção de item de
+navegação duplicado, não regra de negócio nova; a identidade e o vocabulário do credenciamento já
+estão cravados pela RN-399, e esta decisão só aplica a régua dela (uma porta só) dentro de Kits.
+
+## 11.2 · DECIDIDO com desenho vetável — Distribuição e a leitura de retirada de Estoque unificam
+
+**Medição — anatomia das duas abas hoje.**
+
+- **Distribuição** (`KitsLayout.tsx:27`, rota `kits/distribuicao` → `DistribuicaoPage` →
+  `DistribuicaoView.tsx`): tela presentational pura, sem KPI e sem tabela. Duas seções de barra de
+  progresso — "Retiradas por kit" (`DistribuicaoView.tsx:46`) e "Retiradas por modalidade"
+  (`:59`) —, cada linha com retirados/total/percentual (`LinhaProgresso`, `:86-108`).
+- **Estoque** (`KitsLayout.tsx:28`, rota `kits/estoque` → `EstoquePage` → `EstoqueView.tsx`): tela
+  maior, cinco blocos — alertas de kit esgotado/SKU em baixa (`:433-468`); 4 KPIs incluindo
+  "Retirados" (`:480`, hint "presença registrada"); matriz Kit×modalidade com coluna
+  Retirados/confirmados por célula (`:511-517`, caption "Retiradas e saldo por kit e
+  modalidade"); tabela de SKU por tamanho — vendido/físico/a encomendar/estado/alerta/entregues
+  (`:281-384`); EmptyState de movimentações (`:575-578`).
+
+**Achado — onde mora a redundância que ele leu.** Não existe no código uma terceira aba chamada
+"Retirada dos kits" ao lado de Distribuição — o rótulo é dele, lido do **conteúdo**, não de um
+rótulo de aba. O dado de retirada aparece em **três leituras dentro de Kits**: as duas seções
+inteiras de Distribuição, o KPI "Retirados" de Estoque e a coluna Retirados/confirmados da matriz
+de Estoque — três cortes do mesmo número (presença registrada), sem uma leitura única. É essa
+sobreposição, e não uma tela isolada, que sustenta "ficou redundante".
+
+**Efeito.** Fica **decidido que Distribuição e a metade de retirada de Estoque unificam** numa aba
+só. **Vetável** é o desenho: nome da aba, o que cada metade vira (progresso por kit/modalidade de
+um lado, controle de estoque físico/SKU do outro) e a hierarquia interna — proposta da esteira
+dentro do card de build (S1258), não decisão fechada aqui.
+
+**Efeito no RN.** **Não consome número agora** — mesmo desenho da leva 10 (slug editável): a
+decisão de unificar está tomada, mas o desenho concreto é vetável, e cravar regra antes dele
+responder cravaria o que o card ainda precisa perguntar. Se o veto fechar como reorganização pura
+de tela (sem mudar o que um dado significa), a build não deve precisar de RN nem nessa hora — é
+decisão de UI, não de negócio; se o veto criar comportamento novo, quem constrói registra o número
+na própria aterrissagem daquela lane.
+
+## 11.3 · DECIDIDO — a aba Cadastro vira Gerenciamento
+
+**Medição — o que a aba faz hoje.** `KitsCadastroPage.tsx` → `KitsCadastroView.tsx`, rota-índice
+de Kits (`KitsLayout.tsx:26`, rótulo atual "Cadastro"). Três seções: resumo com 3 KPIs — kits
+configurados, itens no catálogo, marcas ativadas (`:58-62`); "Kits do evento" (`:65`), com cards de
+kit e botão "+ Adicionar kit" que abre `KitEditorPage` em tela cheia (`/kits/novo`,
+`/kits/editar/:kitId` — rotas próprias, `EventosRoutes.tsx:128-129`); "Catálogo de itens" (`:93`),
+com CRUD completo por modal (`ItemKitModal`), badges de tipo/origem (RN-212/RN-213) e bloco de
+patrocinador com toggle "Exibir logo ao atleta" (RN-214).
+
+**Achado.** A aba já faz mais que cadastrar: cria **e** edita kits (por rota própria) e itens (por
+modal), com KPIs de resumo e configuração de patrocínio — é gestão do inventário de kits e itens
+do evento, não só o registro inicial. O nome novo fecha com o conteúdo; não é troca de rótulo
+vazio.
+
+**Efeito.** Rótulo de `KitsLayout.tsx:26` muda de "Cadastro" para "Gerenciamento". O `id` interno
+(`'cadastro'`, usado no cálculo de aba ativa) **não muda** — mesma régua da RN-399: o que muda é o
+que a pessoa lê, não o identificador. **Consome RN-572** (dona = E03), enunciado no épico e no
+delta da rodada.
+
+## Onde aterrissa
+
+- Épico dono das três: [[LEELA-E03-operacao-evento]].
+- Cards de build no [[V1-KANBAN]], padrão épico → história → tarefa: **S1257** (item 11.1),
+  **S1258** (item 11.2, com a proposta da aba unificada como vetável dentro do card) e **S1259**
+  (item 11.3). Build não é desta lane.
+- RN-572 consolidada no épico e no delta da rodada (`03-rns-delta.md`); índice atualizado.
+  Próxima livre passa a ser **573**.

@@ -164,3 +164,49 @@ A premissa fica **marcada, não apagada**, no [[LEELA-E16-plataforma-superadmin]
 | **S1247-T4** · A senha na primeira entrada | tarefa **nova dentro da história que já existe** (RN-570) — não vira história solta, porque é o desfecho do mesmo fluxo que a T1 abre | acrescentada à S1247 |
 | **S1250** · O banner convida a concluir o cadastro | o banner de convite na área do cliente, lendo a derivação da RN-564 e sem pedir endereço (RN-571) | nova, espera a S1245-T1 |
 | **SLUG-1** · O slug editável nas três superfícies | card de **backlog**, direcional, ancorado em E03, E05 e E16; **não entra em execução** — as quatro perguntas abertas vêm antes | novo, retido por desenho |
+
+---
+
+# Adendo · a área de kits perde a redundância e ganha nomes de gente (lane REGISTRO-LEVA11-KITS-IA)
+
+> Mesmo desenho das seções acima: **delta apenas**. O texto canônico da regra mora no épico
+> dono. A fala do dono está no adendo "Leva 11" de [[01-decisoes-dono]].
+
+## Faixa consumida: RN-572
+
+Das três decisões da leva 11, só uma consome número. A conferência foi refeita imediatamente
+antes do commit, por grep de `RN-572` a `RN-576` sobre o corpus inteiro fora do índice: **zero
+definições**. **A próxima livre passa a ser a 573.**
+
+| RN | Enunciado curto | Épico dono | Item do dono |
+|---|---|---|---|
+| **RN-572** | A aba índice de Kits troca o rótulo "Cadastro" por "Gerenciamento" — o conteúdo já é gestão de kits e catálogo (criar, editar, configurar patrocínio), não só cadastro inicial. O `id` interno e a rota não mudam, mesma régua da RN-399. | [[LEELA-E03-operacao-evento]] | item 3 da leva 11 (rótulo da aba Cadastro) |
+
+## O que esta leva decide e **não** consome número
+
+- **A duplicata de credenciamento dentro de Kits sai (item 1).** É remoção de item de navegação
+  redundante, não regra de negócio: o vocabulário e a identidade do credenciamento já são
+  governados pela RN-399, e o item removido é um `href` idêntico ao da aba do menu secundário,
+  sempre inativo — sem conteúdo próprio a preservar.
+- **Distribuição e a leitura de retirada de Estoque unificam (item 2).** A decisão de unificar
+  está tomada, mas o desenho é vetável (nome da aba, o que cada metade vira, hierarquia interna)
+  — mesmo desenho da leva 10 (slug editável): regra escrita antes do desenho responder cravaria o
+  que o card de build ainda precisa perguntar. Se o veto fechar como reorganização pura de tela, a
+  build não deve precisar de RN nem nessa hora.
+
+## O que a regra nova NÃO faz
+
+- **A RN-572 não muda `kitEntregueEm`, `registrarEntrega` nem o id de área de permissão
+  `entrega`.** Nenhum deles é tocado por esta leva — o rótulo trocado é só o de
+  `KitsLayout.tsx:26`, e o `id: 'cadastro'` da aba índice de Kits segue intocado, mesma régua que
+  a RN-399 já cravou para o credenciamento.
+- **A RN-572 não muda o que a aba faz.** Ela só nomeia o que a aba já fazia — criar e editar kits
+  e itens do catálogo — com o nome que fecha com o conteúdo.
+
+## Histórias
+
+| História | O que entrega | Estado |
+|---|---|---|
+| **S1257** · A sub-nav de Kits para de duplicar Credenciamento | remove o 4º item (sempre inativo) da sub-nav interna de Kits | nova, backlog |
+| **S1258** · Distribuição e a leitura de retirada de Estoque viram uma aba só | desenho vetável da aba unificada + implementação depois do veto | nova, backlog — T1 é o vetável |
+| **S1259** · A aba índice de Kits vira "Gerenciamento" | RN-572: troca de rótulo, sem tocar id nem rota | nova, backlog |
