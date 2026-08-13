@@ -159,7 +159,13 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
 
         <div className="flex min-w-0 flex-1 flex-col gap-[var(--spacing-1)]">
           <div className="flex min-w-0 items-center gap-[var(--spacing-3)] flex-wrap">
-            <h1 className="font-display italic font-[var(--font-weight-bold)] text-[length:var(--header-title-size)] tracking-[var(--header-title-spacing)] text-[var(--text-primary)] min-w-0 truncate">
+            {/* Mesmo degrau responsivo do `PageHeader` do DS, pelo mesmo par de
+                tokens: o tamanho continua sendo decisão do design system, não
+                desta tela. (Este h1 é uma cópia manual da receita do
+                `PageHeader` — dívida já contada pelo `gate-canon`; promovê-lo
+                ao componente do DS é trabalho de outra lane, porque a anatomia
+                daqui tem tile, badge e duas linhas de meta.) */}
+            <h1 className="font-display italic font-[var(--font-weight-bold)] text-[length:var(--header-title-size-compact)] md:text-[length:var(--header-title-size)] tracking-[var(--header-title-spacing)] text-[var(--text-primary)] min-w-0 md:truncate">
               {evento.nome}
             </h1>
             <Badge variant={status.variant}>{status.label}</Badge>
