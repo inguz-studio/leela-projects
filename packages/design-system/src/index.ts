@@ -46,6 +46,10 @@ export {
 export { FileInput, type FileInputProps } from './components/FileInput';
 export { Select, type SelectProps, type SelectOption } from './components/Select';
 export { Checkbox, type CheckboxProps } from './components/Checkbox';
+// O par rótulo + caixinha (Onda C0 · CANONE-1). O `Checkbox` não tem prop de
+// rótulo e o `Field` põe o rótulo ACIMA — o de um checkbox vai ao lado. Sem
+// peça para o par, dezessete telas montaram a sua, em três dialetos.
+export { CheckboxField, type CheckboxFieldProps } from './components/CheckboxField';
 export { Textarea, type TextareaProps } from './components/Textarea';
 export {
   Radio,
@@ -57,6 +61,10 @@ export {
 } from './components/Radio';
 export { Switch, type SwitchProps } from './components/Switch';
 export { Field, type FieldProps } from './components/Field';
+// O grupo de campos (Onda C0 · CANONE-1). O cânone tinha `Field` para UM
+// controle e nada para o grupo; o painel montou onze `<fieldset>` à mão, cada
+// um reconsertando à sua maneira os defaults que o navegador impõe.
+export { FieldGroup, type FieldGroupProps } from './components/FieldGroup';
 export { Badge, badgeVariants, type BadgeProps } from './components/Badge';
 export { Chip, type ChipProps } from './components/Chip';
 export { Avatar, type AvatarProps } from './components/Avatar';
@@ -72,7 +80,23 @@ export { KpiCard, type KpiCardProps } from './components/KpiCard';
 
 // ── Toolbar global (Lote FIDELIDADE T3) ─────────────────────────────────────
 export { Toolbar, type ToolbarProps } from './components/Toolbar';
+
+// Barra de filtros da lista (Onda C0 · CANONE-1). Treze telas montaram a
+// mesma barra à mão; a única fatorada do produto era a casca app-local
+// `ListaGlobal`, que nunca subiu ao DS. Compõe o `Toolbar` — não o substitui.
+export { FilterBar, type FilterBarProps } from './components/FilterBar';
 export { SearchInput, type SearchInputProps } from './components/SearchInput';
+
+// Contador da lista recortada (Onda C0 · CANONE-1). Doze escritas da mesma
+// frase de seis palavras, três dialetos de ARIA e duas grafias — duas delas
+// sem canal nenhum. O canal vira prop com default polido e o total só aparece
+// quando ele existe de verdade.
+export { ResultCount, textoDoContador } from './components/ResultCount';
+export type {
+  ResultCountProps,
+  ResultCountLive,
+  ResultCountSubstantivo,
+} from './components/ResultCount';
 
 // ── Shell (S001-3-T1) ───────────────────────────────────────────────────────
 export { Sidebar, DEFAULT_SIDEBAR_SECTIONS, DEFAULT_SIDEBAR_NAV_ICONS, sidebarNavIcon, SidebarBrand, SidebarFooter } from './components/Sidebar';
@@ -133,6 +157,13 @@ export { DropdownMenu } from './components/DropdownMenu';
 export type { DropdownMenuProps, DropdownMenuAction } from './components/DropdownMenu';
 export { FilterMenu } from './components/FilterMenu';
 export type { FilterMenuProps, FilterMenuOption } from './components/FilterMenu';
+
+// Faceta de filtro (Onda C0 · CANONE-1). Doze telas montaram o mesmo
+// `<div role="group">` + `Chip.map()` à mão porque não havia o que importar; a
+// peça compõe `Chip`, `FilterMenu` e `Combobox` e fecha o limiar do cânone §1
+// por construção — ela recebe as opções, então ela as conta.
+export { FilterChips } from './components/FilterChips';
+export type { FilterChipsProps, FilterChipsOption } from './components/FilterChips';
 
 // ── Modais (S001-3-T3) ──────────────────────────────────────────────────────
 export { Modal, ConfirmModal } from './components/Modal';

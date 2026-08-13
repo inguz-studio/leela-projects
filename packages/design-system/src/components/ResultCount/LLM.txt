@@ -1,0 +1,51 @@
+# ResultCount — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: ResultCount
+version: 0.0.1
+generated_at: "2026-08-12"
+source: src/components/ResultCount
+verdict: NASCEU NA ONDA C0 (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { ResultCount, textoDoContador, type ResultCountProps } from '@leela/design-system'
+
+## Quando usar
+Toda vez que a tela for dizer quantos itens está mostrando: "Mostrando 12 de 40 comunicados". As doze instâncias medidas no inventário 2026-08-12 §4.3 são esta peça.
+
+## Quando NÃO usar
+Indicador de KPI é KpiCard. Selo de estado é Badge. Paginação é Pagination — o contador diz quantos, a paginação leva para os próximos.
+
+## Props válidas
+- visiveis: number   (obrigatório)   — quantos estão na tela agora
+- total: number      — o total do recorte, SÓ quando ele é conhecido
+- substantivo: { singular: string; plural: string }   (obrigatório)
+- temMais: boolean   (default: false)   — há página seguinte; `total` passa a ser ignorado
+- live: 'status' | 'none'   (default: 'status' = role="status" + aria-live="polite")
+- className, e as props de React.HTMLAttributes<HTMLParagraphElement>
+
+## As três frases (a peça escolhe, você não escreve)
+- total conhecido   → "Mostrando 12 de 40 comunicados"
+- temMais           → "Mostrando 20 comunicados · há mais para carregar"
+- sem total, sem mais → "37 comunicados · fim da lista"
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --font-size-sm / --text-tertiary
+
+## Proibido (do/don't)
+DON'T: escrever "Mostrando {x} de {y}" na tela. São doze cópias, três dialetos de ARIA e duas grafias.
+DON'T: passar `total` junto com `temMais` esperando ver "de N" — a paginação por cursor não conhece o total e a peça ignora o número em vez de mentir.
+DON'T: `live="none"` numa lista que filtra. Duas telas do administrativo já não anunciam a mudança, e é a única falha de a11y real da fila.
+DO: `live="none"` só quando o número nunca muda sem a página recarregar.
+
+## Exemplo mínimo (válido, copiável)
+<ResultCount visiveis={12} total={40} substantivo={{ singular: 'comunicado', plural: 'comunicados' }} />
+
+## Exemplo completo (válido, copiável)
+<ResultCount
+  visiveis={estado.itens.length}
+  temMais={estado.temMais}
+  substantivo={{ singular: 'venda', plural: 'vendas' }}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use ResultCount para qualquer contagem de lista recortada. Nunca escreva a frase à mão e nunca apresente o carregado como total: quando há próxima página, o total não existe.
