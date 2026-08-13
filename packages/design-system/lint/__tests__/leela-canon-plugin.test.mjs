@@ -18,6 +18,7 @@ import plugin, {
   canoneDoBarrel,
   componentesDeclarados,
   controlesCrus,
+  filtrosForaDoCanone,
   SINONIMOS_PADRAO,
 } from '../leela-canon-plugin.mjs';
 
@@ -379,5 +380,136 @@ describe('canoneDoBarrel · a lista vem do barrel, nunca da mão', () => {
     for (const canonico of Object.keys(SINONIMOS_PADRAO)) {
       expect(nomes.has(canonico), `sinônimos apontam para ${canonico}`).toBe(true);
     }
+  });
+});
+
+// ===========================================================================
+// Regra 3 — filtro-fora-do-canone
+//
+// Os casos inválidos são as instâncias REAIS medidas em 2026-08-12 (§4.1 e §5),
+// com o arquivo de origem no comentário. Os válidos são o que a regra não pode
+// barrar: `Select` de formulário é legítimo e é a maioria (21 das 23 medidas).
+// ===========================================================================
+
+const filtroForaDoCanone = plugin.rules['filtro-fora-do-canone'];
+
+describe('filtro-fora-do-canone · o rótulo denuncia o papel', () => {
+  it('reprova seleção que filtra, recorta ou ordena', () => {
+    expect(() =>
+      tester.run('filtro-fora-do-canone', filtroForaDoCanone, {
+        valid: [],
+        invalid: [
+          // EngajamentoView.tsx:299 e :382 — "quantos desafios mostrar".
+          { code: 'const a = <Select aria-label="Quantos desafios mostrar" />;', errors: 1 },
+          { code: 'const a = <Select aria-label="Top 5 modalidades" />;', errors: 1 },
+          // ClientesPage.tsx:118 — `Select` de ORDENAÇÃO (padrão órfão).
+          { code: 'const a = <Select aria-label="Ordenar por" />;', errors: 1 },
+          // A grafia com prop `label`, que o `Select` do DS também aceita.
+          { code: 'const a = <Select label="Filtrar por status" options={o} />;', errors: 1 },
+          { code: 'const a = <Select label="Filtro de canal" />;', errors: 1 },
+          // Nativo, com a mesma denúncia no rótulo.
+          { code: 'const a = <select aria-label="Recortar por tenant" />;', errors: 1 },
+          // Caixa alta e acento não escapam.
+          { code: 'const a = <Select aria-label="FILTRAR POR KIT" />;', errors: 1 },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it('reprova o motor de combobox montado à mão, em qualquer elemento', () => {
+    expect(() =>
+      tester.run('filtro-fora-do-canone', filtroForaDoCanone, {
+        valid: [],
+        invalid: [
+          { code: 'const a = <div role="combobox" />;', errors: 1 },
+          { code: 'const a = <ul role="listbox" />;', errors: 1 },
+          { code: 'const a = <li role="option" />;', errors: 1 },
+          { code: 'const a = <input aria-autocomplete="list" />;', errors: 1 },
+          { code: 'const a = <input aria-activedescendant={ativo} />;', errors: 1 },
+        ],
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('filtro-fora-do-canone · o que ela NÃO barra', () => {
+  it('deixa passar o que é legítimo — falso positivo é como gate morre', () => {
+    expect(() =>
+      tester.run('filtro-fora-do-canone', filtroForaDoCanone, {
+        valid: [
+          // As 21 conformes do inventário §5: `Select` de FORMULÁRIO, que vira
+          // dado. Nenhuma delas recorta lista nenhuma.
+          { code: 'const a = <Select label="Modalidade" options={o} />;' },
+          { code: 'const a = <Select label="Tipo de clube" />;' },
+          { code: 'const a = <Select aria-label="Banco" />;' },
+          // O rótulo que só CONTÉM a palavra não é o rótulo que começa com ela:
+          // "Cidade do filtro aplicado" descreve, não declara papel.
+          { code: 'const a = <Select label="Cidade do filtro aplicado" />;' },
+          // Rótulo vindo de variável é DESCONHECIDO, e desconhecido não é
+          // violação — a mesma fronteira que a Regra 1 já pratica com `type`.
+          { code: 'const a = <Select aria-label={rotulo} />;' },
+          { code: 'const a = <Select {...props} />;' },
+          // O canônico com o rótulo de filtro é o CONSERTO, não a violação.
+          { code: 'const a = <FilterChips label="Filtrar por status" options={o} />;' },
+          { code: 'const a = <FilterMenu label="Filtrar por status" options={o} />;' },
+          { code: 'const a = <Combobox aria-label="Filtrar por kit" options={o} />;' },
+          { code: 'const a = <SearchInput aria-label="Filtrar por nome" />;' },
+          // `role="group"` de faceta é a montagem à mão que a CONTAGEM mede —
+          // barrá-la aqui bloquearia trabalho por um vazio que a C0 fechou e as
+          // ondas C1-C6 ainda estão pagando.
+          { code: 'const a = <div role="group" aria-label="Filtrar por status" />;' },
+        ],
+        invalid: [],
+      }),
+    ).not.toThrow();
+  });
+
+  it('a porta única de exceção silencia o arquivo inteiro, e só ele', () => {
+    expect(() =>
+      tester.run('filtro-fora-do-canone', filtroForaDoCanone, {
+        valid: [
+          {
+            code: 'const a = <Select aria-label="Filtrar por status" />;',
+            filename: 'apps/painel/src/routes/crm/ClientesPage.tsx',
+            options: [{ arquivosDeExcecao: ['routes/crm/ClientesPage.tsx'] }],
+          },
+        ],
+        invalid: [
+          {
+            code: 'const a = <Select aria-label="Filtrar por status" />;',
+            filename: 'apps/painel/src/routes/crm/OutraPagina.tsx',
+            options: [{ arquivosDeExcecao: ['routes/crm/ClientesPage.tsx'] }],
+            errors: 1,
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it('o vocabulário é extensível por config — a casa escreve em português', () => {
+    expect(() =>
+      tester.run('filtro-fora-do-canone', filtroForaDoCanone, {
+        valid: [{ code: 'const a = <Select aria-label="Segmentar por praça" />;' }],
+        invalid: [
+          {
+            code: 'const a = <Select aria-label="Segmentar por praça" />;',
+            options: [{ prefixosDeFiltro: ['segmentar'] }],
+            errors: 1,
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it('um Select com rótulo de filtro é UM achado, não dois', () => {
+    // `aria-label` e `label` juntos não podem duplicar a mensagem: dois
+    // relatórios para um conserto envelhecem o segundo.
+    const achados = filtrosForaDoCanone(
+      tsParser.parse('const a = <Select label="Filtrar por status" aria-label="Filtrar por status" />;', {
+        ecmaFeatures: { jsx: true },
+        sourceType: 'module',
+      }),
+    );
+    expect(achados).toHaveLength(1);
   });
 });
