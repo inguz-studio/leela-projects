@@ -178,6 +178,7 @@ generalidade que a medição não achou.
 | Paginação | `Pagination` |
 | Lista de eventos | `EventRow` dentro de `<ul>` |
 | Barra de ações sobre a lista | `Toolbar` |
+| Contagem da lista recortada ("Mostrando X de Y") | `ResultCount` — canal de ARIA por prop, default polido; com `temMais` o total não aparece |
 
 `<table>` cru é permitido em um caso: tabela `sr-only` pareada com gráfico, para leitor de tela. Não
 é atalho de estilo; é a versão acessível do dado.

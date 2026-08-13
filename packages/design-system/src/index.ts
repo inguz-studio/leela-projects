@@ -74,6 +74,17 @@ export { KpiCard, type KpiCardProps } from './components/KpiCard';
 export { Toolbar, type ToolbarProps } from './components/Toolbar';
 export { SearchInput, type SearchInputProps } from './components/SearchInput';
 
+// Contador da lista recortada (Onda C0 · CANONE-1). Doze escritas da mesma
+// frase de seis palavras, três dialetos de ARIA e duas grafias — duas delas
+// sem canal nenhum. O canal vira prop com default polido e o total só aparece
+// quando ele existe de verdade.
+export { ResultCount, textoDoContador } from './components/ResultCount';
+export type {
+  ResultCountProps,
+  ResultCountLive,
+  ResultCountSubstantivo,
+} from './components/ResultCount';
+
 // ── Shell (S001-3-T1) ───────────────────────────────────────────────────────
 export { Sidebar, DEFAULT_SIDEBAR_SECTIONS, DEFAULT_SIDEBAR_NAV_ICONS, sidebarNavIcon, SidebarBrand, SidebarFooter } from './components/Sidebar';
 export type { SidebarProps, SidebarSection, SidebarItem, SidebarBadgeVariant, SidebarNavIconEntry, SidebarBrandProps, SidebarFooterProps } from './components/Sidebar';
