@@ -289,7 +289,8 @@ describe('Sidebar', () => {
   it('renders icons as decorative (aria-hidden) — nome acessível vem do label', () => {
     const { container } = render(<Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />);
     const svgs = container.querySelectorAll('svg[aria-hidden="true"]');
-    expect(svgs.length).toBe(6);
+    // 5 desde a Leva 15 (Configurações saiu do catálogo).
+    expect(svgs.length).toBe(5);
   });
 
   it('labels stay visible (nome acessível = label do item)', () => {
