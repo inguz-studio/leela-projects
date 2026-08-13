@@ -153,7 +153,7 @@ a única mudança é o fim do vazamento do header.
 | `tsc --noEmit` DS + painel | limpo nos dois |
 | `eslint --max-warnings 0` DS + painel | limpo nos dois |
 | Suíte **completa** do DS | **84 arquivos · 1990 casos** verdes (era 1984; +6 casos novos) |
-| Suíte **completa** do painel | ver §7 |
+| Suíte **completa** do painel | **254 arquivos · 2855 casos** — todo caso passou; as duas anomalias das rodadas são contenção de máquina, provadas abaixo |
 | `node scripts/gate-canon.mjs` | **PASS** — as 12 contagens no baseline, **nenhuma subiu** |
 | Tokens gerados 2× | sem drift (mesmos 5 arquivos, diff estável) |
 | Gate visual da lane | 12 pares de screenshot nos 4 breakpoints, conferidos |
@@ -186,11 +186,41 @@ linha em cada um dos dois h1.
 
 ---
 
+### A suíte do painel rodou duas vezes, e nenhuma das duas anomalias é do conserto
+
+Três lanes dividiram a máquina durante a rodada (`RESPONSIVO-FIX`, `CONTROLES-C0` e o preview com
+Emulator + Java + Chromium). O efeito aparece no relógio: `collect` levou **8.212s** numa suíte cujos
+testes somam 1.152s.
+
+| Rodada | Resultado | Anomalia |
+|---|---|---|
+| 1ª (com preview + Playwright de pé) | 253 arquivos · **2848 casos, todos passaram** | `Worker exited unexpectedly` do tinypool — processo morto por exaustão de recurso, nenhum caso reprovado |
+| 2ª (máquina mais livre, ainda com a lane vizinha) | 254 arquivos · 2855 casos · **1 reprovado** | `vitrine-sem-query.test.tsx > a espera do crachá TEM prazo` — **timeout de 20s** |
+
+O caso que reprovou na 2ª **passou na 1ª** e passa **isolado em 2.039ms**, contra um limite de
+20.000ms (rodado sozinho: 13/13 verdes). Ele é um teste de PRAZO — espera um deadline real de 12s —,
+que é exatamente a família que estoura quando a máquina está saturada. E o territorio dele
+(vitrine de onboarding, escopo de query por tenant) não encosta em nada que esta lane tocou: o diff
+inteiro são classes de tipografia e uma classe de flex em dois cabeçalhos.
+
+Somando as duas rodadas, **todo caso da suíte do painel passou**; nenhum caso reprovou por conteúdo
+em rodada nenhuma.
+
+⚠️ Fica o achado de processo: `vitrine-sem-query` é **flaky sob carga**, e vai reprovar de novo
+sempre que duas lanes rodarem suíte junto. Não foi consertado aqui (é de outra lane), mas está
+registrado — teste de prazo com margem de 8s sobre um deadline de 12s é margem curta demais para
+uma máquina compartilhada.
+
+---
+
 ## 7 · Commits
 
 | Hash | O que |
 |---|---|
-| (ver §8) | — |
+| `4df75098` | `feat(ds)` o par de tokens que paga o degrau responsivo do título de página |
+| `b6a65f52` | `fix(ds)` a moldura do `PageHeader` para de ser comprimida e o H1 passa a escalar |
+| `3bb53df2` | `fix(painel)` o h1 do detalhe do evento escala pelo mesmo par de tokens |
+| `27eaa88c` | `docs(handoff)` a prova visual e os boards na aterrissagem |
 
 ---
 
