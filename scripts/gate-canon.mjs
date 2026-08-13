@@ -209,7 +209,7 @@ function elementosComCorpo(fonte, tag) {
   for (let i = 0; i < eventos.length; i += 1) {
     const ev = eventos[i];
     if (ev.tipo !== 'abre') continue;
-    let inicioCorpo = ev.corpo;
+    const inicioCorpo = ev.corpo;
     let fimCorpo = ev.corpo;
     if (!ev.auto) {
       let profundidade = 1;
