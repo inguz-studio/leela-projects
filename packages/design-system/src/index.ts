@@ -61,6 +61,10 @@ export {
 } from './components/Radio';
 export { Switch, type SwitchProps } from './components/Switch';
 export { Field, type FieldProps } from './components/Field';
+// O grupo de campos (Onda C0 · CANONE-1). O cânone tinha `Field` para UM
+// controle e nada para o grupo; o painel montou onze `<fieldset>` à mão, cada
+// um reconsertando à sua maneira os defaults que o navegador impõe.
+export { FieldGroup, type FieldGroupProps } from './components/FieldGroup';
 export { Badge, badgeVariants, type BadgeProps } from './components/Badge';
 export { Chip, type ChipProps } from './components/Chip';
 export { Avatar, type AvatarProps } from './components/Avatar';

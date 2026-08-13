@@ -136,7 +136,7 @@ describe('entradas Radix-free (ADR-017)', () => {
 // ===========================================================================
 
 describe('peças da Onda C0 no boundary da landing (ADR-017)', () => {
-  for (const peca of ['CheckboxField']) {
+  for (const peca of ['CheckboxField', 'FieldGroup']) {
     it(`${peca}: grafo sem @radix-ui e com externos na allowlist`, () => {
       const { files, externals } = walk(`components/${peca}/index.ts`);
       expect(files.length).toBeGreaterThan(1);

@@ -48,6 +48,9 @@ export {
   // Os cinco pares do checkout e da conta são da Onda C2.
   CheckboxField,
   Field,
+  // Grupo de campos (Onda C0). Mesmo caminho e mesma razão do CheckboxField:
+  // usa `useId` para fiar o `aria-describedby` do grupo.
+  FieldGroup,
   Radio,
   RadioGroup,
   RadioCard,

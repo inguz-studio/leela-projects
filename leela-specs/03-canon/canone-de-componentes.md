@@ -74,6 +74,7 @@ permitido dentro do `DateTimeField`: é spinner, não é o calendário do SO.
 | Escolha exclusiva | `Radio` / `RadioGroup` |
 | Escolha exclusiva com descrição e peso | `RadioCard` |
 | Rótulo + dica + erro + `aria-describedby` | `Field` — envolve qualquer controle acima |
+| Grupo de campos com rótulo comum | `FieldGroup` — `fieldset` + `legend` visível, dica e erro DO grupo, `disabled` nativo |
 | Fluxo em etapas | `Stepper` |
 
 **Proibido:** todo controle nativo desta tabela. Checkbox nativo é violação da mesma severidade que

@@ -1,0 +1,61 @@
+# FieldGroup — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: FieldGroup
+version: 0.0.1
+generated_at: "2026-08-12"
+source: src/components/FieldGroup
+verdict: NASCEU NA ONDA C0 (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { FieldGroup, type FieldGroupProps } from '@leela/design-system'
+Landing (ADR-017): pelo boundary `app/_ds/ds.ts` — a peça usa `useId` para fiar o `aria-describedby`.
+
+## Quando usar
+Todo agrupamento de controles com um rótulo comum: notificações, grade de tamanhos, modalidades aceitas, permissões. Os onze `<fieldset>` do painel (inventário 2026-08-12 §7) são esta peça.
+
+## Quando NÃO usar
+Um controle só, com rótulo acima, é Field. Um checkbox com rótulo ao lado é CheckboxField. Escolha exclusiva já vem agrupada por RadioGroup. Bloco de conteúdo com título é Card + SectionHeader — o grupo é de FORMULÁRIO, não de página.
+
+## Props válidas
+- legend: ReactNode   (obrigatório)   — sempre visível
+- description: ReactNode   — entra por aria-describedby
+- errorMessage: string     — erro DO GRUPO, com role="alert"
+- gap: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'   (default: 'md')   — a escala fechada do Stack
+- children: ReactNode   (obrigatório)
+- ...props nativas de `<fieldset>`, incluindo `disabled` (que propaga a todos os controles de dentro)
+
+## O que a peça conserta, para você não reconsertar
+- `min-inline-size: min-content` do fieldset → `min-w-0`: sem isso o grupo não encolhe e a página ganha rolagem horizontal
+- `padding-inline: 2px` da legend → `p-0`: sem isso a legenda desalinha de todo rótulo da tela
+- borda e padding próprios do fieldset, que o produto não usa em lugar nenhum
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --font-size-sm / --font-size-xs / --spacing-0-5 / --spacing-2
+- --text-primary / --text-tertiary / --text-danger
+- o ritmo interno é do Stack
+
+## Proibido (do/don't)
+DON'T: `<fieldset className="flex flex-col gap-3 rounded-md bg-surface-high p-4">` na tela. São onze cópias medidas.
+DON'T: `<legend className="sr-only">` com um `<span>` visível ao lado — é o mesmo rótulo escrito duas vezes, e os dois divergem no primeiro conserto.
+DON'T: usar o grupo para dar superfície ao bloco. Superfície é Card; o fieldset aqui nasce sem borda e sem padding.
+DO: `disabled` no grupo em vez de em cada controle — o fieldset propaga nativamente.
+
+## Exemplo mínimo (válido, copiável)
+<FieldGroup legend="Notificações">
+  <CheckboxField label="Avisar quando alguém se inscrever" checked={a} onChange={(e) => setA(e.target.checked)} />
+</FieldGroup>
+
+## Exemplo completo (válido, copiável)
+<FieldGroup
+  legend="Grade de tamanhos"
+  description="Separe por corte ou use unissex como grade única."
+  errorMessage={semCorte ? 'Escolha ao menos um corte para publicar o kit.' : undefined}
+  gap="sm"
+  disabled={salvando}
+>
+  <CheckboxField label="Feminina" checked={fem} onChange={(e) => setFem(e.target.checked)} />
+  <CheckboxField label="Masculina" checked={masc} onChange={(e) => setMasc(e.target.checked)} />
+</FieldGroup>
+
+## Instrução para o modelo (colar no system prompt)
+Use FieldGroup para qualquer grupo de campos com rótulo comum. Nunca escreva `<fieldset>` numa tela: os defaults que o navegador impõe já estão consertados aqui, e a catraca `grupo-de-campos-cru` conta cada fieldset que nascer fora do design system.
