@@ -19,7 +19,14 @@
 // diz isso melhor do que uma linha que some.
 // =============================================================================
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@leela/design-system';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  FormGrid,
+} from '@leela/design-system';
 import type { Profissional } from '@leela/core';
 import { formatarTelefone } from '../../../eventos/_lib/pii';
 
@@ -67,7 +74,7 @@ export function ResponsavelCard({ owner, ownerUid }: ResponsavelCardProps): JSX.
             <code>{ownerUid}</code>.
           </p>
         ) : (
-          <dl className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+          <FormGrid as="dl">
             <Campo rotulo="Nome" valor={owner.nome} />
             <Campo rotulo="E-mail" valor={owner.email} />
             <Campo
@@ -75,7 +82,7 @@ export function ResponsavelCard({ owner, ownerUid }: ResponsavelCardProps): JSX.
               valor={owner.telefone ? formatarTelefone(owner.telefone) : undefined}
             />
             <Campo rotulo="Organização" valor={owner.organizacao} />
-          </dl>
+          </FormGrid>
         )}
       </CardContent>
     </Card>
