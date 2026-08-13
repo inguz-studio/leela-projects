@@ -432,6 +432,20 @@ caminho de operador, **continua aberta**. Apagar o comprometido de teste não cr
 congelado antes do apply, e report com contagem antes e depois. **Nada de código de aplicação nesta
 lane.**
 
+**Executada em 10/08, fim de tarde — o resultado, movido do painel em 12/08.** O plano congelado rodou
+inteiro em produção: **247 exclusões**, backup duplo tirado antes do primeiro delete, pós-check
+integral verde e as duas contas demo fora do Auth (21 → 19). Os quatro intocáveis — a compra real
+`PED-8CDHM`, o código `T93N7F`, o evento `teste-taxa-repassada` e a conta `inguzbuilders@gmail.com` —
+foram relidos depois de tudo por sonda independente: vivos, com o mesmo carimbo de antes.
+
+Três linhas do painel fecharam com ela. O **COMPROMETIDO-1**: os três repasses vetados morreram com o
+resto do seed, o pós-check provou `comprometido = 0`, e o disponível para repasse voltou a bater com o
+dinheiro real. O **VITRINE-2**: os dois eventos sem preço já não existem em produção (a leitura de
+10/08 devolve 404 para ambos), então não há mais o que precificar nem despublicar. E a tarefa
+**S318-T6**, o reparo dos dois kits de preço negativo, fica **sem objeto** — a leitura de 10/08
+encontra zero `itensKit` nos dois eventos, o que confirma a inferência registrada no bloco 14 de
+[[01-decisoes-dono]].
+
 ---
 
 ## O que volta ao dono antes de qualquer build
