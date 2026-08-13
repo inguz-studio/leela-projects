@@ -308,6 +308,15 @@ Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-s
 
 Removidas (sem afiliados): ~~S1204-T1~~, ~~S1204-T3~~. Deferida V1.1: S1208 (portal público do organizador).
 
+**📋 Revisão de copy da landing (COPY-LANDING-REVIEW · 12/08) — proposta, nada construído.** 18 achados: 3 bloqueadores, 6 graves, 5 médios, 4 baixos; 13 defeitos objetivos e 5 vetáveis do dono. Fila em `02-rodadas/2026-08-12-copy-landing/03-fila-aplicacao.md`; números de história **propostos** contra o topo atual do épico (`LEELA-S1250`) e a conferir no índice antes de cravar. Nenhum card consome RN.
+
+- [ ] LEELA-S1251 — O renome do Serviço chega ao ar (SERV-3 construído em `37e5c0ca`; produção ainda serve "taxa de serviço" em 5 lugares) — **deploy, não código**; não espera veto
+- [ ] LEELA-S1252 — O checkout para de afirmar que o pagamento é processado dentro da Leela (`CheckoutFlow.tsx:2337`; quem processa é o Asaas) — 🔺 espera o dono decidir se a tela nomeia o provedor
+- [ ] LEELA-S1253 — O `ShareBlock` diz o que está sendo compartilhado (a página do produtor manda compartilhar "este evento"; o apoio presume grupo de treino nas duas superfícies)
+- [ ] LEELA-S1254 — O vocabulário de experiência fecha as lacunas da varredura S1218-T3 (`Pronto para largar?` na dobra de fechamento, `Percursos` no Sobre, dois estados vazios do perfil)
+- [ ] LEELA-S1255 — Os rótulos dizem o que acontece depois do clique ("Baixar o app" sem destino, `Minha conta · Leela · Leela`, caixa do Painel Profissional, alta de lote afirmada sem lastro, dois links para o mesmo destino no header)
+- [ ] LEELA-S1256 — A home ganha a direção que o dono escolher ⛔ **espera ele** (D-0802-1 §2); sem copy nova da esteira, o texto pronto está nas 4 direções de `2026-08-02-retomada/02-sugestoes-home-experiencias.md`, e a T4 acrescenta a descrição do root layout, que ficou de fora daquela tabela
+
 ### LEELA-E09-slim · Repasses do organizador — brief `onda2-E09slim-lotes.md`
 
 Vendido/disponível/retido + dados bancários LGPD + solicitação validada + retenção 15% (editável platform_admin) + comprovante numerado + histórico. "Pago" é registro manual mock (RN-356).

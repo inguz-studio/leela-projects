@@ -10,6 +10,13 @@ tags:
 
 ## 📋 Backlog
 
+- [ ] **[E12] A landing para de se contradizer** — a copy revista pelo copywriter da casa: 18 achados, 13 defeitos objetivos e 5 vetáveis dele 📋 **revisão de 12/08**, proposta e não construção · a página diz "corrida" no `<head>` e "bem-estar" no rodapé da mesma resposta, o evento fecha com `Pronto para largar?` numa página de retiro, e o checkout público afirma que o pagamento é processado dentro da Leela quando quem processa é o Asaas · ⛔ **a home é dele** por D-0802-1 §2 e a copy dela já espera decisão desde 02/08 · **nenhum card consome RN** — tudo cabe em D-0802-1, SERV-3, RN-559 e RN-569 · detalhe em `02-rodadas/2026-08-12-copy-landing/` [[LEELA-E12-landing]]
+    - [ ] **S1251 · O renome do Serviço chega ao ar** — construído desde `37e5c0ca` e a produção ainda serve "taxa de serviço" em cinco lugares; é deploy, não código, e não espera veto nenhum
+    - [ ] **S1252 · O checkout para de afirmar onde o pagamento é processado** 🔺 espera o dono decidir se a tela nomeia o Asaas
+    - [ ] **S1253 · O bloco de compartilhar diz o que está sendo compartilhado** — a página do produtor manda compartilhar "este evento", e o apoio presume grupo de treino nas duas superfícies
+    - [ ] **S1254 · O vocabulário de experiência fecha as lacunas da varredura anterior** — três telas que a S1218-T3 pulou citando a mesma decisão
+    - [ ] **S1255 · Os rótulos passam a dizer o que acontece depois do clique** — "Baixar o app" sem destino, título da conta com a marca duas vezes, e a alta de lote afirmada onde a página não sabe quantos lotes existem
+    - [ ] **S1256 · A home ganha a direção que o dono escolher** ⛔ **espera ele** — sem copy nova da esteira; o texto pronto está nas quatro direções de 02/08, e esta história acrescenta a descrição do root layout, que ficou de fora daquela tabela
 - [ ] **[E12] A conta nasce no fim da compra, e a fronteira é re-provada** — quem compra pela primeira vez paga, a tela confirma e a área do cliente pede o login de uma conta que a pessoa ainda não sabe que tem. A lane que construiu o pós-pagamento deixou um aviso explicando o caminho do e-mail, e o aviso é o remendo que este card remove 🔺 **decidido em 12/08 (leva 8 · CKLOGIN-1)**, na íntegra: *"Ok, promova a sessao ao confirmar o pagamento."* · RN-562, amarrada à RN-451 · **prioridade alta**: o fluxo pós-pagamento está construído e provado desde 11/08 e chega numa porta trancada para metade de quem compra [[LEELA-E12-landing]]
     - [ ] **S1247 · A sessão do checkout vira conta ao pagar**
         - [ ] S1247-T1 a promoção da sessão anônima a conta logada no instante do pagamento confirmado, uma vez só e nunca em cobrança pendente
