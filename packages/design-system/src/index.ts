@@ -134,6 +134,13 @@ export type { DropdownMenuProps, DropdownMenuAction } from './components/Dropdow
 export { FilterMenu } from './components/FilterMenu';
 export type { FilterMenuProps, FilterMenuOption } from './components/FilterMenu';
 
+// Faceta de filtro (Onda C0 · CANONE-1). Doze telas montaram o mesmo
+// `<div role="group">` + `Chip.map()` à mão porque não havia o que importar; a
+// peça compõe `Chip`, `FilterMenu` e `Combobox` e fecha o limiar do cânone §1
+// por construção — ela recebe as opções, então ela as conta.
+export { FilterChips } from './components/FilterChips';
+export type { FilterChipsProps, FilterChipsOption } from './components/FilterChips';
+
 // ── Modais (S001-3-T3) ──────────────────────────────────────────────────────
 export { Modal, ConfirmModal } from './components/Modal';
 export type { ModalProps, ModalSize, ConfirmModalProps, ConfirmModalDetails } from './components/Modal';

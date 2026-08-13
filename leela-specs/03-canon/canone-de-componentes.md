@@ -37,6 +37,7 @@ não exceção. Regra completa em `04-engenharia/governanca-design.md` §8.
 | Escolha única, poucas opções, em formulário | `Select` | até ~7 opções conhecidas, sem busca |
 | Escolha com busca, cardinalidade alta | `Combobox` | quando rolar é pior que digitar; anatomia Popover + Command |
 | Filtro de lista ou tabela | `FilterMenu` | filtro nunca é `Select`; ele mostra o que está aplicado |
+| A faceta de UM filtro (a fileira ou o menu) | `FilterChips` | recebe as opções e **conta**: fileira de `Chip` abaixo de 4, `FilterMenu` (empilhável) ou `Combobox` (exclusiva) a partir de 4 |
 | Menu de ações sobre um item | `DropdownMenu` | ação, não valor; se o resultado é um dado, é `Select`/`Combobox` |
 | Âncora flutuante genérica | `Popover` + `PopoverTrigger` / `PopoverContent` / `PopoverAnchor` / `PopoverClose` | direto só quando o conteúdo não é lista |
 | Lista filtrável dentro de painel | `Command` + `CommandInput` / `CommandList` / `CommandEmpty` / `CommandGroup` / `CommandItem` | primitivo do `Combobox` |
