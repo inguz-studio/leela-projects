@@ -1,0 +1,827 @@
+{
+  "visao-geral@320": {
+    "h1": [
+      {
+        "texto": "Visão geral",
+        "fontSize": "40px",
+        "larguraCaixa": 209,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Visão geral",
+        "alturaCaixa": 96,
+        "alturaConteudo": 157,
+        "vazamentoPx": 61
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "transbordo",
+        "el": "span.flex-1.min-w-0[Trilha do Pântano do Sul 2026 ainda não ]",
+        "scrollW": 69,
+        "clientW": 62
+      },
+      {
+        "tipo": "transbordo",
+        "el": "span.block.text-[length:var(--font-size-base)][Trilha do Pântano do Sul 2026 ainda não ]",
+        "scrollW": 69,
+        "clientW": 62
+      },
+      {
+        "tipo": "transbordo",
+        "el": "span.flex-1.min-w-0[Noturna da Beira-Mar 2026 está com 100% ]",
+        "scrollW": 87,
+        "clientW": 62
+      },
+      {
+        "tipo": "transbordo",
+        "el": "span.block.text-[length:var(--font-size-base)][Noturna da Beira-Mar 2026 está com 100% ]",
+        "scrollW": 87,
+        "clientW": 62
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 4,
+        "oy": 4
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "circle[]",
+        "b": "path[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 5,
+        "oy": 5
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 6,
+        "oy": 6
+      }
+    ]
+  },
+  "visao-geral@375": {
+    "h1": [
+      {
+        "texto": "Visão geral",
+        "fontSize": "40px",
+        "larguraCaixa": 209,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Visão geral",
+        "alturaCaixa": 96,
+        "alturaConteudo": 157,
+        "vazamentoPx": 61
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 4,
+        "oy": 4
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "circle[]",
+        "b": "path[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 5,
+        "oy": 5
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 6,
+        "oy": 6
+      }
+    ]
+  },
+  "visao-geral@768": {
+    "h1": [
+      {
+        "texto": "Visão geral",
+        "fontSize": "40px",
+        "larguraCaixa": 209,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Visão geral",
+        "alturaCaixa": 96,
+        "alturaConteudo": 135,
+        "vazamentoPx": 39
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 4,
+        "oy": 4
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "circle[]",
+        "b": "path[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 5,
+        "oy": 5
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 6,
+        "oy": 6
+      }
+    ]
+  },
+  "visao-geral@1024": {
+    "h1": [
+      {
+        "texto": "Visão geral",
+        "fontSize": "40px",
+        "larguraCaixa": 209,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Visão geral",
+        "alturaCaixa": 96,
+        "alturaConteudo": 96,
+        "vazamentoPx": -5
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Receita confirmadaR$167.277—]",
+        "scrollW": 205,
+        "clientW": 199
+      },
+      {
+        "tipo": "transbordo",
+        "el": "span.min-w-0[Receita confirmadaR$167.277—]",
+        "scrollW": 119,
+        "clientW": 89
+      },
+      {
+        "tipo": "transbordo",
+        "el": "span.block.mt-[var(--spacing-1-5)][R$167.277]",
+        "scrollW": 119,
+        "clientW": 89
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 4,
+        "oy": 4
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "circle[]",
+        "b": "path[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 5,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 5,
+        "oy": 5
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "polyline[]",
+        "b": "polyline[]",
+        "ox": 6,
+        "oy": 6
+      }
+    ]
+  },
+  "eventos-lista@320": {
+    "h1": [
+      {
+        "texto": "Eventos",
+        "fontSize": "40px",
+        "larguraCaixa": 150,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Eventos",
+        "alturaCaixa": 161,
+        "alturaConteudo": 161,
+        "vazamentoPx": 0
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.flex-col[Receita consolidadaR$ 167.277]",
+        "scrollW": 160,
+        "clientW": 128
+      },
+      {
+        "tipo": "transbordo",
+        "el": "span.text-[length:var(--font-size-xl)].font-[var(--font-weight-bold)][R$ 167.277]",
+        "scrollW": 140,
+        "clientW": 88
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Publicado]",
+        "scrollW": 76,
+        "clientW": 56
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Publicado]",
+        "scrollW": 76,
+        "clientW": 56
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Publicado]",
+        "scrollW": 76,
+        "clientW": 56
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Publicado]",
+        "scrollW": 76,
+        "clientW": 56
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Publicado]",
+        "scrollW": 76,
+        "clientW": 56
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Encerrado]",
+        "scrollW": 80,
+        "clientW": 56
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Rascunho]",
+        "scrollW": 74,
+        "clientW": 56
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.items-center[Rascunho]",
+        "scrollW": 74,
+        "clientW": 56
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 3,
+        "oy": 3
+      }
+    ]
+  },
+  "eventos-lista@375": {
+    "h1": [
+      {
+        "texto": "Eventos",
+        "fontSize": "40px",
+        "larguraCaixa": 150,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Eventos",
+        "alturaCaixa": 161,
+        "alturaConteudo": 161,
+        "vazamentoPx": 0
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "transbordo",
+        "el": "div.flex.flex-col[Receita consolidadaR$ 167.277]",
+        "scrollW": 160,
+        "clientW": 156
+      },
+      {
+        "tipo": "transbordo",
+        "el": "span.text-[length:var(--font-size-xl)].font-[var(--font-weight-bold)][R$ 167.277]",
+        "scrollW": 140,
+        "clientW": 116
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 3,
+        "oy": 3
+      }
+    ]
+  },
+  "eventos-lista@768": {
+    "h1": [
+      {
+        "texto": "Eventos",
+        "fontSize": "40px",
+        "larguraCaixa": 150,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Eventos",
+        "alturaCaixa": 139,
+        "alturaConteudo": 139,
+        "vazamentoPx": 0
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "transbordo",
+        "el": "span.text-[length:var(--font-size-xl)].font-[var(--font-weight-bold)][R$ 167.277]",
+        "scrollW": 140,
+        "clientW": 128
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 3,
+        "oy": 3
+      }
+    ]
+  },
+  "eventos-lista@1024": {
+    "h1": [
+      {
+        "texto": "Eventos",
+        "fontSize": "40px",
+        "larguraCaixa": 150,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Eventos",
+        "alturaCaixa": 96,
+        "alturaConteudo": 96,
+        "vazamentoPx": -5
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "circle[]",
+        "ox": 3,
+        "oy": 3
+      }
+    ]
+  },
+  "evento-detalhe@320": {
+    "h1": [
+      {
+        "texto": "Meia Maratona Floripa 2026",
+        "fontSize": "40px",
+        "larguraCaixa": 180,
+        "transborda": true
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Meia Maratona Floripa 2026",
+        "alturaCaixa": 261,
+        "alturaConteudo": 261,
+        "vazamentoPx": -16
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "transbordo",
+        "el": "div[Capacidade total600limite de inscrições]",
+        "scrollW": 72,
+        "clientW": 66
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.text-[length:var(--countdown-stat-label-size)].font-[var(--font-weight-semibold)][Capacidade total]",
+        "scrollW": 72,
+        "clientW": 66
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div[Inscritos461 (77%)pagos + confirmados]",
+        "scrollW": 69,
+        "clientW": 66
+      },
+      {
+        "tipo": "transbordo",
+        "el": "div.text-[length:var(--countdown-stat-value-size)].font-[var(--font-weight-bold)][461 (77%)]",
+        "scrollW": 69,
+        "clientW": 66
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][461 inscritos]",
+        "b": "span.text-[var(--text-brand)].font-[var(--font-weight-semibold)][Faltam 8 dias para o evento]",
+        "ox": 76,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 6,
+        "oy": 6
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 3,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 8,
+        "oy": 8
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[]",
+        "ox": 88,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 88,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 88,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "span.text-[var(--text-tertiary)][·]",
+        "b": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Rafael Guimarães]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Rafael Guimarães]",
+        "b": "span.text-[var(--text-tertiary)][·]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "span.text-[var(--text-tertiary)][·]",
+        "b": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Camila Souza]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Camila Souza]",
+        "b": "span.text-[var(--text-tertiary)][·]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "span.text-[var(--text-tertiary)][·]",
+        "b": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Diego Alves]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Diego Alves]",
+        "b": "span.text-[var(--text-tertiary)][·]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Diego Alves]",
+        "b": "span.inline-flex.items-center[Falha]",
+        "ox": 50,
+        "oy": 16
+      }
+    ]
+  },
+  "evento-detalhe@375": {
+    "h1": [
+      {
+        "texto": "Meia Maratona Floripa 2026",
+        "fontSize": "40px",
+        "larguraCaixa": 235,
+        "transborda": true
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Meia Maratona Floripa 2026",
+        "alturaCaixa": 243,
+        "alturaConteudo": 243,
+        "vazamentoPx": -16
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][461 inscritos]",
+        "b": "span.text-[var(--text-brand)].font-[var(--font-weight-semibold)][Faltam 8 dias para o evento]",
+        "ox": 76,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 6,
+        "oy": 6
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 3,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 8,
+        "oy": 8
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[]",
+        "ox": 143,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 143,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 143,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "span.text-[var(--text-tertiary)][·]",
+        "b": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Rafael Guimarães]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Rafael Guimarães]",
+        "b": "span.text-[var(--text-tertiary)][·]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "span.text-[var(--text-tertiary)][·]",
+        "b": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Camila Souza]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Camila Souza]",
+        "b": "span.text-[var(--text-tertiary)][·]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "span.text-[var(--text-tertiary)][·]",
+        "b": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Helena Teixeira]",
+        "ox": 4,
+        "oy": 14
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "strong.font-[var(--font-weight-semibold)].text-[var(--text-primary)][Helena Teixeira]",
+        "b": "span.text-[var(--text-tertiary)][·]",
+        "ox": 4,
+        "oy": 14
+      }
+    ]
+  },
+  "evento-detalhe@768": {
+    "h1": [
+      {
+        "texto": "Meia Maratona Floripa 2026",
+        "fontSize": "40px",
+        "larguraCaixa": 526,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Meia Maratona Floripa 2026",
+        "alturaCaixa": 192,
+        "alturaConteudo": 192,
+        "vazamentoPx": -16
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 6,
+        "oy": 6
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 3,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 8,
+        "oy": 8
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[]",
+        "ox": 536,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 536,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 536,
+        "oy": 120
+      }
+    ]
+  },
+  "evento-detalhe@1024": {
+    "h1": [
+      {
+        "texto": "Meia Maratona Floripa 2026",
+        "fontSize": "40px",
+        "larguraCaixa": 526,
+        "transborda": false
+      }
+    ],
+    "headers": [
+      {
+        "rotulo": "Meia Maratona Floripa 2026",
+        "alturaCaixa": 169,
+        "alturaConteudo": 169,
+        "vazamentoPx": -16
+      }
+    ],
+    "problemas": [
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 6,
+        "oy": 6
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 3,
+        "oy": 3
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "path[]",
+        "b": "path[]",
+        "ox": 8,
+        "oy": 8
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[]",
+        "ox": 330,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 330,
+        "oy": 120
+      },
+      {
+        "tipo": "cruzamento",
+        "a": "g[]",
+        "b": "g[21k10k5k21116882]",
+        "ox": 330,
+        "oy": 120
+      }
+    ]
+  }
+}
