@@ -8,6 +8,7 @@
 //   [PROBE] focaveis FORA do dialog: 8
 //   [PROBE] amostra fora: A:Visão Geral | A:Eventos | A:Clubs | A:CRM |
 //                         A:Marcas | A:Configurações | BUTTON: |
+//   (a sonda é de 12/08; na Leva 15 'A:Configurações' saiu do menu)
 //                         BUTTON:Como receber o código
 //   [PROBE] body.style.overflow = ""
 //   [PROBE] URL depois do clique de AT: /marcas
@@ -164,7 +165,7 @@ const CONTROLES_DO_FUNDO: readonly string[] = [
   'A:CRM',
   // D-1008-R17: o slot que era de "Marcas" — mesmo nó, rótulo novo.
   'A:Parcerias',
-  'A:Configurações',
+  // Leva 15: 'A:Configurações' saiu do menu principal.
   'BUTTON:Abrir menu de navegação',
   'BUTTON:Como receber o código Leela',
 ];

@@ -288,7 +288,9 @@ const SUPERFICIES: SuperficieNav[] = [
     // não era link. Agora é link E navega por SPA — as duas coisas medidas aqui.
     nome: 'menu lateral do produtor',
     landmark: 'Navegação principal',
-    ancoras: 6,
+    // 5 desde a Leva 15: Configurações saiu do menu principal (o popover do
+    // perfil já levava ao MESMO `/conta`).
+    ancoras: 5,
     // MEL-19: o item do menu principal é sentence case, igual à vitrine.
     atual: 'Visão geral',
     // A moldura ≥ lg é o SidebarRail (HIFI-REC), e ele traz DOIS botões que

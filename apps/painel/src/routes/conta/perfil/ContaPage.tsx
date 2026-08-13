@@ -21,7 +21,7 @@
 
 import * as React from 'react';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Avatar, Button, FileInput, Input, InputSenha, useToast } from '@leela/design-system';
 import {
   atualizarFotoPerfil,
@@ -67,7 +67,6 @@ export interface ContaPageProps {
 export function ContaPage({ recebimento }: ContaPageProps = {}): JSX.Element {
   const { user, loading } = useContaUsuario();
   const { toast } = useToast();
-  const navigate = useNavigate();
   // Deixou de ser a ÚNICA saída de logout na Leva 16 — o popover do perfil
   // oferece a mesma ação, e as duas leem esta implementação (`useSair`).
   const { sair, saindo } = useSair();
