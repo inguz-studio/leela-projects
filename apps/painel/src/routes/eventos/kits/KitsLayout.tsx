@@ -4,15 +4,14 @@
 // do Outlet às rotas-filhas. Sob o EventoLayout (header + sub-nav do evento).
 // =============================================================================
 
-import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import { SubNav, type SubNavTab } from '@leela/design-system';
+import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
+import type { SubNavTab } from '@leela/design-system';
 import type { EventoOutletContext } from '../evento/EventoLayout';
-import { tabsComNavSpa } from '../../../lib/navSpa';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 
 export function KitsLayout(): JSX.Element {
   const ctx = useOutletContext<EventoOutletContext>();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const slug = ctx.evento.slug;
   const base = `/eventos/${slug}/kits`;
 
@@ -20,21 +19,17 @@ export function KitsLayout(): JSX.Element {
   const ativa = resto.split('/')[0] || 'cadastro';
 
   // `href` fica (ctrl+clique, clique do meio, copiar endereço); o clique simples
-  // é interceptado e navega por SPA — LEELA-NAVFIX-T2.
-  const tabs: SubNavTab[] = tabsComNavSpa(
-    [
-      { id: 'cadastro', label: 'Cadastro', href: base, active: ativa === 'cadastro' },
-      { id: 'distribuicao', label: 'Distribuição', href: `${base}/distribuicao`, active: ativa === 'distribuicao' },
-      { id: 'estoque', label: 'Estoque', href: `${base}/estoque`, active: ativa === 'estoque' },
-      { id: 'entrega', label: 'Credenciamento', href: `/eventos/${slug}/credenciamento`, active: false },
-    ],
-    navigate,
-    pathname,
-  );
+  // é interceptado e navega por SPA — a fiação vive no `AreaSubNav`.
+  const tabs: SubNavTab[] = [
+    { id: 'cadastro', label: 'Cadastro', href: base, active: ativa === 'cadastro' },
+    { id: 'distribuicao', label: 'Distribuição', href: `${base}/distribuicao`, active: ativa === 'distribuicao' },
+    { id: 'estoque', label: 'Estoque', href: `${base}/estoque`, active: ativa === 'estoque' },
+    { id: 'entrega', label: 'Credenciamento', href: `/eventos/${slug}/credenciamento`, active: false },
+  ];
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
-      <SubNav tabs={tabs} aria-label="Seções de kits" divider />
+      <AreaSubNav tabs={tabs} aria-label="Seções de kits" />
       <Outlet context={ctx} />
     </div>
   );
