@@ -112,3 +112,43 @@ describe('entradas Radix-free (ADR-017)', () => {
     }
   });
 });
+
+// ===========================================================================
+// Peças da Onda C0 que a landing consome pelo boundary `app/_ds/ds.ts`.
+//
+// A Onda C2 converte cinco pares rótulo+checkbox do checkout e da conta, e a
+// fila escreveu a restrição: o `CheckboxField` precisa entrar por
+// `@leela/design-system/server` OU pelo boundary de cliente da landing, e a C0
+// tem de provar isso ANTES da C2 abrir — o `Checkbox` já passa pelo `_ds/ds.ts`
+// e o par não pode ser o que quebra a fronteira.
+//
+// Pela entrada server-safe elas NÃO passam, e a razão é dura: o `Checkbox` usa
+// `useRef`/`useEffect` para o `indeterminate` (o React não tem atributo nativo)
+// e o `CheckboxField`/`FieldGroup` usam `useId` para fiar o `htmlFor` e o
+// `aria-describedby`. Hook em grafo de RSC é ilegal, e trocar o `useId` por um
+// id obrigatório empurraria para dezessete telas a invenção de identificador
+// único — que é justamente o que a peça existe para tirar delas.
+//
+// O que a landing PRECISA, então, é do que o ADR-017 realmente proíbe: Radix no
+// bundle público (o `dist` externaliza a dependência e ela vira MODULE_NOT_FOUND
+// — o 500 da lane LPVK). É isso que este bloco prova, arquivo por arquivo do
+// grafo.
+// ===========================================================================
+
+describe('peças da Onda C0 no boundary da landing (ADR-017)', () => {
+  for (const peca of ['CheckboxField']) {
+    it(`${peca}: grafo sem @radix-ui e com externos na allowlist`, () => {
+      const { files, externals } = walk(`components/${peca}/index.ts`);
+      expect(files.length).toBeGreaterThan(1);
+      for (const external of externals) {
+        expect(external, `dependência externa fora da allowlist em ${peca}`).toSatisfy(
+          (spec: string) => EXTERNAL_ALLOWLIST.has(spec),
+        );
+      }
+      for (const file of files) {
+        const source = stripComments(readFileSync(file, 'utf8'));
+        expect(source, `@radix-ui no grafo da landing: ${file}`).not.toContain('@radix-ui');
+      }
+    });
+  }
+});

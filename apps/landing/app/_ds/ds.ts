@@ -40,6 +40,13 @@ export {
   InputSenha,
   Select,
   Checkbox,
+  // Par rótulo + caixinha (Onda C0 · CANONE-1). Entra por AQUI, e não pela
+  // entrada server-safe, porque compõe o `Checkbox` — que tem `useRef`/
+  // `useEffect` para o `indeterminate` — e usa `useId` para fiar o `htmlFor`.
+  // O que o ADR-017 proíbe é Radix no bundle público, e o
+  // `server-safety.test.ts` caminha o grafo desta peça para provar que não há.
+  // Os cinco pares do checkout e da conta são da Onda C2.
+  CheckboxField,
   Field,
   Radio,
   RadioGroup,

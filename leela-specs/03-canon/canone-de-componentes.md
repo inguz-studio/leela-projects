@@ -69,6 +69,7 @@ permitido dentro do `DateTimeField`: é spinner, não é o calendário do SO.
 | Busca | `SearchInput` |
 | Arquivo | `FileInput`; imagem com preview, `components/upload/ImageUploadField.tsx` |
 | Marcação booleana | `Checkbox` |
+| Marcação booleana **com rótulo ao lado** | `CheckboxField` — `Checkbox` + `<label htmlFor>` irmão, dica e erro por `aria-describedby` |
 | Liga/desliga com efeito imediato | `Switch` — muda agora; `Checkbox` só na submissão |
 | Escolha exclusiva | `Radio` / `RadioGroup` |
 | Escolha exclusiva com descrição e peso | `RadioCard` |

@@ -46,6 +46,10 @@ export {
 export { FileInput, type FileInputProps } from './components/FileInput';
 export { Select, type SelectProps, type SelectOption } from './components/Select';
 export { Checkbox, type CheckboxProps } from './components/Checkbox';
+// O par rótulo + caixinha (Onda C0 · CANONE-1). O `Checkbox` não tem prop de
+// rótulo e o `Field` põe o rótulo ACIMA — o de um checkbox vai ao lado. Sem
+// peça para o par, dezessete telas montaram a sua, em três dialetos.
+export { CheckboxField, type CheckboxFieldProps } from './components/CheckboxField';
 export { Textarea, type TextareaProps } from './components/Textarea';
 export {
   Radio,
