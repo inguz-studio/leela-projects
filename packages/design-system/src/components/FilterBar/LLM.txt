@@ -1,0 +1,59 @@
+# FilterBar — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: FilterBar
+version: 0.0.1
+generated_at: "2026-08-12"
+source: src/components/FilterBar
+verdict: NASCEU NA ONDA C0 (CANONE-1) — cânone escrito no mesmo commit
+
+## Import canônico
+import { FilterBar, type FilterBarProps } from '@leela/design-system'
+
+## Quando usar
+Toda lista ou tabela com busca, faceta, contador ou ação primária. As treze barras montadas à mão no painel (inventário 2026-08-12 §4.2) são esta peça.
+
+## Quando NÃO usar
+Barra de ferramentas GLOBAL do main, sem filtro, é Toolbar direto. Cabeçalho de página é PageHeader; cabeçalho de bloco é SectionHeader. A barra não tem título e não pinta superfície — misturar os três foi o que produziu treze anatomias.
+
+## Props válidas
+- label: string   (obrigatório)   — o que a lista mostra, no plural; vira `Filtros de <label>`
+- search: ReactNode    — o SearchInput
+- facets: ReactNode    — uma ou mais FilterChips
+- count: ReactNode     — o ResultCount
+- actions: ReactNode   — a ação primária da lista
+- className: string
+
+## Anatomia (o que a peça resolve, para você não repetir)
+- linha de dois lados com refluxo que EMPILHA abaixo de lg (vem do Toolbar)
+- `role="toolbar"` com nome acessível em uma grafia só
+- `flex-wrap` no lado que cresce: N facetas quebram linha em vez de virar rolagem horizontal
+- hairline de separação da lista (vem do Toolbar)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-3 (gap entre busca e facetas) / --spacing-4 (gap entre facetas). O resto é do Toolbar.
+
+## Proibido (do/don't)
+DON'T: pôr `role="search"` na barra. O SearchInput já traz o dele; dois landmarks de busca aninhados anunciam duas buscas onde há uma.
+DON'T: montar `<div className="flex items-center gap-…">` com SearchInput + Chips na tela. São treze cópias medidas.
+DON'T: pôr o título da lista dentro da barra — é SectionHeader ou PageHeader.
+DO: passar as facetas como irmãs no slot `facets`; o refluxo é da peça.
+
+## Exemplo mínimo (válido, copiável)
+<FilterBar label="comunicados" search={<SearchInput aria-label="Buscar comunicado" shortcutLabel={null} />} />
+
+## Exemplo completo (válido, copiável)
+<FilterBar
+  label="inscritos"
+  search={<SearchInput aria-label="Buscar atleta pelo nome ou código" shortcutLabel={null} />}
+  facets={
+    <>
+      <FilterChips label="Filtrar por status" options={STATUS} selected={status} onChange={setStatus} />
+      <FilterChips label="Filtrar por kit" options={KITS} selected={kit} onChange={setKit} />
+    </>
+  }
+  count={<ResultCount visiveis={18} total={453} substantivo={{ singular: 'inscrito', plural: 'inscritos' }} />}
+  actions={<Button variant="primary">Exportar</Button>}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Toda lista com busca ou filtro usa FilterBar. Nunca monte a barra com div e flex: o refluxo, o nome acessível e a hairline são da peça, e é essa montagem — não o controle dentro dela — que o produto recriou treze vezes.

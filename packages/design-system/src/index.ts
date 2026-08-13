@@ -72,6 +72,11 @@ export { KpiCard, type KpiCardProps } from './components/KpiCard';
 
 // ── Toolbar global (Lote FIDELIDADE T3) ─────────────────────────────────────
 export { Toolbar, type ToolbarProps } from './components/Toolbar';
+
+// Barra de filtros da lista (Onda C0 · CANONE-1). Treze telas montaram a
+// mesma barra à mão; a única fatorada do produto era a casca app-local
+// `ListaGlobal`, que nunca subiu ao DS. Compõe o `Toolbar` — não o substitui.
+export { FilterBar, type FilterBarProps } from './components/FilterBar';
 export { SearchInput, type SearchInputProps } from './components/SearchInput';
 
 // Contador da lista recortada (Onda C0 · CANONE-1). Doze escritas da mesma

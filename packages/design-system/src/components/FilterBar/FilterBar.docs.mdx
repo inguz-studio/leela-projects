@@ -1,0 +1,33 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './FilterBar.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# FilterBar
+
+A barra que hospeda busca, facetas, contador e ação da lista. Compõe o `Toolbar` — dele vêm a linha de dois lados, o refluxo abaixo de `lg`, o `role="toolbar"` nomeado e a hairline. A `FilterBar` acrescenta os quatro slots e o refluxo interno das facetas, que é onde a barra escrita à mão quebra.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## O landmark de busca
+
+O `SearchInput` já declara `role="search"` no próprio contêiner. A barra **não** declara um segundo: dois landmarks de busca aninhados anunciam duas buscas onde há uma. A barra é o `toolbar` nomeado (`Filtros de comunicados`) e o `search` fica no campo.
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="FilterBar"
+  snippet={`import { FilterBar } from '@leela/design-system';
+
+<FilterBar
+  label="comunicados"
+  search={<SearchInput aria-label="Buscar comunicado" shortcutLabel={null} />}
+  facets={<FilterChips label="Filtrar por status" options={STATUS} selected={status} onChange={setStatus} />}
+  count={<ResultCount visiveis={12} total={40} substantivo={{ singular: 'comunicado', plural: 'comunicados' }} />}
+/>`}
+  contract={contract}
+/>
