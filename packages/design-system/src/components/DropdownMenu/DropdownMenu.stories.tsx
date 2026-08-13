@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { DropdownMenu, type DropdownMenuAction } from './DropdownMenu';
 import { Button } from '../Button';
+import { LogOut, Settings } from 'lucide-react';
 
 const ACTIONS: DropdownMenuAction[] = [
   { id: 'ver', label: 'Ver detalhes', onClick: () => undefined },
@@ -88,3 +89,37 @@ function DropdownCheckboxDemo(): React.JSX.Element {
 }
 
 export const ComCheckbox: Story = { render: () => <DropdownCheckboxDemo /> };
+
+/**
+ * Itens com ícone pequeno (Leva 16) — o menu do perfil no rodapé do rail:
+ * "Configurações" e "Sair", cada um com o seu desenho à esquerda do rótulo.
+ *
+ * O ícone é decorativo: quem nomeia a ação para o leitor de tela continua sendo
+ * o rótulo. Tamanho e traço vêm de `--popover-icon-size` e `--icon-stroke`, e
+ * não do consumidor — passar `className` no SVG aqui é o caminho de volta para
+ * três tamanhos diferentes no mesmo menu.
+ */
+function DropdownComIconesDemo(): React.JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <DropdownMenu
+      open={open}
+      onOpenChange={setOpen}
+      menuLabel="Menu do perfil"
+      side="top"
+      align="left"
+      trigger={<Button variant="secondary">Vitor Piagge</Button>}
+      actions={[
+        {
+          id: 'configuracoes',
+          label: 'Configurações',
+          icon: <Settings />,
+          onClick: () => undefined,
+        },
+        { id: 'sair', label: 'Sair', icon: <LogOut />, onClick: () => undefined },
+      ]}
+    />
+  );
+}
+
+export const ComIcones: Story = { render: () => <DropdownComIconesDemo /> };

@@ -16,7 +16,7 @@ Menu de ações flutuante ancorado a um trigger (padrão: ações por linha de T
 Não use para dicas de texto (Tooltip) nem para formulários flutuantes (Modal). Popover é apenas um alias @deprecated deste componente — em código novo use sempre DropdownMenu.
 
 ## Props válidas
-- actions: DropdownMenuAction[]   (obrigatório) — DropdownMenuAction = { id: string; label: string; onClick: () => void; destructive?: boolean; disabled?: boolean; checked?: boolean; count?: number }
+- actions: DropdownMenuAction[]   (obrigatório) — DropdownMenuAction = { id: string; label: string; onClick: () => void; destructive?: boolean; disabled?: boolean; checked?: boolean; count?: number; icon?: React.ReactNode }
 - open: boolean   (obrigatório) — controlado pelo consumidor
 - onOpenChange: (open: boolean) => void   (obrigatório)
 - trigger: React.ReactElement   (obrigatório) — elemento único (ex.: <Button/>); recebe onClick/aria-haspopup/aria-expanded/aria-controls via Radix Slot
@@ -28,7 +28,8 @@ Não use para dicas de texto (Tooltip) nem para formulários flutuantes (Modal).
 
 ## Tokens consumidos (nenhum valor cru permitido)
 - --spacing-1 / --spacing-3
-- --popover-min-width
+- --popover-min-width / --popover-icon-size (ícone do item)
+- --icon-stroke (traço do ícone do item)
 - --btn-height-sm
 - --font-size-base
 - --text-primary / --text-danger
@@ -41,6 +42,9 @@ DON'T: subcomponentes DropdownMenuTrigger/DropdownMenuContent/DropdownMenuItem d
 DON'T: uso não controlado (sem open/onOpenChange) — não há defaultOpen.
 DON'T: align="center" — align só aceita left|right. Eixo vertical é side (bottom default; top só quando abrir para baixo sairia da tela).
 DON'T: hex, rgb, px, rem em style inline.
+DON'T: className de tamanho no elemento passado em `icon` — o wrapper do DS já aplica --popover-icon-size e --icon-stroke no SVG filho; classe do consumidor aqui é como o rail acabou com três tamanhos de ícone.
+DON'T: `icon` como nome em string — o campo recebe o ELEMENTO pronto (icon={<Settings />}); o DS tem lucide-react como peer e não mantém tabela de nomes.
+DO: use `icon` quando o item é ação nomeada e reconhecível (Configurações, Sair); ícone decorativo — o rótulo continua sendo o nome acessível.
 DO: para "só um menu aberto por vez" em Table, guarde no pai um único id aberto; marque ações destrutivas com destructive: true.
 
 ## Exemplo mínimo (válido, copiável)

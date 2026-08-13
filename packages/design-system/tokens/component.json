@@ -240,7 +240,9 @@
     "header-spacing": "0.08em"
   },
   "popover": {
-    "min-width":     "160px"
+    "$description": "Painel flutuante de menu (DropdownMenu). O icone do item e 16 — um degrau ABAIXO do icone de busca/iconbtn, porque o item de menu tem altura de botao pequeno (--btn-height-sm) e o icone acompanha o rotulo em vez de competir com ele. Numero proprio, e por isso token: a Leva 16 pediu 'pequenos icones' e sem token a proxima tela escolhe outro tamanho.",
+    "min-width":     "160px",
+    "icon-size":     "16px"
   },
   "modal": {
     "width-sm":      "480px",
