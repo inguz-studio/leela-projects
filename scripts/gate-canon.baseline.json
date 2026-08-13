@@ -1,5 +1,5 @@
 {
-  "medidoEm": "2026-08-12",
+  "medidoEm": "2026-08-13",
   "contagens": {
     "superficie-crua": {
       "painel": 107,
@@ -10,7 +10,7 @@
       "landing": 0
     },
     "grade-crua": {
-      "painel": 104,
+      "painel": 103,
       "landing": 12
     },
     "receita-de-grid": {

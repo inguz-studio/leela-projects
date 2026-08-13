@@ -240,9 +240,10 @@ const SUPERFICIES: SuperficieNav[] = [
   {
     nome: 'sub-abas de Kits',
     landmark: 'Seções de kits',
-    // 3 e não 4 desde a S1257: o item "Credenciamento" saiu daqui — ele
-    // repetia o `href` da aba do menu secundário do evento.
-    ancoras: 3,
+    // 2 e não 4: a S1257 tirou o item "Credenciamento" (repetia o `href` da
+    // aba do menu secundário do evento) e a S1258 fundiu "Estoque" dentro de
+    // "Distribuição". Sobraram a aba-índice e a distribuição.
+    ancoras: 2,
     atual: 'Cadastro',
     montar: () =>
       montarSobContexto(`/eventos/${SLUG}/kits`, <KitsLayout />),

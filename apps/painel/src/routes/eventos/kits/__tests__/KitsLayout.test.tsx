@@ -41,14 +41,11 @@ function abas(): HTMLElement {
 }
 
 describe('S1257 · a sub-nav de Kits para de duplicar Credenciamento', () => {
-  it('a sub-nav de Kits tem 3 abas, e nenhuma delas é Credenciamento', () => {
+  it('nenhuma aba de Kits é Credenciamento', () => {
     montar(`/eventos/${SLUG}/kits`);
     const links = within(abas()).getAllByRole('link');
-    expect(links.map((l) => l.textContent?.trim())).toEqual([
-      'Cadastro',
-      'Distribuição',
-      'Estoque',
-    ]);
+    // Depois da S1258 sobram duas: a aba-índice e a distribuição.
+    expect(links.map((l) => l.textContent?.trim())).toEqual(['Cadastro', 'Distribuição']);
     expect(within(abas()).queryByText('Credenciamento')).toBeNull();
   });
 
@@ -69,5 +66,22 @@ describe('S1257 · a sub-nav de Kits para de duplicar Credenciamento', () => {
     const credenciamento = eventoSubNavTabs(SLUG, 'kits').find((t) => t.id === 'entrega');
     expect(credenciamento?.label).toBe('Credenciamento');
     expect(credenciamento?.href).toBe(`/eventos/${SLUG}/credenciamento`);
+  });
+});
+
+describe('S1258 · Distribuição absorve Estoque, e o endereço antigo não morre', () => {
+  it('a aba "Estoque" não existe mais na sub-nav', () => {
+    montar(`/eventos/${SLUG}/kits`);
+    expect(within(abas()).queryByText('Estoque')).toBeNull();
+  });
+
+  it('na rota antiga `kits/estoque` a aba ACESA é Distribuição', () => {
+    // Durante o salto a aba certa já fica marcada — a pessoa que chega pelo
+    // favorito antigo não vê a sub-nav sem nenhuma aba ativa.
+    montar(`/eventos/${SLUG}/kits/estoque`);
+    expect(within(abas()).getByText('Distribuição').closest('a')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 });
