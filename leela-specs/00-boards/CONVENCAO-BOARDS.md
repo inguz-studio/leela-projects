@@ -70,7 +70,7 @@ Reorganização de 2026-07-18: `leela-specs/` tem só `HOME.md` e `README.md` na
 
    | Arquivo | O que guarda |
    |---|---|
-   | `00-review.md` | a ata — o pedido do cliente/Vitor na íntegra (verbatim), reconstruída do audit |
+   | `00-review.md` | a ata — o pedido do cliente/Vitor na íntegra, reconstruída do audit |
    | `01-planning.md` | os lotes, quem executou, modelo, gates e o placar final |
    | `02-jtbd.md` | matriz story → JTBD |
    | `03-stories.md` | user stories com ACs |
@@ -78,6 +78,10 @@ Reorganização de 2026-07-18: `leela-specs/` tem só `HOME.md` e `README.md` na
    | `05-rns-delta.md` | **só o delta** de RNs da rodada |
 
 2. **RN nova SEMPRE consolida no épico na aterrissagem.** A regra de negócio canônica mora em `03-canon/epics/` (a seção "Regras de negócio novas" do épico); a rodada guarda apenas o **delta** em `05-rns-delta.md`, apontando para o épico. Ponta solta de RN vira atualização do épico na MESMA aterrissagem — nunca fica só no delta da rodada. (Par da regra de boards: o épico é atualizado junto do kanban.)
+
+## O painel de decisões
+
+Mesma disciplina do card, aplicada ao [[DECISOES-ABERTAS]]: ele carrega **só o que ainda é decisão do dono**, e nada de ata. Cabeçalho de no máximo 3 linhas (o que é, a contagem contada à mão, e o ponteiro para `02-rodadas/`), o contrato do padrão escrito no topo, e depois só itens — título, um parágrafo curto de contexto, caso de uso e job story em uma linha cada, o que fica com ele, opções com o default proposto e onde aterrissa. **Item fechado sai na mesma aterrissagem**, e o registro do fechamento vai para o arquivo da rodada; narrativa de fechamento nunca vira parágrafo no painel. Trabalho ordenado que não pede resposta dele não mora lá: vive em [[FILA-DE-CONSTRUCAO]]. Ordem do dono de 2026-08-12, registrada em `02-rodadas/2026-08-12-decisoes-dono/01-decisoes-dono.md` §Adendo da tarde.
 
 ## Onde foi parar o detalhe antigo
 

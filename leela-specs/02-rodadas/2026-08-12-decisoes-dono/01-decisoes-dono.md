@@ -368,6 +368,45 @@ e ADMIN-USUARIOS-2. Ficam quatro, contados à mão contra as duas seções do pa
 e o **CRM-4** em "Decisões que dependem de você", e o **69** e o **JUROS-1** em "Ações que só
 você pode executar".
 
+## Adendo da tarde de 12/08 · decisão de processo — o painel vira só decisão
+
+Não é decisão de produto, é decisão sobre como a casa registra. Entra aqui porque é dele, e porque
+foi cobrada duas vezes.
+
+**Fala do dono, na íntegra:** *"o painel de decisoes está sujo e já falei pra voce limpar ele com
+informações que nao sejam estritamene minhas tomadas de decisão, nao quero porra nenhuma de ata. (...)
+ta complicado aprender isso ou vamos padronizar logo ?"*
+
+**Leitura.** A cobrança é de repetição, não de estilo. O painel tinha acumulado cerca de vinte
+parágrafos de narrativa no cabeçalho — cortes, trocas, purga, levas 6, 7 e 8 —, e cada limpeza anterior
+tirava itens sem tirar a ata que eles deixavam. A pergunta final é a ordem de verdade: escrever o
+padrão em vez de reaprendê-lo a cada rodada.
+
+**O padrão, que passa a viver escrito no topo do próprio painel como contrato.**
+
+1. Cabeçalho de no máximo 3 linhas: o que é o painel, a contagem atual contada à mão, e onde vive o
+   histórico de fechamentos (`02-rodadas/`).
+2. Depois do cabeçalho, só itens. Item = título · um parágrafo curto de contexto, no máximo 3 frases ·
+   caso de uso em uma linha · job story em uma linha · o que fica com você · opções com o default
+   proposto · onde aterrissa. A seção "Ações que só você pode executar" segue a mesma régua.
+3. Item fechado sai na mesma aterrissagem, e o registro do fechamento vai para a rodada. Narrativa de
+   fechamento nunca vira parágrafo no painel.
+
+**Efeito, aplicado no mesmo ato.** O painel foi reescrito no padrão: os parágrafos de narrativa saíram
+depois de conferido, um a um, que o fato já vivia na rodada citada — o único que existia só no painel
+era o resultado da execução da purga de 10/08, e ele foi movido para
+`02-rodadas/2026-08-09-decisoes-dono/02-fila-execucao.md` §PURGA-DADOS-TESTE antes de a linha ser
+apagada. A seção "Fila de construção" inteira, com as pendências do CTO, saiu para
+`leela-specs/01-produto/FILA-DE-CONSTRUCAO.md`, com ponteiro de uma linha no fim do painel: ela nunca
+foi decisão dele. Os cinco itens vivos ficaram, comprimidos para o formato, com opções e defaults
+intocados — nenhuma decisão foi fechada nem aberta nesta passagem.
+
+**Onde mais o padrão foi escrito.** [[CONVENCAO-BOARDS]] §"O painel de decisões", para a régua morar
+junto da governança de registro dos boards, e não só dentro do arquivo que ela governa.
+
+**Condição de reabertura.** Ele pedir de volta algum tipo de contexto que o padrão hoje manda para a
+rodada. O caminho é emendar o contrato no topo do painel, não voltar a escrever ata solta.
+
 ## Arquivos desta rodada
 
 | Arquivo | O que carrega |
