@@ -804,3 +804,86 @@ vigésima quarta vez.
 **Fora do projeto.** O dono registrou a mesma prática um nível acima, para a casa: *"é primordial
 que nossa software forge utilize a prática de snippets e design system."* Registro em
 `02-rodadas/2026-08-11-decisoes-dono/03-leva6-tarde.md §Leva 7` e no complemento do mesmo ato.
+
+---
+
+## Delta a conformidade dos controles é medida, e a resposta muda o diagnóstico (2026-08-12 · CONFORMIDADE-CONTROLES)
+
+**A ordem do dono, na íntegra:**
+
+> *"Pesquisadores, combobox, filtros, componente de seleção e pesquisa dos filtros e caiaxs de
+> seleção naoe stao padronizados. Voce está apliacndo sempre o design system ou recriando eles do
+> zero? se estiver recriando está quebrando uma regra nossa que nao pode ser quebrada. E precisamos
+> ter uma leva de conferencia de conformidade ao design system apdronização de componentes
+> também."*
+
+### S006 · a conformidade dos controles vira medição, trava e fila
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S006-T1 · o inventário das seis famílias, ocorrência por ocorrência | ✅ | `02-rodadas/2026-08-12-conformidade-controles/01-inventario-controles.md` — 134 ocorrências em 303 arquivos de tela, com arquivo e linha |
+| S006-T2 · a resposta com número à pergunta do dono | ✅ | mesmo documento, §10, citável |
+| S006-T3 · a extensão da catraca para estas famílias | ✅ | `.../02-catraca-controles.md` — regra 3 `filtro-fora-do-canone` + cinco contagens novas com baseline medido |
+| S006-T4 · a fila em ondas por JTBD | ✅ | `.../03-fila-em-ondas.md` — sete ondas, C0 enabler e C1 independente |
+| S006-T5 · Onda C0, as cinco peças nascem no DS | ⏳ | livre |
+| S006-T6 · Onda C1, as sete violações viram adoção | ⏳ | livre, independe da C0 |
+| S006-T7 · Ondas C2 a C6, a conversão por superfície | ⏳ | esperam a C0 |
+
+### O que a medição corrigiu no diagnóstico do próprio épico
+
+A hipótese que abriu a leva era que a violação objetiva fosse **recriação onde o canônico existe**.
+Ela existe, e são sete casos: cinco por cento das ocorrências. O que domina é o outro mecanismo.
+
+| Veredito | Quantas | % |
+|---|---:|---:|
+| (a) usa o canônico | 68 | 51% |
+| (b) recria onde o canônico EXISTE | **7** | 5% |
+| (c) recria onde NÃO existe canônico | **59** | 44% |
+
+**O produto não recria o controle. Recria o que fica em volta do controle.** Zero `<input>` cru,
+zero `<input type="checkbox">`, zero combobox artesanal (`role="combobox"`, `role="listbox"` e
+`aria-autocomplete` não têm um único hit fora do DS), um único `<select>` nativo no produto inteiro.
+A proibição mais dura do cânone — checkbox nativo com a severidade do `<select>` nativo — é a mais
+obedecida.
+
+As quatro peças que faltam, e que respondem por 54 das 59 ocorrências (c):
+
+| Peça ausente | Recriações | O que a ausência produziu |
+|---|---:|---|
+| barra de filtros | 13 | uma casca app-local (`ListaGlobal`) e treze montagens de tela |
+| grupo de faceta | 12 | oito com chip "Todos", quatro sem; uma com contagem, onze sem |
+| contador de resultado | 12 | três dialetos de ARIA, duas grafias, **duas sem canal nenhum** |
+| par rótulo + checkbox | 17 | três dialetos que só se distinguem quando o rótulo quebra em duas linhas |
+
+O `Checkbox` do DS não tem prop de rótulo (`CheckboxProps` estende `InputHTMLAttributes` e
+acrescenta só `indeterminate`), e o `Field` põe o rótulo acima do controle — o rótulo de um checkbox
+vai ao lado. Não é omissão de quem escreveu a tela: não havia o que importar.
+
+### RN-568 · a montagem em volta do controle é peça do design system, não receita de tela (nova · 2026-08-12 · CONFORMIDADE-CONTROLES)
+
+A RN-558 diz que toda instância de padrão nomeado usa o componente canônico. A CANONE-1 diz o que
+acontece quando o cânone não tem componente para o padrão. Esta regra fecha o terceiro caso, que as
+duas deixavam de fora por construção: **a composição recorrente de controles canônicos também é um
+padrão nomeado.**
+
+Uma barra de filtros feita inteiramente de `SearchInput`, `Chip` e `Combobox` do design system passa
+no gate de marca, no gate de procedência e na leitura humana com o cânone na mão — e ainda assim é
+a décima quarta escrita da mesma peça. O que ela decide não é estilo: é se a faceta tem "Todos", se
+o contador avisa o leitor de tela, se o rótulo alinha ao topo quando quebra. Hoje isso é escolha de
+cada tela, e as telas escolheram diferente.
+
+**Aplicação:** montagem que aparece três vezes ou mais com a mesma anatomia nasce no design system,
+com story, teste, contrato e linha do cânone no mesmo commit. A catraca a mede por contagem
+(`faceta-crua`, `barra-de-filtro-crua`, `contador-de-resultado-cru`, `rotulo-de-checkbox-cru`,
+`grupo-de-campos-cru`) enquanto a peça não existe, e vira `error` quando ela nasce.
+
+### Achado de lado, e ele abre a fila
+
+`node scripts/gate-canon.mjs` na main de `f962efe3` devolve `GATE LEELA-CANON: FAIL (1)`:
+`grade-crua.painel` subiu de 104 para 109 com o merge do administrativo, que escreveu cinco molduras
+à mão depois de `Stack`, `FormGrid` e `MetricGrid` existirem. A leva de conferência não conserta
+(zero código de produto), e o item abre a Onda C0.
+
+Vale o registro pelo que ele prova: **a catraca pegou a regressão sozinha, no dia seguinte, sem
+ninguém revisar com o cânone na mão.** É o argumento inteiro a favor de estendê-la para as quatro
+famílias que hoje passam batido.
