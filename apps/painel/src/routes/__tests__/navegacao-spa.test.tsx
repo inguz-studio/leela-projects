@@ -244,7 +244,8 @@ const SUPERFICIES: SuperficieNav[] = [
     // aba do menu secundário do evento) e a S1258 fundiu "Estoque" dentro de
     // "Distribuição". Sobraram a aba-índice e a distribuição.
     ancoras: 2,
-    atual: 'Cadastro',
+    // "Gerenciamento" desde a S1259 (RN-572) — o `id` interno segue `cadastro`.
+    atual: 'Gerenciamento',
     montar: () =>
       montarSobContexto(`/eventos/${SLUG}/kits`, <KitsLayout />),
   },

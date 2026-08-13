@@ -326,7 +326,7 @@ export function KitEditor({
             { label: 'Eventos', href: '/eventos' },
             { label: evento.nome, href: `/eventos/${evento.slug}` },
             { label: 'Kits', href: `/eventos/${evento.slug}/kits` },
-            { label: 'Cadastro', href: `/eventos/${evento.slug}/kits` },
+            { label: 'Gerenciamento', href: `/eventos/${evento.slug}/kits` },
             { label: kit ? kit.nome : 'Novo kit' },
           ],
           navigate,
@@ -453,7 +453,7 @@ export function KitEditor({
         </div>
         {itens.length === 0 ? (
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-            Nenhum item no catálogo. Adicione itens no cadastro.
+            Nenhum item no catálogo. Adicione itens no Gerenciamento.
           </p>
         ) : (
           <ul className="flex flex-col gap-[var(--spacing-2)]">

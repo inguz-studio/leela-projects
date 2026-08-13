@@ -45,7 +45,7 @@ describe('S1257 · a sub-nav de Kits para de duplicar Credenciamento', () => {
     montar(`/eventos/${SLUG}/kits`);
     const links = within(abas()).getAllByRole('link');
     // Depois da S1258 sobram duas: a aba-índice e a distribuição.
-    expect(links.map((l) => l.textContent?.trim())).toEqual(['Cadastro', 'Distribuição']);
+    expect(links.map((l) => l.textContent?.trim())).toEqual(['Gerenciamento', 'Distribuição']);
     expect(within(abas()).queryByText('Credenciamento')).toBeNull();
   });
 
@@ -80,6 +80,32 @@ describe('S1258 · Distribuição absorve Estoque, e o endereço antigo não mor
     // favorito antigo não vê a sub-nav sem nenhuma aba ativa.
     montar(`/eventos/${SLUG}/kits/estoque`);
     expect(within(abas()).getByText('Distribuição').closest('a')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+});
+
+describe('S1259 · a aba-índice de Kits vira "Gerenciamento" (RN-572)', () => {
+  it('a primeira aba lê "Gerenciamento", nunca mais "Cadastro"', () => {
+    montar(`/eventos/${SLUG}/kits`);
+    expect(within(abas()).getByText('Gerenciamento')).toBeInTheDocument();
+    expect(within(abas()).queryByText('Cadastro')).toBeNull();
+  });
+
+  it('a rota da aba-índice NÃO muda com o rótulo', () => {
+    // RN-572 é troca de PALAVRA, na régua da RN-399: o `id` (`cadastro`) e o
+    // endereço ficam. Trocar qualquer um dos dois seria migração, não renome.
+    montar(`/eventos/${SLUG}/kits`);
+    expect(within(abas()).getAllByRole('link')[0]).toHaveAttribute(
+      'href',
+      `/eventos/${SLUG}/kits`,
+    );
+  });
+
+  it('"Gerenciamento" é a aba ATIVA na rota-índice (o `id` interno segue `cadastro`)', () => {
+    montar(`/eventos/${SLUG}/kits`);
+    expect(within(abas()).getByText('Gerenciamento').closest('a')).toHaveAttribute(
       'aria-current',
       'page',
     );

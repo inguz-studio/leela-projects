@@ -15,6 +15,13 @@
 //           mesmo número entre Distribuição e Estoque; as duas viraram UMA aba
 //           (`kits/distribuicao`), e o endereço `kits/estoque` salta para ela.
 //
+//   S1259 · a aba-índice deixou de se chamar "Cadastro" e passou a se chamar
+//           "Gerenciamento" (RN-572). A medição mostrou que ela já fazia mais
+//           que cadastrar — cria E edita kits (por rota própria) e itens (por
+//           modal), com KPIs de resumo e configuração de patrocínio. O `id`
+//           interno continua `cadastro` e a rota continua `/eventos/:slug/kits`:
+//           mesma régua da RN-399, muda o que a pessoa lê, não o identificador.
+//
 // Sobram duas: a aba-índice e a distribuição.
 // =============================================================================
 
@@ -37,7 +44,7 @@ export function KitsLayout(): JSX.Element {
   // é interceptado e navega por SPA — LEELA-NAVFIX-T2.
   const tabs: SubNavTab[] = tabsComNavSpa(
     [
-      { id: 'cadastro', label: 'Cadastro', href: base, active: ativa === 'cadastro' },
+      { id: 'cadastro', label: 'Gerenciamento', href: base, active: ativa === 'cadastro' },
       // `estoque` continua acendendo a aba: o endereço antigo salta para
       // `distribuicao`, e durante o salto a aba certa já fica marcada.
       {
