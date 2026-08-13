@@ -132,7 +132,7 @@ visual. O que ela precisa provar, quando rodar: `próxima corrida`, `Corrida de 
 ## ⛔ Delta exato para a review antagonista
 
 - **Branch:** `copy-apply` (preservada), merge `--no-ff` na `main`
-- **Delta a revisar:** `DELTA_HASHES`
+- **Delta a revisar:** **`9a8af79c..eb24170c`** — merge `eb24170c`, 18 arquivos, 695 inserções e 72 remoções. Os 7 commits da lane: `f23df9dc` (S1252), `66212438` (S1253), `c5ee93d2` (S1254), `86567b23` (S1255), `f55187b6` (S1256), `b2def2ec` (rodada + handoff), `aa1bd856` (leva 13, vetáveis, épico e boards)
 - **Arquivos de código:** 10, todos em `apps/landing/`
 - **Arquivos de registro:** rodada, vetáveis, decisões do dono, épico E12, kanban e checklist
 
