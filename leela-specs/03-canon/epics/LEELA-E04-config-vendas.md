@@ -2479,6 +2479,10 @@ entre modalidade, lote, kit e campanha. Três fatos que a apuração devolveu:
 **Também aberto, se ele quiser:** hoje o menu do evento é visão geral, inscritos, kits, lotes e
 configurações. Se modalidades ganharem lugar próprio, entram entre kits e lotes.
 
+**Subiu ao painel em 12/08.** A proposta vivia só aqui, fora do alcance de quem olha o painel — o
+dono perguntou por ela no chat de 12/08 e a pergunta provou a lacuna. Ela entra em
+`leela-specs/01-produto/DECISOES-ABERTAS.md` como **MODALIDADES-1**, no formato integral da casa.
+
 ## Delta a venda paga tem chão (SERV1-BUILD · 2026-08-11 · decisão do dono SERV-2)
 
 O dono fechou o **SERV-2** na manhã de 11/08, na íntegra: *"venda minima é de 10 reais"*. É a

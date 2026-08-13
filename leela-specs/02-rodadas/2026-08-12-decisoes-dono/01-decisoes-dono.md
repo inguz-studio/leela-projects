@@ -192,6 +192,12 @@ enquanto a tela não nascer. E o gate de frescor: o Strava acrescenta tipo de es
 frequência — a lista de casa envelhece sozinha, e a RN-563 é o que impede isso de ser
 descoberto por um participante em vez de por nós.
 
+**+12/08 (tarde) · a lista vira insumo declarado da S316.** Quando a S316 subir (fase B do
+**MODALIDADES-1**, agora no painel canônico), o vocabulário físico do editor de modalidades
+deriva desta mesma tabela — uma fonte só, nunca duas listas de modalidade divergindo entre a
+Arena e o cadastro do evento. Nenhuma tarefa nasce aqui; é ponteiro de intenção, registrado em
+`leela-specs/01-produto/DECISOES-ABERTAS.md` **MODALIDADES-1**.
+
 ## 5 · CRM-1 · DECIDIDO — as quatro visões que saem de dado pronto
 
 A varredura de 05/08 achou dez visões possíveis para a primeira leva do CRM e mediu o custo de
