@@ -10,7 +10,9 @@ verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
 import { SubNav, type SubNavProps, type SubNavTab } from '@leela/design-system'
 
 ## Quando usar
-Barra de sub-navegação entre ROTAS de uma seção (nav landmark + links com aria-current="page"). Container TRANSPARENTE (D-1008-R18): itens + indicador direto sobre a página — o AA por estado é medido contra o fundo da PÁGINA (gate na suíte de contraste). O underline Brasa 2px da ativa é um indicador ÚNICO que DESLIZA entre as abas ao trocar seleção (D-1008-R14; motion por token, motion-reduce honrado); contador opcional em pill.
+Barra de sub-navegação entre ROTAS de uma seção (nav landmark + links com aria-current="page"). É o ÚNICO menu secundário do produto: área, sub-área e terciária usam este componente, com a mesma aparência — não existe variante por nível. Container TRANSPARENTE (D-1008-R18) e SEM borda inferior (Leva 14): itens + indicador direto sobre a página — o AA por estado é medido contra o fundo da PÁGINA (gate na suíte de contraste). O underline Brasa 2px da ativa é um indicador ÚNICO que DESLIZA entre as abas ao trocar seleção (D-1008-R14; motion por token, motion-reduce honrado); contador opcional em pill.
+
+No painel, NÃO renderize este componente direto: use `AreaSubNav` (apps/painel/src/components/nav/AreaSubNav.tsx), que é o consumidor único e já fia a navegação de SPA. A catraca `menu-secundario-cru` do gate leela-canon conta os renders diretos e o baseline é zero.
 
 ## Quando NÃO usar
 Não use para troca de conteúdo dentro da mesma página — isso é o Tabs (tablist ARIA). SubNav é navegação entre rotas, não tablist.
@@ -18,9 +20,8 @@ Não use para troca de conteúdo dentro da mesma página — isso é o Tabs (tab
 ## Props válidas
 - tabs: SubNavTab[]   (obrigatório) — SubNavTab = { id: string; label: string; href?: string; count?: number; active?: boolean; onClick?: (event: React.MouseEvent) => void }
 - 'aria-label': string   (default: 'Navegação de seções')
-- divider: boolean   (default: false) — divisória inferior das sub-navs terciárias (RN-229)
 - className: string   (default: undefined)
-Nenhuma outra prop existe.
+Nenhuma outra prop existe. `divider` FOI REMOVIDA na Leva 14 (13/08) — ela desenhava a linha que o dono mandou tirar.
 
 ## Tokens consumidos (nenhum valor cru permitido)
 - (container TRANSPARENTE desde D-1008-R18 — nenhum token de fundo) / --surface-raised (pill do contador)
@@ -33,12 +34,13 @@ Nenhuma outra prop existe.
 - --text-primary / --text-secondary
 - --radius-sm
 - --motion-duration-fast / --motion-duration-normal / --motion-easing-default (indicador deslizante)
-- --border-subtle (divider opcional)
 
 ## Proibido (do/don't)
 DON'T: props value/onValueChange/defaultTab — NÃO existem aqui (isso é Tabs); o estado ativo vem de tab.active.
 DON'T: content dentro de SubNavTab — SubNav não renderiza painéis, só a barra.
 DON'T: hex, rgb, px, rem em style inline.
+DON'T: className com border-b (nem divider, nem "só para separar do conteúdo") — a borda inferior é travada em border-b-0 depois do className e o override não pega. Separação da barra é ESPAÇO, feito pelo gap da moldura.
+DON'T: recriar a barra à mão com flex + border-b-2 na aba ativa; é o padrão que a catraca menu-secundario-cru reprova.
 DO: marque exatamente uma tab com active: true; use href para navegação real e onClick para SPAs.
 
 ## Exemplo mínimo (válido, copiável)

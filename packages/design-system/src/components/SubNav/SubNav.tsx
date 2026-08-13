@@ -2,8 +2,8 @@
  * SubNav — barra de sub-navegação (§2.14).
  *
  * Container: TRANSPARENTE (D-1008-R18), padding 0 40px (--subnav-px), SEM
- * border-bottom (a `divider` opcional das terciárias segue existindo). Itens e
- * indicador deslizante assentam DIRETO sobre a página.
+ * border-bottom — sem exceção nenhuma desde a Leva 14. Itens e indicador
+ * deslizante assentam DIRETO sobre a página.
  * Tab inativa: font-weight 400, text-secondary.
  * Tab ativa: font-weight 600, text-primary, sublinhado Brasa 2px (indicador
  * deslizante único — D-1008-R14).
@@ -61,15 +61,18 @@ export interface SubNavProps {
   tabs: SubNavTab[];
   /** Rótulo do landmark de navegação. */
   'aria-label'?: string;
-  /**
-   * Divisória inferior (RN-229 · S-R9-10). Default `false` = plano (decisão do
-   * Vitor 2026-07-11, preservado em TODOS os consumidores existentes). `true`
-   * alinha ao padrão de Comunicação (Tabs §2.7): `border-b` em `--border-subtle`
-   * — usado nas sub-navs TERCIÁRIAS dentro de eventos (Financeiro/Kits/Config).
-   */
-  divider?: boolean;
   className?: string;
 }
+// A prop `divider` MORREU na Leva 14. Ela existia desde a RN-229 (S-R9-10) para
+// as sub-navs terciárias e desenhava `border-b` em `--border-subtle`. O dono
+// leu o resultado na tela e reprovou, na íntegra: *"o menu secundário de clubs
+// está coreto, mas nas outras telas, a linha esta aparecendo, aonde os
+// seletores laranja ficam."* A linha é literalmente isso — o border-bottom
+// assenta no MESMO `bottom: 0` do indicador Brasa, e onde o indicador não está
+// (as abas inativas) sobra o traço cinza atravessado. Oito dos onze menus do
+// painel passavam `divider`; clubs, que não passava, era o único certo. Tirar a
+// prop é o que faz a linha morrer na origem uma vez, em vez de morrer em oito
+// arquivos e voltar no nono.
 
 // ---------------------------------------------------------------------------
 // Component
@@ -78,7 +81,6 @@ export interface SubNavProps {
 function SubNav({
   tabs,
   'aria-label': ariaLabel = 'Navegação de seções',
-  divider = false,
   className,
 }: SubNavProps): JSX.Element {
   const tabRefs = React.useRef<(HTMLAnchorElement | HTMLButtonElement | null)[]>([]);
@@ -139,8 +141,6 @@ function SubNav({
         // horizontal INTERNO: em telas estreitas a barra rola em vez de quebrar.
         // `overscroll-x-contain` evita que o gesto de scroll da barra role a página.
         'overscroll-x-contain',
-        // RN-229 (S-R9-10): divisória opcional das terciárias, igual a Comunicação.
-        divider && 'border-b border-b-[var(--border-subtle)]',
         className,
         // ---------------------------------------------------------------------
         // TRAVA DE ROLAGEM — DEPOIS do `className` DE PROPÓSITO (REV-LOTES).
@@ -152,7 +152,9 @@ function SubNav({
         // um defeito que o dono já reportou DUAS vezes — com o teste de contrato
         // ainda verde, porque ele renderiza sem `className`. Vindo por último, a
         // trava vence qualquer override: o eixo do SubNav não é configurável.
-        // Cor, fundo, padding e borda seguem sobrescrevíveis (outros grupos).
+        // Cor, fundo e padding seguem sobrescrevíveis (outros grupos); a BORDA
+        // INFERIOR saiu dessa lista na Leva 14 e ganhou trava própria, logo
+        // abaixo.
         //
         // A escolha do SEM_CROMO é da navegação, e é o pedido literal do dono,
         // feito duas vezes: `w-max` na lista estoura a largura em tablet/celular,
@@ -166,6 +168,22 @@ function SubNav({
         // A regra da casa e o porquê do eixo y fechado estão em utils/scroll.ts.
         // ---------------------------------------------------------------------
         SCROLL_X_ONLY_SEM_CROMO,
+        // ---------------------------------------------------------------------
+        // TRAVA DA LINHA (Leva 14) — também DEPOIS do `className`, e pela mesma
+        // mecânica: `twMerge` resolve `border-b-*` pelo último da lista, então
+        // `border-b-0` vence qualquer `border-b` que um consumidor tente passar.
+        //
+        // Tirar a prop `divider` conserta os oito arquivos de hoje. Só que a
+        // linha voltaria pela porta de trás no dia em que alguém escrevesse
+        // `<SubNav className="border-b …">` para "separar do conteúdo" — que é
+        // exatamente o raciocínio que criou a RN-229. Esta lane é a TERCEIRA
+        // cobrança da classe padronização; consertar o sintoma e deixar a porta
+        // aberta é como as duas primeiras terminaram.
+        //
+        // A borda inferior do SubNav não é configurável. Quem precisa separar a
+        // barra do conteúdo usa espaço (o `gap` da moldura), não traço.
+        // ---------------------------------------------------------------------
+        'border-b-0',
       )}
     >
       <ul role="list" className="flex w-max items-end gap-[var(--spacing-1)] h-[var(--subnav-height)]">

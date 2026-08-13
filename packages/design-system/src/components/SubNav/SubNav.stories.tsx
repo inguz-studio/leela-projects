@@ -23,12 +23,21 @@ type Story = StoryObj<typeof SubNav>;
 export const Default: Story = {};
 
 /**
- * Com divisória (RN-229 · S-R9-10): padrão das sub-navs TERCIÁRIAS dentro de
- * eventos (Financeiro/Kits/Configurações), alinhado a Comunicação. Default
- * segue plano (Vitor 2026-07-11); `divider` é opt-in.
+ * O menu de ÁREA — a anatomia que o dono aprovou na tela de clubs e que a Leva
+ * 14 tornou a única: barra transparente, sem traço nenhum embaixo, e o Brasa
+ * deslizando sozinho como orientação. Todas as áreas do painel renderizam esta
+ * story; nenhuma tem versão própria.
+ *
+ * A story `ComDivisoria` existiu aqui até 13/08 e foi removida junto com a prop
+ * `divider`. Ela documentava a linha que o dono mandou tirar.
  */
-export const ComDivisoria: Story = {
-  args: { divider: true },
+export const MenuDeArea: Story = {
+  args: {
+    tabs: [
+      { id: 'clubes', label: 'Clubs', active: true },
+      { id: 'engajamento', label: 'Engajamento' },
+    ],
+  },
 };
 
 /** Sem contadores — só navegação. */
