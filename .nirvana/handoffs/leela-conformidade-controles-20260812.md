@@ -66,5 +66,15 @@ o atalho não existe no painel, então o `kbd` promete uma tecla que não faz na
 
 | Hash | O que |
 |---|---|
-| (ver `git log`) | rodada 2026-08-12-conformidade-controles: inventário, catraca, fila |
-| (ver `git log`) | board e épico E01 na mesma aterrissagem |
+| `db3a8404` | rodada `2026-08-12-conformidade-controles`: inventário, catraca, fila |
+| `4f43eb37` | kanban, BOARD-EPICOS, épico E01 com a S006 e a RN-568, índice de RNs com a faixa refeita |
+| `391fd918` | este handoff |
+
+Push feito: `b56fe822..391fd918` em `origin/main`.
+
+## O que a próxima lane faz primeiro
+
+1. **Onda C0.** As cinco peças nascem no DS, com o gate verde como pré-condição do fechamento.
+2. **Onda C1** pode rodar em paralelo: as sete violações são adoção de peça que já existe.
+3. Antes de qualquer conversão, `node scripts/gate-canon.mjs` tem de voltar a PASS — nenhuma onda
+   fecha com o relatório vermelho, e o critério de aceite comum exige o relatório como prova.
