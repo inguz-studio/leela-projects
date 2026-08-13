@@ -160,6 +160,16 @@ os 20s do `testTimeout` e passava sozinho em 4,1s. Os dois são da família que 
 Rebuildados os três pacotes, as quatro fatias fecharam verdes sem exceção. É o mesmo princípio que a
 casa já escreveu para o deploy — **artefato se julga rebuildado** —, e ele vale para a suíte também.
 
+## Aterrissagem
+
+| O que | Hash |
+|---|---|
+| merge `--no-ff` na main | `236c4656` |
+| main re-puxada antes do merge | `f529c53b` (merge `b8dcdcd8` na branch) |
+| push | confirmado, `ahead 0` |
+
+`gate-canon` rodado na main JÁ MERGEADA: **PASS**, as treze contagens no baseline. Nenhum deploy.
+
 ## O que fica para as próximas ondas
 
 - **C1 a C6 convertem as telas.** Esta lane não converteu nenhuma, por desenho.
