@@ -147,6 +147,96 @@ function tagsDeAbertura(fonte, tags) {
   return achados;
 }
 
+/**
+ * O `>` que fecha uma tag de abertura, a partir do fim do nome. Mesmo corte do
+ * `tagsDeAbertura` — nível zero de chaves e aspas.
+ *
+ * @returns {{ fim: number, auto: boolean }} índice do `>` e se ela auto-fecha.
+ */
+function fimDaAbertura(fonte, inicio) {
+  let i = inicio;
+  let chaves = 0;
+  let aspas = null;
+  while (i < fonte.length) {
+    const c = fonte[i];
+    if (aspas) {
+      if (c === aspas) aspas = null;
+    } else if (c === '"' || c === "'" || c === '`') {
+      aspas = c;
+    } else if (c === '{') {
+      chaves += 1;
+    } else if (c === '}') {
+      chaves -= 1;
+    } else if (c === '>' && chaves === 0) {
+      break;
+    }
+    i += 1;
+  }
+  return { fim: i, auto: fonte.slice(inicio, i).trimEnd().endsWith('/') };
+}
+
+/**
+ * Aberturas e fechamentos de UMA tag, em ordem, com o corpo de cada elemento.
+ *
+ * Existe porque as contagens desta rodada precisam olhar DENTRO do elemento — a
+ * faceta é um `role="group"` que contém dois ou mais chips, a barra é um bloco
+ * que contém busca E faceta. As cinco contagens anteriores só liam atributo, e
+ * por isso nenhuma delas via as quatro famílias que a rodada mediu.
+ *
+ * @returns {Array<{ tag: string, atributos: string, linha: number, corpo: string, inicioCorpo: number, fimCorpo: number }>}
+ */
+function elementosComCorpo(fonte, tag) {
+  const eventos = [];
+  const re = new RegExp(`<(/?)${tag}(?=[\\s/>])`, 'g');
+  let m;
+  while ((m = re.exec(fonte))) {
+    if (m[1] === '/') {
+      eventos.push({ tipo: 'fecha', inicio: m.index });
+      continue;
+    }
+    const depoisDoNome = m.index + m[0].length;
+    const { fim, auto } = fimDaAbertura(fonte, depoisDoNome);
+    eventos.push({
+      tipo: 'abre',
+      inicio: m.index,
+      auto,
+      corpo: fim + 1,
+      atributos: fonte.slice(depoisDoNome, fim),
+    });
+  }
+
+  const saida = [];
+  for (let i = 0; i < eventos.length; i += 1) {
+    const ev = eventos[i];
+    if (ev.tipo !== 'abre') continue;
+    const inicioCorpo = ev.corpo;
+    let fimCorpo = ev.corpo;
+    if (!ev.auto) {
+      let profundidade = 1;
+      let j = i + 1;
+      for (; j < eventos.length; j += 1) {
+        const seguinte = eventos[j];
+        if (seguinte.tipo === 'abre') {
+          if (!seguinte.auto) profundidade += 1;
+        } else {
+          profundidade -= 1;
+          if (profundidade === 0) break;
+        }
+      }
+      fimCorpo = j < eventos.length ? eventos[j].inicio : fonte.length;
+    }
+    saida.push({
+      tag,
+      atributos: ev.atributos,
+      linha: fonte.slice(0, ev.inicio).split('\n').length,
+      corpo: fonte.slice(inicioCorpo, fimCorpo),
+      inicioCorpo,
+      fimCorpo,
+    });
+  }
+  return saida;
+}
+
 // ===========================================================================
 // CAMADA A — integridade do cânone
 // ===========================================================================
@@ -206,6 +296,13 @@ const DIVIDA = [
   {
     regra: 'leela-canon/padrao-reimplementado-fora-do-ds',
     bloco: configRaiz.findIndex((b) => b?.rules?.['leela-canon/padrao-reimplementado-fora-do-ds']),
+  },
+  // Regra 3 (rodada 2026-08-12): entra aqui pelo mesmo serviço que as outras
+  // duas recebem — entrada MORTA na dívida reprova, então a lista de dois
+  // arquivos não sobrevive à onda que a apaga.
+  {
+    regra: 'leela-canon/filtro-fora-do-canone',
+    bloco: configRaiz.findIndex((b) => b?.rules?.['leela-canon/filtro-fora-do-canone']),
   },
 ];
 
@@ -310,12 +407,57 @@ const ehBotaoCruEstilizado = (attrs) =>
   (/rounded-ds-pill/.test(attrs) || /bg-\[var\(--action-[a-z-]+\)\]|bg-action-[a-z-]+/.test(attrs)) &&
   /px-|py-|\bp-/.test(attrs);
 
+// ---------------------------------------------------------------------------
+// As cinco contagens da rodada de 2026-08-12 (§3 da spec da catraca).
+//
+// Das 134 ocorrências que a rodada mediu, 129 passam pelas cinco contagens
+// acima sem tocar em nenhuma: elas medem superfície, botão, moldura, receita de
+// grid e padrão órfão, e a barra de filtro, o grupo de faceta, o contador e o
+// par rótulo-checkbox não são nada disso. Uma décima quarta barra montada à mão
+// entrava com o gate verde.
+//
+// DOIS CONSERTOS DE RÉGUA que a medição obrigou, e que a spec original já tinha
+// nomeado como ponto cego ("a catraca hoje não vê `<p>` nem const"):
+//
+//   1. O contador mora num `<p>` ou num `<span>` — doze de doze. Uma varredura
+//      que só olhe tag de contêiner nasce em ZERO e mente. Por isso esta
+//      contagem lê o CONTEÚDO TEXTUAL DA LINHA: a assinatura é a frase, e a
+//      frase é o que se repete.
+//   2. A faceta e a barra moram em componentes locais declarados com `const` ou
+//      `function` dentro do arquivo de tela. Um parser que só desça a árvore do
+//      `export default` não os vê. As cinco contagens varrem o ARQUIVO INTEIRO,
+//      como as de superfície e moldura já fazem.
+// ---------------------------------------------------------------------------
+
+/** Tags que podem hospedar um grupo de faceta ou uma barra montada à mão. */
+const TAGS_DE_BLOCO = ['div', 'section', 'header', 'form', 'fieldset', 'ul', 'nav', 'aside', 'span', 'li', 'p', 'label'];
+
+/** Rótulo de `role="group"` que declara papel de faceta. */
+const ROTULO_DE_FACETA = /aria-label=(?:"|'|\{")\s*(filtrar|filtro|recorte)/i;
+/** O que uma faceta hospeda: dois ou mais chips (ou botões replicando chip). */
+const contaOcorrencias = (texto, agulha) => texto.split(agulha).length - 1;
+
+/** A barra de filtro: um bloco `flex` com busca E pelo menos um recorte. */
+const TEM_BUSCA = /<SearchInput\b/;
+const TEM_RECORTE = /<Chip\b|<Combobox\b|<Select\b|role="group"/;
+/** As duas cascas que JÁ fatoram a barra — elas não são dívida. */
+const CASCA_FATORADA = /<Toolbar\b|<ListaGlobal\b|<FilterBar\b/;
+
+/** A frase do contador, lida por LINHA — ela mora em `<p>` e em `<span>`. */
+const FRASE_DO_CONTADOR = /\b[Mm]ostrando\b/;
+const HELPER_DO_CONTADOR = /\b(contadorInscritos|rotuloContagem)\s*\(/;
+
 const contagens = {
   'superficie-crua': {},
   'botao-cru-estilizado': {},
   'grade-crua': {},
   'receita-de-grid': {},
   'padrao-orfao': {},
+  'faceta-crua': {},
+  'barra-de-filtro-crua': {},
+  'contador-de-resultado-cru': {},
+  'rotulo-de-checkbox-cru': {},
+  'grupo-de-campos-cru': {},
 };
 const detalhes = {
   'superficie-crua': [],
@@ -323,6 +465,11 @@ const detalhes = {
   'grade-crua': [],
   'receita-de-grid': [],
   'padrao-orfao': [],
+  'faceta-crua': [],
+  'barra-de-filtro-crua': [],
+  'contador-de-resultado-cru': [],
+  'rotulo-de-checkbox-cru': [],
+  'grupo-de-campos-cru': [],
 };
 /**
  * Assinaturas distintas de grade. Até 11/08 esta contagem media a AUSÊNCIA de
@@ -338,11 +485,104 @@ for (const { app, dir } of APPS) {
   contagens['botao-cru-estilizado'][app] = 0;
   contagens['grade-crua'][app] = 0;
   contagens['padrao-orfao'][app] = 0;
+  contagens['faceta-crua'][app] = 0;
+  contagens['barra-de-filtro-crua'][app] = 0;
+  contagens['contador-de-resultado-cru'][app] = 0;
+  contagens['rotulo-de-checkbox-cru'][app] = 0;
+  contagens['grupo-de-campos-cru'][app] = 0;
   receitasDeGrid[app] = new Set();
 
   for (const arquivo of varrer(dir)) {
     const fonte = readFileSync(arquivo, 'utf8');
     const caminho = rel(arquivo);
+
+    // ── As cinco contagens de 2026-08-12 ───────────────────────────────────
+    //
+    // Os elementos com corpo são calculados UMA vez por arquivo e reusados
+    // pelas três contagens que precisam olhar para dentro.
+    const blocos = TAGS_DE_BLOCO.flatMap((t) => elementosComCorpo(fonte, t));
+
+    // (1) faceta-crua — o grupo de faceta montado à mão.
+    for (const b of blocos) {
+      if (!/role="group"/.test(b.atributos)) continue;
+      if (!ROTULO_DE_FACETA.test(b.atributos)) continue;
+      // Dois ou mais chips RENDERIZADOS — e o `.map()` é o caso normal: onze
+      // dos doze grupos medidos escrevem UM `<Chip` dentro de um `map` das
+      // opções. Uma régua que contasse só ocorrências de texto veria um chip
+      // onde a tela desenha cinco, e a contagem nasceria em quatro.
+      const chips = contaOcorrencias(b.corpo, '<Chip') + contaOcorrencias(b.corpo, '<button');
+      const emLote = chips >= 1 && /\.map\(/.test(b.corpo);
+      if (chips < 2 && !emLote) continue;
+      contagens['faceta-crua'][app] += 1;
+      detalhes['faceta-crua'].push(`${caminho}:${b.linha}  <${b.tag} role="group"> (${chips} chips)`);
+    }
+
+    // (2) barra-de-filtro-crua — o bloco que hospeda busca e recorte.
+    //
+    // Só o bloco MAIS INTERNO conta: sem isso, o contêiner da página inteira
+    // casaria junto com a barra dentro dele e o número mediria aninhamento em
+    // vez de dívida.
+    const candidatasABarra = blocos.filter(
+      (b) =>
+        /\bflex\b/.test(b.atributos) &&
+        TEM_BUSCA.test(b.corpo) &&
+        !CASCA_FATORADA.test(b.corpo),
+    );
+    for (const b of candidatasABarra) {
+      const temOutraDentro = candidatasABarra.some(
+        (o) => o !== b && o.inicioCorpo >= b.inicioCorpo && o.fimCorpo <= b.fimCorpo,
+      );
+      if (temOutraDentro) continue;
+      contagens['barra-de-filtro-crua'][app] += 1;
+      detalhes['barra-de-filtro-crua'].push(`${caminho}:${b.linha}  <${b.tag}>`);
+    }
+
+    // (3) contador-de-resultado-cru — a frase, lida por LINHA.
+    fonte.split('\n').forEach((linha, i) => {
+      // A interpolação tem de ser de JSX (`{…}`), não de template literal
+      // (`${…}`): sem essa distinção, uma frase de AVISO escrita em `string`
+      // ("Mostrando os 50 produtores mais recentes…") entraria como contador, e
+      // um número que conta prosa não mede dívida nenhuma.
+      const temExpressaoJsx = linha.replace(/\$\{/g, '').includes('{');
+      const ehFrase = FRASE_DO_CONTADOR.test(linha) && temExpressaoJsx && /\bde\b/.test(linha);
+      const ehHelper = HELPER_DO_CONTADOR.test(linha);
+      if (!ehFrase && !ehHelper) return;
+      contagens['contador-de-resultado-cru'][app] += 1;
+      detalhes['contador-de-resultado-cru'].push(`${caminho}:${i + 1}  ${linha.trim().slice(0, 80)}`);
+    });
+
+    // (4) rotulo-de-checkbox-cru — o par rótulo + caixinha montado à mão.
+    //
+    // Dois dialetos, uma régua: o `<label>` que ENVOLVE o controle, e o
+    // `<label htmlFor>` IRMÃO dentro do mesmo bloco. O que não conta é o
+    // `Checkbox` de célula de tabela, com `aria-label` e sem rótulo visível —
+    // ali o par não existe, e é o certo.
+    for (const m of fonte.matchAll(/<Checkbox\b/g)) {
+      const envolventes = blocos.filter((b) => m.index > b.inicioCorpo && m.index < b.fimCorpo);
+      if (envolventes.length === 0) continue;
+      const maisInterno = envolventes.reduce((a, b) =>
+        a.fimCorpo - a.inicioCorpo <= b.fimCorpo - b.inicioCorpo ? a : b,
+      );
+      const ehLabelEnvolvente = maisInterno.tag === 'label';
+      const temLabelIrmao = /<label\s[^>]*htmlFor=/.test(maisInterno.corpo);
+      if (!ehLabelEnvolvente && !temLabelIrmao) continue;
+      const linha = fonte.slice(0, m.index).split('\n').length;
+      contagens['rotulo-de-checkbox-cru'][app] += 1;
+      detalhes['rotulo-de-checkbox-cru'].push(
+        `${caminho}:${linha}  ${ehLabelEnvolvente ? '<label> envolvendo' : '<label htmlFor> irmão'}`,
+      );
+    }
+
+    // (5) grupo-de-campos-cru — `<fieldset>` fora do design system.
+    //
+    // Conta os ONZE do painel, não só os três que hospedam `Checkbox`: a régua
+    // mede a MONTAGEM, não o conteúdo dela. Contar só os de checkbox pediria ao
+    // script uma leitura de intenção que ele não faz, e deixaria oito grupos
+    // crescendo fora da vista.
+    for (const t of tagsDeAbertura(fonte, ['fieldset'])) {
+      contagens['grupo-de-campos-cru'][app] += 1;
+      detalhes['grupo-de-campos-cru'].push(`${caminho}:${t.linha}  <fieldset>`);
+    }
 
     for (const t of tagsDeAbertura(fonte, ['div', 'section', 'article', 'li', 'aside'])) {
       if (ehSuperficieCrua(t.atributos)) {

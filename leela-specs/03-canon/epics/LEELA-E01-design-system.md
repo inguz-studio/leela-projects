@@ -825,7 +825,7 @@ que nossa software forge utilize a prática de snippets e design system."* Regis
 | S006-T2 · a resposta com número à pergunta do dono | ✅ | mesmo documento, §10, citável |
 | S006-T3 · a extensão da catraca para estas famílias | ✅ | `.../02-catraca-controles.md` — regra 3 `filtro-fora-do-canone` + cinco contagens novas com baseline medido |
 | S006-T4 · a fila em ondas por JTBD | ✅ | `.../03-fila-em-ondas.md` — sete ondas, C0 enabler e C1 independente |
-| S006-T5 · Onda C0, as cinco peças nascem no DS | ⏳ | livre |
+| S006-T5 · Onda C0, as cinco peças nascem no DS | ✅ | `FilterChips` `3570d74a`, `ResultCount` `450707d3`, `FilterBar` `161da9f7`, `CheckboxField` `9c3f99ab`, `FieldGroup` `04c1b047` — cada uma com story, docs, contrato LLM, teste e a linha do cânone no MESMO commit; a catraca aprendeu as seis contagens em `6f08f59e` (regra 3 + cinco contagens + três consertos de régua, falsificados); handoff em `.nirvana/handoffs/leela-controles-c0-20260812.md` |
 | S006-T6 · Onda C1, as sete violações viram adoção | ⏳ | livre, independe da C0 |
 | S006-T7 · Ondas C2 a C6, a conversão por superfície | ⏳ | esperam a C0 |
 

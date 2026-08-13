@@ -256,8 +256,12 @@ function SecaoEventos({
       </h2>
       {futuros.length === 0 ? (
         <Card className="mt-5 border-border-subtle py-10">
+          {/* S1254-T3 (achado L1) · "à vista" já tem sentido financeiro neste
+              mesmo produto ("À vista ou parcelado", `SeletorForma.tsx`). A
+              expressão é boa; estava no produto errado. A descrição já estava
+              certa e não muda. */}
           <EmptyState
-            title="Nenhum evento à vista"
+            title="Nenhuma experiência marcada"
             description="Quando este organizador publicar uma experiência, ela aparece aqui na linha do tempo."
           />
         </Card>
@@ -286,9 +290,18 @@ function SecaoClubs({ clubes }: { clubes: ClubeResumoPublico[] }): React.JSX.Ele
       </h2>
       {clubes.length === 0 ? (
         <Card className="border-border-subtle py-10">
+          {/* S1254-T4 (achado L2) · a descrição repetia o título e não
+              informava nada. A aba vizinha (Feed) faz o oposto e é o padrão bom
+              da casa: ela conta o que VAI aparecer.
+
+              A proposta da review era "os treinos e encontros do grupo", e ela
+              vinha marcada como suposição sobre o que um club faz. A frase
+              aplicada descreve só o que o card realmente mostra — categoria e
+              modalidade (`CardClube`) —, porque copy que supõe o produto é a
+              mesma família de defeito que esta rodada veio pagar. */}
           <EmptyState
             title="Nenhum club público"
-            description="Os clubs públicos deste organizador aparecem aqui."
+            description="Quando este organizador abrir um club, o grupo aparece aqui com a categoria e a modalidade."
           />
         </Card>
       ) : (
@@ -406,8 +419,18 @@ export function PerfilView({
       {patrocinadores.length > 0 && <FaixaPatrocinadores patrocinadores={patrocinadores} />}
 
       {/* ── Compartilhar (S1700-T3 — reusa ShareBlock E12) ──────────────── */}
+      {/* S1253-T2 (achado G1): esta página é um perfil com calendário, feed e
+          clubs. O bloco dizia "Compartilhe este evento", e não há evento aqui
+          para o "este" apontar. Os dois rótulos entram por prop; o componente
+          segue com o texto do evento como padrão. */}
       <section className="mx-auto max-w-3xl px-4 sm:px-6">
-        <ShareBlock shareUrl={shareUrl} qrSvg={qrSvg} nome={perfil.nome} />
+        <ShareBlock
+          shareUrl={shareUrl}
+          qrSvg={qrSvg}
+          nome={perfil.nome}
+          titulo="Compartilhe este perfil"
+          apoio="Mande o link para quem acompanha a agenda ou aponte a câmera no QR."
+        />
       </section>
     </div>
   );

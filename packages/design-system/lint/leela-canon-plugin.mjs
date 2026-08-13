@@ -417,6 +417,148 @@ const padraoReimplementadoForaDoDs = {
 };
 
 // ===========================================================================
+// Regra 3 — filtro-fora-do-canone
+// ===========================================================================
+
+/**
+ * O cânone §1 tem uma linha escrita como REGRA, e não como preferência:
+ * *"filtro nunca é `Select`"*. As duas regras acima não a viam — um `<Select>`
+ * importado do design system tem procedência perfeita, e é justamente o PAPEL
+ * dele que está errado.
+ *
+ * POR QUE ESTA ENTRA NA REGRA DURA E O `<button>` NÃO. O `<button>` ficou fora
+ * porque a violação dele se reconhece por ASSINATURA DE CLASSE, e assinatura de
+ * classe é onde falso positivo nasce. O `Select` de filtro é o oposto: a
+ * violação está no RÓTULO QUE O PRÓPRIO AUTOR ESCREVEU. Quem escreve
+ * `aria-label="Filtrar por status"` num `<Select>` declarou o papel do controle
+ * em texto — não há ambiguidade a resolver nem legítimo a proteger.
+ *
+ * O TERCEIRO CASO NASCE COM CONTAGEM ZERO, e esse é o melhor momento possível
+ * para uma regra dura nascer: a varredura de 2026-08-12 (§6) procurou
+ * `role="combobox"`, `role="listbox"`, `role="option"`, `aria-autocomplete` e
+ * `aria-activedescendant` fora do design system e **não teve um único hit**. A
+ * regra nunca vai precisar de dívida para eles, e a primeira violação é
+ * exatamente a que ela existe para pegar.
+ */
+
+/** Prefixos de rótulo que denunciam papel de filtro. Extensível por config. */
+const PREFIXOS_DE_FILTRO = ['filtrar', 'filtro', 'recorte', 'recortar', 'ordenar'];
+/** Prefixos que denunciam alternância entre recortes ("Top 5", "Quantos"). */
+const PREFIXOS_DE_RECORTE = ['quantos', 'quantas', 'top'];
+/** Atributos que só existem quando alguém está construindo um combobox à mão. */
+const ARIA_DE_COMBOBOX = ['aria-autocomplete', 'aria-activedescendant'];
+/** Papéis do motor de seleção rica — o motor é do DS. */
+const PAPEIS_DE_COMBOBOX = new Set(['combobox', 'listbox', 'option']);
+
+/** Nome do elemento JSX, intrínseco ou componente (`select`, `Select`). */
+function nomeDoElemento(abertura) {
+  const nome = abertura?.name;
+  return nome?.type === 'JSXIdentifier' ? nome.name : null;
+}
+
+/**
+ * @param {any} ast
+ * @param {{ prefixosDeFiltro?: string[], prefixosDeRecorte?: string[] }} [opcoes]
+ * @returns {Array<{ no: any, tipo: 'filtro'|'recorte'|'motor', elemento: string, detalhe: string }>}
+ */
+export function filtrosForaDoCanone(ast, opcoes = {}) {
+  const reFiltro = new RegExp(`^(${(opcoes.prefixosDeFiltro ?? PREFIXOS_DE_FILTRO).join('|')})`, 'i');
+  const reRecorte = new RegExp(
+    `^(${(opcoes.prefixosDeRecorte ?? PREFIXOS_DE_RECORTE).join('|')})`,
+    'i',
+  );
+
+  /** @type {Array<{ no: any, tipo: 'filtro'|'recorte'|'motor', elemento: string, detalhe: string }>} */
+  const achados = [];
+
+  percorrer(ast, (no) => {
+    if (no.type !== 'JSXOpeningElement') return;
+    const nome = nomeDoElemento(no);
+    if (nome === null) return;
+
+    // ── motor de combobox artesanal, em qualquer elemento ────────────────────
+    const papel = atributoLiteral(no, 'role');
+    if (typeof papel === 'string' && PAPEIS_DE_COMBOBOX.has(papel.toLowerCase())) {
+      achados.push({ no, tipo: 'motor', elemento: `<${nome}>`, detalhe: `role="${papel}"` });
+      return;
+    }
+    for (const attr of ARIA_DE_COMBOBOX) {
+      if (temAtributo(no, attr)) {
+        achados.push({ no, tipo: 'motor', elemento: `<${nome}>`, detalhe: attr });
+        return;
+      }
+    }
+
+    // ── `Select` (do DS) ou `<select>` (nativo) fazendo trabalho de filtro ────
+    if (nome !== 'select' && nome !== 'Select') return;
+    const rotulos = [atributoLiteral(no, 'aria-label'), atributoLiteral(no, 'label')].filter(
+      (v) => typeof v === 'string',
+    );
+    for (const rotulo of rotulos) {
+      if (reFiltro.test(rotulo.trim())) {
+        achados.push({ no, tipo: 'filtro', elemento: `<${nome}>`, detalhe: rotulo });
+        return;
+      }
+      if (reRecorte.test(rotulo.trim())) {
+        achados.push({ no, tipo: 'recorte', elemento: `<${nome}>`, detalhe: rotulo });
+        return;
+      }
+    }
+  });
+
+  return achados;
+}
+
+/** @type {import('eslint').Rule.RuleModule} */
+const filtroForaDoCanone = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description:
+        'Elemento de seleção fazendo trabalho de filtro, recorte ou ordenação — o cânone §1 escreve "filtro nunca é Select".',
+    },
+    schema: [
+      {
+        type: 'object',
+        properties: {
+          prefixosDeFiltro: { type: 'array', items: { type: 'string' } },
+          prefixosDeRecorte: { type: 'array', items: { type: 'string' } },
+          arquivosDeExcecao: { type: 'array', items: { type: 'string' } },
+        },
+        additionalProperties: false,
+      },
+    ],
+    messages: {
+      filtro:
+        'Filtro em `{{elemento}}` (rótulo "{{detalhe}}"). O cânone §1 escreve "filtro nunca é Select": use `FilterChips` — ela conta as opções e escolhe fileira de `Chip` (menos de 4) ou `FilterMenu`/`Combobox` (4+).',
+      recorte:
+        'Alternância entre recortes em `{{elemento}}` (rótulo "{{detalhe}}"). Cânone §1: recorte do mesmo dado é `Chip` com `active` ou `Tabs` — um seletor de formulário para escolher entre duas opções são dois toques onde um chip é um.',
+      motor:
+        'Motor de seleção rica montado à mão: `{{detalhe}}` em `{{elemento}}`, fora do design system. O canônico é `Combobox` (anatomia `Popover` + `Command`) — a varredura de 2026-08-12 não achou nenhum combobox artesanal no produto, e esta é a primeira.',
+    },
+  },
+  create(context) {
+    const opcoes = context.options[0] ?? {};
+    const excecoes = opcoes.arquivosDeExcecao ?? [];
+    const arquivo = (context.filename ?? context.getFilename() ?? '').replace(/\\/g, '/');
+    if (excecoes.some((p) => arquivo.endsWith(p))) return {};
+
+    return {
+      'Program:exit'() {
+        const ast = context.sourceCode?.ast ?? context.getSourceCode().ast;
+        for (const achado of filtrosForaDoCanone(ast, opcoes)) {
+          context.report({
+            node: achado.no,
+            messageId: achado.tipo,
+            data: { elemento: achado.elemento, detalhe: achado.detalhe },
+          });
+        }
+      },
+    };
+  },
+};
+
+// ===========================================================================
 // A fonte do cânone — gerada do barrel, nunca escrita à mão
 // ===========================================================================
 
@@ -457,6 +599,7 @@ const plugin = {
   rules: {
     'controle-cru-fora-do-ds': controleCruForaDoDs,
     'padrao-reimplementado-fora-do-ds': padraoReimplementadoForaDoDs,
+    'filtro-fora-do-canone': filtroForaDoCanone,
   },
 };
 

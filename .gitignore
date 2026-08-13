@@ -55,8 +55,18 @@ storybook-static/
 # Idem (lane LANDING-PREVIEW): config web pública + URL canônica da landing.
 # Fica no diretório do app porque o Next lê env do próprio app, não da raiz.
 !/apps/landing/.env.leela-hub
+# Idem (lane MOCK-CAMPECHE): modo de build do painel apontado ao EMULADOR.
+# Não tem credencial nenhuma — só `VITE_USE_EMULATOR=true` e portas de
+# loopback. Commitado para o comando de 1 linha do dono sobreviver a reboot.
+!/.env.mock-emulador
 # Valores locais dos secrets declarados (Functions Emulator) — NUNCA commitar
 .secret.local
+
+# Runtime do mock local (logs + pids do scripts/mock-campeche.sh)
+.mock-campeche/
+# Build do painel em modo emulador (outDir próprio para não substituir o
+# `dist/` de produção que a :4601 serve)
+dist-mock-campeche/
 
 # Artefato de deploy das Functions (gerado por bundle-deploy.mjs)
 functions-deploy/

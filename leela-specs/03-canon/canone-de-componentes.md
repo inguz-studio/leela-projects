@@ -37,6 +37,7 @@ não exceção. Regra completa em `04-engenharia/governanca-design.md` §8.
 | Escolha única, poucas opções, em formulário | `Select` | até ~7 opções conhecidas, sem busca |
 | Escolha com busca, cardinalidade alta | `Combobox` | quando rolar é pior que digitar; anatomia Popover + Command |
 | Filtro de lista ou tabela | `FilterMenu` | filtro nunca é `Select`; ele mostra o que está aplicado |
+| A faceta de UM filtro (a fileira ou o menu) | `FilterChips` | recebe as opções e **conta**: fileira de `Chip` abaixo de 4, `FilterMenu` (empilhável) ou `Combobox` (exclusiva) a partir de 4 |
 | Menu de ações sobre um item | `DropdownMenu` | ação, não valor; se o resultado é um dado, é `Select`/`Combobox` |
 | Âncora flutuante genérica | `Popover` + `PopoverTrigger` / `PopoverContent` / `PopoverAnchor` / `PopoverClose` | direto só quando o conteúdo não é lista |
 | Lista filtrável dentro de painel | `Command` + `CommandInput` / `CommandList` / `CommandEmpty` / `CommandGroup` / `CommandItem` | primitivo do `Combobox` |
@@ -68,10 +69,12 @@ permitido dentro do `DateTimeField`: é spinner, não é o calendário do SO.
 | Busca | `SearchInput` |
 | Arquivo | `FileInput`; imagem com preview, `components/upload/ImageUploadField.tsx` |
 | Marcação booleana | `Checkbox` |
+| Marcação booleana **com rótulo ao lado** | `CheckboxField` — `Checkbox` + `<label htmlFor>` irmão, dica e erro por `aria-describedby` |
 | Liga/desliga com efeito imediato | `Switch` — muda agora; `Checkbox` só na submissão |
 | Escolha exclusiva | `Radio` / `RadioGroup` |
 | Escolha exclusiva com descrição e peso | `RadioCard` |
 | Rótulo + dica + erro + `aria-describedby` | `Field` — envolve qualquer controle acima |
+| Grupo de campos com rótulo comum | `FieldGroup` — `fieldset` + `legend` visível, dica e erro DO grupo, `disabled` nativo |
 | Fluxo em etapas | `Stepper` |
 
 **Proibido:** todo controle nativo desta tabela. Checkbox nativo é violação da mesma severidade que
@@ -177,6 +180,8 @@ generalidade que a medição não achou.
 | Paginação | `Pagination` |
 | Lista de eventos | `EventRow` dentro de `<ul>` |
 | Barra de ações sobre a lista | `Toolbar` |
+| Barra de busca, facetas e contador da lista | `FilterBar` — compõe `Toolbar`; o `role="search"` fica no `SearchInput`, não na barra |
+| Contagem da lista recortada ("Mostrando X de Y") | `ResultCount` — canal de ARIA por prop, default polido; com `temMais` o total não aparece |
 
 `<table>` cru é permitido em um caso: tabela `sr-only` pareada com gráfico, para leitor de tela. Não
 é atalho de estilo; é a versão acessível do dado.

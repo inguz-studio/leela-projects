@@ -1,0 +1,34 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './ResultCount.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# ResultCount
+
+O contador da lista recortada. Doze telas escreveram a mesma frase de seis palavras em três dialetos de ARIA e duas grafias — duas delas sem canal nenhum, o que deixa quem filtra por teclado com leitor de tela sem saber que a lista mudou.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## A honestidade do número
+
+Com `temMais`, o `total` é ignorado: a paginação por cursor nunca computou um total, e "de N" seria invenção. A frase diz o que é verdade — o que está na tela, e que há mais.
+
+<Canvas of={Stories.ComMaisParaCarregar} />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="ResultCount"
+  snippet={`import { ResultCount } from '@leela/design-system';
+
+<ResultCount
+  visiveis={12}
+  total={40}
+  substantivo={{ singular: 'comunicado', plural: 'comunicados' }}
+/>`}
+  contract={contract}
+/>

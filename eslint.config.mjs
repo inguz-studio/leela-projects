@@ -7,6 +7,7 @@ import leelaScroll from "./packages/design-system/lint/leela-scroll-plugin.mjs";
 import leelaAuth from "./packages/design-system/lint/leela-auth-plugin.mjs";
 import leelaCanon, {
   canoneDoBarrel,
+  SINONIMOS_PADRAO,
 } from "./packages/design-system/lint/leela-canon-plugin.mjs";
 
 // O cânone da regra 2 NÃO é uma lista escrita à mão. Lista copiada envelhece na
@@ -86,6 +87,42 @@ const DIVIDA_PADRAO_REIMPLEMENTADO = [
   // wrapper, o nome precisa dizer o que ele acrescenta — `SecaoHead` batiza o
   // canônico de novo, e é o batismo que faz a duplicata parecer oficial.
   "apps/painel/src/components/SecaoHead.tsx",
+  // Onda C5 · `FiltroStatus` = `FilterChips`, publicada na Onda C0. A entrada
+  // nasce com a peça, e não depois dela — foi a separação entre as duas coisas
+  // que custou uma remedição em 11/08, quando `SecaoHead` virou sinônimo de
+  // `SectionHeader` com o componente já no ar.
+  //
+  // O caso é literal: a função local monta `<div role="group" aria-label>` em
+  // volta de um `FilterMenu`, que é byte a byte a anatomia da `FilterChips` — e
+  // o comentário dela ainda explica à mão o limiar de quatro valores que a peça
+  // agora fecha por construção. A entrada morre quando `HubEventos` importar a
+  // peça (a onda já lista a barra deste arquivo).
+  "apps/painel/src/routes/eventos/hub/HubEventos.tsx",
+];
+
+/**
+ * Dívida da Regra 3 — seleção fazendo trabalho de filtro. Dois arquivos, cada
+ * um com a onda que o paga.
+ *
+ * A regra nasce `error`, como o `senha-fora-do-ds` fez, e não `warn`: a Parte B
+ * de 11/08 já provou que `warn` não é instrumento de rollout neste repo, porque
+ * os três `lint` rodam com `--max-warnings 0`.
+ *
+ * O terceiro caso da regra — o motor de combobox artesanal — entra com contagem
+ * ZERO: a varredura de 2026-08-12 §6 procurou `role="combobox"`, `role="listbox"`,
+ * `role="option"`, `aria-autocomplete` e `aria-activedescendant` fora do design
+ * system e não teve um único hit. Ele não precisa de dívida nenhuma.
+ */
+const DIVIDA_FILTRO_FORA_DO_CANONE = [
+  // Onda C1 · três `Select` fazendo trabalho de filtro (inventário §4.1): dois
+  // escolhem QUANTOS itens mostrar (viram `Chip` com `active`) e um escolhe o
+  // clube analisado (vira `Combobox`).
+  "apps/painel/src/routes/clubes/engajamento/EngajamentoView.tsx",
+  // Onda C5 · `Select` de ORDENAÇÃO — padrão ÓRFÃO. O cânone não tem linha
+  // para ordenação de lista: não é filtro (não retira nada) e não é campo de
+  // formulário (não vira dado). A entrada sai daqui quando a decisão voltar e
+  // o cânone ganhar a linha.
+  "apps/painel/src/routes/crm/ClientesPage.tsx",
 ];
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
@@ -324,7 +361,68 @@ export default [
     rules: {
       "leela-canon/padrao-reimplementado-fora-do-ds": [
         "warn",
-        { canone: CANONE_DO_DS },
+        {
+          canone: CANONE_DO_DS,
+          // Os sinônimos das cinco peças da Onda C0 entram JUNTO com as peças,
+          // e é isso que evita a remedição em separado que o `SecaoHead` custou
+          // em 11/08. `FiltroStatus`, `FiltroEstado` e `FiltroTipo` são os nomes
+          // que as telas já usaram para as funções locais que a `FilterChips`
+          // substitui — o segundo mecanismo da L-021, e o mais caro: a
+          // duplicata BATIZADA é a que a próxima pessoa importa achando que
+          // importou o cânone.
+          //
+          // O spread é obrigatório: a opção SUBSTITUI o default do plugin, e
+          // sem ele os quinze sinônimos anteriores sumiriam em silêncio — o
+          // número desceria e o gate pareceria mais verde estando mais cego.
+          sinonimos: {
+            ...SINONIMOS_PADRAO,
+            FilterBar: ["BarraDeFiltros", "FiltrosBar", "Filtros", "FilterToolbar"],
+            FilterChips: [
+              "ChipGroup",
+              "GrupoDeChips",
+              "FiltroStatus",
+              "FiltroEstado",
+              "FiltroTipo",
+            ],
+            ResultCount: ["ContadorResultado", "Mostrando", "ContadorDeLista"],
+            CheckboxField: ["CheckboxComRotulo", "CampoCheckbox", "LabeledCheckbox"],
+            FieldGroup: ["GrupoDeCampos", "Fieldset", "CampoGrupo"],
+          },
+        },
+      ],
+    },
+  },
+  {
+    // Regra 3 · `filtro-fora-do-canone` (rodada 2026-08-12, §2 da spec da
+    // catraca). O cânone §1 tem uma linha escrita como REGRA — "filtro nunca é
+    // `Select`" — e as duas regras acima não a viam: um `<Select>` importado do
+    // DS tem procedência perfeita, e é o PAPEL dele que está errado.
+    //
+    // Bloco separado pelo mesmo motivo dos outros dois: escopo e dívida
+    // próprios. Misturar as listas cegaria uma regra pela dívida da outra.
+    files: [
+      "apps/painel/src/**/*.tsx",
+      "apps/landing/app/**/*.tsx",
+      "packages/design-system/showcase/src/**/*.tsx",
+    ],
+    ignores: [
+      "**/__tests__/**",
+      "**/*.test.tsx",
+      "**/*.stories.tsx",
+      "apps/mobile/**",
+      ...DIVIDA_FILTRO_FORA_DO_CANONE,
+    ],
+    plugins: {
+      "leela-canon": leelaCanon,
+    },
+    rules: {
+      "leela-canon/filtro-fora-do-canone": [
+        "error",
+        {
+          prefixosDeFiltro: ["filtrar", "filtro", "recorte", "recortar", "ordenar"],
+          prefixosDeRecorte: ["quantos", "quantas", "top"],
+          arquivosDeExcecao: [],
+        },
       ],
     },
   },
