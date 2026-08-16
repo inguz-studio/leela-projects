@@ -193,3 +193,33 @@ próprio.
   destrutivo que esta lane evitou no próprio caso — precisa de quem saiba qual
   dos dois lados tem sub-tarefas escritas.
 - **RN-229 está superseded** e agora marcada nos dois `rns-delta` que a definem.
+
+---
+
+## 8 · Aterrissagem
+
+- **Merge na main:** `d82eb610` (`--no-ff`), **pushed** — `origin/main` = `d82eb610`.
+- **Branch de backup:** `subnav-unifica` @ `4338cf0f`, também no remoto.
+- **Base do merge:** main re-puxada **três vezes** no mesmo dia (KITS-BUILD, CONTROLES-C1 e LANDING-SUITE-FIX entraram durante a lane). Só a primeira deu conflito.
+- **Commits da lane:** 8 herdados + 8 da retomada + 4 merges.
+
+| Commit | O quê |
+|---|---|
+| `ee398608` | a prop `divider` sai do design system, e a borda vira `border-b-0` travado |
+| `c30b15a0` | as onze barras passam a ser uma só (`AreaSubNav`) |
+| `85ed9ab6` | catraca `menu-secundario-cru`, baseline 0/0 |
+| `77cfd5a2` | o item de menu aceita ícone pequeno, por token |
+| `6f85318f` | Configurações sai do rail e o popover ganha Sair |
+| `fa3fc7bc` | o contrato do ícone do item |
+| `6c6dd173` | o registro das levas 14/15/16 e a POPOVER-COR-1 |
+| `c201c860` | os testes passam a guardar a AUSÊNCIA da linha |
+| `776d8265` | **(retomada)** o teste do ícone compila sob `noUncheckedIndexedAccess` |
+| `592669e4` | **(retomada)** o fail-safe do logout ganha teste |
+| `d98534a1` | **(retomada)** as duas histórias saem da colisão de número |
+| `83311729` | **(retomada)** a RN-229 marcada como superseded onde é definida |
+| `0d89d7b2` | **(retomada)** as sobras do emulador saem do `git status` |
+| `70dd1399` | **(retomada)** o gate visual vira script e passa a medir |
+| `74e8538d` | **(retomada)** o épico E01 fecha com o que a auditoria achou |
+| `4338cf0f` | **(retomada)** este handoff |
+
+⛔ **NENHUM deploy.** O que está no ar não mudou.
