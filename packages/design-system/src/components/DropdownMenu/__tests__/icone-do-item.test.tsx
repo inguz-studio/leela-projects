@@ -37,6 +37,22 @@ function Menu({ actions }: { actions: DropdownMenuAction[] }): React.JSX.Element
   );
 }
 
+/**
+ * O wrapper que o DS põe em volta do SVG do item.
+ *
+ * O acesso por índice existe porque a asserção é sobre o PRIMEIRO ícone, e o
+ * `noUncheckedIndexedAccess` do `tsconfig.base.json` tipa `[0]` como
+ * possivelmente ausente. `getAllByTestId` já lança quando não acha nenhum — a
+ * guarda abaixo é para o compilador, não para o teste, e por isso ela falha
+ * ruidosamente em vez de silenciar com `!`.
+ */
+function wrapperDoPrimeiroIcone(): HTMLElement {
+  const [primeiro] = screen.getAllByTestId('icone');
+  const wrapper = primeiro?.parentElement;
+  if (!wrapper) throw new Error('o ícone renderizou sem o wrapper do DS');
+  return wrapper;
+}
+
 const COM_ICONE: DropdownMenuAction[] = [
   { id: 'configuracoes', label: 'Configurações', icon: <IconeFalso />, onClick: vi.fn() },
   { id: 'sair', label: 'Sair', icon: <IconeFalso />, onClick: vi.fn() },
@@ -55,7 +71,7 @@ describe('DropdownMenu · ícone do item (Leva 16)', () => {
 
   it('o tamanho e o traço são do DS, por token, e não do consumidor', () => {
     render(<Menu actions={COM_ICONE} />);
-    const wrapper = screen.getAllByTestId('icone')[0].parentElement as HTMLElement;
+    const wrapper = wrapperDoPrimeiroIcone();
     expect(wrapper.className).toContain('[&>svg]:h-[var(--popover-icon-size)]');
     expect(wrapper.className).toContain('[&>svg]:w-[var(--popover-icon-size)]');
     expect(wrapper.className).toContain('[&>svg]:[stroke-width:var(--icon-stroke)]');
@@ -65,7 +81,7 @@ describe('DropdownMenu · ícone do item (Leva 16)', () => {
 
   it('o ícone é decorativo — quem nomeia a ação é o rótulo', () => {
     render(<Menu actions={COM_ICONE} />);
-    const wrapper = screen.getAllByTestId('icone')[0].parentElement as HTMLElement;
+    const wrapper = wrapperDoPrimeiroIcone();
     expect(wrapper).toHaveAttribute('aria-hidden');
     // O nome acessível do item não ganhou ruído: continua sendo só o rótulo.
     expect(screen.getByRole('menuitem', { name: 'Configurações' })).toBeInTheDocument();
