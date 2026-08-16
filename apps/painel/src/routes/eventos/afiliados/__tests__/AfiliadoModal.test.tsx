@@ -68,6 +68,35 @@ describe('AfiliadoModal (RN-317)', () => {
     expect(screen.getByLabelText(/Clube vinculado/)).toBeInTheDocument();
   });
 
+  it('clube vinculado (Onda C1): Combobox lista os clubes do tenant, não texto livre', async () => {
+    const onSalvar = vi.fn().mockResolvedValue({
+      afiliadoId: 'X', refCodigo: 'X', status: 'convite_pendente', jaExistia: false,
+    });
+    renderModal({
+      onSalvar,
+      clubes: [
+        { id: 'floripa-run', nome: 'Floripa Run Coletivo' },
+        { id: 'pedal-norte', nome: 'Pedal Norte' },
+      ],
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Clube' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Floripa Run Coletivo');
+    await userEvent.click(screen.getByRole('button', { name: /Clube vinculado/ }));
+    await userEvent.click(screen.getByRole('option', { name: 'Pedal Norte' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar afiliado' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: 'clube', clubeRef: 'pedal-norte' }),
+    );
+  });
+
+  it('clube vinculado sem lista carregada (null) não bloqueia o resto do form', async () => {
+    renderModal({ clubes: null });
+    await userEvent.click(screen.getByRole('button', { name: 'Clube' }));
+    expect(screen.getByRole('button', { name: /Clube vinculado/ })).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Nome'), 'Floripa Run');
+    expect(screen.getByRole('button', { name: 'Criar afiliado' })).toBeEnabled();
+  });
+
   it('submit desabilitado até válido; salva PF com e-mail', async () => {
     const onSalvar = vi.fn().mockResolvedValue({
       afiliadoId: 'X', refCodigo: 'X', status: 'convite_pendente', jaExistia: false,

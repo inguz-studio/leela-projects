@@ -8,7 +8,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Input, Modal } from '@leela/design-system';
+import { Button, Input, Modal, Select } from '@leela/design-system';
 import { validateProvisionInput, type ProvisionInput, type TenantTipo } from '@leela/core';
 
 export interface ProvisionTenantModalProps {
@@ -140,23 +140,16 @@ export function ProvisionTenantModal({
           placeholder="castelo-producoes"
         />
 
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="prov-tipo"
-            className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]"
-          >
-            Tipo
-          </label>
-          <select
-            id="prov-tipo"
-            value={values.tipo}
-            onChange={(e) => set('tipo', e.target.value as TenantTipo)}
-            className="h-[var(--input-height)] rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-raised)] px-[var(--input-px)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
-          >
-            <option value="produtor">Produtor</option>
-            <option value="promotor">Promotor</option>
-          </select>
-        </div>
+        <Select
+          id="prov-tipo"
+          label="Tipo"
+          options={[
+            { value: 'produtor', label: 'Produtor' },
+            { value: 'promotor', label: 'Promotor' },
+          ]}
+          value={values.tipo}
+          onChange={(e) => set('tipo', e.target.value as TenantTipo)}
+        />
 
         <Input
           id="prov-email"
