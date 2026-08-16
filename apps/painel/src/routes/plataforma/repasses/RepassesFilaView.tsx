@@ -15,7 +15,7 @@
 // domínio; a back-office não redefine a semântica de estado/moeda.
 // =============================================================================
 
-import { Badge, Button, Combobox, PageHeader, Skeleton, Table } from '@leela/design-system';
+import { Badge, Button, Chip, Combobox, PageHeader, Skeleton, Table } from '@leela/design-system';
 import type { SelectOption, TableColumn } from '@leela/design-system';
 import { badgeEstado } from '../../eventos/repasses/_lib/estadoRepasse';
 import { formatBRL, formatData } from '../../eventos/repasses/_lib/format';
@@ -62,28 +62,12 @@ function EstadoChips({
       {ESTADO_FILA_FILTERS.map((opt) => {
         const ativo = opt.id === filter;
         return (
-          <button
-            key={opt.id}
-            type="button"
-            aria-pressed={ativo}
-            onClick={() => onChange(opt.id)}
-            className={[
-              'inline-flex items-center gap-[var(--spacing-2)]',
-              'h-[var(--btn-height-sm)] px-[var(--spacing-3)]',
-              'rounded-[var(--radius-sm)]',
-              'text-[length:var(--font-size-sm)]',
-              'transition-colors duration-[var(--motion-duration-fast)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
-              ativo
-                ? 'bg-[var(--action-primary)] text-[var(--action-primary-fg)] font-[var(--font-weight-semibold)]'
-                : 'bg-[var(--surface-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-            ].join(' ')}
-          >
+          <Chip key={opt.id} active={ativo} onClick={() => onChange(opt.id)}>
             {opt.label}
             <span aria-hidden className="opacity-70">
               {counts[opt.id]}
             </span>
-          </button>
+          </Chip>
         );
       })}
     </div>

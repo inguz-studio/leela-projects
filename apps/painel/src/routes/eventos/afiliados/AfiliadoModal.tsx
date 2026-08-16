@@ -5,14 +5,17 @@
 // convite de e-mail (RN-316). Toda decisão sensível (refCodigo/token/
 // amarração de cupom) é do SERVIDOR (salvarAfiliado) — aqui só coleta.
 //
-// Nota shadcn §8 (registrada): o Combobox/DS do lote R9-A ainda não aterrissou
-// nesta árvore; cupom/clube entram por Input simples e a troca pelo Combobox
-// fica como follow-up de conformidade quando o R9-A mergear (sem mudança de
-// contrato).
+// Onda C1 (2026-08-12 · conformidade-controles): o Combobox/DS do lote R9-A
+// aterrissou e o follow-up de conformidade que este arquivo prometia (nota
+// acima, histórica) se paga aqui — o campo de clube vinculado deixa de ser
+// texto livre (cânone §1: cardinalidade alta com busca é Combobox, não
+// digitar um docId de memória) e passa a listar os clubes do tenant, do
+// mesmo registro que `EngajamentoView` já consome (`useClubes`).
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Button, Chip, Input, Modal } from '@leela/design-system';
+import { Button, Chip, Combobox, Input, Modal } from '@leela/design-system';
+import type { ComboboxOption } from '@leela/design-system';
 import type {
   ComissaoAfiliadoClient,
   SalvarAfiliadoClientInput,
@@ -77,6 +80,13 @@ export interface AfiliadoModalProps {
   onSalvar: (
     input: SalvarAfiliadoClientInput
   ) => Promise<SalvarAfiliadoClientResult>;
+  /**
+   * Clubes do tenant (mesma leitura de `useClubes`), para o Combobox de clube
+   * vinculado (Onda C1). `null`/ausente = ainda carregando ou tenant sem
+   * clube — o campo abre com a lista vazia (busca não acha nada), nunca
+   * bloqueia o resto do form.
+   */
+  clubes?: { id: string; nome: string }[] | null;
 }
 
 type Tipo = 'clube' | 'pessoa_fisica';
@@ -87,6 +97,7 @@ export function AfiliadoModal({
   eventoId,
   afiliado,
   onSalvar,
+  clubes,
 }: AfiliadoModalProps): JSX.Element {
   const editando = afiliado !== null;
   const [tipo, setTipo] = useState<Tipo>(afiliado?.tipo ?? 'pessoa_fisica');
@@ -103,6 +114,16 @@ export function AfiliadoModal({
   );
   const [cupomCodigo, setCupomCodigo] = useState(afiliado?.cupomCodigo ?? '');
   const [clubeRef, setClubeRef] = useState(afiliado?.clubeRef ?? '');
+  // Onda C1: opções do Combobox de clube vinculado. Inclui o clube já
+  // amarrado (edição) mesmo que ele tenha saído da lista corrente — trocar
+  // de tela nunca pode apagar silenciosamente um vínculo existente.
+  const opcoesClube: ComboboxOption[] = useMemo(() => {
+    const lista = (clubes ?? []).map((c) => ({ value: c.id, label: c.nome }));
+    if (clubeRef.trim() !== '' && !lista.some((o) => o.value === clubeRef)) {
+      return [{ value: clubeRef, label: clubeRef }, ...lista];
+    }
+    return lista;
+  }, [clubes, clubeRef]);
   const [email, setEmail] = useState(afiliado?.responsavelEmail ?? '');
   const [documento, setDocumento] = useState('');
   // FASE 2 (COMF2 · RN-310): config de comissão — o ORGANIZADOR define; mudar
@@ -281,13 +302,24 @@ export function AfiliadoModal({
               />
             </>
           ) : (
-            <Input
-              id="afiliado-clube"
-              label="Clube vinculado (id/slug — opcional)"
-              value={clubeRef}
-              onChange={(e) => setClubeRef(e.target.value)}
-              placeholder="floripa-run"
-            />
+            <div className="flex flex-col gap-[var(--spacing-2)]">
+              <label
+                htmlFor="afiliado-clube"
+                className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]"
+              >
+                Clube vinculado (opcional)
+              </label>
+              <Combobox
+                id="afiliado-clube"
+                aria-label="Clube vinculado (opcional)"
+                options={opcoesClube}
+                value={clubeRef}
+                onValueChange={(v) => setClubeRef(Array.isArray(v) ? (v[0] ?? '') : v)}
+                placeholder="Selecione um clube…"
+                searchPlaceholder="Buscar clube…"
+                emptyText="Nenhum clube encontrado."
+              />
+            </div>
           )}
 
           <Input

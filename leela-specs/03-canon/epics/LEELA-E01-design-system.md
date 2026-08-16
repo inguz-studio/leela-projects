@@ -826,7 +826,7 @@ que nossa software forge utilize a prática de snippets e design system."* Regis
 | S006-T3 · a extensão da catraca para estas famílias | ✅ | `.../02-catraca-controles.md` — regra 3 `filtro-fora-do-canone` + cinco contagens novas com baseline medido |
 | S006-T4 · a fila em ondas por JTBD | ✅ | `.../03-fila-em-ondas.md` — sete ondas, C0 enabler e C1 independente |
 | S006-T5 · Onda C0, as cinco peças nascem no DS | ✅ | `FilterChips` `3570d74a`, `ResultCount` `450707d3`, `FilterBar` `161da9f7`, `CheckboxField` `9c3f99ab`, `FieldGroup` `04c1b047` — cada uma com story, docs, contrato LLM, teste e a linha do cânone no MESMO commit; a catraca aprendeu as seis contagens em `6f08f59e` (regra 3 + cinco contagens + três consertos de régua, falsificados); handoff em `.nirvana/handoffs/leela-controles-c0-20260812.md` |
-| S006-T6 · Onda C1, as sete violações viram adoção | ⏳ | livre, independe da C0 |
+| S006-T6 · Onda C1, as sete violações viram adoção | ✅ | `ProvisionTenantModal` (`<select>`→`Select`) `dd2e2ab5`, `TenantsList` (`<button>`→`Chip`) `f09fc120`, `RepassesFilaView` (`<button>`→`Chip`) `b19cae66`, `EngajamentoView` (3× `Select`→`Chip`/`Combobox`) `40241781`, `AfiliadoModal` (`Input`→`Combobox`, follow-up do R9-A que o próprio arquivo confessava desde S-R9-11-T4) `3ce4bd43`; baseline regravado em `fa014476` (`botao-cru-estilizado.painel` 6→4, `controle-cru-fora-do-ds.total` 3→0, `filtro-fora-do-canone.total` 3→1); handoff em `.nirvana/handoffs/leela-controles-c1-20260813.md` |
 | S006-T7 · Ondas C2 a C6, a conversão por superfície | ⏳ | esperam a C0 |
 
 ### O que a medição corrigiu no diagnóstico do próprio épico
