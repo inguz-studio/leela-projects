@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, Checkbox, Chip, Input, Select, Textarea, useToast } from '@leela/design-system';
+import { Badge, Button, CheckboxField, Chip, Input, Select, Textarea, useToast } from '@leela/design-system';
 import type { ClubeInput, VisibilidadeClube } from '@leela/core';
 import { gerarCodigoConvite, validarClube } from '@leela/core';
 import { criarClubePadrao } from '../_data/clubes';
@@ -206,10 +206,11 @@ export function NovoClubePage(): JSX.Element {
             ))}
           </div>
         </div>
-        <label className="flex items-center gap-[var(--spacing-2)]">
-          <Checkbox checked={aprovacaoManual} onChange={(e) => setAprovacaoManual(e.target.checked)} />
-          <span className="text-[var(--text-primary)]">Exigir aprovação manual de novos membros (RN-141)</span>
-        </label>
+        <CheckboxField
+          checked={aprovacaoManual}
+          onChange={(e) => setAprovacaoManual(e.target.checked)}
+          label="Exigir aprovação manual de novos membros"
+        />
       </section>
 
       <div>
