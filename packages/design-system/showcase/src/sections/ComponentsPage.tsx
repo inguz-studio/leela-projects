@@ -21,6 +21,7 @@ import {
   DEFAULT_SIDEBAR_SECTIONS,
   DatePicker,
   DateRangePicker,
+  DefinitionItem,
   DonutChart,
   ConfirmModal,
   Dialog,
@@ -280,6 +281,23 @@ export function ComponentsPage(): JSX.Element {
                 }
               />
             </Stack>
+          </DemoCard>
+
+          <DemoCard
+            title="DefinitionItem"
+            description="O par rótulo + valor em pé, para ficha e resumo. ResponsavelCard e FichaDoClienteDrawer montavam cada um a própria versão — decisão da Onda C0 fechada na Onda C6: a ausência (null, undefined ou string vazia) cai sempre no mesmo emptyLabel, prop por campo quando a ausência tem causa que vale nomear."
+          >
+            <FormGrid as="dl" columns={2}>
+              <DefinitionItem label="Nome" value="Marina Castelo" />
+              <DefinitionItem label="E-mail" value="marina@demo.dev" />
+              <DefinitionItem label="Telefone" value={undefined} />
+              <DefinitionItem
+                label="CPF"
+                value={null}
+                emptyLabel="Não coletado. O CPF vem dos dados pessoais da inscrição."
+                size="sm"
+              />
+            </FormGrid>
           </DemoCard>
 
           <DemoCard
