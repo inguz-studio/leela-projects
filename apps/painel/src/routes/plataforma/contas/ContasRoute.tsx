@@ -288,6 +288,18 @@ export function ContasRoute(): JSX.Element {
 
   const recorte = (
     <div className="flex flex-col gap-[var(--spacing-2)]">
+      {/*
+        Modo de visualização: alternância ENTRE DUAS TELAS inteiras (Fila ×
+        Diretório), sempre com exatamente um lado ativo — nunca "nenhum". Não é
+        FilterChips: a peça sempre desenha um chip "Todos" no modo exclusivo
+        (`selected.length === 0`), e aqui não existe estado vazio válido para
+        ele mapear (`onChange([])` não corresponde a nenhum ModoDeContas). O
+        próprio aria-label não começa com "filtrar/filtro/recorte" — nem a
+        régua mecânica do gate-canon (§3 de 02-catraca-controles.md) conta esta
+        ocorrência como faceta-crua. Mesmo desenho que EngajamentoView adotou
+        na Onda C1 para Top N/Todos: alternância de recorte é Chip active
+        direto, cânone §1.
+      */}
       <div
         role="group"
         aria-label="Modo de visualização"
