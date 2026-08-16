@@ -102,3 +102,14 @@ functions/src/__probe__/
 
 # Config do Obsidian (local)
 .obsidian/
+
+# Sobras de quem roda o emulador local (preview.sh / mock-campeche.sh).
+# Nascem na raiz do worktree, ninguém as rastreia e elas apareciam soltas no
+# `git status` de toda lane que sobe o mock — o tipo de ruído que entra num
+# `git add -A` distraído. `functions/lib/` é saída do `tsc` das Functions.
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+database-debug.log
+functions/lib/
