@@ -90,17 +90,19 @@ const DIVIDA_PADRAO_REIMPLEMENTADO = [
   // wrapper, o nome precisa dizer o que ele acrescenta — `SecaoHead` batiza o
   // canônico de novo, e é o batismo que faz a duplicata parecer oficial.
   "apps/painel/src/components/SecaoHead.tsx",
-  // Onda C5 · `FiltroStatus` = `FilterChips`, publicada na Onda C0. A entrada
-  // nasce com a peça, e não depois dela — foi a separação entre as duas coisas
-  // que custou uma remedição em 11/08, quando `SecaoHead` virou sinônimo de
-  // `SectionHeader` com o componente já no ar.
-  //
-  // O caso é literal: a função local monta `<div role="group" aria-label>` em
-  // volta de um `FilterMenu`, que é byte a byte a anatomia da `FilterChips` — e
-  // o comentário dela ainda explica à mão o limiar de quatro valores que a peça
-  // agora fecha por construção. A entrada morre quando `HubEventos` importar a
-  // peça (a onda já lista a barra deste arquivo).
-  "apps/painel/src/routes/eventos/hub/HubEventos.tsx",
+  // Onda C5 · `FiltroStatus` (HubEventos.tsx) SAIU desta lista, verdicto
+  // registrado na própria lane, não achado morto por engano. A hipótese da C0
+  // — "byte a byte a anatomia da FilterChips" — não resistiu à leitura de
+  // perto: `FilterChips` só produz o `<div role="group">` no ramo de FILEIRA
+  // (<4 opções); o ramo de dropdown (4+) devolve `<FilterMenu>` puro, sem
+  // grupo. A faceta de HubEventos tem 3 categorias REAIS — abaixo do limiar —,
+  // e só cruza o "4" porque o dono decidiu (2026-07-11, testado e travado em
+  // `HubEventos.test.tsx`) contar "Todos" como um quarto estado. Rotear pela
+  // `FilterChips` de verdade inverteria essa decisão em silêncio (fileira no
+  // lugar de dropdown). O conserto real — tirar o `<div role="group">`
+  // redundante, que o `FilterMenu` já não precisa — saiu da HubEventos.tsx
+  // sem trocar o nome por um sinônimo da peça; o comentário no arquivo
+  // registra o porquê e a condição de reabertura.
 ];
 
 /**
@@ -125,11 +127,26 @@ const DIVIDA_FILTRO_FORA_DO_CANONE = [
   // humana (ver 02-catraca-controles.md §7). Arquivo sai da lista: zero achado
   // sobrando, e entrada morta reprova a camada A.
   //
-  // Onda C5 · `Select` de ORDENAÇÃO — padrão ÓRFÃO. O cânone não tem linha
-  // para ordenação de lista: não é filtro (não retira nada) e não é campo de
-  // formulário (não vira dado). A entrada sai daqui quando a decisão voltar e
-  // o cânone ganhar a linha.
-  "apps/painel/src/routes/crm/ClientesPage.tsx",
+  // Onda C5 · `Select` de ORDENAÇÃO (ClientesPage.tsx:118) SAIU desta lista —
+  // decisão tomada NA ONDA, como `03-fila-em-ondas.md` mandou (não sobe ao
+  // dono: não é dinheiro nem dado pessoal, e o default é técnico). Dos três
+  // destinos que a fila apontou (prop `sort` da `FilterBar`, peça própria
+  // `SortSelect`, ou `Select` legítimo com linha nova no cânone), o veredicto
+  // é o terceiro: ordenar não retira nada da lista (não é filtro) e não é
+  // campo de formulário que vira dado — mas É "escolha única, poucas opções,
+  // sem busca", exatamente a forma que `Select` já cobre. Uma peça nova
+  // (`SortSelect`) para UM único consumidor no produto inteiro violaria o
+  // reuso-primeiro que justificou as cinco peças da C0 (12-13 consumidores
+  // cada); a prop `sort` da `FilterBar` misturaria responsabilidade de
+  // reordenar TODA a lista dentro de uma peça desenhada para RECORTAR facetas.
+  // Registro: `03-canon/canone-de-componentes.md` §1 ganhou a linha
+  // "Ordenação de lista"; `prefixosDeFiltro` (abaixo) perdeu `"ordenar"` — o
+  // prefixo confundia ordenar (reordena) com filtrar (retira), e a decisão
+  // vale para a categoria inteira, não só para este arquivo.
+  // Condição de reabertura: se aparecer um SEGUNDO consumidor de ordenação
+  // fora de formulário, ou se um `Select` rotulado "Ordenar por…" for achado
+  // filtrando de verdade (retirando item da lista), a exceção volta à mesa —
+  // registrar achado + ADR antes de tocar código.
 ];
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
@@ -426,7 +443,12 @@ export default [
       "leela-canon/filtro-fora-do-canone": [
         "error",
         {
-          prefixosDeFiltro: ["filtrar", "filtro", "recorte", "recortar", "ordenar"],
+          // "ordenar" SAIU (Onda C5, ver o comentário de
+          // DIVIDA_FILTRO_FORA_DO_CANONE acima): reordenar não é filtrar —
+          // não retira item nenhum da lista — e a régua da regra é o rótulo
+          // que o próprio autor escreveu, então "Ordenar por…" declara papel
+          // de ordenação, nunca de filtro.
+          prefixosDeFiltro: ["filtrar", "filtro", "recorte", "recortar"],
           prefixosDeRecorte: ["quantos", "quantas", "top"],
           arquivosDeExcecao: [],
         },

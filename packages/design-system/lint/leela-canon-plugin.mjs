@@ -439,10 +439,20 @@ const padraoReimplementadoForaDoDs = {
  * `aria-activedescendant` fora do design system e **não teve um único hit**. A
  * regra nunca vai precisar de dívida para eles, e a primeira violação é
  * exatamente a que ela existe para pegar.
+ *
+ * "ORDENAR" SAIU DOS PREFIXOS DE FILTRO (Onda C5, 2026-08-16). O órfão de
+ * `01-inventario-controles.md` §5 — `ClientesPage.tsx:118`, um `Select` que
+ * reordena a lista de clientes — forçou a distinção que faltava: filtrar
+ * RETIRA item da lista, ordenar só muda a ORDEM em que tudo aparece. O cânone
+ * §1 proíbe `Select` para o primeiro papel e não tem opinião sobre o segundo —
+ * e a forma de "escolha única, poucas opções, sem busca" é exatamente o que
+ * `Select` já cobre. A régua continua sendo o rótulo que o autor escreveu:
+ * "Ordenar por…" declara ordenação, nunca filtro, com a mesma falta de
+ * ambiguidade que "Filtrar por…" declara o contrário.
  */
 
 /** Prefixos de rótulo que denunciam papel de filtro. Extensível por config. */
-const PREFIXOS_DE_FILTRO = ['filtrar', 'filtro', 'recorte', 'recortar', 'ordenar'];
+const PREFIXOS_DE_FILTRO = ['filtrar', 'filtro', 'recorte', 'recortar'];
 /** Prefixos que denunciam alternância entre recortes ("Top 5", "Quantos"). */
 const PREFIXOS_DE_RECORTE = ['quantos', 'quantas', 'top'];
 /** Atributos que só existem quando alguém está construindo um combobox à mão. */
