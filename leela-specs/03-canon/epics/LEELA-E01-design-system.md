@@ -887,3 +887,48 @@ com story, teste, contrato e linha do cânone no mesmo commit. A catraca a mede 
 Vale o registro pelo que ele prova: **a catraca pegou a regressão sozinha, no dia seguinte, sem
 ninguém revisar com o cânone na mão.** É o argumento inteiro a favor de estendê-la para as quatro
 famílias que hoje passam batido.
+
+## Delta um menu secundário só, e a auditoria da herança acha o que o gate verde não pegou (2026-08-13/16 · lanes `SUBNAV-UNIFICA` + `SUBNAV-RESUME`)
+
+A terceira cobrança da classe padronização veio do dono lendo a tela, na íntegra: *"o menu
+secundário de clubs está coreto, mas nas outras telas, a linha esta aparecendo, aonde os seletores
+laranja ficam. Isso é um exemplo de que voce naoe stá retulizando e padronizando os componentes."*
+
+### S1266..S1268 · a barra, o rail e o popover
+
+| Tarefa | Estado | Onde |
+|---|---|---|
+| S1266 · a prop que desenhava a linha sai do design system | ✅ | `ee398608` — `divider` removida e a borda inferior travada em `border-b-0` **depois** do `className` (mesma mecânica de `twMerge` da trava de rolagem); story, `LLM.txt`, testes e linha do cânone §9 no MESMO commit. **Supersede a RN-229**, agora marcada nos dois `rns-delta` que a definem (`83311729`) |
+| S1267 · as onze áreas passam a consumir uma peça só | ✅ | `c30b15a0` — nasce `apps/painel/src/components/nav/AreaSubNav.tsx`, consumidor único, **com clubs dentro**: a área correta consome o mesmo componente que as outras, e não uma versão própria preservada por ser a boa. Um defeito caiu junto — `TenantFichaLayout` chamava `preventDefault()` sem conferir tecla nem botão, e só naquela barra ctrl/cmd+clique e clique do meio não funcionavam |
+| S1262 · a catraca que impede a próxima barra solta | ✅ | `85ed9ab6` — `menu-secundario-cru`, baseline **0/0**: conta `<SubNav>` renderizado direto em `apps/` fora do consumidor único e a barra reescrita à mão (`flex` + borda inferior de 2px ou no token de marca) |
+| S1263 · o item redundante sai do catálogo, não do consumidor | ✅ | `6f85318f` — `configuracoes` sai de `DEFAULT_SIDEBAR_NAV_ICONS` no DS e a seção `CONTA` foi junto; menu do produtor **6 → 5**. A remoção só aconteceu porque a redundância foi MEDIDA e é pura (rail e popover apontavam para a mesma `/conta`) |
+| S1264 · Sair aparece onde se procura, e os dois itens ganham ícone | ✅ | `77cfd5a2` (token `--popover-icon-size` + campo `icon` no `DropdownMenuAction`), `6f85318f` (`useSair`, Sair por ÚLTIMO de propósito), `fa3fc7bc` + `776d8265` (contrato do ícone), `592669e4` (o fail-safe do logout) |
+| S1265 · o raio do painel flutuante volta a ser token | ⏳ | achado da varredura de cor; `rounded-md`/`rounded-sm` do Tailwind em vez dos tokens de raio |
+| S1268 · "Desafios ativos" mostra NaN na área de clubs | ⏳ | achado NA TELA no gate visual da retomada; não é da família desta lane |
+
+### O que a auditoria da herança corrigiu, e o que ela ensina
+
+A sessão de 13/08 morreu de quota no instante do merge, declarando gates verdes. A retomada
+re-mediu tudo, e o que a declaração escondia vale mais que o que ela dizia:
+
+- **O `tsc` do design-system nunca rodou.** O handoff declarava "`tsc` (painel) 0" — e o painel
+  estava mesmo em zero. Só que o território da lane incluía o DS, tocado em quatro commits, e o
+  arquivo de teste nascido na leva 16 não compilava (dois `TS2532` sob `noUncheckedIndexedAccess`).
+  O `vitest` não typecheca, então o arquivo passava verde na suíte. ⛔ **`tsc` do pacote entra nos
+  gates de qualquer lane que toque `packages/design-system`; gate do app não cobre o pacote.**
+- **O `useSair` foi entregue sem teste, e o commit dele explicava por que ele existe.** A razão era
+  o fail-safe (`logout()` que rejeita e ainda assim navega para `/entrar`) — o comportamento caro e
+  invisível, coberto em `592669e4`.
+- **Duas histórias com o número de outra lane.** `S1260`/`S1261` estavam gravadas duas vezes no
+  V1-KANBAN: esta lane e a da landing escolheram os mesmos números no mesmo dia, cada uma lendo o
+  board antes de a outra escrever. ⛔ **Id de história se confere no board RE-PUXADO na aterrissagem.**
+- **O gate visual fotografava a tela errada sem saber.** Seis das 48 imagens da rodada anterior eram
+  a mesma imagem com dois nomes, e o popover — a leva 16 inteira — nunca apareceu em nenhuma. Detalhe
+  em `.nirvana/handoffs/leela-subnav-unifica-20260813.md` §5. ⛔ **Superfície de gate visual declara
+  qual barra ela é, e o gate reprova se a tela entregar outra.**
+
+### RN-229 · superseded (2026-08-13 · leva 14)
+
+Área, sub-área e terciária são o mesmo menu: **não existe variante por nível de profundidade**, e a
+borda inferior do `SubNav` não é configurável. Separar a barra do conteúdo é trabalho do espaço da
+moldura, nunca de traço.
