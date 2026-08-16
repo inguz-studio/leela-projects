@@ -98,7 +98,10 @@ describe('TenantsList', () => {
       />,
     );
     expect(screen.getByText(/Nenhum tenant com esse status/i)).toBeInTheDocument();
-    expect(screen.getByText('Mostrando 0 de 1 tenants')).toBeInTheDocument();
+    // ResultCount concorda no singular pelo TOTAL (1 tenant carregado), não
+    // pelo visível — a mesma honestidade gramatical que a peça já traz para
+    // as outras telas convertidas (Onda C6).
+    expect(screen.getByText('Mostrando 0 de 1 tenant')).toBeInTheDocument();
   });
 
   it('abrir tenant chama onOpenTenant com o id', async () => {

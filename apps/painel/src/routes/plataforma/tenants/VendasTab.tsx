@@ -31,13 +31,13 @@ import {
   CardFooter,
   EmptyState,
   PageHeader,
+  ResultCount,
   Skeleton,
   Table,
   type TableColumn,
 } from '@leela/design-system';
 import { formatarCodigoPedido } from '@leela/core';
 import { formatBRL, formatDataHora } from '../../eventos/repasses/_lib/format';
-import { rotuloContagem } from '../_lib/listasGlobais';
 import {
   FORMA_PAGAMENTO_LABEL,
   SUBSTANTIVO_VENDAS,
@@ -186,12 +186,12 @@ export function VendasTab({ estado }: VendasTabProps): JSX.Element {
           />
         ) : (
           <div className="flex flex-col gap-[var(--spacing-4)]">
-            <p
-              aria-live="polite"
-              className="text-right text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
-            >
-              {rotuloContagem(estado.itens.length, estado.temMais, SUBSTANTIVO_VENDAS)}
-            </p>
+            <ResultCount
+              visiveis={estado.itens.length}
+              temMais={estado.temMais}
+              substantivo={SUBSTANTIVO_VENDAS}
+              className="text-right"
+            />
 
             <Table
               columns={colunas}

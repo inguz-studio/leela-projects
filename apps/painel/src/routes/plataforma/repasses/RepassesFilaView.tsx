@@ -15,8 +15,17 @@
 // domínio; a back-office não redefine a semântica de estado/moeda.
 // =============================================================================
 
-import { Badge, Button, Chip, Combobox, PageHeader, Skeleton, Table } from '@leela/design-system';
-import type { SelectOption, TableColumn } from '@leela/design-system';
+import {
+  Badge,
+  Button,
+  Combobox,
+  FilterChips,
+  PageHeader,
+  ResultCount,
+  Skeleton,
+  Table,
+} from '@leela/design-system';
+import type { FilterChipsOption, SelectOption, TableColumn } from '@leela/design-system';
 import { badgeEstado } from '../../eventos/repasses/_lib/estadoRepasse';
 import { formatBRL, formatData } from '../../eventos/repasses/_lib/format';
 import type { RepasseFilaItem } from '../../../lib/query/queries';
@@ -26,6 +35,7 @@ import {
   filtrarFila,
   tenantsNaFila,
   type EstadoFilaFilter,
+  type EstadoFilaOption,
   type TenantFilaFilter,
 } from './_lib/fila';
 
@@ -48,6 +58,14 @@ export interface RepassesFilaViewProps {
   onRegistrarPagamento?: (item: RepasseFilaItem) => void;
 }
 
+/**
+ * Opções da faceta de estado, SEM "todos" — a `FilterChips` desenha o "Todos"
+ * sozinha (`allLabel`/`allCount`), como o desenho da peça manda (Onda C0).
+ */
+const OPCOES_DE_ESTADO: readonly EstadoFilaOption[] = ESTADO_FILA_FILTERS.filter(
+  (opt) => opt.id !== 'todos'
+);
+
 function EstadoChips({
   filter,
   counts,
@@ -57,20 +75,20 @@ function EstadoChips({
   counts: Record<EstadoFilaFilter, number>;
   onChange: (f: EstadoFilaFilter) => void;
 }): JSX.Element {
+  const options: FilterChipsOption[] = OPCOES_DE_ESTADO.map((opt) => ({
+    id: opt.id,
+    label: opt.label,
+    count: counts[opt.id],
+  }));
   return (
-    <div role="group" aria-label="Filtrar por estado" className="flex flex-wrap gap-[var(--spacing-2)]">
-      {ESTADO_FILA_FILTERS.map((opt) => {
-        const ativo = opt.id === filter;
-        return (
-          <Chip key={opt.id} active={ativo} onClick={() => onChange(opt.id)}>
-            {opt.label}
-            <span aria-hidden className="opacity-70">
-              {counts[opt.id]}
-            </span>
-          </Chip>
-        );
-      })}
-    </div>
+    <FilterChips
+      label="Estado"
+      options={options}
+      selected={filter === 'todos' ? [] : [filter]}
+      onChange={(next) => onChange((next[0] as EstadoFilaFilter | undefined) ?? 'todos')}
+      allLabel="Todos"
+      allCount={counts.todos}
+    />
   );
 }
 
@@ -164,9 +182,11 @@ export function RepassesFilaView({
                   />
                 </label>
               </div>
-              <p aria-live="polite" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                Mostrando {visiveis.length} de {itens.length} repasses
-              </p>
+              <ResultCount
+                visiveis={visiveis.length}
+                total={itens.length}
+                substantivo={{ singular: 'repasse', plural: 'repasses' }}
+              />
             </div>
 
             <Table
