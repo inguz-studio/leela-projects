@@ -3,17 +3,30 @@
 //
 // RN-130: 3 grupos (enviadas → agendadas → rascunhos), cada linha com o dado
 // que importa no estado (enviada: alcance; agendada: disparo em; rascunho:
-// criado em). Filter bar (busca × canal = interseção) + contador "mostrando
-// X de Y" (aria-live) + popover contextual por linha (ações por estado). Filtro
-// que zera → EmptyState honesto. Stateful de UI; dados/ações vêm por props.
+// criado em). FilterBar (busca × canal = interseção) com ResultCount no slot
+// de contagem + popover contextual por linha (ações por estado). Filtro que
+// zera → EmptyState honesto. Stateful de UI; dados/ações vêm por props.
 //
-// Reuso-first: DS (Badge, Button, Chip, EmptyState, DropdownMenu, Skeleton) + KpiCard
-// do evento + helpers PUROS de `_lib/campanhas` (labels feminino/estado, filtro,
-// agrupamento, KPIs, ações). Zero hardcode de token; cor de borda por token.
+// Reuso-first: DS (Badge, Button, FilterBar, FilterChips, ResultCount,
+// EmptyState, DropdownMenu, Skeleton) + KpiCard do evento + helpers PUROS de
+// `_lib/campanhas` (labels feminino/estado, filtro, agrupamento, KPIs, ações).
+// Zero hardcode de token; cor de borda por token.
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { KpiCard, Badge, Button, Chip, EmptyState, DropdownMenu, IconButton, SearchInput, Skeleton } from '@leela/design-system';
+import {
+  KpiCard,
+  Badge,
+  Button,
+  EmptyState,
+  DropdownMenu,
+  FilterBar,
+  FilterChips,
+  IconButton,
+  ResultCount,
+  SearchInput,
+  Skeleton,
+} from '@leela/design-system';
 import { MoreVertical } from 'lucide-react';
 import type { Campanha, CanalCampanha, StatusCampanhaPersistido } from '@leela/core';
 import { formatDataCurta, formatInt } from '../_lib/format';
@@ -140,10 +153,6 @@ export function CampanhasList({
   );
   const grupos = useMemo(() => agruparPorEstado(filtradas), [filtradas]);
 
-  function toggleCanal(c: CanalCampanha): void {
-    setCanais((atual) => (atual.includes(c) ? atual.filter((x) => x !== c) : [...atual, c]));
-  }
-
   if (loading) {
     return (
       <div role="status" aria-label="Carregando campanhas" className="flex flex-col gap-[var(--spacing-4)]">
@@ -194,26 +203,34 @@ export function CampanhasList({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-[var(--spacing-3)]">
-        <SearchInput
-          aria-label="Buscar campanha por título"
-          placeholder="Buscar por título"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          shortcutLabel={null}
-        />
-        <div role="group" aria-label="Filtrar por canal" className="flex flex-wrap gap-[var(--spacing-2)]">
-          {CANAL_OPCOES.map((c) => (
-            <Chip key={c} active={canais.includes(c)} onClick={() => toggleCanal(c)}>
-              {canalCampanhaLabel(c)}
-            </Chip>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
-        Mostrando {formatInt(filtradas.length)} de {formatInt(kpis.total)} campanhas
-      </p>
+      <FilterBar
+        label="campanhas"
+        search={
+          <SearchInput
+            aria-label="Buscar campanha por título"
+            placeholder="Buscar por título"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            shortcutLabel={null}
+          />
+        }
+        facets={
+          <FilterChips
+            label="Canal"
+            options={CANAL_OPCOES.map((c) => ({ id: c, label: canalCampanhaLabel(c) }))}
+            selected={canais}
+            onChange={(next) => setCanais(next as CanalCampanha[])}
+            multiple
+          />
+        }
+        count={
+          <ResultCount
+            visiveis={filtradas.length}
+            total={kpis.total}
+            substantivo={{ singular: 'campanha', plural: 'campanhas' }}
+          />
+        }
+      />
 
       {filtradas.length === 0 ? (
         <EmptyState

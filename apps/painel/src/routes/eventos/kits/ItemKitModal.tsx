@@ -13,7 +13,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Checkbox, Input, Modal, Radio, RadioGroup, useToast } from '@leela/design-system';
+import { Button, CheckboxField, FieldGroup, Input, Modal, Radio, RadioGroup, useToast } from '@leela/design-system';
 import {
   gradeEfetivaDoItem,
   validarGradeItem,
@@ -227,26 +227,19 @@ export function ItemKitModal({
         </RadioGroup>
 
         {tamanhado && (
-          <fieldset className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--surface-high)] p-[var(--spacing-4)]">
-            <legend className="sr-only">Grade de tamanhos por corte</legend>
-            <div className="flex flex-col gap-[var(--spacing-1)]">
-              <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-                Grade de tamanhos
-              </span>
-              <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-                Separe por corte (feminina/masculina) ou use unissex como grade única. No
-                checkout, quem compra escolhe o corte primeiro e depois o tamanho.
-              </span>
-            </div>
+          <FieldGroup
+            legend="Grade de tamanhos"
+            description="Separe por corte (feminina/masculina) ou use unissex como grade única. No checkout, quem compra escolhe o corte primeiro e depois o tamanho."
+            className="rounded-[var(--radius-md)] bg-[var(--surface-high)] p-[var(--spacing-4)]"
+            {...(erroGrade ? { errorMessage: erroGrade } : {})}
+          >
             {ORDEM_CORTES.map((corte) => (
               <div key={corte} className="flex flex-col gap-[var(--spacing-2)]">
-                <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-                  <Checkbox
-                    checked={grade[corte].ativo}
-                    onChange={(e) => mudarCorte(corte, { ativo: e.target.checked })}
-                  />
-                  {CORTE_LABEL[corte]}
-                </label>
+                <CheckboxField
+                  checked={grade[corte].ativo}
+                  onChange={(e) => mudarCorte(corte, { ativo: e.target.checked })}
+                  label={CORTE_LABEL[corte]}
+                />
                 {grade[corte].ativo && (
                   <Input
                     id={`grade-${corte}`}
@@ -258,12 +251,7 @@ export function ItemKitModal({
                 )}
               </div>
             ))}
-            {erroGrade && (
-              <p role="alert" className="text-[length:var(--font-size-xs)] text-[var(--text-danger)]">
-                {erroGrade}
-              </p>
-            )}
-          </fieldset>
+          </FieldGroup>
         )}
 
         <RadioGroup
@@ -285,13 +273,11 @@ export function ItemKitModal({
               onChange={(e) => setMarca(e.target.value)}
               {...(erro && marca.trim().length === 0 ? { errorMessage: erro } : {})}
             />
-            <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-              <Checkbox
-                checked={exibirLogo}
-                onChange={(e) => setExibirLogo(e.target.checked)}
-              />
-              Exibir logo ao atleta
-            </label>
+            <CheckboxField
+              checked={exibirLogo}
+              onChange={(e) => setExibirLogo(e.target.checked)}
+              label="Exibir logo ao atleta"
+            />
           </div>
         )}
       </div>

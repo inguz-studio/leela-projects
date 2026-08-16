@@ -57,13 +57,13 @@ describe('InscritosView', () => {
     renderView({ inscritos: muitosInscritos(453), loading: false, error: null, modalidades: ['10k'] });
     // header + 18 linhas de dados
     expect(screen.getAllByRole('row')).toHaveLength(19);
-    expect(screen.getByText('Mostrando 453 de 453')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 453 de 453 inscritos')).toBeInTheDocument();
   });
 
   it('busca "Marina" filtra e atualiza o contador', async () => {
     renderView({ inscritos: muitosInscritos(50), loading: false, error: null, modalidades: ['10k'] });
     await userEvent.type(screen.getByLabelText(LABEL_BUSCA), 'Marina');
-    expect(screen.getByText('Mostrando 1 de 50')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 1 de 50 inscritos')).toBeInTheDocument();
     expect(screen.getByText('Marina Silva')).toBeInTheDocument();
   });
 
@@ -77,7 +77,7 @@ describe('InscritosView', () => {
     ];
     renderView({ inscritos, loading: false, error: null, modalidades: ['10k'] });
     await userEvent.type(screen.getByLabelText(LABEL_BUSCA), 'ped-k7mpq');
-    expect(screen.getByText('Mostrando 1 de 2')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 1 de 2 inscritos')).toBeInTheDocument();
     expect(screen.getByText('João Pereira')).toBeInTheDocument();
     expect(screen.queryByText('Marina Silva')).not.toBeInTheDocument();
   });
@@ -136,7 +136,7 @@ describe('InscritosView', () => {
     renderView({ inscritos, loading: false, error: null, modalidades: ['10k'] });
     expect(screen.getByText('2 inscrição(ões) com pagamento pendente')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Ver pendentes' }));
-    expect(screen.getByText('Mostrando 2 de 4')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 2 de 4 inscritos')).toBeInTheDocument();
   });
 
   it('aba Pagamento lista os inadimplentes (não é mais placeholder)', async () => {
@@ -172,8 +172,9 @@ describe('InscritosView', () => {
   it('A1 · reexpõe "selecionar todos da página" no mobile (lg:hidden), mesmo handler', async () => {
     renderView({ inscritos: muitosInscritos(3), loading: false, error: null, modalidades: ['10k'] });
     const mobileSelectAll = screen.getByRole('checkbox', { name: 'Selecionar todos da página' });
-    // vive num container só-mobile (some no desktop via lg:hidden)
-    expect(mobileSelectAll.closest('label')?.className).toContain('lg:hidden');
+    // vive num container só-mobile (some no desktop via lg:hidden) — o wrapper
+    // é o `div` raiz da CheckboxField (Onda C3), não mais um `<label>` à mão.
+    expect(mobileSelectAll.closest('div')?.className).toContain('lg:hidden');
     // opera a MESMA seleção em massa da página que o header do desktop
     await userEvent.click(mobileSelectAll);
     expect(screen.getByText('3 selecionado(s)')).toBeInTheDocument();
@@ -259,7 +260,7 @@ describe('InscritosView — código do ingresso e QR (RN-397)', () => {
     );
     expect(screen.getByText('João Pereira')).toBeInTheDocument();
     expect(screen.queryByText('Marina Silva')).not.toBeInTheDocument();
-    expect(screen.getByText('Mostrando 1 de 3')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 1 de 3 inscritos')).toBeInTheDocument();
   });
 
   it('a ação da linha abre o QR daquele inscrito, com o código junto', async () => {

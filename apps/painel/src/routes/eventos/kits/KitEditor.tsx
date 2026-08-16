@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Breadcrumb,
   Button,
-  Checkbox,
+  CheckboxField,
   Chip,
   FileInput,
   Input,
@@ -459,13 +459,11 @@ export function KitEditor({
           <ul className="flex flex-col gap-[var(--spacing-2)]">
             {itens.map((item) => (
               <li key={item.id}>
-                <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-                  <Checkbox
-                    checked={itensSel.has(item.id)}
-                    onChange={() => toggleItem(item.id)}
-                  />
-                  {item.nome}
-                </label>
+                <CheckboxField
+                  checked={itensSel.has(item.id)}
+                  onChange={() => toggleItem(item.id)}
+                  label={item.nome}
+                />
               </li>
             ))}
           </ul>

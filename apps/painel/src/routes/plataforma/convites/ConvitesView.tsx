@@ -20,6 +20,7 @@ import { Badge, Button, Input, PageHeader, Skeleton, Table } from '@leela/design
 import type { TableColumn } from '@leela/design-system';
 import { NOTA_CONVITE_MAX, type ConviteOrganizador, type StatusConviteOrganizador } from '@leela/core';
 import { formatDataHora } from '../_lib/format';
+import { DateField } from '@/components/fields/DateField';
 
 export interface ConvitesViewProps {
   convites: ConviteOrganizador[] | null;
@@ -139,12 +140,11 @@ export function ConvitesView({
             />
           </div>
           <div className="sm:w-56">
-            <Input
+            <DateField
               id="convite-validade"
               label="Validade (opcional)"
-              type="date"
               value={expiraEm}
-              onChange={(e) => setExpiraEm(e.target.value)}
+              onChange={setExpiraEm}
             />
           </div>
           <Button type="submit" variant="primary" size="sm" disabled={gerando}>

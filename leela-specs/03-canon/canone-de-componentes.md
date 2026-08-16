@@ -42,6 +42,7 @@ não exceção. Regra completa em `04-engenharia/governanca-design.md` §8.
 | Âncora flutuante genérica | `Popover` + `PopoverTrigger` / `PopoverContent` / `PopoverAnchor` / `PopoverClose` | direto só quando o conteúdo não é lista |
 | Lista filtrável dentro de painel | `Command` + `CommandInput` / `CommandList` / `CommandEmpty` / `CommandGroup` / `CommandItem` | primitivo do `Combobox` |
 | Alternância entre recortes do mesmo dado | `Chip` com `active`, ou `Tabs` | chip para filtro empilhável; tab para recorte exclusivo com painel |
+| Busca com resultado inline, sem popover ("modo de fluxo") | `SearchInput` + lista própria — exceção registrada, **ADR-018** | `Combobox` é picker de popover; o balcão (`AtendimentoPanel.tsx`) não pode pagar o clique de abrir um gatilho antes de buscar (RN-205). Único consumidor hoje; um segundo justifica `Combobox` ganhar `mode="flow"` |
 
 **Proibido:** `<select>` nativo para filtro ou seleção rica. A lista dele é desenhada pelo sistema
 operacional e não aceita os tokens do DS.

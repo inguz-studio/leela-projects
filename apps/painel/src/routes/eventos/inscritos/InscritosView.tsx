@@ -26,9 +26,12 @@ import {
   Badge,
   Button,
   Checkbox,
+  CheckboxField,
   Chip,
   Combobox,
+  FilterBar,
   Pagination,
+  ResultCount,
   SearchInput,
   Skeleton,
   Table,
@@ -50,7 +53,6 @@ import { statusInscritoBadge } from '../_lib/statusInscrito';
 import { formatDataCurta } from '../_lib/format';
 import { montarCsvInscritos } from '../_lib/inscritosCsv';
 import {
-  contadorInscritos,
   contarPendentesAntigos,
   contarPorStatus,
   filtrarInscritos,
@@ -343,14 +345,15 @@ export function InscritosView({
       )}
 
       {/* Barra de filtros consolidada */}
-      <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-3)]">
-        <div className="flex flex-wrap items-end gap-[var(--spacing-3)]">
-          {/*
+      <FilterBar
+        label="inscritos"
+        search={
+          /*
             RN-475: o rótulo nomeia os TRÊS campos que a caixa casa, porque
             quem recebe um `PED-` no telefone precisa saber que ele serve aqui —
             a busca já casa o código da compra (espelho no inscrito), e busca
             que ninguém sabe que existe não é busca.
-          */}
+          */
           <SearchInput
             aria-label="Buscar atleta pelo nome, código do ingresso ou código da compra"
             placeholder="Buscar por nome ou código"
@@ -358,36 +361,57 @@ export function InscritosView({
             onChange={(e) => setBusca(e.target.value)}
             className="w-[var(--sidebar-width)] max-w-full"
           />
-          <div className="min-w-[var(--spacing-24)]">
-            <Combobox
-              aria-label="Filtrar por kit"
-              options={kitOptions}
-              value={kit ?? TODOS_VALUE}
-              onValueChange={(v) =>
-                setKit((v as string) === TODOS_VALUE ? null : (v as KitInscrito))
-              }
-            />
-          </div>
-          {modalidades.length > 0 && (
+        }
+        facets={
+          <>
             <div className="min-w-[var(--spacing-24)]">
               <Combobox
-                aria-label="Filtrar por modalidade"
-                options={modalidadeOptions}
-                value={modalidade ?? TODOS_VALUE}
+                aria-label="Filtrar por kit"
+                options={kitOptions}
+                value={kit ?? TODOS_VALUE}
                 onValueChange={(v) =>
-                  setModalidade((v as string) === TODOS_VALUE ? null : (v as string))
+                  setKit((v as string) === TODOS_VALUE ? null : (v as KitInscrito))
                 }
               />
             </div>
-          )}
-        </div>
-        <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]" role="status">
-          {contadorInscritos(filtrados.length, inscritos.length)}
-        </span>
-      </div>
+            {modalidades.length > 0 && (
+              <div className="min-w-[var(--spacing-24)]">
+                <Combobox
+                  aria-label="Filtrar por modalidade"
+                  options={modalidadeOptions}
+                  value={modalidade ?? TODOS_VALUE}
+                  onValueChange={(v) =>
+                    setModalidade((v as string) === TODOS_VALUE ? null : (v as string))
+                  }
+                />
+              </div>
+            )}
+          </>
+        }
+        count={
+          <ResultCount
+            visiveis={filtrados.length}
+            total={inscritos.length}
+            substantivo={{ singular: 'inscrito', plural: 'inscritos' }}
+          />
+        }
+      />
 
-      {/* Status: controle segmentado VISÍVEL com contagens (faceta de pagamento) */}
-      <div className="flex flex-wrap items-center gap-[var(--spacing-2)]" role="group" aria-label="Filtrar por status">
+      {/*
+        Status: controle segmentado VISÍVEL com contagens (faceta de pagamento,
+        dor #1). EXCEÇÃO REGISTRADA à FilterChips — ADR-019: STATUS_INSCRITO tem
+        4 valores, o limiar exato em que a peça troca a fileira por um Combobox
+        de popover (cânone §1, "4+ exclusiva = Combobox"). Um clique direto no
+        chip viraria abrir+escolher no Combobox, custo extra na interação mais
+        usada da tela — a onda não paga esse passo a mais. Chip é canônico; a
+        MONTAGEM segue à mão até a peça ganhar um jeito de honrar um limiar
+        maior quando o autor da tela pedir explicitamente.
+      */}
+      <div
+        className="flex flex-wrap items-center gap-[var(--spacing-2)]"
+        role="group"
+        aria-label="Filtrar por status"
+      >
         <Chip active={status === null} onClick={() => setStatus(null)}>
           {`Todos · ${contagem.total}`}
         </Chip>
@@ -405,16 +429,13 @@ export function InscritosView({
           — só no mobile (lg:hidden), preservando o JTBD de seleção em massa (P5
           inadimplência) no celular. No desktop o header cobre, então não duplica. */}
       {pageItems.length > 0 && (
-        <label className="flex items-center gap-[var(--spacing-2)] lg:hidden">
-          <Checkbox
-            checked={todosMarcadosNaPagina}
-            indeterminate={algunsMarcadosNaPagina}
-            onChange={alternarPagina}
-          />
-          <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            Selecionar todos da página
-          </span>
-        </label>
+        <CheckboxField
+          className="lg:hidden"
+          checked={todosMarcadosNaPagina}
+          indeterminate={algunsMarcadosNaPagina}
+          onChange={alternarPagina}
+          label="Selecionar todos da página"
+        />
       )}
 
       {renderTabela(pageItems)}

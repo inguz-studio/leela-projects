@@ -12,8 +12,10 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Badge,
   Button,
-  Chip,
   EmptyState,
+  FilterBar,
+  FilterChips,
+  ResultCount,
   SearchInput,
   Skeleton,
   Table,
@@ -220,32 +222,37 @@ export function AfiliadosPage(): JSX.Element {
         />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-[var(--spacing-3)]">
-            <SearchInput
-              aria-label="Buscar afiliado"
-              placeholder="Buscar por nome, código ou canal"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              shortcutLabel={null}
-              className="w-full max-w-md"
-            />
-            <div role="group" aria-label="Filtrar por tipo" className="flex gap-[var(--spacing-2)]">
-              {(
-                [
-                  ['todos', 'Todos'],
-                  ['clube', 'Clubes'],
-                  ['pessoa_fisica', 'Pessoas físicas'],
-                ] as const
-              ).map(([id, label]) => (
-                <Chip key={id} active={filtroTipo === id} onClick={() => setFiltroTipo(id)}>
-                  {label}
-                </Chip>
-              ))}
-            </div>
-            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
-              mostrando {filtrados.length} de {(afiliados ?? []).length}
-            </span>
-          </div>
+          <FilterBar
+            label="afiliados"
+            search={
+              <SearchInput
+                aria-label="Buscar afiliado"
+                placeholder="Buscar por nome, código ou canal"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                shortcutLabel={null}
+                className="w-full max-w-md"
+              />
+            }
+            facets={
+              <FilterChips
+                label="Tipo"
+                options={[
+                  { id: 'clube', label: 'Clubes' },
+                  { id: 'pessoa_fisica', label: 'Pessoas físicas' },
+                ]}
+                selected={filtroTipo === 'todos' ? [] : [filtroTipo]}
+                onChange={(next) => setFiltroTipo((next[0] as FiltroTipo) ?? 'todos')}
+              />
+            }
+            count={
+              <ResultCount
+                visiveis={filtrados.length}
+                total={(afiliados ?? []).length}
+                substantivo={{ singular: 'afiliado', plural: 'afiliados' }}
+              />
+            }
+          />
 
           {filtrados.length === 0 ? (
             <EmptyState
