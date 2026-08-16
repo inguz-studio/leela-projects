@@ -6,7 +6,19 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { KpiCard, Badge, Button, Chip, EmptyState, DropdownMenu, IconButton, SearchInput, Skeleton } from '@leela/design-system';
+import {
+  KpiCard,
+  Badge,
+  Button,
+  EmptyState,
+  DropdownMenu,
+  FilterBar,
+  FilterChips,
+  IconButton,
+  ResultCount,
+  SearchInput,
+  Skeleton,
+} from '@leela/design-system';
 import { MoreVertical } from 'lucide-react';
 import type {
   CanalComunicado,
@@ -119,10 +131,6 @@ export function ComunicadosList({
     [todos, busca, status, canais, origem],
   );
 
-  function toggleCanal(c: CanalComunicado): void {
-    setCanais((atual) => (atual.includes(c) ? atual.filter((x) => x !== c) : [...atual, c]));
-  }
-
   if (loading) {
     return (
       <div role="status" aria-label="Carregando comunicados" className="flex flex-col gap-[var(--spacing-4)]">
@@ -173,45 +181,48 @@ export function ComunicadosList({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-[var(--spacing-3)]">
-        <SearchInput
-          aria-label="Buscar comunicado por título"
-          placeholder="Buscar por título"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          shortcutLabel={null}
-        />
-        <div className="flex flex-wrap items-center gap-[var(--spacing-4)]">
-          <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-[var(--spacing-2)]">
-            <Chip active={status === null} onClick={() => setStatus(null)}>
-              Todos
-            </Chip>
-            {STATUS_OPCOES.map((s) => (
-              <Chip key={s.id} active={status === s.id} onClick={() => setStatus(status === s.id ? null : s.id)}>
-                {s.label}
-              </Chip>
-            ))}
-          </div>
-          <div role="group" aria-label="Filtrar por canal" className="flex flex-wrap gap-[var(--spacing-2)]">
-            {CANAL_OPCOES.map((c) => (
-              <Chip key={c} active={canais.includes(c)} onClick={() => toggleCanal(c)}>
-                {canalLabel(c)}
-              </Chip>
-            ))}
-          </div>
-          <div role="group" aria-label="Filtrar por origem" className="flex flex-wrap gap-[var(--spacing-2)]">
-            {ORIGEM_OPCOES.map((o) => (
-              <Chip key={o} active={origem === o} onClick={() => setOrigem(origem === o ? null : o)}>
-                {origemLabel(o)}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
-        Mostrando {formatInt(filtrados.length)} de {formatInt(kpis.total)} comunicados
-      </p>
+      <FilterBar
+        label="comunicados"
+        search={
+          <SearchInput
+            aria-label="Buscar comunicado por título"
+            placeholder="Buscar por título"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            shortcutLabel={null}
+          />
+        }
+        facets={
+          <>
+            <FilterChips
+              label="Status"
+              options={STATUS_OPCOES.map((s) => ({ id: s.id, label: s.label }))}
+              selected={status ? [status] : []}
+              onChange={(next) => setStatus((next[0] as StatusComunicado | undefined) ?? null)}
+            />
+            <FilterChips
+              label="Canal"
+              options={CANAL_OPCOES.map((c) => ({ id: c, label: canalLabel(c) }))}
+              selected={canais}
+              onChange={(next) => setCanais(next as CanalComunicado[])}
+              multiple
+            />
+            <FilterChips
+              label="Origem"
+              options={ORIGEM_OPCOES.map((o) => ({ id: o, label: origemLabel(o) }))}
+              selected={origem ? [origem] : []}
+              onChange={(next) => setOrigem((next[0] as OrigemComunicado | undefined) ?? null)}
+            />
+          </>
+        }
+        count={
+          <ResultCount
+            visiveis={filtrados.length}
+            total={kpis.total}
+            substantivo={{ singular: 'comunicado', plural: 'comunicados' }}
+          />
+        }
+      />
 
       {filtrados.length === 0 ? (
         <EmptyState
