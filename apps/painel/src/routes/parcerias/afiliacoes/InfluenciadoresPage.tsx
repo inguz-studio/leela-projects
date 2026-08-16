@@ -18,8 +18,10 @@ import {
   Button,
   ConfirmModal,
   EmptyState,
+  FilterBar,
   Input,
   Modal,
+  ResultCount,
   SearchInput,
   KpiCard,
   PageHeader,
@@ -262,17 +264,26 @@ export function InfluenciadoresPage(): JSX.Element {
               <KpiCard label="Comissão em aberto" value={formatBRL(kpis.saldoAberto)} hint="saldo a repassar" />
             </section>
 
-            <SearchInput
-              aria-label="Buscar influenciador"
-              placeholder="Buscar por nome, código ou evento"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              shortcutLabel={null}
-              className="w-full max-w-md"
+            <FilterBar
+              label="influenciadores"
+              search={
+                <SearchInput
+                  aria-label="Buscar influenciador"
+                  placeholder="Buscar por nome, código ou evento"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  shortcutLabel={null}
+                  className="w-full max-w-md"
+                />
+              }
+              count={
+                <ResultCount
+                  visiveis={filtrados.length}
+                  total={(afiliados ?? []).length}
+                  substantivo={{ singular: 'influenciador', plural: 'influenciadores' }}
+                />
+              }
             />
-            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
-              mostrando {filtrados.length} de {(afiliados ?? []).length}
-            </span>
 
             {filtrados.length === 0 ? (
               <EmptyState title="Nada encontrado" description="Nenhum influenciador casa com a busca." />
