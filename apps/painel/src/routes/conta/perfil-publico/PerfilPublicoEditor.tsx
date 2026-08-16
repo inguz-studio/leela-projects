@@ -27,6 +27,7 @@ import {
   Badge,
   Button,
   Chip,
+  FieldGroup,
   Input,
   Textarea,
   useToast,
@@ -258,10 +259,7 @@ export function PerfilPublicoEditor({
       </div>
 
       {/* Visibilidade (RN-161) */}
-      <fieldset className="flex flex-col gap-[var(--spacing-2)]">
-        <legend className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Visibilidade
-        </legend>
+      <FieldGroup legend="Visibilidade" gap="sm">
         <div role="group" aria-label="Visibilidade" className="flex flex-wrap gap-[var(--spacing-2)]">
           {VISIBILIDADES_PERFIL.map((v) => (
             <Chip key={v} active={values.visibilidade === v} onClick={() => set('visibilidade', v)}>
@@ -272,13 +270,10 @@ export function PerfilPublicoEditor({
         <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
           {VISIBILIDADE_INFO[values.visibilidade].hint}
         </span>
-      </fieldset>
+      </FieldGroup>
 
       {/* Links externos (link-in-bio) — até 5 */}
-      <fieldset className="flex flex-col gap-[var(--spacing-3)]">
-        <legend className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Links externos
-        </legend>
+      <FieldGroup legend="Links externos">
         {values.linksExternos.map((link, i) => (
           <div key={i} className="flex items-end gap-[var(--spacing-2)]">
             <Input
@@ -315,7 +310,7 @@ export function PerfilPublicoEditor({
             Máximo de {PERFIL_LINKS_MAX} links.
           </span>
         )}
-      </fieldset>
+      </FieldGroup>
 
       <div className="flex items-center gap-[var(--spacing-3)]">
         <Button type="submit" variant="primary" disabled={salvando}>
