@@ -82,7 +82,7 @@ export function DeletarClubeModal({
 
         <p className="rounded-[var(--radius-md)] bg-[var(--surface-base)] p-[var(--spacing-3)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
           Conforme a LGPD, os dados ficam disponíveis para exportação por até 90 dias
-          após a exclusão e depois são apagados definitivamente (RN-144). Exporte antes
+          após a exclusão e depois são apagados definitivamente. Exporte antes
           de excluir se quiser guardar uma cópia.
         </p>
 
