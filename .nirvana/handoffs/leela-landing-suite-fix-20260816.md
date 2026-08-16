@@ -87,7 +87,42 @@ declarava — o mesmo contrato de que o painel já vivia.
 | `tsc --noEmit` | exit 0 | exit 0 |
 | `eslint app lib --max-warnings 0` | exit 0 | exit 0 |
 
-Duas execuções seguidas na árvore canônica registradas no rodapé deste arquivo.
+### As duas execuções seguidas na árvore canônica (a estabilidade, provada por repetição)
+
+Depois do merge, em `C:\dev\LEELA`, com o comando do gate:
+
+| execução | resultado |
+|---|---|
+| 1ª | ✅ **849 verdes (849)**, 65 de 65 arquivos, **exit 0**, 210,02s |
+| 2ª | ✅ **849 verdes (849)**, 65 de 65 arquivos, **exit 0**, 192,52s |
+
+---
+
+## ⚠️ O segundo achado: o dist DEFASADO existe — só não era a causa dos 147
+
+Entre a primeira dupla de execuções, um caso reprovou sozinho, e **não era timeout**: 114ms e 77ms,
+determinístico. Era o **gate de frescor**, `test/build-frescor-dist.test.ts`, no caso que se chama
+`⚔ o REPO DE VERDADE está fresco agora — se este caso ficar vermelho, não builde`:
+
+```
+@leela/design-system · ./dist/tailwind-preset.js · estado: "defasado"
+  distEm  ≈ 13/08      fonteEm ≈ 16/08
+```
+
+A fonte do DS estava **três dias à frente** do dist na árvore canônica. Basta um `merge`/`checkout`
+reescrever mtime de arquivo de pacote para o gate abrir — e ele estava certo em abrir. `turbo run
+build` dos três pacotes fechou o caso (14 de 14 verdes), e as duas execuções seguidas vieram depois
+disso.
+
+**Como isso convive com a falsificação do C0 registrada acima:** dist defasado é um problema **real e
+recorrente** desta árvore, e o gate de frescor o pega. O que está falsificado é ele ser a causa dos
+**147 reprovados** — o worktree limpo, com dist recém-buildado e byte a byte igual, reproduziu o
+vermelho idêntico. São dois defeitos distintos, com dois sintomas distintos: dist defasado dá **um**
+caso vermelho, nomeado, em 100ms; o custo de import dava **147**, espalhados por 22 arquivos, em
+timeout.
+
+⚠️ **Nota operacional para toda lane que rode esta suíte:** se `build-frescor-dist` abrir, o conserto
+é `turbo run build` dos pacotes, **não** mexer no teste.
 
 ---
 
