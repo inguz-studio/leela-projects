@@ -11,8 +11,9 @@ import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
-  Checkbox,
+  CheckboxField,
   Chip,
+  FieldGroup,
   Input,
   RadioCard,
   RadioGroup,
@@ -191,17 +192,13 @@ export function DesafioEditor({
             const sel = values.acoes[a.id];
             return (
               <li key={a.id} className="flex flex-wrap items-center gap-[var(--spacing-3)]">
-                <label className="flex flex-1 items-center gap-[var(--spacing-2)] text-[var(--text-primary)]">
-                  <Checkbox
-                    checked={Boolean(sel)}
-                    aria-label={`Selecionar ${a.nome}`}
-                    onChange={() => setValues((v) => toggleAcao(v, a.id))}
-                  />
-                  <span>{a.nome}</span>
-                  <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                    {a.pontosBase} pts / {a.unidadeBase} {a.unidade}
-                  </span>
-                </label>
+                <CheckboxField
+                  className="flex-1"
+                  checked={Boolean(sel)}
+                  onChange={() => setValues((v) => toggleAcao(v, a.id))}
+                  label={a.nome}
+                  description={`${a.pontosBase} pts / ${a.unidadeBase} ${a.unidade}`}
+                />
                 {sel && values.modelo === 'A' ? (
                   <Input
                     type="number"
@@ -302,10 +299,7 @@ export function DesafioEditor({
             ) : null}
 
             {values.modelo === 'C' ? (
-              <fieldset className="flex flex-col gap-[var(--spacing-2)]">
-                <legend className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-                  Mínimo por pilar (RN-111)
-                </legend>
+              <FieldGroup legend="Mínimo por pilar (RN-111)">
                 <div className="grid grid-cols-1 gap-[var(--spacing-3)] sm:grid-cols-3">
                   {PILARES.map((p) => (
                     <Input
@@ -320,7 +314,7 @@ export function DesafioEditor({
                     />
                   ))}
                 </div>
-              </fieldset>
+              </FieldGroup>
             ) : null}
           </CardSecao>
 
