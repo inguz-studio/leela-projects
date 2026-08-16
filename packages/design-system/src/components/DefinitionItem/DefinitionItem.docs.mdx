@@ -1,0 +1,37 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './DefinitionItem.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# DefinitionItem
+
+O par rótulo + valor em pé. `ResponsavelCard` e `FichaDoClienteDrawer` montaram cada um a própria versão — dezessete usos ao todo, medidos pela auditoria de ADMINVISAO-ONDAS-235 — porque na hora em que foram escritos o design system não tinha esta peça.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## A ausência é honesta, sempre
+
+`null`, `undefined` e string vazia caem no mesmo `emptyLabel` — e o rótulo da ausência é prop, não texto fixo, porque cada campo de uma ficha de PII precisa dizer de onde o dado viria.
+
+<Canvas of={Stories.AusenciaComCausa} />
+
+## O que não é esta peça
+
+Rótulo e valor lado a lado, numa linha de COMPARAÇÃO (ex.: `PlanoAplicadoCard`'s "plano X · vigente Y") tem anatomia horizontal, não empilhada — forçar as duas no mesmo componente seria a lição que o `FieldGroup` já registrou para si: compor um layout para depois desfazê-lo é carregar a anatomia errada.
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="DefinitionItem"
+  snippet={`import { DefinitionItem } from '@leela/design-system';
+
+<dl className="grid grid-cols-2 gap-[var(--spacing-4)]">
+  <DefinitionItem label="Nome" value={owner.nome} />
+  <DefinitionItem label="E-mail" value={owner.email} />
+</dl>`}
+  contract={contract}
+/>

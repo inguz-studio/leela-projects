@@ -11,7 +11,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Input, Modal } from '@leela/design-system';
+import { Button, FieldGroup, Input, Modal } from '@leela/design-system';
 import {
   CHAVES_TABELA_PARCELAS,
   PLANO_PADRAO,
@@ -172,10 +172,7 @@ export function PlanoFormModal({
           />
         </div>
 
-        <fieldset className="flex flex-col gap-[var(--spacing-3)]">
-          <legend className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            Taxa por parcela (%)
-          </legend>
+        <FieldGroup legend="Taxa por parcela (%)">
           <div className="grid grid-cols-3 gap-[var(--spacing-3)] sm:grid-cols-4 md:grid-cols-6">
             {CHAVES_TABELA_PARCELAS.map((chave) => (
               <Input
@@ -192,7 +189,7 @@ export function PlanoFormModal({
               />
             ))}
           </div>
-        </fieldset>
+        </FieldGroup>
 
         {enviado && erros.length > 0 && (
           <ul role="alert" className="flex flex-col gap-[var(--spacing-1)] text-[length:var(--font-size-sm)] text-[var(--text-danger)]">

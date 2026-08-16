@@ -31,6 +31,7 @@ import {
   FormGrid,
   KpiCard,
   MetricGrid,
+  SectionHeader,
   Skeleton,
   Table,
   type TableColumn,
@@ -151,9 +152,7 @@ export function RepassesDoTenant({
 
   return (
     <section aria-label="Saldo e repasses" className="flex flex-col gap-[var(--spacing-5)]">
-      <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-        Saldo e repasses
-      </h2>
+      <SectionHeader title="Saldo e repasses" />
 
       {saldoError !== null ? (
         <Card role="alert" className="border-l-4 border-l-[var(--border-danger)]">

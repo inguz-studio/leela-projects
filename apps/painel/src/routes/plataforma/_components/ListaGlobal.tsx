@@ -27,14 +27,15 @@ import {
   CardDescription,
   CardFooter,
   EmptyState,
+  FilterBar,
   PageHeader,
+  ResultCount,
   Skeleton,
   Table,
-  Toolbar,
   type TableColumn,
 } from '@leela/design-system';
 import type { ListaGlobalState } from '../_data/listasGlobais';
-import { rotuloContagem, type Substantivo } from '../_lib/listasGlobais';
+import type { Substantivo } from '../_lib/listasGlobais';
 
 export interface ListaGlobalProps<T> {
   titulo: string;
@@ -66,12 +67,29 @@ export function ListaGlobal<T>({
   vazio,
   erro,
 }: ListaGlobalProps<T>): JSX.Element {
+  // O contador só existe quando há o que contar — mesma condição que já
+  // decidia a linha antes desta peça compor a `FilterBar` (erro e loading não
+  // têm contagem, e a lista vazia já diz isso pelo `EmptyState`).
+  const mostrarContador = estado.error === null && !estado.loading && estado.itens.length > 0;
+
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
       <PageHeader title={titulo} subtitle={subtitulo} />
 
       <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">
-        <Toolbar aria-label={`Recorte de ${substantivo.plural}`} start={recorte} />
+        <FilterBar
+          label={substantivo.plural}
+          facets={recorte}
+          count={
+            mostrarContador ? (
+              <ResultCount
+                visiveis={estado.itens.length}
+                temMais={estado.temMais}
+                substantivo={substantivo}
+              />
+            ) : undefined
+          }
+        />
 
         {estado.error !== null ? (
           <Card role="alert" className="border-l-4 border-l-[var(--border-danger)]">
@@ -97,13 +115,6 @@ export function ListaGlobal<T>({
           <EmptyState title={vazio.titulo} description={vazio.descricao} />
         ) : (
           <div className="flex flex-col gap-[var(--spacing-4)]">
-            <p
-              aria-live="polite"
-              className="text-right text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
-            >
-              {rotuloContagem(estado.itens.length, estado.temMais, substantivo)}
-            </p>
-
             <Table
               columns={colunas}
               data={estado.itens}

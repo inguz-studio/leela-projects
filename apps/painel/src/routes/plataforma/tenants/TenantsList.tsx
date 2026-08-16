@@ -5,8 +5,17 @@
 // skeleton no load, bloco de erro no fail (§2.12).
 // =============================================================================
 
-import { Badge, Button, Chip, EmptyState, PageHeader, Skeleton, Table } from '@leela/design-system';
-import type { TableColumn } from '@leela/design-system';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  FilterChips,
+  PageHeader,
+  ResultCount,
+  Skeleton,
+  Table,
+} from '@leela/design-system';
+import type { FilterChipsOption, TableColumn } from '@leela/design-system';
 import type { Tenant } from '@leela/core';
 import { deriveTenantHealth } from '@leela/core';
 import { statusTenantBadge, healthTenantBadge } from '../_lib/health';
@@ -24,6 +33,12 @@ export interface TenantsListProps {
   onProvisionar?: () => void;
 }
 
+/**
+ * Opções da faceta de status, SEM "todos" — a `FilterChips` desenha o "Todos"
+ * sozinha (`allLabel`/`allCount`), como o desenho da peça manda (Onda C0).
+ */
+const OPCOES_DE_STATUS = TENANT_FILTERS.filter((opt) => opt.id !== 'todos');
+
 function FiltroChips({
   filter,
   onFilterChange,
@@ -33,20 +48,20 @@ function FiltroChips({
   onFilterChange: (f: TenantFilter) => void;
   counts: Record<TenantFilter, number>;
 }): JSX.Element {
+  const options: FilterChipsOption[] = OPCOES_DE_STATUS.map((opt) => ({
+    id: opt.id,
+    label: opt.label,
+    count: counts[opt.id],
+  }));
   return (
-    <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-[var(--spacing-2)]">
-      {TENANT_FILTERS.map((opt) => {
-        const ativo = opt.id === filter;
-        return (
-          <Chip key={opt.id} active={ativo} onClick={() => onFilterChange(opt.id)}>
-            {opt.label}
-            <span aria-hidden className="opacity-70">
-              {counts[opt.id]}
-            </span>
-          </Chip>
-        );
-      })}
-    </div>
+    <FilterChips
+      label="Status"
+      options={options}
+      selected={filter === 'todos' ? [] : [filter]}
+      onChange={(next) => onFilterChange((next[0] as TenantFilter | undefined) ?? 'todos')}
+      allLabel="Todos"
+      allCount={counts.todos}
+    />
   );
 }
 
@@ -146,9 +161,11 @@ export function TenantsList({
           <>
             <div className="flex items-center justify-between gap-[var(--spacing-4)] flex-wrap">
               <FiltroChips filter={filter} onFilterChange={onFilterChange} counts={counts} />
-              <p aria-live="polite" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                Mostrando {formatInt(visiveis.length)} de {formatInt(todos.length)} tenants
-              </p>
+              <ResultCount
+                visiveis={visiveis.length}
+                total={todos.length}
+                substantivo={{ singular: 'tenant', plural: 'tenants' }}
+              />
             </div>
 
             {visiveis.length === 0 ? (

@@ -38,9 +38,11 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  DefinitionItem,
   Divider,
   Drawer,
   SCROLL_Y_ONLY,
+  SectionHeader,
   Skeleton,
 } from '@leela/design-system';
 import type { FichaDoClienteView, FichaPedidoDoClienteView } from '@leela/api-client';
@@ -104,41 +106,6 @@ function formatarMs(ms: number): string {
 // Peças
 // ---------------------------------------------------------------------------
 
-/**
- * Um campo da ficha: o valor, ou a frase que declara a ausência.
- *
- * `ausente` é opcional só para os campos que o contrato do callable garante
- * presentes (os quatro números de comportamento). Quando ele falta e o valor
- * vier nulo mesmo assim, a tela ainda declara — a rede é "Não coletado.", nunca
- * uma célula em branco.
- */
-function Campo({
-  rotulo,
-  valor,
-  ausente = 'Não coletado.',
-}: {
-  rotulo: string;
-  valor: string | null;
-  ausente?: string;
-}): JSX.Element {
-  return (
-    <div className="flex flex-col gap-[var(--spacing-1)]">
-      <dt className="text-[length:var(--font-size-xs)] uppercase tracking-[var(--table-header-spacing)] text-[var(--text-tertiary)]">
-        {rotulo}
-      </dt>
-      <dd
-        className={
-          valor === null
-            ? 'text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]'
-            : 'text-[length:var(--font-size-sm)] text-[var(--text-primary)]'
-        }
-      >
-        {valor === null ? ausente : valor}
-      </dd>
-    </div>
-  );
-}
-
 /** Uma seção da ficha: título e os campos dela. */
 function Secao({
   titulo,
@@ -149,9 +116,7 @@ function Secao({
 }): JSX.Element {
   return (
     <section className="flex flex-col gap-[var(--spacing-3)]" aria-label={titulo}>
-      <h3 className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-        {titulo}
-      </h3>
+      <SectionHeader title={titulo} titleAs="h3" />
       <dl className="flex flex-col gap-[var(--spacing-4)]">{children}</dl>
     </section>
   );
@@ -250,49 +215,54 @@ export function FichaDoClienteDrawer({
       ) : (
         <div className="flex flex-col gap-[var(--spacing-5)]">
           <Secao titulo="Identidade">
-            <Campo
-              rotulo="CPF"
-              valor={ficha.cpf === null ? null : formatarCpf(ficha.cpf)}
-              ausente={AUSENTE.cpf}
+            <DefinitionItem
+              label="CPF"
+              value={ficha.cpf === null ? null : formatarCpf(ficha.cpf)}
+              emptyLabel={AUSENTE.cpf}
+              size="sm"
             />
-            <Campo
-              rotulo="Nascimento"
-              valor={ficha.nascimento === null ? null : formatNascimento(ficha.nascimento)}
-              ausente={AUSENTE.nascimento}
+            <DefinitionItem
+              label="Nascimento"
+              value={ficha.nascimento === null ? null : formatNascimento(ficha.nascimento)}
+              emptyLabel={AUSENTE.nascimento}
+              size="sm"
             />
-            <Campo
-              rotulo="Gênero"
-              valor={ficha.genero === null ? null : (GENERO_LABEL[ficha.genero] ?? ficha.genero)}
-              ausente={AUSENTE.genero}
+            <DefinitionItem
+              label="Gênero"
+              value={ficha.genero === null ? null : (GENERO_LABEL[ficha.genero] ?? ficha.genero)}
+              emptyLabel={AUSENTE.genero}
+              size="sm"
             />
           </Secao>
 
           <Divider />
 
           <Secao titulo="Contato">
-            <Campo rotulo="E-mail" valor={ficha.email} ausente={AUSENTE.email} />
-            <Campo
-              rotulo="Telefone"
-              valor={ficha.telefone === null ? null : formatarTelefone(ficha.telefone)}
-              ausente={AUSENTE.telefone}
+            <DefinitionItem label="E-mail" value={ficha.email} emptyLabel={AUSENTE.email} size="sm" />
+            <DefinitionItem
+              label="Telefone"
+              value={ficha.telefone === null ? null : formatarTelefone(ficha.telefone)}
+              emptyLabel={AUSENTE.telefone}
+              size="sm"
             />
           </Secao>
 
           <Divider />
 
           <Secao titulo="Onde">
-            <Campo
-              rotulo="Cidade e UF"
-              valor={
+            <DefinitionItem
+              label="Cidade e UF"
+              value={
                 ficha.cidade === null && ficha.uf === null
                   ? null
                   : [ficha.cidade, ficha.uf].filter((p) => p !== null).join(' · ')
               }
-              ausente={AUSENTE.cidade}
+              emptyLabel={AUSENTE.cidade}
+              size="sm"
             />
-            <Campo
-              rotulo="Endereço"
-              valor={
+            <DefinitionItem
+              label="Endereço"
+              value={
                 ficha.endereco === null
                   ? null
                   : [
@@ -305,21 +275,23 @@ export function FichaDoClienteDrawer({
                       .filter((p) => typeof p === 'string' && p.trim() !== '')
                       .join(' · ')
               }
-              ausente={AUSENTE.endereco}
+              emptyLabel={AUSENTE.endereco}
+              size="sm"
             />
           </Secao>
 
           <Divider />
 
           <Secao titulo="Saúde">
-            <Campo
-              rotulo="Restrições médicas"
-              valor={ficha.restricoesMedicas}
-              ausente={AUSENTE.restricoes}
+            <DefinitionItem
+              label="Restrições médicas"
+              value={ficha.restricoesMedicas}
+              emptyLabel={AUSENTE.restricoes}
+              size="sm"
             />
-            <Campo
-              rotulo="Contato de emergência"
-              valor={
+            <DefinitionItem
+              label="Contato de emergência"
+              value={
                 ficha.contatoEmergencia === null
                   ? null
                   : [
@@ -333,17 +305,22 @@ export function FichaDoClienteDrawer({
                       .filter((p) => p.trim() !== '')
                       .join(' · ')
               }
-              ausente={AUSENTE.emergencia}
+              emptyLabel={AUSENTE.emergencia}
+              size="sm"
             />
           </Secao>
 
           <Divider />
 
           <Secao titulo="Comportamento de compra">
-            <Campo rotulo="Eventos" valor={formatInt(ficha.qtdEventos)} />
-            <Campo rotulo="Inscrições confirmadas" valor={formatInt(ficha.qtdInscricoes)} />
-            <Campo rotulo="Valor gasto" valor={formatBRL(ficha.valorGasto)} />
-            <Campo rotulo="LTV" valor={formatBRL(ficha.ltv)} />
+            <DefinitionItem label="Eventos" value={formatInt(ficha.qtdEventos)} size="sm" />
+            <DefinitionItem
+              label="Inscrições confirmadas"
+              value={formatInt(ficha.qtdInscricoes)}
+              size="sm"
+            />
+            <DefinitionItem label="Valor gasto" value={formatBRL(ficha.valorGasto)} size="sm" />
+            <DefinitionItem label="LTV" value={formatBRL(ficha.ltv)} size="sm" />
           </Secao>
 
           <Divider />
@@ -352,14 +329,11 @@ export function FichaDoClienteDrawer({
             className="flex flex-col gap-[var(--spacing-3)]"
             aria-label="Histórico de inscrições"
           >
-            <h3 className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-              Histórico de inscrições
-            </h3>
-
-            <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-              O histórico traz inscrições confirmadas e estornadas. Estornada continua aqui e fica
-              fora do valor gasto e do LTV, porque o dinheiro voltou.
-            </p>
+            <SectionHeader
+              title="Histórico de inscrições"
+              titleAs="h3"
+              description="O histórico traz inscrições confirmadas e estornadas. Estornada continua aqui e fica fora do valor gasto e do LTV, porque o dinheiro voltou."
+            />
 
             {ficha.pedidosTruncados ? (
               <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">

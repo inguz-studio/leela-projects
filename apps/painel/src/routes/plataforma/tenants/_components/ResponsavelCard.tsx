@@ -25,6 +25,7 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  DefinitionItem,
   FormGrid,
 } from '@leela/design-system';
 import type { Profissional } from '@leela/core';
@@ -35,26 +36,6 @@ export interface ResponsavelCardProps {
   owner: Profissional | null;
   /** uid do dono — o fallback honesto quando não há perfil. */
   ownerUid: string;
-}
-
-function Campo({ rotulo, valor }: { rotulo: string; valor: string | undefined }): JSX.Element {
-  const preenchido = typeof valor === 'string' && valor.trim() !== '';
-  return (
-    <div className="flex flex-col gap-[var(--spacing-1)]">
-      <dt className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
-        {rotulo}
-      </dt>
-      <dd
-        className={
-          preenchido
-            ? 'text-[length:var(--font-size-base)] text-[var(--text-primary)]'
-            : 'text-[length:var(--font-size-base)] text-[var(--text-tertiary)]'
-        }
-      >
-        {preenchido ? valor : 'Não informado'}
-      </dd>
-    </div>
-  );
 }
 
 export function ResponsavelCard({ owner, ownerUid }: ResponsavelCardProps): JSX.Element {
@@ -75,13 +56,13 @@ export function ResponsavelCard({ owner, ownerUid }: ResponsavelCardProps): JSX.
           </p>
         ) : (
           <FormGrid as="dl">
-            <Campo rotulo="Nome" valor={owner.nome} />
-            <Campo rotulo="E-mail" valor={owner.email} />
-            <Campo
-              rotulo="Telefone"
-              valor={owner.telefone ? formatarTelefone(owner.telefone) : undefined}
+            <DefinitionItem label="Nome" value={owner.nome} />
+            <DefinitionItem label="E-mail" value={owner.email} />
+            <DefinitionItem
+              label="Telefone"
+              value={owner.telefone ? formatarTelefone(owner.telefone) : undefined}
             />
-            <Campo rotulo="Organização" valor={owner.organizacao} />
+            <DefinitionItem label="Organização" value={owner.organizacao} />
           </FormGrid>
         )}
       </CardContent>

@@ -113,6 +113,15 @@ export function EventosGlobaisRoute(): JSX.Element {
           className="w-full sm:w-64"
         />
 
+        {/*
+          Status: controle segmentado. EXCEÇÃO REGISTRADA à FilterChips —
+          ADR-020: FILTROS_STATUS_EVENTO tem 4 valores reais, o limiar exato em
+          que a peça troca a fileira por um Combobox de popover (cânone §1,
+          "4+ exclusiva = Combobox"), e a faceta também precisa de `disabled`
+          durante o recorte por tenant — capacidade que a FilterChips não tem.
+          Mesmo mecanismo do ADR-019 (InscritosView), segundo consumidor
+          nomeado da mesma condição de reabertura.
+        */}
         <div
           role="group"
           aria-label="Filtrar por status"

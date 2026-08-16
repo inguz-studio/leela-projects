@@ -145,6 +145,7 @@ e entra aqui como linha, não como componente.
 | Grade de indicadores (1 → xs:2 → lg:N) | `MetricGrid` — `columns` 2, 3 ou 4, `gap` |
 | Bento assimétrico de dois painéis | `SplitPanel` — `ratio` `3:2`/`7:3`/`1:3`, `gap` |
 | Cabeçalho de bloco interno | `SectionHeader` — `title`, `titleAs`, `description` e os slots `help` / `control` / `action` |
+| Par rótulo + valor em pé, de leitura (ficha, resumo) | `DefinitionItem` — `label`, `value`, `emptyLabel`, `size` `sm`/`base`; compõe `FormGrid as="dl"` ou `Stack`, não substitui — decisão da Onda C6 (2026-08-16), `02-rodadas/2026-08-12-conformidade-controles/03-fila-em-ondas.md`: rótulo+valor LADO A LADO numa linha de comparação (`PlanoAplicadoCard`) NÃO é esta peça, anatomia horizontal diferente |
 
 **O DS publicava 50 componentes e nenhum era layout.** Consequência medida: 106 ocorrências de
 `grid grid-cols-*` no painel, com **23 assinaturas distintas**, para o que são três famílias

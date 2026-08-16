@@ -239,6 +239,11 @@ export { SplitPanel, splitPanelVariants } from './components/SplitPanel';
 export type { SplitPanelProps, SplitPanelElement } from './components/SplitPanel';
 export { SectionHeader } from './components/SectionHeader';
 export type { SectionHeaderProps } from './components/SectionHeader';
+// O par rótulo + valor em pé (Onda C6 · CANONE-1). ResponsavelCard e
+// FichaDoClienteDrawer montaram cada um a própria versão (auditoria de
+// ADMINVISAO-ONDAS-235) — decisão da C0 sobre "peça própria ou composição de
+// Stack?" medida linha a linha nesta onda. Compõe FormGrid/Stack, não substitui.
+export { DefinitionItem, type DefinitionItemProps, type DefinitionItemSize } from './components/DefinitionItem';
 // Cartão de domínio (inventário §7.2): clube, comunicado, campanha, parceria
 // e afiliação não tinham canônico e produziam os sete `<article>` crus da §5.
 // UMA peça para as cinco famílias — elas têm a mesma anatomia, e cinco corpos

@@ -15,7 +15,16 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, Checkbox, Input, PageHeader, Skeleton, useToast } from '@leela/design-system';
+import {
+  Badge,
+  Button,
+  CheckboxField,
+  FieldGroup,
+  Input,
+  PageHeader,
+  Skeleton,
+  useToast,
+} from '@leela/design-system';
 import {
   MEIOS_TAXA,
   validarTabelaTaxaPlataforma,
@@ -151,45 +160,39 @@ export function TaxaGlobalRoute(): JSX.Element {
         )}
 
         {MEIOS_TAXA.map((meio) => (
-          <fieldset key={meio} className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
-            <legend className="mb-[var(--spacing-2)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-              {ROTULO_MEIO[meio]}
-            </legend>
-            <Input
-              id={`global-${meio}-pct`}
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              label="Percentual (%)"
-              value={form[meio].percentual}
-              onChange={(e) => setLinha(meio, 'percentual', e.target.value)}
-              disabled={saver.isPending}
-            />
-            <Input
-              id={`global-${meio}-fixo`}
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              label="Fixo por venda (R$)"
-              value={form[meio].fixoReais}
-              onChange={(e) => setLinha(meio, 'fixoReais', e.target.value)}
-              disabled={saver.isPending}
-            />
-          </fieldset>
+          <FieldGroup key={meio} legend={ROTULO_MEIO[meio]}>
+            <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+              <Input
+                id={`global-${meio}-pct`}
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                label="Percentual (%)"
+                value={form[meio].percentual}
+                onChange={(e) => setLinha(meio, 'percentual', e.target.value)}
+                disabled={saver.isPending}
+              />
+              <Input
+                id={`global-${meio}-fixo`}
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                label="Fixo por venda (R$)"
+                value={form[meio].fixoReais}
+                onChange={(e) => setLinha(meio, 'fixoReais', e.target.value)}
+                disabled={saver.isPending}
+              />
+            </div>
+          </FieldGroup>
         ))}
 
         {temZeroAtivo && (
-          <label className="flex items-center gap-[var(--spacing-2)]">
-            <Checkbox
-              checked={confirmaZero}
-              disabled={saver.isPending}
-              onChange={(e) => setConfirmaZero(e.target.checked)}
-            />
-            <span className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">
-              Confirmo Serviço ZERO no(s) meio(s) marcado(s) — a plataforma não cobrará nada nessas
-              vendas
-            </span>
-          </label>
+          <CheckboxField
+            checked={confirmaZero}
+            disabled={saver.isPending}
+            onChange={(e) => setConfirmaZero(e.target.checked)}
+            label="Confirmo Serviço ZERO no(s) meio(s) marcado(s) — a plataforma não cobrará nada nessas vendas"
+          />
         )}
 
         {erros.length > 0 && (

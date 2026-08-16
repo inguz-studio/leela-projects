@@ -1,0 +1,51 @@
+# DefinitionItem — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: DefinitionItem
+version: 0.0.1
+generated_at: "2026-08-16"
+source: src/components/DefinitionItem
+verdict: NASCEU NA ONDA C6 (CANONE-1) — decisão da C0 sobre a peça de rótulo/valor, medida linha a linha; cânone escrito no mesmo commit
+
+## Import canônico
+import { DefinitionItem, type DefinitionItemProps } from '@leela/design-system'
+
+## Quando usar
+Par rótulo + valor EM PÉ (rótulo em cima, valor embaixo), de leitura — ficha, resumo, drawer de detalhe. As 17 ocorrências da auditoria de ADMINVISAO-ONDAS-235 (`ResponsavelCard`, `FichaDoClienteDrawer`) são esta peça.
+
+## Quando NÃO usar
+Rótulo e valor LADO A LADO numa linha de comparação (ex.: "plano X · vigente Y") não é esta peça — é anatomia horizontal, não um par empilhado; `PlanoAplicadoCard.tsx` fica de fora por isso, decisão medida na Onda C6. Rótulo ACIMA de um controle EDITÁVEL é `Field`. Indicador numérico com variação é `KpiCard`.
+
+## Props válidas
+- label: ReactNode   (obrigatório)
+- value: ReactNode   (obrigatório)   — `null`, `undefined` ou string vazia contam como ausência
+- emptyLabel: ReactNode   (default: "Não informado")
+- size: 'sm' | 'base'   (default: 'base')   — 'sm' para ficha densa com muitos campos
+- className, e as props de React.HTMLAttributes<HTMLDivElement>
+
+## Anatomia (o que a peça resolve, para você não repetir)
+- `<dt>` maiúsculo por token + `<dd>` do valor — compõe `<FormGrid as="dl">` ou `<dl>` cru, nunca substitui o container
+- a mesma checagem de ausência para as três formas que as telas já usavam (`null`, `undefined`, string vazia)
+- `emptyLabel` é PROP, não texto fixo — cada campo pode nomear a própria causa de ausência
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-1 / --font-size-xs / --font-size-sm / --font-size-base / --table-header-spacing
+- --text-primary / --text-tertiary
+
+## Proibido (do/don't)
+DON'T: escrever `<div className="flex flex-col gap-1"><dt>...</dt><dd>...</dd></div>` à mão — são as mesmas 17 cópias que a peça existe para fechar.
+DON'T: usar para rótulo+valor LADO A LADO numa comparação — anatomia diferente, ver "Quando NÃO usar".
+DO: passar `emptyLabel` por campo quando a ausência tem causa que vale nomear (ex.: "Não coletado. O CPF vem de...").
+
+## Exemplo mínimo (válido, copiável)
+<DefinitionItem label="Nome" value={owner.nome} />
+
+## Exemplo completo (válido, copiável)
+<DefinitionItem
+  label="CPF"
+  value={ficha.cpf === null ? null : formatarCpf(ficha.cpf)}
+  emptyLabel="Não coletado. O CPF vem dos dados pessoais da inscrição, e nenhuma inscrição desta pessoa guarda o campo."
+  size="sm"
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use DefinitionItem para todo par rótulo+valor empilhado de leitura. Nunca escreva `<dt>`/`<dd>` à mão. Se o par for horizontal (comparação lado a lado), esta peça não serve — registre como caso novo em vez de forçar a anatomia errada.

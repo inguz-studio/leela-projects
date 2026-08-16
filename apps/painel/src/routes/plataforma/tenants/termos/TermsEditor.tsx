@@ -8,7 +8,15 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Badge, Button, Checkbox, Input, PageHeader, Skeleton } from '@leela/design-system';
+import {
+  Badge,
+  Button,
+  CheckboxField,
+  FieldGroup,
+  Input,
+  PageHeader,
+  Skeleton,
+} from '@leela/design-system';
 import {
   DEFAULT_COMMERCIAL_TERMS,
   MEIOS_TAXA,
@@ -256,55 +264,49 @@ export function TermsEditor({
           )}
         </div>
 
-        <fieldset className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
-          <legend className="mb-[var(--spacing-2)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            Parcelamento
-          </legend>
-          <Input
-            id="maxParcelas"
-            type="number"
-            inputMode="numeric"
-            step="1"
-            label="Máx. parcelas"
-            value={values.maxParcelas}
-            onChange={(e) => set('maxParcelas', e.target.value)}
-            disabled={readOnly || saving}
-          />
-          <Input
-            id="jurosAoMes"
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            label="Juros ao mês (%)"
-            value={values.jurosAoMes}
-            onChange={(e) => set('jurosAoMes', e.target.value)}
-            disabled={readOnly || saving}
-          />
-          <Input
-            id="parcelaMinima"
-            type="number"
-            inputMode="decimal"
-            step="1"
-            label="Parcela mínima (R$)"
-            value={values.parcelaMinima}
-            onChange={(e) => set('parcelaMinima', e.target.value)}
-            disabled={readOnly || saving}
-          />
-        </fieldset>
+        <FieldGroup legend="Parcelamento">
+          <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
+            <Input
+              id="maxParcelas"
+              type="number"
+              inputMode="numeric"
+              step="1"
+              label="Máx. parcelas"
+              value={values.maxParcelas}
+              onChange={(e) => set('maxParcelas', e.target.value)}
+              disabled={readOnly || saving}
+            />
+            <Input
+              id="jurosAoMes"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              label="Juros ao mês (%)"
+              value={values.jurosAoMes}
+              onChange={(e) => set('jurosAoMes', e.target.value)}
+              disabled={readOnly || saving}
+            />
+            <Input
+              id="parcelaMinima"
+              type="number"
+              inputMode="decimal"
+              step="1"
+              label="Parcela mínima (R$)"
+              value={values.parcelaMinima}
+              onChange={(e) => set('parcelaMinima', e.target.value)}
+              disabled={readOnly || saving}
+            />
+          </div>
+        </FieldGroup>
 
         {/* TAXAFLEX (RN-178 · S1606): exceção NEGOCIADA por meio — linha
             vazia herda a tabela GLOBAL da plataforma (config em
             /plataforma/taxa). Congelada por venda no ato da compra (RN-179):
             mudar aqui nunca reprecifica pedido feito. */}
-        <fieldset className="flex flex-col gap-[var(--spacing-4)]">
-          <legend className="mb-[var(--spacing-2)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            Exceção do Serviço por meio de pagamento
-          </legend>
-          <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            Condição negociada por contrato. Linha vazia herda a tabela global da plataforma;
-            preenchida, vale percentual + valor fixo por venda (ex.: 6% + R$ 2,00). Vendas já
-            feitas não são reprecificadas.
-          </p>
+        <FieldGroup
+          legend="Exceção do Serviço por meio de pagamento"
+          description="Condição negociada por contrato. Linha vazia herda a tabela global da plataforma; preenchida, vale percentual + valor fixo por venda (ex.: 6% + R$ 2,00). Vendas já feitas não são reprecificadas."
+        >
           {MEIOS_TAXA.map((meio) => (
             <div key={meio} className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
               <Input
@@ -339,31 +341,23 @@ export function TermsEditor({
               />
             </div>
           ))}
-        </fieldset>
+        </FieldGroup>
 
-        <label className="flex items-center gap-[var(--spacing-2)]">
-          <Checkbox
-            checked={values.communityMonthlyEnabled}
-            disabled={readOnly || saving}
-            onChange={(e) => set('communityMonthlyEnabled', e.target.checked)}
-          />
-          <span className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">
-            Habilitar mensalidade da comunidade
-          </span>
-        </label>
+        <CheckboxField
+          checked={values.communityMonthlyEnabled}
+          disabled={readOnly || saving}
+          onChange={(e) => set('communityMonthlyEnabled', e.target.checked)}
+          label="Habilitar mensalidade da comunidade"
+        />
 
         {/* Antecipação — campo existe, mecânica é pós-V1 (RN-410) */}
         <div className="flex items-center gap-[var(--spacing-3)] opacity-70">
-          <label className="flex items-center gap-[var(--spacing-2)]">
-            <Checkbox
-              checked={values.anticipationDisponivel}
-              disabled
-              readOnly
-            />
-            <span className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">
-              Antecipação de recebíveis
-            </span>
-          </label>
+          <CheckboxField
+            checked={values.anticipationDisponivel}
+            disabled
+            readOnly
+            label="Antecipação de recebíveis"
+          />
           <Badge variant="alerta">disponível em breve</Badge>
         </div>
 

@@ -26,7 +26,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Checkbox, Input, InputSenha } from '@leela/design-system';
+import { Button, CheckboxField, Input, InputSenha } from '@leela/design-system';
 import {
   atualizarNomeExibicao,
   criarContaComEmail,
@@ -236,20 +236,17 @@ export function CadastrarPage(): JSX.Element {
 
         {/* Consentimento LGPD (RN-412) — finalidade declarada AO LADO do
             checkbox, não escondida atrás de um link. */}
-        <div className="flex items-start gap-[var(--spacing-3)]">
-          <Checkbox
-            id="cadastrar-lgpd"
-            checked={consentimento}
-            onChange={(e) => setConsentimento(e.target.checked)}
-          />
-          <label
-            htmlFor="cadastrar-lgpd"
-            className="text-[length:var(--font-size-sm)] leading-[var(--line-height-normal)] text-[var(--text-secondary)]"
-          >
-            Autorizo o tratamento dos meus dados para a seguinte finalidade:{' '}
-            {TERMO_LGPD_FINALIDADE}
-          </label>
-        </div>
+        <CheckboxField
+          id="cadastrar-lgpd"
+          checked={consentimento}
+          onChange={(e) => setConsentimento(e.target.checked)}
+          label={
+            <>
+              Autorizo o tratamento dos meus dados para a seguinte finalidade:{' '}
+              {TERMO_LGPD_FINALIDADE}
+            </>
+          }
+        />
 
         <Button type="submit" variant="primary" disabled={!podeCadastrar} className="w-full">
           {enviando ? 'Criando conta…' : 'Criar conta'}
