@@ -26,7 +26,6 @@ import { GaleriaEstados } from './entrega/estados/GaleriaEstados';
 import { KitsLayout } from './kits/KitsLayout';
 import { KitsCadastroPage } from './kits/KitsCadastroPage';
 import { DistribuicaoPage } from './kits/DistribuicaoPage';
-import { EstoquePage } from './kits/EstoquePage';
 import { KitEditorPage } from './kits/KitEditorPage';
 import { LotesPage } from './lotes/LotesPage';
 import { AfiliadosPage } from './afiliados/AfiliadosPage';
@@ -57,6 +56,19 @@ function RedirectCredenciamento({ sufixo = '' }: { sufixo?: string }): JSX.Eleme
 }
 
 RedirectCredenciamento.displayName = 'RedirectCredenciamento';
+
+/**
+ * Salto de `kits/estoque` para a aba única de distribuição (S1258 · leva 11).
+ * Mesmo molde do salto acima: quem tem o endereço antigo no favorito, no
+ * histórico ou colado num chat de operação chega na tela que absorveu o
+ * conteúdo, em vez de num 404.
+ */
+function RedirectEstoqueParaDistribuicao(): JSX.Element {
+  const { slug } = useParams();
+  return <RedirectLegado para={`/eventos/${slug ?? ''}/kits/distribuicao`} />;
+}
+
+RedirectEstoqueParaDistribuicao.displayName = 'RedirectEstoqueParaDistribuicao';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -122,7 +134,11 @@ export function EventosRoutes(): JSX.Element {
           <Route path="kits" element={<KitsLayout />}>
             <Route index element={<KitsCadastroPage />} />
             <Route path="distribuicao" element={<DistribuicaoPage />} />
-            <Route path="estoque" element={<EstoquePage />} />
+            {/* S1258: Estoque foi absorvida por Distribuição — o endereço
+                antigo continua vivo e SALTA, pela mesma máquina de
+                redirecionamento da RN-234 que serve o balcão. Aba unificada
+                não pode custar 404 a quem tem a URL no favorito. */}
+            <Route path="estoque" element={<RedirectEstoqueParaDistribuicao />} />
           </Route>
           {/* Editor de kit em tela cheia (RN-217, 2 pontos de entrada) — fora da sub-nav de Kits */}
           <Route path="kits/novo" element={<KitEditorPage />} />

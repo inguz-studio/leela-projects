@@ -2,8 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
-import { DistribuicaoView } from '../DistribuicaoView';
-import { EstoqueView, type EstoqueViewProps } from '../EstoqueView';
+import { DistribuicaoView, type DistribuicaoViewProps } from '../DistribuicaoView';
 import type { Aprovisionamento, ItemKit, Kit } from '@leela/core';
 import { mkInscrito, ts } from '../../_test/fixtures';
 
@@ -66,14 +65,14 @@ function mkItem(over: Partial<ItemKit>): ItemKit {
   };
 }
 
-function renderEstoque(over: Partial<EstoqueViewProps> = {}) {
+function renderAba(over: Partial<DistribuicaoViewProps> = {}) {
   const onTransicao = over.onTransicao ?? vi.fn().mockResolvedValue(undefined);
   const onEncerrarEncomendas =
     over.onEncerrarEncomendas ??
     vi.fn().mockResolvedValue({ encerrados: [], jaEncerrados: [] });
   render(
     <ToastProvider>
-      <EstoqueView
+      <DistribuicaoView
         kits={[mkKit({ capacidade: 100 })]}
         inscritos={pool}
         modalidades={['21k']}
@@ -90,10 +89,10 @@ function renderEstoque(over: Partial<EstoqueViewProps> = {}) {
   return { onTransicao, onEncerrarEncomendas };
 }
 
-describe('DistribuicaoView', () => {
+describe('DistribuicaoView · o lado da retirada', () => {
   it('mostra progresso por kit refletindo as retiradas', () => {
-    render(<DistribuicaoView inscritos={pool} modalidades={['21k']} loading={false} error={null} />);
-    expect(screen.getByText('Retiradas por kit')).toBeInTheDocument();
+    renderAba();
+    expect(screen.getByText('Retirada por kit')).toBeInTheDocument();
     // kit_ouro e a modalidade 21k têm o mesmo 1/2 (50%) — ambos presentes
     expect(screen.getAllByText('1 / 2 (50%)').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('progressbar', { name: 'Retirada de Kit Ouro' })).toHaveAttribute(
@@ -101,39 +100,92 @@ describe('DistribuicaoView', () => {
       '50',
     );
   });
+
+  it('a retirada por modalidade vem na MESMA aba que o estoque (S1258)', () => {
+    renderAba();
+    expect(screen.getByText('Retirada por modalidade')).toBeInTheDocument();
+    // As duas metades convivem: progresso E tabela de SKU, sem trocar de aba.
+    expect(screen.getByText('Estoque por tamanho')).toBeInTheDocument();
+  });
 });
 
-describe('EstoqueView', () => {
+// ---------------------------------------------------------------------------
+// S1258 — a convergência para UMA fonte.
+//
+// A medição da leva 11 achou TRÊS cortes do mesmo número (presença registrada):
+// as barras de progresso, o KPI "Retirados" e a coluna Retirados/confirmados da
+// matriz. Estes testes fixam onde a retirada passou a morar — e onde ela parou
+// de aparecer —, porque um "volta rapidinho a coluna" desfaz a decisão sem que
+// nada mais quebre.
+// ---------------------------------------------------------------------------
+
+describe('S1258 · a retirada tem UMA fonte por leitura', () => {
+  it('a matriz de estoque NÃO tem mais coluna "Retirados"', () => {
+    renderAba();
+    const cabecalhos = screen
+      .getAllByRole('columnheader')
+      .map((c) => c.textContent?.trim());
+    expect(cabecalhos).not.toContain('Retirados');
+    expect(cabecalhos).toContain('Confirmados');
+  });
+
+  it('a célula da matriz diz a DEMANDA (confirmados), não retirados/confirmados', () => {
+    renderAba();
+    expect(screen.getByText('Estoque por kit e modalidade')).toBeInTheDocument();
+    // Kit Ouro em 21k: 2 confirmados, 1 retirado. A célula mostra só a demanda.
+    expect(screen.queryByText('1 / 2')).toBeNull();
+  });
+
+  it('"Retirados" sobrou só como manchete — o KPI', () => {
+    renderAba();
+    // Um nó de texto, e ele é o rótulo do KPI (não header de coluna).
+    const retirados = screen.getAllByText('Retirados');
+    expect(retirados).toHaveLength(1);
+    expect(retirados[0]?.closest('th')).toBeNull();
+  });
+
+  it('a tabela de SKU/aprovisionamento vem inteira (nenhum dado se perde)', () => {
+    renderAba({ aprovisionamento: [mkAprov({})], itens: [mkItem({})] });
+    const cabecalhos = screen
+      .getAllByRole('columnheader')
+      .map((c) => c.textContent?.trim());
+    for (const coluna of ['Vendido', 'Físico', 'A encomendar', 'Entregues', 'Estado', 'Alerta']) {
+      expect(cabecalhos).toContain(coluna);
+    }
+  });
+});
+
+describe('DistribuicaoView · o lado do estoque', () => {
   it('kit esgotado dispara alerta crítico', () => {
-    renderEstoque({ kits: [mkKit({ capacidade: 1 })] });
+    renderAba({ kits: [mkKit({ capacidade: 1 })] });
     expect(screen.getByRole('alert')).toHaveTextContent('sem saldo');
     expect(screen.getByText('Esgotado')).toBeInTheDocument();
   });
 
   it('capacidade ausente degrada para "—" sem fabricar número', () => {
-    renderEstoque({ kits: [mkKit({ capacidade: 0 })] });
+    renderAba({ kits: [mkKit({ capacidade: 0 })] });
     expect(screen.getByText('Sem capacidade')).toBeInTheDocument();
   });
 
   it('mostra KPIs de estoque a partir do dado real (capacidade + presença)', () => {
-    renderEstoque();
+    renderAba();
     // pool: 2 confirmados em kit_ouro/21k, 1 com presença → retirados = 1
-    // "Retirados" é label de KPI e header de coluna → mais de um nó
-    expect(screen.getAllByText('Retirados').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Retirados')).toBeInTheDocument();
     expect(screen.getByText('Disponíveis')).toBeInTheDocument();
     // saldo = 100 − 1 = 99 (KPI de disponíveis e coluna de saldo)
     expect(screen.getAllByText('99').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('matriz kit × modalidade mostra retirados / confirmados por célula', () => {
-    renderEstoque();
-    expect(screen.getByText('Kit por modalidade')).toBeInTheDocument();
-    // Kit Ouro em 21k: 1 retirado / 2 confirmados — aparece na célula e no total
-    expect(screen.getAllByText('1 / 2').length).toBeGreaterThanOrEqual(1);
+  it('matriz kit × modalidade mantém capacidade, saldo e status', () => {
+    renderAba();
+    expect(screen.getByText('Estoque por kit e modalidade')).toBeInTheDocument();
+    expect(screen.getByText('Disponível')).toBeInTheDocument();
+    // capacidade 100 segue legível por kit (e no KPI de total — 2 nós)
+    expect(screen.getAllByText('100').length).toBeGreaterThanOrEqual(1);
   });
 
   it('sem kits cadastrados mostra empty state (não inventa linhas)', () => {
-    renderEstoque({ kits: [], inscritos: [] });
+    renderAba({ kits: [], inscritos: [] });
     expect(screen.getByText('Nenhum kit para controlar')).toBeInTheDocument();
   });
 
@@ -142,13 +194,13 @@ describe('EstoqueView', () => {
   // ---------------------------------------------------------------------------
 
   it('sem SKU tamanhado: EmptyState honesto; movimentações seguem como dependência', () => {
-    renderEstoque({ aprovisionamento: [] });
+    renderAba({ aprovisionamento: [] });
     expect(screen.getByText('Nenhum SKU de tamanho neste evento')).toBeInTheDocument();
     expect(screen.getByText('Movimentações ainda não disponíveis')).toBeInTheDocument();
   });
 
   it('renderiza os ∑ do doc por SKU (vendido/físico/a-encomendar) SEM recalcular', () => {
-    renderEstoque({
+    renderAba({
       aprovisionamento: [
         // ∑ vêm carimbados pela Function: a view exibe EXATAMENTE estes valores.
         mkAprov({ id: 'camiseta__M', tamanho: 'M', qtdVendida: 7, estoqueFisico: 0, aEncomendar: 7 }),
@@ -175,7 +227,7 @@ describe('EstoqueView', () => {
   });
 
   it('ordena tamanhos pela ordem canônica do catálogo (P antes de M antes de G)', () => {
-    renderEstoque({
+    renderAba({
       aprovisionamento: [
         mkAprov({ id: 'camiseta__G', tamanho: 'G' }),
         mkAprov({ id: 'camiseta__P', tamanho: 'P' }),
@@ -190,7 +242,7 @@ describe('EstoqueView', () => {
   });
 
   it('alerta de baixa vem do doc (limiar do servidor) e fica visível em banner + badge', () => {
-    renderEstoque({
+    renderAba({
       aprovisionamento: [
         mkAprov({
           id: 'camiseta__M',
@@ -211,13 +263,13 @@ describe('EstoqueView', () => {
   });
 
   it('sem catálogo carregado o nome degrada para o itemId (ausência honesta)', () => {
-    renderEstoque({ aprovisionamento: [mkAprov({})], itens: [] });
+    renderAba({ aprovisionamento: [mkAprov({})], itens: [] });
     expect(screen.getAllByText('camiseta').length).toBeGreaterThanOrEqual(1);
   });
 
   it('estimativa → "Encomendar" abre modal com sugestão = aEncomendar do doc e chama a transição', async () => {
     const onTransicao = vi.fn().mockResolvedValue(undefined);
-    renderEstoque({
+    renderAba({
       aprovisionamento: [mkAprov({ aEncomendar: 7 })],
       itens: [mkItem({})],
       onTransicao,
@@ -237,7 +289,7 @@ describe('EstoqueView', () => {
 
   it('encomendado → "Receber" sugere a qtd da última encomenda e declara estoque', async () => {
     const onTransicao = vi.fn().mockResolvedValue(undefined);
-    renderEstoque({
+    renderAba({
       aprovisionamento: [
         mkAprov({
           estado: 'encomendado',
@@ -261,7 +313,7 @@ describe('EstoqueView', () => {
   });
 
   it('em_estoque é terminal (RN-226): linha sem botão de ação', () => {
-    renderEstoque({
+    renderAba({
       aprovisionamento: [
         mkAprov({ estado: 'em_estoque', qtdVendida: 2, estoqueFisico: 20, aEncomendar: 0 }),
       ],
@@ -275,7 +327,7 @@ describe('EstoqueView', () => {
     const onTransicao = vi
       .fn()
       .mockRejectedValue(new Error("Transição 'em_estoque' → 'encomendado' inválida (RN-226)"));
-    renderEstoque({
+    renderAba({
       aprovisionamento: [mkAprov({})],
       itens: [mkItem({})],
       onTransicao,
@@ -290,21 +342,21 @@ describe('EstoqueView', () => {
   });
 });
 
-describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () => {
+describe('DistribuicaoView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () => {
   const aprovGrade = [
     mkAprov({ id: 'camiseta__feminina__M', corte: 'feminina', tamanho: 'M', qtdVendida: 3, aEncomendar: 3 }),
     mkAprov({ id: 'camiseta__masculina__G', corte: 'masculina', tamanho: 'G', qtdVendida: 1, aEncomendar: 1 }),
   ];
 
   it('SKU com corte mostra a coluna Corte com o rotulo pt-BR', () => {
-    renderEstoque({ aprovisionamento: aprovGrade, itens: [mkItem({})] });
+    renderAba({ aprovisionamento: aprovGrade, itens: [mkItem({})] });
     expect(screen.getAllByText('Corte').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Feminina').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Masculina').length).toBeGreaterThanOrEqual(1);
   });
 
   it('evento 100% unissex/legado NAO mostra a coluna Corte (tabela enxuta)', () => {
-    renderEstoque({ aprovisionamento: [mkAprov({})], itens: [mkItem({})] });
+    renderAba({ aprovisionamento: [mkAprov({})], itens: [mkItem({})] });
     expect(screen.queryAllByText('Corte')).toHaveLength(0);
   });
 
@@ -315,7 +367,7 @@ describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () =>
       // pendente — mesmo SKU
       mkInscrito({ id: 'e2', kit: 'kit_ouro', modalidade: '21k', status: 'confirmado', tamanhos: { camiseta: 'feminina__M' } }),
     ];
-    renderEstoque({ inscritos, aprovisionamento: aprovGrade, itens: [mkItem({})] });
+    renderAba({ inscritos, aprovisionamento: aprovGrade, itens: [mkItem({})] });
     expect(screen.getAllByText('Entregues').length).toBeGreaterThanOrEqual(1);
     // 1 entregue de 2 escolhidos no SKU feminina M
     expect(screen.getAllByText('/ 2').length).toBeGreaterThanOrEqual(1);
@@ -326,7 +378,7 @@ describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () =>
       encerrados: ['camiseta__feminina__M', 'camiseta__masculina__G'],
       jaEncerrados: [],
     });
-    renderEstoque({ aprovisionamento: aprovGrade, itens: [mkItem({})], onEncerrarEncomendas });
+    renderAba({ aprovisionamento: aprovGrade, itens: [mkItem({})], onEncerrarEncomendas });
 
     await userEvent.click(
       screen.getByRole('button', { name: /Encerrar encomendas · Camiseta oficial/ }),
@@ -342,7 +394,7 @@ describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () =>
   });
 
   it('item sem SKU em estimativa NAO oferece encerrar encomendas', () => {
-    renderEstoque({
+    renderAba({
       aprovisionamento: [
         mkAprov({ id: 'camiseta__feminina__M', corte: 'feminina', estado: 'encomendado' }),
       ],
@@ -357,7 +409,7 @@ describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () =>
     const onEncerrarEncomendas = vi
       .fn()
       .mockRejectedValue(new Error('Evento pertence a outro tenant (RN-400).'));
-    renderEstoque({ aprovisionamento: aprovGrade, itens: [mkItem({})], onEncerrarEncomendas });
+    renderAba({ aprovisionamento: aprovGrade, itens: [mkItem({})], onEncerrarEncomendas });
     await userEvent.click(
       screen.getByRole('button', { name: /Encerrar encomendas · Camiseta oficial/ }),
     );
@@ -377,7 +429,7 @@ describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () =>
 
 describe('PARSE-1 · a recusa do parser tem onde aparecer no estoque', () => {
   it('é campo de TEXTO com teclado numérico', async () => {
-    renderEstoque({ aprovisionamento: [mkAprov({ aEncomendar: 7 })], itens: [mkItem({})] });
+    renderAba({ aprovisionamento: [mkAprov({ aEncomendar: 7 })], itens: [mkItem({})] });
     await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
     const campo = screen.getByLabelText('Quantidade a encomendar');
     expect(campo).toHaveAttribute('type', 'text');
@@ -386,7 +438,7 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer no estoque', () => {
 
   it('casa decimal na quantidade diz o que fazer, e nada é chamado', async () => {
     const onTransicao = vi.fn().mockResolvedValue(undefined);
-    renderEstoque({
+    renderAba({
       aprovisionamento: [mkAprov({ aEncomendar: 7 })],
       itens: [mkItem({})],
       onTransicao,
@@ -407,7 +459,7 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer no estoque', () => {
 
   it('BASELINE colar de planilha: "1.000" camisetas continuam sendo mil', async () => {
     const onTransicao = vi.fn().mockResolvedValue(undefined);
-    renderEstoque({
+    renderAba({
       aprovisionamento: [mkAprov({ aEncomendar: 7 })],
       itens: [mkItem({})],
       onTransicao,
