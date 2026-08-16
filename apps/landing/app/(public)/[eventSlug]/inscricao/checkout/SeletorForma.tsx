@@ -7,13 +7,14 @@ import type { FormaUI } from './tipos';
 // =============================================================================
 // SeletorForma — escolha da forma de pagamento (S1209-T1 · decisão D-5).
 //
-// Verbatim do Vitor: "pix e cartao na etapa de pagamento, mas em botões, sem
-// toggle." O controle é o `RadioCard` do DS (shadcn-first §8): cartão clicável
-// de decisão — ícone, título e apoio — que LÊ como botão e é, por baixo, um
-// `<input type="radio">` nativo. Isso entrega o que a decisão pede (botão, não
-// toggle) sem inventar peça fora do DS e sem perder navegação por seta, foco
-// de teclado e o role de fábrica (design-principles: escolha única exclusiva
-// entre 2 opções que valem ser comparadas = radio/segmented, nunca switch).
+// Citação do Vitor, na íntegra: "pix e cartao na etapa de pagamento, mas em
+// botões, sem toggle." O controle é o `RadioCard` do DS (shadcn-first §8):
+// cartão clicável de decisão — ícone, título e apoio — que LÊ como botão e é,
+// por baixo, um `<input type="radio">` nativo. Isso entrega o que a decisão
+// pede (botão, não toggle) sem inventar peça fora do DS e sem perder
+// navegação por seta, foco de teclado e o role de fábrica (design-principles:
+// escolha única exclusiva entre 2 opções que valem ser comparadas =
+// radio/segmented, nunca switch).
 //
 // O TÍTULO é o rótulo vindo do consumidor (S1210 · RN-180: quando a taxa é
 // repassada e os totais DIFEREM por meio, o total de cada opção entra no
