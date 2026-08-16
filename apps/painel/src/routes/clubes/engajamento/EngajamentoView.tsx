@@ -33,10 +33,11 @@ import { useState, type ReactNode } from 'react';
 import {
   BarChart,
   Button,
+  Chip,
+  Combobox,
   EmptyState,
   KpiCard,
   PageHeader,
-  Select,
   Skeleton,
   cn,
   type BarChartDatum,
@@ -296,15 +297,18 @@ function RankingDeDesafios({
         }
         controle={
           excedeTop ? (
-            <Select
+            <div
+              role="group"
               aria-label="Quantos desafios mostrar"
-              options={[
-                { value: 'top', label: `Top ${RANKING_MAX_DESAFIOS}` },
-                { value: 'todos', label: `Todos (${lista.length})` },
-              ]}
-              value={recorte}
-              onChange={(e) => setRecorte(e.target.value as RecorteDoRanking)}
-            />
+              className="flex gap-[var(--spacing-2)]"
+            >
+              <Chip active={recorte === 'top'} onClick={() => setRecorte('top')}>
+                Top {RANKING_MAX_DESAFIOS}
+              </Chip>
+              <Chip active={recorte === 'todos'} onClick={() => setRecorte('todos')}>
+                Todos ({lista.length})
+              </Chip>
+            </div>
           ) : undefined
         }
       />
@@ -379,15 +383,18 @@ function ModalidadesDaComunidade({
         }
         controle={
           excedeTop ? (
-            <Select
+            <div
+              role="group"
               aria-label="Quantas modalidades mostrar"
-              options={[
-                { value: 'top', label: `Top ${RANKING_MAX_MODALIDADES}` },
-                { value: 'todas', label: `Todas (${lista.length})` },
-              ]}
-              value={recorte}
-              onChange={(e) => setRecorte(e.target.value as RecorteDeModalidades)}
-            />
+              className="flex gap-[var(--spacing-2)]"
+            >
+              <Chip active={recorte === 'top'} onClick={() => setRecorte('top')}>
+                Top {RANKING_MAX_MODALIDADES}
+              </Chip>
+              <Chip active={recorte === 'todas'} onClick={() => setRecorte('todas')}>
+                Todas ({lista.length})
+              </Chip>
+            </div>
           ) : undefined
         }
       />
@@ -458,11 +465,11 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
         title="Engajamento"
         actions={
           semClubes ? undefined : (
-            <Select
+            <Combobox
               aria-label="Club analisado"
               options={opcoes}
               value={clubeSelecionado}
-              onChange={(e) => onSelecionarClube(e.target.value)}
+              onValueChange={(v) => onSelecionarClube(Array.isArray(v) ? (v[0] ?? TODOS_OS_CLUBS) : v)}
             />
           )
         }

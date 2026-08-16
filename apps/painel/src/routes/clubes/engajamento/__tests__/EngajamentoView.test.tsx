@@ -161,10 +161,7 @@ describe('EngajamentoView · cabeçalhos e o fim do "ponto de equilíbrio" (REFA
     expect(noTop).toHaveTextContent('de 9 no total');
 
     await userEvent.keyboard('{Escape}');
-    await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Quantos desafios mostrar' }),
-      'todos'
-    );
+    await userEvent.click(screen.getByRole('button', { name: /Todos/ }));
     const emTodos = await abrirAjuda('Desafios que mais movem a comunidade');
     expect(emTodos).not.toHaveTextContent('de 9 no total');
     expect(emTodos).toHaveTextContent(/do maior para o menor/);
@@ -346,17 +343,16 @@ describe('EngajamentoView · modalidades da comunidade (estudo · bloco 4, vers�
       (m, i) => ({ id: m, rotulo: m, membros: 60 - i })
     );
     render(<EngajamentoView {...props({ modalidades: seis })} />);
-    const recorte = screen.getByRole('combobox', { name: 'Quantas modalidades mostrar' });
-    expect(recorte).toHaveValue('top');
+    expect(screen.getByRole('button', { name: /Top 5/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByRole('rowheader', { name: 'Triatlo' })).not.toBeInTheDocument();
-    await userEvent.selectOptions(recorte, 'todas');
+    await userEvent.click(screen.getByRole('button', { name: /Todas/ }));
     expect(screen.getByRole('rowheader', { name: 'Triatlo' })).toBeInTheDocument();
   });
 
   it('com cinco ou menos, o controle não existe — recorte que não recorta é ruído', () => {
     render(<EngajamentoView {...props()} />);
     expect(
-      screen.queryByRole('combobox', { name: 'Quantas modalidades mostrar' })
+      screen.queryByRole('group', { name: 'Quantas modalidades mostrar' })
     ).not.toBeInTheDocument();
   });
 
@@ -477,7 +473,7 @@ describe('EngajamentoView · estados da tela', () => {
     expect(screen.queryByText(/nasce da comunidade/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/passa a contar quem aparece/i)).not.toBeInTheDocument();
     expect(screen.getByText(/passa a mostrar quem está na sua comunidade/i)).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Club analisado' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Club analisado' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Números da comunidade' })
     ).not.toBeInTheDocument();
@@ -503,8 +499,7 @@ describe('EngajamentoView · recorte por card (REFACTOR item 9)', () => {
 
   it('com mais de cinco desafios, o card ganha o PRÓPRIO recorte e mostra o Top 5', () => {
     render(<EngajamentoView {...props({ desafios: muitos })} />);
-    const recorte = screen.getByRole('combobox', { name: 'Quantos desafios mostrar' });
-    expect(recorte).toHaveValue('top');
+    expect(screen.getByRole('button', { name: /Top 5/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('rowheader', { name: 'Desafio E' })).toBeInTheDocument();
     expect(screen.queryByRole('rowheader', { name: 'Desafio F' })).not.toBeInTheDocument();
   });
@@ -512,19 +507,16 @@ describe('EngajamentoView · recorte por card (REFACTOR item 9)', () => {
   it('trocar para "Todos" revela o que o corte escondia — sem tocar no filtro de club', async () => {
     const onSelecionarClube = vi.fn();
     render(<EngajamentoView {...props({ desafios: muitos, onSelecionarClube })} />);
-    await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Quantos desafios mostrar' }),
-      'todos'
-    );
+    await userEvent.click(screen.getByRole('button', { name: /Todos/ }));
     expect(screen.getByRole('rowheader', { name: 'Desafio H' })).toBeInTheDocument();
     expect(onSelecionarClube).not.toHaveBeenCalled();
-    expect(screen.getByRole('combobox', { name: 'Club analisado' })).toHaveValue(TODOS_OS_CLUBS);
+    expect(screen.getByRole('button', { name: 'Club analisado' })).toHaveTextContent('Todos os clubs');
   });
 
   it('com cinco ou menos, o controle não existe — recorte que não recorta é ruído', () => {
     render(<EngajamentoView {...props({ desafios: muitos.slice(0, 5) })} />);
     expect(
-      screen.queryByRole('combobox', { name: 'Quantos desafios mostrar' })
+      screen.queryByRole('group', { name: 'Quantos desafios mostrar' })
     ).not.toBeInTheDocument();
   });
 });
@@ -552,10 +544,7 @@ describe('EngajamentoView · animação escopada por filtro (REFACTOR item 10)',
     const situacaoAntes = faseDoGrafico('Membros por situação');
     const entradaAntes = faseDoGrafico('Membros por porta de entrada');
 
-    await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Quantos desafios mostrar' }),
-      'todos'
-    );
+    await userEvent.click(screen.getByRole('button', { name: /Todos/ }));
 
     expect(faseDoGrafico('Participantes por desafio em andamento')).not.toBe(rankingAntes);
     expect(faseDoGrafico('Membros por situação')).toBe(situacaoAntes);
@@ -576,20 +565,18 @@ describe('EngajamentoView · animação escopada por filtro (REFACTOR item 10)',
 });
 
 describe('EngajamentoView · recorte por club', () => {
-  it('o filtro lista "Todos os clubs" primeiro e depois cada club', () => {
+  it('o filtro lista "Todos os clubs" primeiro e depois cada club', async () => {
     render(<EngajamentoView {...props()} />);
-    const filtro = screen.getByRole('combobox', { name: 'Club analisado' });
-    const opcoes = within(filtro).getAllByRole('option').map((o) => o.textContent);
+    await userEvent.click(screen.getByRole('button', { name: 'Club analisado' }));
+    const opcoes = (await screen.findAllByRole('option')).map((o) => o.textContent);
     expect(opcoes).toEqual(['Todos os clubs', 'Floripa Run Coletivo', 'Pedal Norte']);
   });
 
   it('escolher um club avisa quem manda na leitura', async () => {
     const onSelecionarClube = vi.fn();
     render(<EngajamentoView {...props({ onSelecionarClube })} />);
-    await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Club analisado' }),
-      'pedal-norte'
-    );
+    await userEvent.click(screen.getByRole('button', { name: 'Club analisado' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Pedal Norte' }));
     expect(onSelecionarClube).toHaveBeenCalledWith('pedal-norte');
   });
 });

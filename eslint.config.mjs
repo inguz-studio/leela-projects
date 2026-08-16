@@ -117,10 +117,14 @@ const DIVIDA_PADRAO_REIMPLEMENTADO = [
  * system e não teve um único hit. Ele não precisa de dívida nenhuma.
  */
 const DIVIDA_FILTRO_FORA_DO_CANONE = [
-  // Onda C1 · três `Select` fazendo trabalho de filtro (inventário §4.1): dois
-  // escolhem QUANTOS itens mostrar (viram `Chip` com `active`) e um escolhe o
-  // clube analisado (vira `Combobox`).
-  "apps/painel/src/routes/clubes/engajamento/EngajamentoView.tsx",
+  // Onda C1 (2026-08-12) pagou os dois `Select` que a regra 3 realmente via em
+  // `EngajamentoView.tsx` (":299" e ":382", QUANTOS itens mostrar — viraram
+  // `Chip` com `active`). O terceiro (":461", qual club analisado, virou
+  // `Combobox`) nunca produziu achado aqui — o aria-label "Club analisado" não
+  // casa nenhum dos dois prefixos da regra, e a conversão dele foi por leitura
+  // humana (ver 02-catraca-controles.md §7). Arquivo sai da lista: zero achado
+  // sobrando, e entrada morta reprova a camada A.
+  //
   // Onda C5 · `Select` de ORDENAÇÃO — padrão ÓRFÃO. O cânone não tem linha
   // para ordenação de lista: não é filtro (não retira nada) e não é campo de
   // formulário (não vira dado). A entrada sai daqui quando a decisão voltar e
