@@ -49,6 +49,17 @@ function valorDoEixo(valor: number | null, unidade: DivergenciaDeEstampa['unidad
   return unidade === 'brl' ? formatBRL(valor) : formatPct(valor);
 }
 
+/**
+ * FICA DE FORA da adoção de `DefinitionItem` (Onda C6, decisão medida linha a
+ * linha nas quatro receitas de rótulo/valor da auditoria ADMINVISAO-ONDAS-235
+ * — ver `03-fila-em-ondas.md`). Esta é uma linha de COMPARAÇÃO horizontal
+ * ("plano X · vigente Y", `justify-between`, dentro de um `<li>`), não um par
+ * rótulo/valor empilhado (`<dt>`/`<dd>`) como `ResponsavelCard` e
+ * `FichaDoClienteDrawer` tinham. Forçar a mesma peça nas duas anatomias seria
+ * o defeito que o `FieldGroup` já nomeou para si: compor um layout para
+ * depois desfazê-lo é carregar a anatomia errada. Registrado também na linha
+ * do cânone (`03-canon/canone-de-componentes.md`).
+ */
 function ListaDeDivergencias({
   divergencias,
 }: {

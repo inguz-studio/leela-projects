@@ -42,6 +42,7 @@ import {
   Divider,
   Drawer,
   SCROLL_Y_ONLY,
+  SectionHeader,
   Skeleton,
 } from '@leela/design-system';
 import type { FichaDoClienteView, FichaPedidoDoClienteView } from '@leela/api-client';
@@ -115,9 +116,7 @@ function Secao({
 }): JSX.Element {
   return (
     <section className="flex flex-col gap-[var(--spacing-3)]" aria-label={titulo}>
-      <h3 className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-        {titulo}
-      </h3>
+      <SectionHeader title={titulo} titleAs="h3" />
       <dl className="flex flex-col gap-[var(--spacing-4)]">{children}</dl>
     </section>
   );
@@ -330,14 +329,11 @@ export function FichaDoClienteDrawer({
             className="flex flex-col gap-[var(--spacing-3)]"
             aria-label="Histórico de inscrições"
           >
-            <h3 className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-              Histórico de inscrições
-            </h3>
-
-            <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-              O histórico traz inscrições confirmadas e estornadas. Estornada continua aqui e fica
-              fora do valor gasto e do LTV, porque o dinheiro voltou.
-            </p>
+            <SectionHeader
+              title="Histórico de inscrições"
+              titleAs="h3"
+              description="O histórico traz inscrições confirmadas e estornadas. Estornada continua aqui e fica fora do valor gasto e do LTV, porque o dinheiro voltou."
+            />
 
             {ficha.pedidosTruncados ? (
               <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
