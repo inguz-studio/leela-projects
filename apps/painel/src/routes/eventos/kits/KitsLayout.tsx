@@ -25,15 +25,14 @@
 // Sobram duas: a aba-índice e a distribuição.
 // =============================================================================
 
-import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import { SubNav, type SubNavTab } from '@leela/design-system';
+import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
+import type { SubNavTab } from '@leela/design-system';
 import type { EventoOutletContext } from '../evento/EventoLayout';
-import { tabsComNavSpa } from '../../../lib/navSpa';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 
 export function KitsLayout(): JSX.Element {
   const ctx = useOutletContext<EventoOutletContext>();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const slug = ctx.evento.slug;
   const base = `/eventos/${slug}/kits`;
 
@@ -41,26 +40,29 @@ export function KitsLayout(): JSX.Element {
   const ativa = resto.split('/')[0] || 'cadastro';
 
   // `href` fica (ctrl+clique, clique do meio, copiar endereço); o clique simples
-  // é interceptado e navega por SPA — LEELA-NAVFIX-T2.
-  const tabs: SubNavTab[] = tabsComNavSpa(
-    [
-      { id: 'cadastro', label: 'Gerenciamento', href: base, active: ativa === 'cadastro' },
-      // `estoque` continua acendendo a aba: o endereço antigo salta para
-      // `distribuicao`, e durante o salto a aba certa já fica marcada.
-      {
-        id: 'distribuicao',
-        label: 'Distribuição',
-        href: `${base}/distribuicao`,
-        active: ativa === 'distribuicao' || ativa === 'estoque',
-      },
-    ],
-    navigate,
-    pathname,
-  );
+  // é interceptado e navega por SPA — a fiação saiu daqui na Leva 14 e vive no
+  // `AreaSubNav`, uma vez para as onze barras do painel.
+  //
+  // Conflito de merge resolvido SOMANDO as duas lanes, 16/08: a KITS-BUILD
+  // decidiu QUAIS abas existem (duas, com a índice renomeada para
+  // "Gerenciamento" — S1257/S1258/S1259, o cabeçalho acima) e a SUBNAV-UNIFICA
+  // decidiu COMO a barra é montada. As duas metades são de eixos diferentes e
+  // nenhuma sobrescreve a outra: fica o conteúdo da main e a montagem daqui.
+  const tabs: SubNavTab[] = [
+    { id: 'cadastro', label: 'Gerenciamento', href: base, active: ativa === 'cadastro' },
+    // `estoque` continua acendendo a aba: o endereço antigo salta para
+    // `distribuicao`, e durante o salto a aba certa já fica marcada.
+    {
+      id: 'distribuicao',
+      label: 'Distribuição',
+      href: `${base}/distribuicao`,
+      active: ativa === 'distribuicao' || ativa === 'estoque',
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
-      <SubNav tabs={tabs} aria-label="Seções de kits" divider />
+      <AreaSubNav tabs={tabs} aria-label="Seções de kits" />
       <Outlet context={ctx} />
     </div>
   );

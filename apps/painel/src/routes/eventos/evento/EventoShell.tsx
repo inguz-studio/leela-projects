@@ -15,15 +15,15 @@
 // =============================================================================
 
 import * as React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Badge,
   Breadcrumb,
   Button,
   DropdownMenu,
   IconButton,
-  SubNav,
 } from '@leela/design-system';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 import type { Evento } from '@leela/core';
 import {
   Bike,
@@ -39,7 +39,7 @@ import { formatDataEvento, formatInt, diasParaEvento, faltamDiasLabel } from '..
 import { eventoSubNavTabs, type EventoAbaId } from '../_lib/subnav';
 import { thumbVariantDoEvento } from '../../overview/_lib/activeEvents';
 import { linkEventoPublico } from '../../../lib/linkPublico';
-import { tabsComNavSpa, trilhaComNavSpa } from '../../../lib/navSpa';
+import { trilhaComNavSpa } from '../../../lib/navSpa';
 import type { EventThumbVariant } from '@leela/design-system';
 
 export interface EventoShellProps {
@@ -87,17 +87,13 @@ function EventoTile({ variant }: { variant: EventThumbVariant }): JSX.Element {
 export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.Element {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const navigate = useNavigate();
-  const { pathname } = useLocation();
 
   const status = statusEventoBadge(evento.status);
   // O construtor `eventoSubNavTabs` é @pure e segue intocado (o teste orientado
-  // a tabela em `_lib/__tests__/subnav.test.ts` é o contrato dele). A navegação
-  // de SPA é fiada AQUI, no ponto de render.
-  const tabs = tabsComNavSpa(
-    eventoSubNavTabs(evento.slug, ativa, { inscritos: evento.qtdInscritos }),
-    navigate,
-    pathname,
-  );
+  // a tabela em `_lib/__tests__/subnav.test.ts` é o contrato dele). A fiação de
+  // SPA saiu daqui na Leva 14 — quem faz é o `AreaSubNav`, uma vez para as onze
+  // barras do painel.
+  const tabs = eventoSubNavTabs(evento.slug, ativa, { inscritos: evento.qtdInscritos });
   const trilha = trilhaComNavSpa(
     [{ label: 'Eventos', href: '/eventos' }, { label: evento.nome }],
     navigate,
@@ -215,7 +211,7 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
         </div>
       </header>
 
-      <SubNav tabs={tabs} aria-label="Seções do evento" divider />
+      <AreaSubNav tabs={tabs} aria-label="Seções do evento" />
       <div className="p-[var(--spacing-6)]">{children}</div>
     </div>
   );

@@ -9,20 +9,11 @@
 // própria: foi essa anatomia que produziu aba órfã e layout inconsistente.
 // =============================================================================
 
-import { useLocation, useNavigate } from 'react-router-dom';
-import { SubNav } from '@leela/design-system';
-import { tabsComNavSpa } from '../../../lib/navSpa';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 import { clubesAreaNavTabs, type ClubesAreaId } from '../_lib/areaNav';
 
 export function ClubesAreaNav({ ativa }: { ativa: ClubesAreaId }): JSX.Element {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  return (
-    <SubNav
-      aria-label="Seções de clubs"
-      tabs={tabsComNavSpa(clubesAreaNavTabs(ativa), navigate, pathname)}
-    />
-  );
+  return <AreaSubNav aria-label="Seções de clubs" tabs={clubesAreaNavTabs(ativa)} />;
 }
 
 ClubesAreaNav.displayName = 'ClubesAreaNav';

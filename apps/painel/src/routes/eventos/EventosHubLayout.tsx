@@ -10,21 +10,19 @@
 // abas de um evento (essas são a sub-nav terciária de `eventos/_lib/subnav.ts`,
 // que segue intocada).
 //
-// SubNav no padrão §2.14 com `divider` (RN-229 · divisória 1px em
-// --border-subtle) — o mesmo componente e o mesmo par de props que a área
-// Financeiro usava antes de morrer, para a troca de casa não virar troca de
-// aparência. `/eventos/novo` fica FORA desta moldura de propósito: é fluxo de
+// Menu secundário pelo `AreaSubNav` (Leva 14) — o mesmo componente e as
+// mesmas props de TODAS as barras do painel, para a troca de casa não virar
+// troca de aparência. O `divider` da RN-229 morreu junto com a prop no DS. `/eventos/novo` fica FORA desta moldura de propósito: é fluxo de
 // criação em tela cheia, não uma subdivisão do hub.
 // =============================================================================
 
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { SubNav, type SubNavTab } from '@leela/design-system';
-import { tabsComNavSpa } from '../../lib/navSpa';
+import { Outlet, useLocation } from 'react-router-dom';
+import type { SubNavTab } from '@leela/design-system';
+import { AreaSubNav } from '../../components/nav/AreaSubNav';
 
 /** Sub-navegação de primeiro nível da área Eventos (padrão §2.14). */
 export function EventosHubSubNav(): JSX.Element {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   // Só `/eventos/repasses` (e o que vier abaixo dele) ativa a aba Repasses.
   // Um evento de slug `repasses` NÃO existe por esta rota — a precedência de
   // segmento estático sobre `:slug` está declarada e testada em EventosRoutes.
@@ -35,16 +33,12 @@ export function EventosHubSubNav(): JSX.Element {
   // mas também não era link (sem ctrl+clique, sem clique do meio, sem "copiar
   // endereço do link"). Agora segue o mesmo par das outras superfícies — `href`
   // no DOM E `onClick` com `preventDefault`, fiado por `tabsComNavSpa`.
-  const tabs: SubNavTab[] = tabsComNavSpa(
-    [
-      { id: 'eventos', label: 'Eventos', href: '/eventos', active: !emRepasses },
-      { id: 'repasses', label: 'Repasses', href: '/eventos/repasses', active: emRepasses },
-    ],
-    navigate,
-    pathname,
-  );
+  const tabs: SubNavTab[] = [
+    { id: 'eventos', label: 'Eventos', href: '/eventos', active: !emRepasses },
+    { id: 'repasses', label: 'Repasses', href: '/eventos/repasses', active: emRepasses },
+  ];
 
-  return <SubNav aria-label="Seções de Eventos" divider tabs={tabs} />;
+  return <AreaSubNav aria-label="Seções de Eventos" tabs={tabs} />;
 }
 
 EventosHubSubNav.displayName = 'EventosHubSubNav';

@@ -112,11 +112,11 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     expect(ativo).toHaveAttribute('aria-current', 'page');
   });
 
-  it('os 6 itens do produtor renderizam com ícone (RN-233 · menu de 6 áreas)', () => {
+  it('os 5 itens do produtor renderizam com ícone (Leva 15 · menu de 5 áreas)', () => {
     renderAt('/');
     // 6 itens do DS: Visão Geral · Eventos · Clubs · CRM · Parcerias · Configurações.
     const itens = within(nav()).getAllByRole('link');
-    expect(itens).toHaveLength(6);
+    expect(itens).toHaveLength(5);
     for (const item of itens) {
       expect(item.querySelector('svg')).not.toBeNull();
     }
@@ -232,19 +232,45 @@ describe('RootShell · popover do perfil (Configurações + alternador)', () => 
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('conta de organizador: menu só com Configurações — ela só tem um painel', async () => {
+  it('conta de organizador: menu com Configurações e Sair — ela só tem um painel', async () => {
     renderAt('/');
     await abrirMenuDoPerfil();
     const menu = screen.getByRole('menu', { name: 'Menu do perfil' });
     expect(within(menu).getByRole('menuitem', { name: 'Configurações' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Sair' })).toBeInTheDocument();
     expect(within(menu).queryByRole('menuitem', { name: /Acessar painel/ })).toBeNull();
   });
 
-  it('Configurações do menu leva a /conta (o item do rail CONTINUA existindo)', async () => {
+  // LEVA 16, na íntegra: *"devo visualizar 'sair' como opção de logou e
+  // configurações. Ambos com pequenos icones."* O tamanho do ícone é contrato
+  // do DS (`--popover-icon-size`, testado em icone-do-item.test.tsx); aqui o
+  // contrato é a PRESENÇA — o item traz desenho, e não só texto.
+  it('Leva 16: Configurações e Sair têm cada um o seu ícone', async () => {
     renderAt('/');
-    // Default do maestro registrado: o popover soma um caminho — o item
-    // Configurações do rail não sai.
-    expect(within(nav()).getByRole('link', { name: 'Configurações' })).toBeInTheDocument();
+    await abrirMenuDoPerfil();
+    const menu = screen.getByRole('menu', { name: 'Menu do perfil' });
+    for (const nome of ['Configurações', 'Sair']) {
+      const item = within(menu).getByRole('menuitem', { name: nome });
+      expect(item.querySelector('svg')).not.toBeNull();
+    }
+  });
+
+  it('Sair é o ÚLTIMO item — encerrar a sessão não fica no meio da lista', async () => {
+    renderAt('/');
+    await abrirMenuDoPerfil();
+    const menu = screen.getByRole('menu', { name: 'Menu do perfil' });
+    const itens = within(menu).getAllByRole('menuitem');
+    expect(itens[itens.length - 1]).toHaveTextContent('Sair');
+  });
+
+  // LEVA 15 — o dono vetou o default do maestro, na íntegra: *"configuraç~eos
+  // também está redundante no menu pricnipal, já que ao clicar no nome 'ver
+  // perfil' aparecem as configurações."* O caminho para `/conta` passa a ser um
+  // só, e este teste guarda os DOIS lados da troca: sumiu do rail, continua no
+  // popover. Meio conserto (sumir dos dois, ou de nenhum) cai aqui.
+  it('Configurações leva a /conta pelo popover, e NÃO existe mais no rail', async () => {
+    renderAt('/');
+    expect(within(nav()).queryByRole('link', { name: 'Configurações' })).toBeNull();
     await abrirMenuDoPerfil();
     await userEvent.click(screen.getByRole('menuitem', { name: 'Configurações' }));
     expect(screen.getByTestId('path')).toHaveTextContent('/conta');
@@ -350,7 +376,7 @@ describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
     // Os 6 destinos do produtor, rótulos em fluxo (anatomia aberta). O nome
     // acessível pode carregar o badge de eventos ativos ("Eventos 2") — o
     // badge é anatomia do rail aberto e chega por fetch, daí o prefixo.
-    expect(within(drawerNav).getAllByRole('link')).toHaveLength(6);
+    expect(within(drawerNav).getAllByRole('link')).toHaveLength(5);
     expect(within(drawerNav).getByRole('link', { name: /^Eventos/ })).toBeVisible();
   });
 

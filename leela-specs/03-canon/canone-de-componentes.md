@@ -207,8 +207,25 @@ quatro vias de fechamento do DoD de Tela: cancelar, X, overlay, Esc.
 | Menu lateral | `Sidebar` / `SidebarRail` — marca e rodapé por `SidebarBrand` / `SidebarFooter` |
 | Trilha | `Breadcrumb` |
 | Cabeçalho de página | `PageHeader` |
-| Navegação de área | `SubNav` — ativa com sublinhado Brasa 2px e contador pill |
+| Navegação de área | `SubNav` — ativa com sublinhado Brasa 2px e contador pill; barra transparente e **sem borda inferior**, em qualquer nível |
 | Abas com painel | `Tabs` — painéis permanecem no DOM (`forceMount`) |
+
+**Menu secundário é UM só, e no painel ele entra por `AreaSubNav`.** Área, sub-área e terciária são o
+mesmo componente com a mesma aparência: não existe variante por nível de profundidade. A prop
+`divider` do `SubNav` foi removida na Leva 14 — ela desenhava, em `--border-subtle`, um traço no
+mesmo `bottom: 0` do indicador Brasa, e o dono reprovou lendo a tela: *"o menu secundário de clubs
+está coreto, mas nas outras telas, a linha esta aparecendo, aonde os seletores laranja ficam. Isso é
+um exemplo de que voce naoe stá retulizando e padronizando os componentes."* Oito dos onze menus do
+painel passavam a prop; clubs, que não passava, era o único certo. A borda inferior agora é travada
+em `border-b-0` **depois** do `className`, pela mesma mecânica de `twMerge` da trava de rolagem —
+separar a barra do conteúdo é trabalho do espaço da moldura, nunca de traço.
+
+O consumidor único no painel é `apps/painel/src/components/nav/AreaSubNav.tsx`: ele fia a navegação
+de SPA (`tabsComNavSpa`) que estava copiada em onze pontos de render, e é o que garante `href` real
+com interceptação de clique em todas as barras de uma vez. Render direto de `<SubNav>` fora dele é
+contado pela catraca `menu-secundario-cru` do `scripts/gate-canon.mjs`, com baseline **zero** — a
+mesma catraca pega a barra reescrita à mão (`flex` + `border-b-2` na aba ativa), que é como a linha
+voltaria sem passar pelo componente.
 
 ## 10. Estado
 

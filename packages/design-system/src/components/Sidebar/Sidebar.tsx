@@ -1,9 +1,9 @@
 /**
  * Sidebar — painel de navegação lateral do shell.
  *
- * Seções (RN-233, rodada IA-MENU 2026-07-19 — o menu foi de 8 para 6 itens):
+ * Seções (RN-233 · rodada IA-MENU 2026-07-19 levou de 8 a 6; a Leva 15 de
+ * 13/08 levou a 5, tirando Configurações):
  *   OPERAÇÃO: Visão Geral, Eventos, Clubs, CRM, Parcerias
- *   CONTA:    Configurações
  *
  * `Financeiro` e `Analytics` saíram do catálogo: a análise de vendas virou
  * CRM › Visão geral (RN-823) e os repasses viraram subdivisão de Eventos
@@ -35,7 +35,6 @@ import {
   Heart,
   LayoutDashboard,
   Megaphone,
-  Settings,
   Ticket,
   User,
   type LucideIcon,
@@ -113,7 +112,7 @@ export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
 
 /**
  * Mapeamento item → ícone da fonte da verdade (doc de IA do painel Be Hero,
- * §Sidebar), reconciliado pela rodada IA-MENU: **6 itens**, não 8.
+ * §Sidebar), reconciliado pela rodada IA-MENU (8 → 6) e pela Leva 15 (6 → 5).
  *
  * O id `comunicacao` virou `crm` (rótulo "CRM") porque a casca deixou de ser
  * só comunicação — passa a abrigar Visão geral, Clientes e Comunicação.
@@ -129,7 +128,8 @@ export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
  *
  * `Ticket` é EXCLUSIVO deste item de menu: agenda e campos de data seguem em
  * `CalendarDays`/`CalendarCheck`, e trocar isso confundiria "quando acontece"
- * com "o que se vende". Visão Geral e Configurações ficam como estavam.
+ * com "o que se vende". Visão Geral fica como estava; Configurações saiu do
+ * catálogo na Leva 15.
  */
 export interface SidebarNavIconEntry {
   id: string;
@@ -160,7 +160,22 @@ export const DEFAULT_SIDEBAR_NAV_ICONS: readonly SidebarNavIconEntry[] = [
   // Megaphone fica: patrocínio/parceria comunica (troca de ícone não foi
   // decidida; candidata natural seria Handshake — vetável).
   { id: 'parcerias',     label: 'Parcerias',     iconName: 'Megaphone',       Icon: Megaphone },
-  { id: 'configuracoes', label: 'Configurações', iconName: 'Settings',        Icon: Settings },
+  // LEVA 15 — `configuracoes` SAIU do menu principal. O dono, na íntegra:
+  // *"configuraç~eos também está redundante no menu pricnipal, já que ao clicar
+  // no nome 'ver perfil' aparecem as configurações."*
+  //
+  // A remoção só é legítima porque a redundância foi MEDIDA e é pura: o item do
+  // rail e o item do popover do perfil apontavam para a mesma rota `/conta`
+  // (`apps/painel/src/shell/sidebar.ts` · `apps/painel/src/shell/RootShell.tsx`),
+  // e `/conta` é conta pessoal — perfil, senha, foto, dados de recebimento,
+  // logout. Não havia um segundo escopo de "configurações da organização" para
+  // o rail guardar; as configurações POR OBJETO (de um evento, de um clube)
+  // vivem dentro do objeto e nunca estiveram aqui.
+  //
+  // Este catálogo é a fonte da nav do produtor, então a entrada sai daqui e não
+  // por filtro no app — filtro é a deriva que o comentário acima existe para
+  // impedir. A seção 'CONTA' foi junto: ela hospedava só este item, e seção com
+  // rótulo e nenhum filho é cabeçalho de nada.
 ] as const;
 
 /** Monta um item de seção a partir do id declarado no catálogo acima. */
@@ -174,10 +189,6 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     label: 'OPERAÇÃO',
     items: ['visao-geral', 'eventos', 'clubs', 'crm', 'parcerias'].map(itemPadrao),
-  },
-  {
-    label: 'CONTA',
-    items: ['configuracoes'].map(itemPadrao),
   },
 ];
 

@@ -9,20 +9,11 @@
 // aba órfã e layout inconsistente.
 // =============================================================================
 
-import { useLocation, useNavigate } from 'react-router-dom';
-import { SubNav } from '@leela/design-system';
-import { tabsComNavSpa } from '../../../lib/navSpa';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 import { parceriasAreaNavTabs, type ParceriasAreaId } from '../_lib/areaNav';
 
 export function ParceriasAreaNav({ ativa }: { ativa: ParceriasAreaId }): JSX.Element {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  return (
-    <SubNav
-      aria-label="Seções de parcerias"
-      tabs={tabsComNavSpa(parceriasAreaNavTabs(ativa), navigate, pathname)}
-    />
-  );
+  return <AreaSubNav aria-label="Seções de parcerias" tabs={parceriasAreaNavTabs(ativa)} />;
 }
 
 ParceriasAreaNav.displayName = 'ParceriasAreaNav';

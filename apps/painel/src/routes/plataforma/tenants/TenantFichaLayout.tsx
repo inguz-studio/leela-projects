@@ -20,8 +20,9 @@
 // montar o layout não acrescenta uma ida ao Firestore.
 // =============================================================================
 
-import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Skeleton, SubNav, type SubNavTab } from '@leela/design-system';
+import { Outlet, useLocation, useParams } from 'react-router-dom';
+import { Badge, Skeleton, type SubNavTab } from '@leela/design-system';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 import { useTenantComOwner } from '../_data/tenants';
 import { statusTenantBadge } from '../_lib/health';
 import {
@@ -34,22 +35,19 @@ import {
 export function TenantFichaLayout(): JSX.Element {
   const { tenantId = '' } = useParams<{ tenantId: string }>();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
 
   const ativa = abaAtivaDoPath(pathname, tenantId);
   const { tenant, loading } = useTenantComOwner(tenantId);
 
+  // A fiação de SPA saiu daqui na Leva 14. O `onClick` escrito à mão chamava
+  // `preventDefault()` SEM conferir tecla nem botão do mouse, então esta barra —
+  // e só ela — matava ctrl/cmd+clique, clique do meio e "abrir em nova aba".
+  // O `AreaSubNav` usa `tabsComNavSpa`, que devolve esses cliques ao navegador.
   const tabs: SubNavTab[] = ABAS_DA_FICHA.map((aba) => ({
     id: aba.id,
     label: aba.label,
     href: caminhoDaAba(tenantId, aba),
     active: aba.id === ativa,
-    // `href` fica no DOM (ctrl+clique, copiar endereço); o clique simples é
-    // interceptado para navegar por SPA — contrato do próprio SubNav.
-    onClick: (event) => {
-      event.preventDefault();
-      navigate(caminhoDaAba(tenantId, aba));
-    },
   }));
 
   const status = tenant ? statusTenantBadge(tenant.status) : null;
@@ -76,7 +74,7 @@ export function TenantFichaLayout(): JSX.Element {
         </div>
       ) : null}
 
-      <SubNav tabs={tabs} aria-label="Seções da ficha do tenant" />
+      <AreaSubNav tabs={tabs} aria-label="Seções da ficha do tenant" />
 
       <Outlet />
     </div>

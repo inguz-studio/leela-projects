@@ -29,12 +29,39 @@ describe('SubNav', () => {
     expect(screen.getByRole('navigation')).not.toHaveClass('border-b');
   });
 
-  it('divider opts into a divisória (RN-229 · S-R9-10, padrão Comunicação)', () => {
-    render(<SubNav tabs={tabs} divider />);
+  // -------------------------------------------------------------------------
+  // TRAVA DA LINHA (Leva 14) — a terceira cobrança da classe padronização.
+  //
+  // Na íntegra, o dono: *"o menu secundário de clubs está coreto, mas nas
+  // outras telas, a linha esta aparecendo, aonde os seletores laranja ficam."*
+  // A linha era o `border-b` em `--border-subtle` que a prop `divider`
+  // (RN-229) desenhava, no mesmo `bottom: 0` do indicador Brasa. A prop morreu;
+  // estes dois testes são o que impede a volta pelas duas portas conhecidas —
+  // uma prop nova e um `className` de consumidor.
+  // -------------------------------------------------------------------------
+  it('não existe mais prop de divisória — a linha morreu na origem (Leva 14)', () => {
+    // O contrato de tipo já barra `divider` em compilação; aqui a prova é de
+    // RUNTIME, porque JS chamando o componente não passa pelo tsc.
+    render(<SubNav tabs={tabs} {...({ divider: true } as Record<string, unknown>)} />);
     const nav = screen.getByRole('navigation');
-    expect(nav).toHaveClass('border-b');
-    expect(nav).toHaveClass('border-b-[var(--border-subtle)]');
+    expect(nav).not.toHaveClass('border-b');
+    expect(nav.className).not.toContain('border-b-[var(--border-subtle)]');
   });
+
+  // A largura é o que desenha o traço; a cor sozinha não desenha nada. Por isso
+  // a trava é `border-b-0` (grupo border-w-b) e a asserção é sobre LARGURA:
+  // `border-b-[var(--border-subtle)]` é cor para o twMerge e sobrevive à
+  // mesclagem, mas sobre largura zero não pinta pixel nenhum.
+  it.each(['border-b', 'border-b-2', 'border-b border-b-[var(--border-subtle)]'])(
+    'className="%s" NÃO ressuscita a linha — border-b-0 vence por vir depois',
+    (override) => {
+      render(<SubNav tabs={tabs} className={override} />);
+      const nav = screen.getByRole('navigation');
+      expect(nav).toHaveClass('border-b-0');
+      expect(nav).not.toHaveClass('border-b');
+      expect(nav).not.toHaveClass('border-b-2');
+    },
+  );
 
   it('rola horizontalmente por dentro em telas estreitas (Adendo 12 — tablet/mobile)', () => {
     // As terciárias de evento têm N abas que estouravam a largura em
@@ -262,9 +289,12 @@ describe('SubNav', () => {
     expect(nav.className).toContain('bg-transparent');
     expect(nav.className).not.toContain('bg-[var(--surface-base)]');
     expect(nav.className).toContain('px-[var(--subnav-px)]');
-    // Plano (Vitor 2026-07-11): sem divisor inferior por default; o sublinhado
-    // da aba ativa é o único indicador.
-    expect(nav.className).not.toContain('border-b');
+    // Plano (Vitor 2026-07-11, endurecido na Leva 14): sem divisor inferior, e
+    // agora sem porta de opt-in. O sublinhado da aba ativa é o único indicador.
+    // A asserção é por CLASSE e não por substring: `border-b-0` (a trava) tem
+    // `border-b` dentro dele, e um `toContain` aqui reprovaria a própria trava.
+    expect(nav).not.toHaveClass('border-b');
+    expect(nav).toHaveClass('border-b-0');
   });
 
   // -------------------------------------------------------------------------

@@ -50,9 +50,15 @@ describe('EventosHubSubNav', () => {
     );
   });
 
-  it('aplica a divisória padrão da sub-nav (RN-229)', () => {
+  // LEVA 14 — a divisoria MORREU. O dono, na integra: *"o menu secundario de
+  // clubs esta coreto, mas nas outras telas, a linha esta aparecendo, aonde os
+  // seletores laranja ficam."* Este teste guardava a RN-229; agora guarda o
+  // contrario, para a linha nao voltar por esta area.
+  it('a sub-nav NÃO tem divisória — a linha morreu na Leva 14', () => {
     renderEm('/eventos');
-    expect(screen.getByRole('navigation', { name: 'Seções de Eventos' })).toHaveClass('border-b');
+    const nav = screen.getByRole('navigation', { name: 'Seções de Eventos' });
+    expect(nav).not.toHaveClass('border-b');
+    expect(nav).toHaveClass('border-b-0');
   });
 
   // LEELA-DEBT-T4 (H7): as abas eram `<button>` — navegavam, mas não davam

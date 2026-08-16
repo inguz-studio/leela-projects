@@ -15,9 +15,9 @@
 // gate, não decisão de layout.
 // =============================================================================
 
-import { useLocation, useNavigate } from 'react-router-dom';
-import { SubNav, type SubNavTab } from '@leela/design-system';
-import { tabsComNavSpa } from '../../../lib/navSpa';
+import { useLocation } from 'react-router-dom';
+import type { SubNavTab } from '@leela/design-system';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 
 /** Subdivisão do CRM ativa para um pathname (fonte única da derivação). */
 export function crmAbaAtiva(pathname: string): 'visao-geral' | 'clientes' | 'comunicacao' {
@@ -30,7 +30,6 @@ export function crmAbaAtiva(pathname: string): 'visao-geral' | 'clientes' | 'com
 
 export function CrmSubNav(): JSX.Element {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const ativa = crmAbaAtiva(pathname);
 
   // LEELA-DEBT-T4 (H7 do PAINEL-NAV-DIAG-REPORT) — esta barra nasceu na rodada
@@ -40,22 +39,18 @@ export function CrmSubNav(): JSX.Element {
   // barra de status, e um `<button>` onde o leitor de tela esperava navegação.
   // Agora é o mesmo par das demais superfícies — `href` no DOM E `onClick` que
   // faz `preventDefault` (a fiação vive em `tabsComNavSpa`, um lugar só).
-  const tabs: SubNavTab[] = tabsComNavSpa(
-    [
-      { id: 'visao-geral', label: 'Visão geral', href: '/crm', active: ativa === 'visao-geral' },
-      { id: 'clientes', label: 'Clientes', href: '/crm/clientes', active: ativa === 'clientes' },
-      {
-        id: 'comunicacao',
-        label: 'Comunicação',
-        href: '/crm/comunicacao',
-        active: ativa === 'comunicacao',
-      },
-    ],
-    navigate,
-    pathname,
-  );
+  const tabs: SubNavTab[] = [
+    { id: 'visao-geral', label: 'Visão geral', href: '/crm', active: ativa === 'visao-geral' },
+    { id: 'clientes', label: 'Clientes', href: '/crm/clientes', active: ativa === 'clientes' },
+    {
+      id: 'comunicacao',
+      label: 'Comunicação',
+      href: '/crm/comunicacao',
+      active: ativa === 'comunicacao',
+    },
+  ];
 
-  return <SubNav aria-label="Seções de CRM" divider tabs={tabs} />;
+  return <AreaSubNav aria-label="Seções de CRM" tabs={tabs} />;
 }
 
 CrmSubNav.displayName = 'CrmSubNav';

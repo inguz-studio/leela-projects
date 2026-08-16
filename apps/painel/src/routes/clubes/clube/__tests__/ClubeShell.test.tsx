@@ -88,7 +88,11 @@ describe('ClubeShell', () => {
     expect(screen.getByText('conteúdo do overview')).toBeInTheDocument();
   });
 
-  it('aplica a divisória padrão na sub-nav (RN-229 · DEC-0719 item 21)', () => {
+  // LEVA 14 — a divisoria MORREU. O dono, na integra: *"o menu secundario de
+  // clubs esta coreto, mas nas outras telas, a linha esta aparecendo, aonde os
+  // seletores laranja ficam."* Este teste guardava a RN-229; agora guarda o
+  // contrario, para a linha nao voltar por esta area.
+  it('a sub-nav NÃO tem divisória — a linha morreu na Leva 14', () => {
     render(
       <MemoryRouter>
         <ClubeShell clube={mkClube()} ativa="overview" onCopiarCodigo={noop}>
@@ -97,6 +101,8 @@ describe('ClubeShell', () => {
       </MemoryRouter>,
     );
     // Mesmo token/padrão (border-b em --border-subtle) das terciárias de eventos.
-    expect(screen.getByRole('navigation', { name: 'Seções do club' })).toHaveClass('border-b');
+    const nav = screen.getByRole('navigation', { name: 'Seções do club' });
+    expect(nav).not.toHaveClass('border-b');
+    expect(nav).toHaveClass('border-b-0');
   });
 });

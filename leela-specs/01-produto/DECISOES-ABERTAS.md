@@ -32,6 +32,21 @@ As modalidades do evento nascem uma vez, na criação, e nenhuma tela do painel 
 - **Opções:** **fase A agora + fase B como onda seguinte já especificada** (**default proposto** — fase A é tela apenas, sem servidor: a seção de data e modalidades passa a listar as modalidades do evento e a tela de lotes ganha um caminho até lá; fase B sobe depois como onda própria, com a fila da S316 inteira — servidor, com integridade entre modalidade, lote, kit e campanha) · as duas fases de uma vez, pagando o custo de servidor já nesta entrada · modalidades ganhando aba própria entre kits e lotes, opção independente que soma a qualquer uma das duas de cima.
 - **Onde aterrissa:** S316 inteira em [[LEELA-E04-config-vendas]] §"S316 recebe a leva 3 inteira (D-1008-R13)".
 
+### POPOVER-COR-1 · a cor do painel flutuante (o "modal" do perfil)
+
+Você disse, em 13/08, que *"o modal está fora do design system também, quanto as cores"*. A varredura do componente inteiro achou **zero cor fora do sistema**: nenhum hex, nenhum rgba, nenhuma classe de paleta fixa, nenhum estilo inline de cor — tudo sai de token, e o painel flutuante inclusive já respeita a sua decisão anterior de nunca pintar o filme translúcido do vidro (D-1008-R4). Ou seja: a implementação está correta, e mesmo assim o que você viu na tela está certo também.
+
+A explicação medida é de FAMÍLIA de cor, não de conformidade. No brasa, o painel flutuante é `#1C1C1C` e a superfície do rail é `#161616` — dois cinzas neutros puros, enquanto tudo em volta é atravessado pelo brilho de fundo e pelo vidro, que são quentes. O painel é a única superfície grande da tela sem esse tratamento, então ele lê como um retângulo cinza colado por cima de um ambiente que tem cor.
+
+Isto não foi consertado de propósito: o token `--popover` é lido por TODO menu, seleção, busca e painel flutuante do produto. Trocar ele repinta o produto inteiro a partir de uma hipótese sobre o que você viu, e isso é lane própria com conferência visual própria.
+
+- **Caso de uso:** você clica no seu nome no menu, o painel abre, e ele parece de outro produto — cinza chapado sobre uma tela que tem temperatura.
+- **Job story:** quando um menu abre por cima da tela, eu quero que ele pareça da mesma casa que o resto, para não sentir que o sistema foi montado por duas pessoas que não se falaram.
+- **O que fica com você:** confirmar se é isso mesmo que te incomodou, e aprovar (ou vetar) o pareamento proposto.
+- **Opções:** **parear o painel flutuante com a família da superfície elevada de cada tema** (**default proposto** — `--surface-raised-opaque` como ponto de partida, com AA de texto e borda medido nos três temas antes de trocar) · manter como está, se o que te incomodou for outra coisa · escolher um tratamento próprio para painel flutuante, que aí é decisão de marca e não pareamento.
+- **Onde aterrissa:** `--popover` em `packages/design-system/tokens/shadcn.json` e a conferência visual de menu, seleção e busca nos três temas. **Vale olhar primeiro no tema claro**, onde a distância é maior e mais visível (superfície elevada `#FFFFFF` contra painel `#F5F1EC`) — se você responder sobre o claro, a resposta provavelmente vale para os três.
+- **Detalhe completo:** `02-rodadas/2026-08-13-decisoes-dono/01-decisoes-dono.md` §16.2.
+
 ## Ações que só você pode executar
 
 ### 69 · conferência visual das telas novas, no mesmo passeio

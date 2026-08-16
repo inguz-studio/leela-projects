@@ -405,6 +405,7 @@
   --table-header-font-size: var(--font-size-xs);
   --table-header-spacing: 0.08em;
   --popover-min-width: 160px;
+  --popover-icon-size: 16px;
   --modal-width-sm: 480px;
   --modal-width-md: 560px;
   --modal-width-lg: 640px;

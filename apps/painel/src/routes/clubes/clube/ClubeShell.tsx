@@ -10,13 +10,14 @@
 // =============================================================================
 
 import * as React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, Badge, Breadcrumb, PageHeader, SubNav } from '@leela/design-system';
+import { useNavigate } from 'react-router-dom';
+import { Avatar, Badge, Breadcrumb, PageHeader } from '@leela/design-system';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
 import { anoDe, formatInt } from '../_lib/format';
 import { clubeSubNavTabs, type ClubeAbaId } from '../_lib/subnav';
-import { tabsComNavSpa, trilhaComNavSpa } from '../../../lib/navSpa';
+import { trilhaComNavSpa } from '../../../lib/navSpa';
 import { linkClubePublico } from '../../../lib/linkPublico';
 
 export interface ClubeShellProps {
@@ -62,7 +63,6 @@ function CodigoConvite({
 
 export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShellProps): JSX.Element {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const desde = anoDe(clube.criadoEm);
   const subtitleParts = [
     formatarLocalizacaoClube(clube.localizacao),
@@ -71,15 +71,12 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
   ].filter(Boolean) as string[];
 
   // `clubeSubNavTabs` é @pure e segue intocado (teste orientado a tabela em
-  // `_lib/__tests__/subnav.test.ts`). A navegação de SPA é fiada AQUI.
-  const tabs = tabsComNavSpa(
-    clubeSubNavTabs(clube.slug, ativa, {
-      membros: clube.qtdMembrosAtivos,
-      desafios: clube.qtdDesafiosAtivos,
-    }),
-    navigate,
-    pathname,
-  );
+  // `_lib/__tests__/subnav.test.ts`). A fiação de SPA saiu daqui na Leva 14 —
+  // quem faz é o `AreaSubNav`, uma vez para as onze barras do painel.
+  const tabs = clubeSubNavTabs(clube.slug, ativa, {
+    membros: clube.qtdMembrosAtivos,
+    desafios: clube.qtdDesafiosAtivos,
+  });
 
   // D-1008-R10 ("os clubs eu posso acessar um painel, mas depois nao consigo
   // retornar a aba geral"): trilha canônica "Clubs › {nome}" — o MESMO padrão
@@ -107,7 +104,7 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
           <CodigoConvite codigo={clube.codigoConvite} slug={clube.slug} onCopiar={onCopiarCodigo} />
         }
       />
-      <SubNav tabs={tabs} aria-label="Seções do club" divider />
+      <AreaSubNav tabs={tabs} aria-label="Seções do club" />
       <div className="p-[var(--spacing-6)]">{children}</div>
     </div>
   );

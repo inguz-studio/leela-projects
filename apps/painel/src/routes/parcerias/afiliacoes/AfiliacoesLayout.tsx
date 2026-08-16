@@ -10,41 +10,36 @@
 //                      RN-318: só as próprias conversões)
 //
 // O menu da ÁREA mantém as 3 abas canônicas da decisão (Afiliações é UMA
-// frente); os dois lados navegam por esta sub-nav TERCIÁRIA — SubNav com
-// `divider` (RN-229), o mesmo par componente+props das terciárias de eventos
-// (Financeiro/Kits/Configurações). Nenhum dos lados vira beco: no menu antigo
+// frente); os dois lados navegam por esta sub-nav TERCIÁRIA — o mesmo
+// `AreaSubNav` de todas as barras do painel desde a Leva 14 (o `divider` da
+// RN-229 morreu junto com a prop no DS). Nenhum dos lados vira beco: no menu antigo
 // de clubs os dois eram entradas, e aqui seguem a um clique.
 // =============================================================================
 
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { SubNav, type SubNavTab } from '@leela/design-system';
-import { tabsComNavSpa } from '../../../lib/navSpa';
+import { Outlet, useLocation } from 'react-router-dom';
+import type { SubNavTab } from '@leela/design-system';
+import { AreaSubNav } from '../../../components/nav/AreaSubNav';
 
 export function AfiliacoesSubNav(): JSX.Element {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const emMinhas = pathname.startsWith('/parcerias/afiliacoes/minhas');
 
-  const tabs: SubNavTab[] = tabsComNavSpa(
-    [
-      {
-        id: 'influenciadores',
-        label: 'Influenciadores',
-        href: '/parcerias/afiliacoes',
-        active: !emMinhas,
-      },
-      {
-        id: 'minhas',
-        label: 'Minhas afiliações',
-        href: '/parcerias/afiliacoes/minhas',
-        active: emMinhas,
-      },
-    ],
-    navigate,
-    pathname,
-  );
+  const tabs: SubNavTab[] = [
+    {
+      id: 'influenciadores',
+      label: 'Influenciadores',
+      href: '/parcerias/afiliacoes',
+      active: !emMinhas,
+    },
+    {
+      id: 'minhas',
+      label: 'Minhas afiliações',
+      href: '/parcerias/afiliacoes/minhas',
+      active: emMinhas,
+    },
+  ];
 
-  return <SubNav aria-label="Seções de afiliações" divider tabs={tabs} />;
+  return <AreaSubNav aria-label="Seções de afiliações" tabs={tabs} />;
 }
 
 AfiliacoesSubNav.displayName = 'AfiliacoesSubNav';

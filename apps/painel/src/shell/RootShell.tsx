@@ -34,6 +34,8 @@ import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
 import { usePaineisDaConta } from './paineis';
 import { nomeDoPainelAtual, travessia } from './AlternadorDePainel';
+import { useSair } from './sair';
+import { LogOut, Settings } from 'lucide-react';
 
 export interface RootShellProps {
   children: React.ReactNode;
@@ -45,24 +47,47 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   const { nome } = useShellSession();
   const eventosAtivos = useEventosAtivosBadge();
   const paineis = usePaineisDaConta();
+  const { sair } = useSair();
 
   // DELTA-UX-T4 (D-1008-R6): o perfil do rodapé do rail virou TRIGGER do
   // popover do perfil — DropdownMenu canônico ancorado acima (L-021), com
   // Configurações + alternador de painel. Os itens de menu SÃO o "flat
   // button" do vocabulário do DS dentro de popover (sem preenchimento
   // sólido; hover em accent) — nenhum variant novo precisou nascer.
-  // Default do maestro (registrado, vetável): Configurações CONTINUA também
-  // como item do rail — o popover soma um caminho, não rouba o existente.
+  // LEVA 15 — o default vetável do maestro ("Configurações CONTINUA também
+  // como item do rail — o popover soma um caminho, não rouba o existente") foi
+  // VETADO pelo dono, na íntegra: *"configuraç~eos também está redundante no
+  // menu pricnipal, já que ao clicar no nome 'ver perfil' aparecem as
+  // configurações."* A medição confirmou a redundância como PURA, e é o que
+  // autoriza a remoção: os dois caminhos apontavam para a MESMA rota `/conta`
+  // (rail em `sidebar.ts` · popover aqui), não para escopos diferentes de
+  // organização e conta pessoal. A entrada saiu do rail; o caminho fica aqui.
+  //
+  // LEVA 16 — o menu do perfil passa a listar Configurações e Sair, cada um com
+  // ícone pequeno, na íntegra: *"devo visualizar 'sair' como opção de logou e
+  // configurações. Ambos com pequenos icones."* Até aqui o logout era invisível
+  // no shell: existia só dentro de `/conta`, ou seja, atrás do próprio item de
+  // configurações. Os ícones são decorativos (o rótulo é o nome acessível) e o
+  // tamanho vem do token `--popover-icon-size` dentro do DS, não daqui.
+  //
+  // A ORDEM é deliberada: Sair é o ÚLTIMO. É a ação que encerra tudo, e item
+  // destrutivo-adjacente no meio da lista é onde se clica sem querer.
   const { destino, rotulo } = travessia(location.pathname);
   const menuPerfil = {
     menuLabel: 'Menu do perfil',
     actions: [
-      { id: 'configuracoes', label: 'Configurações', onClick: () => navigate('/conta') },
+      {
+        id: 'configuracoes',
+        label: 'Configurações',
+        icon: <Settings />,
+        onClick: () => navigate('/conta'),
+      },
       // Só oferece a travessia a quem alcança os dois lados (regra 1 do
       // alternador — botão que leva a 403 é pior que botão nenhum).
       ...(paineis.podeAlternar
         ? [{ id: 'alternar-painel', label: rotulo, onClick: () => navigate(destino) }]
         : []),
+      { id: 'sair', label: 'Sair', icon: <LogOut />, onClick: () => void sair() },
     ],
   };
 

@@ -93,6 +93,23 @@ export interface DropdownMenuAction {
   checked?: boolean;
   /** Número afixado à direita do item (ex.: contagem da categoria no filtro). */
   count?: number;
+  /**
+   * Ícone pequeno à ESQUERDA do rótulo (Leva 16 — o dono, na íntegra: *"devo
+   * visualizar 'sair' como opção de logou e configurações. Ambos com pequenos
+   * icones."*).
+   *
+   * O contrato recebe o elemento pronto (`icon={<Settings />}`) e não o nome do
+   * ícone: o DS tem `lucide-react` como peer, não como dependência, e uma tabela
+   * de nomes aqui dentro obrigaria o pacote a importar o catálogo inteiro para
+   * servir dois itens de menu. Quem escolhe o desenho é a tela; quem manda no
+   * tamanho e no traço é o DS — o wrapper aplica `--popover-icon-size` e
+   * `--icon-stroke` no SVG filho, então nenhum consumidor precisa (nem
+   * consegue) escolher o número.
+   *
+   * É decorativo por construção: o rótulo ao lado já nomeia a ação, então o
+   * wrapper leva `aria-hidden` e o leitor de tela não ouve o ícone duas vezes.
+   */
+  icon?: React.ReactNode;
 }
 
 export interface DropdownMenuProps {
@@ -393,6 +410,22 @@ function DropdownMenu({
                 )}
               >
                 {isCheckbox && <CheckIndicator checked={action.checked ?? false} />}
+                {action.icon ? (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'shrink-0 inline-flex items-center justify-center',
+                      // O tamanho e o traço são do DS, não do consumidor: o
+                      // seletor de filho alcança o SVG do lucide sem exigir que
+                      // a tela passe className no ícone (que foi como o rail
+                      // acabou com três tamanhos antes do `railNavIcon`).
+                      '[&>svg]:h-[var(--popover-icon-size)] [&>svg]:w-[var(--popover-icon-size)]',
+                      '[&>svg]:[stroke-width:var(--icon-stroke)]',
+                    )}
+                  >
+                    {action.icon}
+                  </span>
+                ) : null}
                 <span className="flex-1">{action.label}</span>
                 {action.count !== undefined && (
                   <span className="shrink-0 tabular-nums text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
