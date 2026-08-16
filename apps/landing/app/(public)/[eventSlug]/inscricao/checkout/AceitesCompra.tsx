@@ -31,7 +31,7 @@ import { useRef, useState } from 'react';
 import { FileText, HeartPulse } from 'lucide-react';
 import { Dialog } from '@leela/design-system/dialog';
 import { Card } from '@leela/design-system/server';
-import { Checkbox } from '@/app/_ds/ds';
+import { CheckboxField } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { PoliticaVendasPublica } from '@/lib/tipos';
 
@@ -135,18 +135,17 @@ export function AceitesCompra({
       className="flex flex-col gap-3 border-border-subtle p-4 sm:p-5"
     >
       {/* (a) Termos da compra + política de cancelamento (resolve o A-1). */}
-      <label className="flex cursor-pointer items-start gap-3 text-[length:var(--font-size-sm)] text-text-primary">
-        <Checkbox
-          checked={aceiteTermos}
-          disabled={desabilitado}
-          onChange={(e) => onAceiteTermos(e.target.checked)}
-          aria-label="Li e aceito os termos da compra e a política de cancelamento deste evento"
-        />
-        <span>
-          Li e aceito os <strong>termos da compra e a política de cancelamento</strong> deste
-          evento.
-        </span>
-      </label>
+      <CheckboxField
+        checked={aceiteTermos}
+        disabled={desabilitado}
+        onChange={(e) => onAceiteTermos(e.target.checked)}
+        label={
+          <>
+            Li e aceito os <strong>termos da compra e a política de cancelamento</strong> deste
+            evento.
+          </>
+        }
+      />
       <button
         ref={gatilhoTermosRef}
         type="button"
@@ -157,18 +156,18 @@ export function AceitesCompra({
       </button>
 
       {/* (b) Termo de responsabilidade de saúde — SEMPRE presente (§5.3b). */}
-      <label className="mt-1 flex cursor-pointer items-start gap-3 text-[length:var(--font-size-sm)] text-text-primary">
-        <Checkbox
-          checked={aceiteSaude}
-          disabled={desabilitado}
-          onChange={(e) => onAceiteSaude(e.target.checked)}
-          aria-label="Declaro que estou em boas condições de saúde e apto a participar deste evento, conforme o termo de responsabilidade"
-        />
-        <span>
-          Declaro que estou em boas condições de saúde e apto(a) a participar deste evento,
-          conforme o <strong>termo de responsabilidade</strong>.
-        </span>
-      </label>
+      <CheckboxField
+        className="mt-1"
+        checked={aceiteSaude}
+        disabled={desabilitado}
+        onChange={(e) => onAceiteSaude(e.target.checked)}
+        label={
+          <>
+            Declaro que estou em boas condições de saúde e apto(a) a participar deste evento,
+            conforme o <strong>termo de responsabilidade</strong>.
+          </>
+        }
+      />
       <button
         ref={gatilhoSaudeRef}
         type="button"
@@ -187,18 +186,18 @@ export function AceitesCompra({
           dos outros dois. */}
       {termoSaudeCustom !== null ? (
         <>
-          <label className="mt-1 flex cursor-pointer items-start gap-3 text-[length:var(--font-size-sm)] text-text-primary">
-            <Checkbox
-              checked={aceiteSaudeCustom}
-              disabled={desabilitado}
-              onChange={(e) => onAceiteSaudeCustom?.(e.target.checked)}
-              aria-label="Li e aceito o termo de saúde específico deste evento, definido pelo organizador"
-            />
-            <span>
-              Li e aceito o <strong>termo de saúde específico deste evento</strong>, definido pelo
-              organizador.
-            </span>
-          </label>
+          <CheckboxField
+            className="mt-1"
+            checked={aceiteSaudeCustom}
+            disabled={desabilitado}
+            onChange={(e) => onAceiteSaudeCustom?.(e.target.checked)}
+            label={
+              <>
+                Li e aceito o <strong>termo de saúde específico deste evento</strong>, definido
+                pelo organizador.
+              </>
+            }
+          />
           <button
             ref={gatilhoSaudeCustomRef}
             type="button"
