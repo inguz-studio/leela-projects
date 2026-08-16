@@ -29,7 +29,7 @@ data: 2026-07-19
 ## Ampliadas (sem novo número)
 
 - **RN-168** (upload-only) — escopo **confirmado/ampliado**: morre a URL colada em **TODAS** as superfícies de imagem (perfil avatar/capa, capa de clube, capa de evento), não só na foto de perfil. Supersede o fallback de URL da ADR-016 globalmente. (Item 19.)
-- **RN-229** (divisórias) — ampliada para **todo `SubNav`**, não só as terciárias dentro de eventos. Supersede "SubNav plano" (2026-07-11) **globalmente**. (Item 21.)
+- **RN-229** (divisórias) — ⛔ **SUPERSEDED em 13/08 pela Leva 14**: a divisória saiu de TODO `SubNav`, a prop `divider` não existe mais no design system e a borda inferior é travada no componente. Regra nova em `2026-08-13-decisoes-dono/01-decisoes-dono.md` §14 e no cânone §9. *(Texto original: ampliada para todo `SubNav`, não só as terciárias dentro de eventos; supersedia "SubNav plano" de 2026-07-11 globalmente. Item 21.)*
 
 ## Em vigor / referenciadas
 
