@@ -45,7 +45,8 @@ export {
   // `useEffect` para o `indeterminate` — e usa `useId` para fiar o `htmlFor`.
   // O que o ADR-017 proíbe é Radix no bundle público, e o
   // `server-safety.test.ts` caminha o grafo desta peça para provar que não há.
-  // Os cinco pares do checkout e da conta são da Onda C2.
+  // Os cinco pares do checkout e da conta (Onda C2) já foram convertidos:
+  // AceitesCompra (×3), StepDados e PortasDaConta.
   CheckboxField,
   Field,
   // Grupo de campos (Onda C0). Mesmo caminho e mesma razão do CheckboxField:

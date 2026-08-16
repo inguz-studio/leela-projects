@@ -11,7 +11,7 @@ import {
   normalizarCep,
   type GeneroInscrito,
 } from '@leela/core';
-import { Checkbox, Field, Input, Select } from '@/app/_ds/ds';
+import { CheckboxField, Field, Input, Select } from '@/app/_ds/ds';
 import { GENERO_LABEL_FORM, type EnderecoForm, type InscritoForm } from './tipos';
 import { CardAtleta, MolduraFormulario } from './CardAtleta';
 import type { ErrosEndereco, ErrosInscrito, ErrosResponsavel } from './validacao';
@@ -395,14 +395,11 @@ export function StepDados({
         </div>
         </MolduraFormulario>
 
-        <label className="flex cursor-pointer items-center gap-3 text-[length:var(--font-size-base)] text-text-primary">
-          <Checkbox
-            checked={euCorro}
-            onChange={(e) => onEuCorro(e.target.checked)}
-            aria-label="Eu também vou participar deste evento"
-          />
-          <span>Eu também vou participar deste evento</span>
-        </label>
+        <CheckboxField
+          checked={euCorro}
+          onChange={(e) => onEuCorro(e.target.checked)}
+          label="Eu também vou participar deste evento"
+        />
       </section>
 
       {/* Inscritos */}

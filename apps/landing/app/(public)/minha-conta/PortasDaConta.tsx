@@ -126,7 +126,7 @@ import {
 // recopiada (PONTE-FIX · B2). Uma segunda cópia da régua aqui é exatamente o
 // que o PONTE-ELEGIVEL-1 existe para impedir, agora em validação de nome.
 import { derivarSlugOrganizacao } from '@leela/core';
-import { Button, Checkbox, Input } from '@/app/_ds/ds';
+import { Button, CheckboxField, Input } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 import { Card, buttonVariants } from '@leela/design-system/server';
 import { painelUrl } from '@/lib/painel';
@@ -426,21 +426,18 @@ function PortaDeQuemAindaNaoE({ nomeDaPessoa }: { nomeDaPessoa: string }): React
         />
       </div>
 
-      <div className="mt-4 flex items-start gap-3">
-        <Checkbox
-          id="ponte-termo-profissional"
-          checked={aceito}
-          onChange={(e) => {
-            setAceito(e.target.checked);
-            if (e.target.checked && fase === 'recusada' && recusa === 'aceite_ausente') {
-              setFase('convite');
-            }
-          }}
-        />
-        <label htmlFor="ponte-termo-profissional" className="text-sm text-text-secondary">
-          Li e aceito o termo do profissional
-        </label>
-      </div>
+      <CheckboxField
+        className="mt-4"
+        id="ponte-termo-profissional"
+        checked={aceito}
+        onChange={(e) => {
+          setAceito(e.target.checked);
+          if (e.target.checked && fase === 'recusada' && recusa === 'aceite_ausente') {
+            setFase('convite');
+          }
+        }}
+        label="Li e aceito o termo do profissional"
+      />
 
       {/* As demais recusas continuam aqui: elas falam da CONTA (sessão, papel,
           aceite, indisponibilidade) e não de um campo, então não têm campo a
