@@ -50,10 +50,13 @@ const CANONE_DO_DS = canoneDoBarrel(
  * a conversão. É esse o ciclo que a lista promete — ela só encolhe, e nunca
  * sobrevive ao item que silenciava.
  */
-const DIVIDA_CONTROLE_CRU = [
-  // Onda 3 · `<select>` cru + dois `<option>` → `Select` (inventário §3)
-  "apps/painel/src/routes/plataforma/tenants/ProvisionTenantModal.tsx",
-];
+/**
+ * Onda C1 (2026-08-12) pagou a única entrada — `<select>` cru + dois `<option>`
+ * do `ProvisionTenantModal` viraram `Select` do DS. Lista vazia por desenho: a
+ * camada A do `gate-canon` reprova entrada MORTA, então ela não sobrevive à
+ * conversão que a apaga.
+ */
+const DIVIDA_CONTROLE_CRU = [];
 
 /**
  * Dívida da Regra 2 — re-implementação batizada. As três entradas são ACHADO
