@@ -5,7 +5,7 @@
 // skeleton no load, bloco de erro no fail (§2.12).
 // =============================================================================
 
-import { Badge, Button, EmptyState, PageHeader, Skeleton, Table } from '@leela/design-system';
+import { Badge, Button, Chip, EmptyState, PageHeader, Skeleton, Table } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import type { Tenant } from '@leela/core';
 import { deriveTenantHealth } from '@leela/core';
@@ -38,28 +38,12 @@ function FiltroChips({
       {TENANT_FILTERS.map((opt) => {
         const ativo = opt.id === filter;
         return (
-          <button
-            key={opt.id}
-            type="button"
-            aria-pressed={ativo}
-            onClick={() => onFilterChange(opt.id)}
-            className={[
-              'inline-flex items-center gap-[var(--spacing-2)]',
-              'h-[var(--btn-height-sm)] px-[var(--spacing-3)]',
-              'rounded-[var(--radius-sm)]',
-              'text-[length:var(--font-size-sm)]',
-              'transition-colors duration-[var(--motion-duration-fast)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
-              ativo
-                ? 'bg-[var(--action-primary)] text-[var(--action-primary-fg)] font-[var(--font-weight-semibold)]'
-                : 'bg-[var(--surface-overlay)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-            ].join(' ')}
-          >
+          <Chip key={opt.id} active={ativo} onClick={() => onFilterChange(opt.id)}>
             {opt.label}
             <span aria-hidden className="opacity-70">
               {counts[opt.id]}
             </span>
-          </button>
+          </Chip>
         );
       })}
     </div>

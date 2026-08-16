@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Badge,
   Button,
@@ -26,6 +27,8 @@ import {
   type SalvarAfiliadoClientInput,
 } from '@leela/api-client';
 import { linkPromocional, MSG_SEM_LINK_PROMOCIONAL } from '../../../lib/linkPublico';
+import { clubesDoTenantQuery } from '../../../lib/query/queries';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 import { AfiliadoModal } from './AfiliadoModal';
 
@@ -59,6 +62,19 @@ export function AfiliadosPage(): JSX.Element {
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<AfiliadoDoTenant | null>(null);
+
+  // Onda C1 (conformidade-controles): clubes do tenant para o Combobox de
+  // clube vinculado do AfiliadoModal — a mesma leitura que `EngajamentoView`
+  // consome (`clubesDoTenantQuery`), tenant-scoped pela sessão, não pelo
+  // evento (um clube não pertence a um evento).
+  const tenantSession = useTenantSession();
+  const clubesQuery = useQuery({
+    ...clubesDoTenantQuery(tenantSession.tenantId ?? ''),
+    enabled: tenantSession.status === 'authenticated' && !!tenantSession.tenantId,
+  });
+  const clubesDoTenant = clubesQuery.data
+    ? clubesQuery.data.map((c) => ({ id: c.id, nome: c.nome }))
+    : null;
 
   const carregar = useCallback(async () => {
     try {
@@ -270,6 +286,7 @@ export function AfiliadosPage(): JSX.Element {
         eventoId={evento.id}
         afiliado={emEdicao}
         onSalvar={salvar}
+        clubes={clubesDoTenant}
       />
     </div>
   );
