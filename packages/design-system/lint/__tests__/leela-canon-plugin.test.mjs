@@ -394,7 +394,7 @@ describe('canoneDoBarrel · a lista vem do barrel, nunca da mão', () => {
 const filtroForaDoCanone = plugin.rules['filtro-fora-do-canone'];
 
 describe('filtro-fora-do-canone · o rótulo denuncia o papel', () => {
-  it('reprova seleção que filtra, recorta ou ordena', () => {
+  it('reprova seleção que filtra ou recorta', () => {
     expect(() =>
       tester.run('filtro-fora-do-canone', filtroForaDoCanone, {
         valid: [],
@@ -402,8 +402,6 @@ describe('filtro-fora-do-canone · o rótulo denuncia o papel', () => {
           // EngajamentoView.tsx:299 e :382 — "quantos desafios mostrar".
           { code: 'const a = <Select aria-label="Quantos desafios mostrar" />;', errors: 1 },
           { code: 'const a = <Select aria-label="Top 5 modalidades" />;', errors: 1 },
-          // ClientesPage.tsx:118 — `Select` de ORDENAÇÃO (padrão órfão).
-          { code: 'const a = <Select aria-label="Ordenar por" />;', errors: 1 },
           // A grafia com prop `label`, que o `Select` do DS também aceita.
           { code: 'const a = <Select label="Filtrar por status" options={o} />;', errors: 1 },
           { code: 'const a = <Select label="Filtro de canal" />;', errors: 1 },
@@ -442,6 +440,13 @@ describe('filtro-fora-do-canone · o que ela NÃO barra', () => {
           { code: 'const a = <Select label="Modalidade" options={o} />;' },
           { code: 'const a = <Select label="Tipo de clube" />;' },
           { code: 'const a = <Select aria-label="Banco" />;' },
+          // ClientesPage.tsx:118 — `Select` de ORDENAÇÃO. Era o padrão órfão do
+          // inventário §5; a Onda C5 decidiu (registro em
+          // `eslint.config.mjs`, DIVIDA_FILTRO_FORA_DO_CANONE): ordenar não
+          // retira item da lista, então não é o papel que o cânone §1 proíbe
+          // — "ordenar" saiu de `prefixosDeFiltro`, na config e no default.
+          { code: 'const a = <Select aria-label="Ordenar por" />;' },
+          { code: 'const a = <Select label="Ordenar por" options={o} />;' },
           // O rótulo que só CONTÉM a palavra não é o rótulo que começa com ela:
           // "Cidade do filtro aplicado" descreve, não declara papel.
           { code: 'const a = <Select label="Cidade do filtro aplicado" />;' },

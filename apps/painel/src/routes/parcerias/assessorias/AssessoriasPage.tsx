@@ -17,6 +17,7 @@ import {
   Button,
   ConfirmModal,
   EmptyState,
+  FilterBar,
   PageHeader,
   SearchInput,
   Skeleton,
@@ -172,14 +173,19 @@ export function AssessoriasPage(): JSX.Element {
         />
       ) : (
         <div className="flex flex-col gap-[var(--spacing-4)]">
-          <SearchInput
-            id="assessorias-busca"
-            aria-label="Buscar assessoria"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Nome, documento ou e-mail do responsável"
-            shortcutLabel={null}
-            className="w-full max-w-md"
+          <FilterBar
+            label="assessorias"
+            search={
+              <SearchInput
+                id="assessorias-busca"
+                aria-label="Buscar assessoria"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Nome, documento ou e-mail do responsável"
+                shortcutLabel={null}
+                className="w-full max-w-md"
+              />
+            }
           />
           {filtradas.length === 0 ? (
             <EmptyState title="Nenhum resultado" description="Nenhuma assessoria bate com a busca." />

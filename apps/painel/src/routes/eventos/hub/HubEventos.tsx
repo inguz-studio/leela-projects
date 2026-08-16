@@ -22,6 +22,7 @@ import {
   DropdownMenu,
   EmptyState,
   EventRow,
+  FilterBar,
   FilterMenu,
   IconButton,
   PageHeader,
@@ -36,7 +37,6 @@ import {
   derivarHubEventos,
   filtrarHubEventosMulti,
   type Categoria,
-  type HubFiltro,
 } from './hubRows';
 
 export interface HubEventosProps {
@@ -79,36 +79,28 @@ function KpisGlobais({ eventos }: { eventos: Evento[] }): JSX.Element {
  * single→multi; direção Vitor 2026-07-11). A faceta tem 4 valores (Todos + 3
  * status) → passa do chip para o dropdown (limiar Polaris 4+). O gatilho resume
  * a seleção ("Status: 2" | "Status: Todos") e cada categoria mostra a contagem.
+ *
+ * NÃO PASSA POR `FilterChips` (Onda C5, revisão do plano da C0). O comentário
+ * herdado em `eslint.config.mjs` presumia que trocar esta função pela peça
+ * fosse conversão direta — não é: `FilterChips` decide fileira × dropdown
+ * contando `options.length` (as 3 categorias REAIS; "Todos" é estado vazio,
+ * nunca entra no array), e 3 < 4 faria a peça renderizar a FILEIRA de chips,
+ * revertendo em silêncio a decisão do dono de 2026-07-11 — testada e travada
+ * em `HubEventos.test.tsx` ("filtro de status é um dropdown..."). Escolha de
+ * padrão é o critério 9 da rubrica (`02-catraca-controles.md` §7: "é leitura
+ * humana, e o gate que tentar isso produz falso positivo"); não é desta lane
+ * reabrir uma decisão do dono sem provocação.
+ *
+ * O que ERA reimplementação de verdade: o `<div role="group" aria-label>`
+ * amarrado à mão em volta do `FilterMenu`. Nenhuma das três formas da
+ * `FilterChips` produz esse wrapper no ramo 4+ — ele devolve `<FilterMenu>`
+ * puro, sem grupo (`FilterChips.tsx`, ramo "faceta empilhável"). O `Button`
+ * gatilho do `FilterMenu` já nomeia o controle ("Status: Todos"); o grupo
+ * era redundância, não anatomia da peça. Reabertura: se um segundo consumidor
+ * precisar do MESMO padrão (contagem de domínio ≠ contagem de opções), vira
+ * caso para uma prop de override na `FilterChips`, não para outra exceção
+ * solta.
  */
-function FiltroStatus({
-  selected,
-  onChange,
-  contagem,
-}: {
-  selected: Categoria[];
-  onChange: (next: Categoria[]) => void;
-  contagem: Record<HubFiltro, number>;
-}): JSX.Element {
-  const options = CATEGORIAS.map((c) => ({
-    id: c.id,
-    label: c.label,
-    count: contagem[c.id],
-  }));
-  return (
-    <div
-      role="group"
-      aria-label="Filtrar eventos por status"
-      className="flex items-center"
-    >
-      <FilterMenu
-        label="Status"
-        options={options}
-        selected={selected}
-        onChange={(next) => onChange(next as Categoria[])}
-      />
-    </div>
-  );
-}
 
 function ListaEventos({
   eventos,
@@ -132,7 +124,17 @@ function ListaEventos({
 
   return (
     <>
-      <FiltroStatus selected={selected} onChange={setSelected} contagem={contagem} />
+      <FilterBar
+        label="eventos"
+        facets={
+          <FilterMenu
+            label="Status"
+            options={CATEGORIAS.map((c) => ({ id: c.id, label: c.label, count: contagem[c.id] }))}
+            selected={selected}
+            onChange={(next) => setSelected(next as Categoria[])}
+          />
+        }
+      />
 
       {visiveis.length === 0 ? (
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)] py-[var(--spacing-4)]">

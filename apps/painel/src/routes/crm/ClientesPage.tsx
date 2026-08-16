@@ -16,6 +16,7 @@ import {
   Button,
   EmptyState,
   SearchInput,
+  FilterBar,
   PageHeader,
   Select,
   Skeleton,
@@ -105,26 +106,39 @@ export function ClientesPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
-              <SearchInput
-                id="crm-busca"
-                aria-label="Buscar por nome"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Início do nome (ex.: Ana)"
-                shortcutLabel={null}
-                className="w-full max-w-md flex-1"
-              />
-              <Select
-                id="crm-ordem"
-                label="Ordenar por"
-                options={ORDENS}
-                value={ordem}
-                onChange={(e) => setOrdem(e.target.value as CrmClientesOrdem)}
-                disabled={pesquisa.ativa}
-                wrapperClassName="w-full sm:w-56"
-              />
-            </div>
+            {/* CANONE-1 (Onda C5) — a barra hospeda busca e a ordenação lado a
+                lado, como as treze telas irmãs já faziam à mão. O `Select` de
+                ordenação NÃO entra no slot `facets`: ordenar não retira nada da
+                lista (não é filtro) e não é dado de formulário — é o padrão
+                órfão que `01-inventario-controles.md` §5 e
+                `03-canon/canone-de-componentes.md` §1 resolveram como `Select`
+                legítimo. Ele viaja no slot `actions`, à direita, porque governa
+                a lista inteira e não recorta nenhuma faceta dela. */}
+            <FilterBar
+              label="clientes"
+              search={
+                <SearchInput
+                  id="crm-busca"
+                  aria-label="Buscar por nome"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Início do nome (ex.: Ana)"
+                  shortcutLabel={null}
+                  className="w-full max-w-md"
+                />
+              }
+              actions={
+                <Select
+                  id="crm-ordem"
+                  label="Ordenar por"
+                  options={ORDENS}
+                  value={ordem}
+                  onChange={(e) => setOrdem(e.target.value as CrmClientesOrdem)}
+                  disabled={pesquisa.ativa}
+                  wrapperClassName="w-full sm:w-56"
+                />
+              }
+            />
 
             {pesquisa.ativa ? (
               <ResultadoBusca

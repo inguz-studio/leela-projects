@@ -35,6 +35,7 @@ não exceção. Regra completa em `04-engenharia/governanca-design.md` §8.
 | Padrão | Canônico | Quando é este e não o vizinho |
 |---|---|---|
 | Escolha única, poucas opções, em formulário | `Select` | até ~7 opções conhecidas, sem busca |
+| Ordenação de lista (reordena, não retira) | `Select` | decisão da Onda C5 (2026-08-16), `02-rodadas/2026-08-12-conformidade-controles/03-fila-em-ondas.md` — o cânone não tinha linha para isto: não é filtro (nada some da lista) e não é campo de formulário (não vira dado). A forma bate com a linha de cima — escolha única, poucas opções, sem busca —, então o veredicto é o mesmo componente, não peça nova. `prefixosDeFiltro` da regra 3 excluiu `"ordenar"`: reordenar declara papel diferente de filtrar, no mesmo rótulo que o autor escreve |
 | Escolha com busca, cardinalidade alta | `Combobox` | quando rolar é pior que digitar; anatomia Popover + Command |
 | Filtro de lista ou tabela | `FilterMenu` | filtro nunca é `Select`; ele mostra o que está aplicado |
 | A faceta de UM filtro (a fileira ou o menu) | `FilterChips` | recebe as opções e **conta**: fileira de `Chip` abaixo de 4, `FilterMenu` (empilhável) ou `Combobox` (exclusiva) a partir de 4 |
