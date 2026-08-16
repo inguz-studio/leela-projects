@@ -26,23 +26,23 @@
       "landing": 0
     },
     "faceta-crua": {
-      "painel": 13,
+      "painel": 11,
       "landing": 0
     },
     "barra-de-filtro-crua": {
-      "painel": 12,
+      "painel": 9,
       "landing": 0
     },
     "contador-de-resultado-cru": {
-      "painel": 13,
+      "painel": 10,
       "landing": 0
     },
     "rotulo-de-checkbox-cru": {
-      "painel": 12,
+      "painel": 8,
       "landing": 0
     },
     "grupo-de-campos-cru": {
-      "painel": 11,
+      "painel": 10,
       "landing": 0
     },
     "controle-cru-fora-do-ds": {
