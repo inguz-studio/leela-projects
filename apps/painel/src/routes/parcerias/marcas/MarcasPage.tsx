@@ -39,7 +39,9 @@ import {
   Badge,
   Button,
   EmptyState,
+  FilterBar,
   PageHeader,
+  ResultCount,
   SearchInput,
   Skeleton,
   Switch,
@@ -293,17 +295,20 @@ export function MarcasPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
-              <SearchInput
-                id="marcas-busca"
-                aria-label="Buscar marca por nome"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome da marca (ex.: CDL)"
-                shortcutLabel={null}
-                className="w-full max-w-md flex-1"
-              />
-            </div>
+            <FilterBar
+              label="marcas"
+              search={
+                <SearchInput
+                  id="marcas-busca"
+                  aria-label="Buscar marca por nome"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Nome da marca (ex.: CDL)"
+                  shortcutLabel={null}
+                  className="w-full max-w-md"
+                />
+              }
+            />
 
             <Conteudo
               loading={loading}
@@ -399,12 +404,11 @@ function Conteudo({
         keyExtractor={(m) => m.id}
         caption="Marcas/patrocinadores do profissional"
       />
-      <p
-        className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
-        aria-live="polite"
-      >
-        Mostrando {filtradas.length} de {total} {total === 1 ? 'marca' : 'marcas'}
-      </p>
+      <ResultCount
+        visiveis={filtradas.length}
+        total={total}
+        substantivo={{ singular: 'marca', plural: 'marcas' }}
+      />
     </div>
   );
 }
