@@ -12,10 +12,12 @@ import {
   Badge,
   Button,
   CardDesafio,
-  Chip,
   EmptyState,
   DropdownMenu,
+  FilterBar,
+  FilterChips,
   IconButton,
+  ResultCount,
   SearchInput,
   Skeleton,
 } from '@leela/design-system';
@@ -158,12 +160,6 @@ export function DesafiosList({
     [filtrados],
   );
 
-  function toggleModelo(m: ModeloDesafio): void {
-    setModelos((atual) =>
-      atual.includes(m) ? atual.filter((x) => x !== m) : [...atual, m],
-    );
-  }
-
   if (loading) {
     return (
       <div role="status" aria-label="Carregando desafios" className="flex flex-col gap-[var(--spacing-4)]">
@@ -216,38 +212,42 @@ export function DesafiosList({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-[var(--spacing-3)]">
-        <SearchInput
-          aria-label="Buscar desafio por nome"
-          placeholder="Buscar por nome"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          shortcutLabel={null}
-        />
-        <div className="flex flex-wrap items-center gap-[var(--spacing-4)]">
-          <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-[var(--spacing-2)]">
-            <Chip active={status === null} onClick={() => setStatus(null)}>
-              Todos
-            </Chip>
-            {STATUS_OPCOES.map((s) => (
-              <Chip key={s.id} active={status === s.id} onClick={() => setStatus(status === s.id ? null : s.id)}>
-                {s.label}
-              </Chip>
-            ))}
-          </div>
-          <div role="group" aria-label="Filtrar por modelo" className="flex flex-wrap gap-[var(--spacing-2)]">
-            {MODELO_OPCOES.map((m) => (
-              <Chip key={m} active={modelos.includes(m)} onClick={() => toggleModelo(m)}>
-                {`Modelo ${m}`}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
-        Mostrando {formatInt(filtrados.length)} de {formatInt(kpis.total)} desafios
-      </p>
+      <FilterBar
+        label="desafios"
+        search={
+          <SearchInput
+            aria-label="Buscar desafio por nome"
+            placeholder="Buscar por nome"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            shortcutLabel={null}
+          />
+        }
+        facets={
+          <>
+            <FilterChips
+              label="Status"
+              options={STATUS_OPCOES.map((s) => ({ id: s.id, label: s.label }))}
+              selected={status ? [status] : []}
+              onChange={(next) => setStatus((next[0] as StatusDesafio | undefined) ?? null)}
+            />
+            <FilterChips
+              label="Modelo"
+              options={MODELO_OPCOES.map((m) => ({ id: m, label: `Modelo ${m}` }))}
+              selected={modelos}
+              onChange={(next) => setModelos(next as ModeloDesafio[])}
+              multiple
+            />
+          </>
+        }
+        count={
+          <ResultCount
+            visiveis={filtrados.length}
+            total={kpis.total}
+            substantivo={{ singular: 'desafio', plural: 'desafios' }}
+          />
+        }
+      />
 
       {nenhumResultado ? (
         <EmptyState

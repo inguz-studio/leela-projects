@@ -22,7 +22,7 @@ describe('DeletarClubeModal', () => {
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Irreversível')).toBeInTheDocument();
     expect(within(dialog).getByText(/90 dias/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/RN-144/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/apagados definitivamente/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Todos os membros/)).toBeInTheDocument();
   });
 

@@ -10,11 +10,13 @@ import { useMemo, useState } from 'react';
 import {
   KpiCard,
   Button,
-  Chip,
   ConfirmModal,
   SearchInput,
   DropdownMenu,
+  FilterBar,
+  FilterChips,
   IconButton,
+  ResultCount,
   Skeleton,
 } from '@leela/design-system';
 import { MoreVertical } from 'lucide-react';
@@ -125,39 +127,42 @@ export function MembrosList({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-[var(--spacing-3)]">
-        <SearchInput
-          aria-label="Buscar membro por nome"
-          placeholder="Buscar por nome"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          shortcutLabel={null}
-          className="w-full max-w-md"
-        />
-        <div className="flex flex-wrap items-center gap-[var(--spacing-4)]">
-          <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-[var(--spacing-2)]">
-            <Chip active={status === null} onClick={() => setStatus(null)}>
-              Todos
-            </Chip>
-            {STATUS_OPCOES.map((s) => (
-              <Chip key={s.id} active={status === s.id} onClick={() => setStatus(status === s.id ? null : s.id)}>
-                {s.label}
-              </Chip>
-            ))}
-          </div>
-          <div role="group" aria-label="Filtrar por papel" className="flex flex-wrap gap-[var(--spacing-2)]">
-            {PAPEL_OPCOES.map((p) => (
-              <Chip key={p.id} active={papel === p.id} onClick={() => setPapel(papel === p.id ? null : p.id)}>
-                {p.label}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
-        Mostrando {formatInt(filtrados.length)} de {formatInt(kpis.total)} membros
-      </p>
+      <FilterBar
+        label="membros"
+        search={
+          <SearchInput
+            aria-label="Buscar membro por nome"
+            placeholder="Buscar por nome"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            shortcutLabel={null}
+            className="w-full max-w-md"
+          />
+        }
+        facets={
+          <>
+            <FilterChips
+              label="Status"
+              options={STATUS_OPCOES.map((s) => ({ id: s.id, label: s.label }))}
+              selected={status ? [status] : []}
+              onChange={(next) => setStatus((next[0] as StatusMembro | undefined) ?? null)}
+            />
+            <FilterChips
+              label="Papel"
+              options={PAPEL_OPCOES.map((p) => ({ id: p.id, label: p.label }))}
+              selected={papel ? [papel] : []}
+              onChange={(next) => setPapel((next[0] as PapelMembro | undefined) ?? null)}
+            />
+          </>
+        }
+        count={
+          <ResultCount
+            visiveis={filtrados.length}
+            total={kpis.total}
+            substantivo={{ singular: 'membro', plural: 'membros' }}
+          />
+        }
+      />
 
       <MembrosTable
         membros={filtrados}

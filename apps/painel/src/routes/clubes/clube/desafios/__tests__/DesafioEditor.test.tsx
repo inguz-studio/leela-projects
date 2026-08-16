@@ -41,7 +41,7 @@ describe('DesafioEditor', () => {
     renderEditor();
     const resumo = screen.getByLabelText('Resumo do desafio');
     expect(within(resumo).getByText(/0 ação\(ões\)/)).toBeInTheDocument();
-    await userEvent.click(screen.getByLabelText('Selecionar Correr'));
+    await userEvent.click(screen.getByLabelText('Correr'));
     expect(within(resumo).getByText(/1 ação\(ões\)/)).toBeInTheDocument();
     expect(within(resumo).getByText(/Físico 1/)).toBeInTheDocument();
   });

@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Checkbox, Chip, Input, Radio, RadioGroup, Select, Textarea } from '@leela/design-system';
+import { Badge, Button, CheckboxField, Chip, Input, Radio, RadioGroup, Select, Textarea } from '@leela/design-system';
 import type { Clube, ModeloEntradaClube, VisibilidadeClube } from '@leela/core';
 import type { AtualizarClubeInput } from '@leela/api-client';
 import { ImageUploadField } from '@/components/upload';
@@ -336,13 +336,11 @@ export function ConfiguracoesView({
               ))}
             </div>
           </div>
-          <label className="flex items-center gap-[var(--spacing-2)]">
-            <Checkbox
-              checked={aprovacaoManual}
-              onChange={(e) => setAprovacaoManual(e.target.checked)}
-            />
-            <span className="text-[var(--text-primary)]">Exigir aprovação manual de novos membros (RN-141)</span>
-          </label>
+          <CheckboxField
+            checked={aprovacaoManual}
+            onChange={(e) => setAprovacaoManual(e.target.checked)}
+            label="Exigir aprovação manual de novos membros"
+          />
         </Secao>
 
         {/* Moderação (RN-143) e Permissões (RN-142): sem persistência de
@@ -376,15 +374,13 @@ export function ConfiguracoesView({
         >
           <div role="group" aria-label="Permissões de admin" className="flex flex-col gap-[var(--spacing-2)]">
             {PERMISSOES_ADMIN.map((p) => (
-              <label key={p.id} className="flex items-center gap-[var(--spacing-2)]">
-                <Checkbox
-                  disabled
-                  checked={permissoes.has(p.id)}
-                  onChange={() => togglePermissao(p.id)}
-                  aria-label={p.label}
-                />
-                <span className="text-[var(--text-secondary)]">{p.label}</span>
-              </label>
+              <CheckboxField
+                key={p.id}
+                disabled
+                checked={permissoes.has(p.id)}
+                onChange={() => togglePermissao(p.id)}
+                label={p.label}
+              />
             ))}
           </div>
         </Secao>
@@ -398,7 +394,7 @@ export function ConfiguracoesView({
             Deletar clube
           </h2>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            Ação irreversível. Todos os membros, desafios, parcerias e comunicados serão removidos (RN-144).
+            Ação irreversível. Todos os membros, desafios, parcerias e comunicados serão removidos.
           </p>
           <div>
             <Button variant="destructive" onClick={onDeletar}>
