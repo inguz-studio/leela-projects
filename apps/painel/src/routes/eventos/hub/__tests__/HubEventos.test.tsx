@@ -65,8 +65,10 @@ describe('HubEventos', () => {
     );
     // Migração single→multi (Vitor 2026-07-11): a faceta de 4 categorias virou
     // dropdown; "Todos" = estado sem seleção; o gatilho resume a seleção.
-    const grupo = screen.getByRole('group', { name: 'Filtrar eventos por status' });
-    const gatilho = within(grupo).getByRole('button', { name: /Status: Todos/ });
+    // A barra (Onda C5) é a `FilterBar` — `role="toolbar"`, não mais o
+    // `role="group"` amarrado à mão; o `FilterMenu` nomeia o próprio gatilho.
+    const barra = screen.getByRole('toolbar', { name: 'Filtros de eventos' });
+    const gatilho = within(barra).getByRole('button', { name: /Status: Todos/ });
     await userEvent.click(gatilho);
 
     // 3 categorias concretas como checkbox (Todos é o vazio, não uma opção).
@@ -80,7 +82,7 @@ describe('HubEventos', () => {
     expect(screen.getByText('Encerrado C')).toBeInTheDocument();
     expect(screen.queryByText('Ativo A')).toBeNull();
     // gatilho reflete "Status: 2"
-    expect(within(grupo).getByRole('button', { name: /Status: 2/ })).toBeInTheDocument();
+    expect(within(barra).getByRole('button', { name: /Status: 2/ })).toBeInTheDocument();
   });
 
   it('clicar na linha navega ao Overview do evento (S200 crit 2)', async () => {
