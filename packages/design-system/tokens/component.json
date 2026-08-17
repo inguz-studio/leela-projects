@@ -249,7 +249,8 @@
     "width-sm":      "480px",
     "width-md":      "560px",
     "width-lg":      "640px",
-    "overlay-bg":    "rgba(0,0,0,0.6)",
+    "$description-overlay": "MODAL-LOTE (17/08, fala do dono na íntegra): 'ainda consigo ver informações de segundo plano, mesmo com o overlay que está sendo aplicado'. rgba(0,0,0,0.6) media alpha 60% — o fundo continuava lendo através da cortina. Subiu para 0.82, acima do irmão público (Dialog usa bg-surface-base/80 = 80%) porque o Modal do painel não tem o degrau extra do blur em telas com muito texto atrás (tabelas densas). Tier COMPARTILHADO: os 3 temas herdam da mesma linha, sem drift.",
+    "overlay-bg":    "rgba(0,0,0,0.82)",
     "overlay-blur":  "4px"
   },
   "toast": {

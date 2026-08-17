@@ -2,10 +2,23 @@
 // EngajamentoView — a análise da comunidade (REDESIGN-DS · lane TELA).
 // Presentational puro: recebe dado já derivado e devolve tela.
 //
-// A NARRATIVA É A DO PROTÓTIPO, e ela é boa: comunidade → ponte → resultado.
-// Três seções com cabeçalho e legenda, na ordem em que a pergunta do
-// organizador amadurece: "quem está aqui?", "isso vira participação?", "e o que
-// aconteceu no evento?".
+// A NARRATIVA É A DO PROTÓTIPO: comunidade → ponte. Duas seções com cabeçalho
+// e legenda, na ordem em que a pergunta do organizador amadurece: "quem está
+// aqui?" e "isso vira participação?". Acima delas, sem faixa, a régua de KPIs
+// do recorte e os Insights da Leela — que resumem o recorte inteiro, não uma
+// seção (é a ordem do template do dono).
+//
+// ERAM TRÊS SEÇÕES ATÉ A LEVA 20. A terceira ("Eventos") saiu na onda R2 da
+// carga cognitiva (ENG-CARGA-1), e a razão vale como critério para qualquer
+// tela com filtro: os dois blocos dela eram os ÚNICOS que o seletor de club do
+// topo não recortava, e os dois já estavam montados na Visão geral, vindos do
+// mesmo componente e da mesma fonte. Bloco que o filtro da tela não alcança não
+// pertence àquela tela. Hoje o seletor recorta tudo que esta tela mostra.
+//
+// TODO NÚMERO DESTA TELA TEM UMA CASA (RN-573). Onde um fato reaparece fora da
+// casa dele — que é o caso de todo insight — a segunda aparição carrega o
+// caminho de volta e declara o papel distinto no código. Cópia sem declaração
+// não passa no gate.
 //
 // A VERDADE DE DADO É A REGRA DURA, e ela mudou o desenho. O estudo pede
 // check-in por pilar, mapa por hora do dia, volume no tempo, ranking de ações e
@@ -42,20 +55,15 @@ import {
   cn,
   type BarChartDatum,
 } from '@leela/design-system';
-import { Activity, CalendarClock, CreditCard, GitBranch, ListOrdered, Users } from 'lucide-react';
+import { Activity, CalendarClock, GitBranch, ListOrdered, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
 import { Cascata } from '../../../components/CartaoV3';
-// Blocos da banda Eventos (estudo · D-1008-R15) — componentes da VG v3
-// RATIFICADA (D-1008-R3), CONSUMIDOS daqui, nunca re-implementados: a
-// "Ocupação" desta tela é a versão analytics (E02) do MESMO bloco, e o card
-// "em breve" estilizado v3 é o mesmo padrão de honestidade da VG.
-import { OcupacaoEventos } from '../../overview/_components/OcupacaoEventos';
-import { EmBreveV3 } from '../../overview/_components/EmBreveV3';
-import type { OcupacaoDosEventos } from '../../overview/_lib/ocupacao';
+import { InsightsDaLeela } from './_components/InsightsDaLeela';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
   RANKING_MAX_DESAFIOS,
   RANKING_MAX_MODALIDADES,
+  derivarInsights,
   pilarComMaiorMedia,
   type ContagemRotulada,
   type DesafioEngajado,
@@ -82,16 +90,6 @@ export interface EngajamentoViewProps {
   desafios: DesafioEngajado[] | null;
   /** A única ponte club→evento com dado: desafios com/sem evento vinculado. */
   ponte: ContagemRotulada[] | null;
-  /**
-   * Banda Eventos (estudo · D-1008-R15) — ocupação REAL dos últimos eventos,
-   * derivada pelo canônico da VG (`derivarOcupacao`). Estado PRÓPRIO: eventos
-   * são do organizador, não de um club, então nem o filtro de club nem o erro
-   * da leitura de clubs alcançam este bloco.
-   */
-  ocupacao: OcupacaoDosEventos | null;
-  eventosLoading: boolean;
-  eventosError: boolean;
-  onRetryEventos?: (() => void) | undefined;
   /**
    * Bloco 4 do estudo, na versão que o dado sustenta: membros ativos por
    * modalidade DOS CLUBS (o "interesse declarado" do estudo não existe como
@@ -438,10 +436,6 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
     entrada,
     desafios,
     ponte,
-    ocupacao,
-    eventosLoading,
-    eventosError,
-    onRetryEventos,
     modalidades,
     loading,
     error,
@@ -510,19 +504,20 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
           </div>
         ) : (
           <>
-            {/* ── Seção 1 · a comunidade ─────────────────────────────────── */}
-            <SecaoTitulo
-              titulo="Clubs"
-              legenda="A comunidade em si: quem está, como chegou e o que move o grupo."
-            />
-
+            {/* ── Os números do recorte, e depois a leitura deles ─────────
+                A ORDEM É A DO TEMPLATE DO DONO: a régua de KPIs e o bloco de
+                insights vêm ANTES da primeira faixa de seção (mockup l.401 e
+                l.439, faixa "Clubs" só na l.460). Eles resumem o recorte
+                inteiro, não a banda "a comunidade em si" — estar dentro dela
+                era o que fazia quatro números do tenant parecerem números de
+                uma seção. */}
             {loading || resumo === null ? (
               <div
                 role="status"
                 aria-label="Carregando números da comunidade"
-                className="grid grid-cols-1 gap-[var(--spacing-4)] xs:grid-cols-2 lg:grid-cols-4"
+                className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-3"
               >
-                {Array.from({ length: 4 }).map((_, i) => (
+                {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} variant="rect" className="h-24" />
                 ))}
               </div>
@@ -530,22 +525,72 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <Cascata i={0}>
                 <section
                   aria-label="Números da comunidade"
-                  className="grid grid-cols-1 gap-[var(--spacing-4)] xs:grid-cols-2 lg:grid-cols-4"
+                  className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-3"
                 >
-                  <KpiCard label="Clubs" value={formatInt(resumo.clubes)} />
-                  <KpiCard label="Membros ativos" value={formatInt(resumo.membrosAtivos)} />
-                  <KpiCard label="Desafios ativos" value={formatInt(resumo.desafiosAtivos)} />
+                  {/* MANEJAMENTO DOS KPI CARDS (régua da casa-única, RN-573).
+                      O KPI "Clubs" MORREU como card próprio, por dois motivos
+                      que se somam:
+
+                      1. A casa dele é outra. O hub de clubs já responde
+                         "quantos clubs eu tenho", duas vezes (`HubClubes.tsx`
+                         :56 "Clubs ativos" e :68 "Meus clubs"). Aqui era a
+                         terceira.
+                      2. Sob o seletor ele não mede nada. Com um club escolhido
+                         o card lia "1" para sempre — um eco do controle que a
+                         pessoa acabou de mexer, não uma medição.
+
+                      Ele não sumiu: virou RESUMO COM CAMINHO, na legenda de
+                      "Membros ativos", que é onde a contagem de clubs de fato
+                      qualifica o número (ela diz entre quantos o total foi
+                      somado). É o mesmo desenho que o hub já usa no KPI
+                      "Pessoas alcançadas" (`HubClubes.tsx:66`). Com um único
+                      club no recorte a legenda também sai: "somados entre 1
+                      club" é ruído.
+
+                      A HIERARQUIA segue o Movimento 7 da spec, que define a
+                      pergunta desta tela como "quem é a comunidade e quanto
+                      dela aponta para evento": primeiro quem é (membros),
+                      depois o quanto ela se mexe (participações), por último o
+                      que a move (desafios). */}
+                  <KpiCard
+                    label="Membros ativos"
+                    value={formatInt(resumo.membrosAtivos)}
+                    {...(resumo.clubes > 1
+                      ? { hint: `somados entre ${formatInt(resumo.clubes)} clubs` }
+                      : {})}
+                  />
                   <KpiCard
                     label="Participações"
                     value={formatInt(resumo.participacoes)}
                     hint="nos desafios em andamento"
                   />
+                  {/* PAPEL DISTINTO DECLARADO (RN-573): este número reaparece
+                      na banda da ponte, onde é o TOTAL da própria decomposição
+                      (ligados a um evento + sem evento vinculado). Total ao
+                      lado da decomposição é papel distinto pela regra-mãe, e a
+                      declaração exigida pela regra é esta linha. */}
+                  <KpiCard label="Desafios ativos" value={formatInt(resumo.desafiosAtivos)} />
                 </section>
               </Cascata>
             )}
 
+            {/* O bloco do template do dono, na posição do template: largura
+                total, logo abaixo da régua de KPIs e acima da primeira faixa. */}
+            <Cascata i={1}>
+              <InsightsDaLeela
+                insights={loading ? null : derivarInsights(situacao, ponte)}
+                loading={loading}
+              />
+            </Cascata>
+
+            {/* ── Seção 1 · a comunidade ─────────────────────────────────── */}
+            <SecaoTitulo
+              titulo="Clubs"
+              legenda="A comunidade em si: quem está, como chegou e o que move o grupo."
+            />
+
             <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2">
-              <Cascata i={1} className="flex">
+              <Cascata i={2} className="flex">
               <section aria-label="Equilíbrio dos pilares" className="flex flex-col flex-1">
                 <SecaoHead
                   titulo="Equilíbrio dos pilares"
@@ -587,8 +632,14 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
 
               </Cascata>
 
-              <Cascata i={2} className="flex">
-              <section aria-label="Situação dos membros" className="flex flex-col flex-1">
+              <Cascata i={3} className="flex">
+              {/* `id`: casa do fato "membros parados" — destino do caminho do
+                  insight de mesmo nome (RN-573, resumo COM caminho). */}
+              <section
+                id="situacao-dos-membros"
+                aria-label="Situação dos membros"
+                className="flex flex-col flex-1 scroll-mt-[var(--spacing-6)]"
+              >
                 <SecaoHead
                   titulo="Situação dos membros"
                   ajuda="Quem entrou nos últimos 7 dias, quem segue ativo e quem está há 30 dias ou mais sem nenhum registro de atividade."
@@ -611,7 +662,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               </Cascata>
             </div>
 
-            <Cascata i={3}>
+            <Cascata i={4}>
             <section aria-label="Como a comunidade entra" className="flex flex-col">
               <SecaoHead
                 titulo="Como a comunidade entra"
@@ -641,7 +692,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </section>
             </Cascata>
 
-            <Cascata i={4}>
+            <Cascata i={5}>
             <section aria-label="Desafios que mais movem a comunidade" className="flex flex-col">
               <RankingDeDesafios
                 desafios={desafios}
@@ -657,7 +708,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 genérica, escondia quantas análises estão previstas e qual
                 delas destrava com qual fonte. Todas dependem do mesmo registro
                 que não existe. */}
-            <Cascata i={5}>
+            <Cascata i={6}>
             <CardEmBreve
               titulo="Check-ins realizados"
               icon={<ListOrdered aria-hidden />}
@@ -669,7 +720,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             />
             </Cascata>
 
-            <Cascata i={6}>
+            <Cascata i={7}>
             <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2">
               <CardEmBreve
                 titulo="Mapa de check-ins"
@@ -685,7 +736,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             </Cascata>
 
             {/* Bloco 4 do estudo — a versão que o dado sustenta. */}
-            <Cascata i={7}>
+            <Cascata i={8}>
             <section aria-label="Modalidades da comunidade" className="flex flex-col">
               <ModalidadesDaComunidade
                 modalidades={modalidades}
@@ -701,8 +752,14 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               legenda="A ponte: quanto da comunidade vira participação em evento."
             />
 
-            <Cascata i={8}>
-            <section aria-label="Desafios ligados a um evento" className="flex flex-col">
+            <Cascata i={9}>
+            {/* `id`: casa do fato "desafios sem evento vinculado" — destino do
+                caminho do insight de oportunidade. */}
+            <section
+              id="ponte-com-eventos"
+              aria-label="Desafios ligados a um evento"
+              className="flex flex-col scroll-mt-[var(--spacing-6)]"
+            >
               <SecaoHead
                 titulo="Desafios ligados a um evento"
                 ajuda="Quanto da atividade em andamento já está apontada para um evento seu. É intenção declarada no desafio, não inscrição confirmada: um desafio ligado a um evento não significa que os participantes se inscreveram nele."
@@ -737,7 +794,7 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 com 52 palavras de causa, três delas descrevendo o modelo de
                 dados. Vira o MESMO CardEmBreve dos cinco irmãos: nome da
                 métrica, causa em uma frase, "em breve" pelo componente. */}
-            <Cascata i={9}>
+            <Cascata i={10}>
             <CardEmBreve
               titulo="Conversão da base"
               icon={<GitBranch aria-hidden />}
@@ -745,35 +802,20 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             />
             </Cascata>
 
-            {/* ── Seção 3 · o resultado (estudo · D-1008-R15) ────────────── */}
-            <SecaoTitulo
-              titulo="Eventos"
-              legenda="O resultado: ocupação dos eventos e como as pessoas pagam."
-            />
+            {/* A BANDA "EVENTOS" SAIU AQUI (R2 · ENG-CARGA-1).
+                Ela tinha dois blocos, `OcupacaoEventos` e o "Formas de
+                pagamento", e os dois já estavam montados na Visão geral
+                (`OverviewContent.tsx:191` e `:182`) — mesmo componente, mesma
+                fonte, mesmo recorte. Não era um bloco desta tela: era uma
+                segunda montagem do bloco de outra. Por isso a remoção é pura e
+                nada migrou; a Visão geral não ganhou nem perdeu uma linha.
 
-            <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2 items-stretch">
-              {/* Bloco REAL: mesma fonte e mesmo componente da VG (chave de
-                  query partilhada — o cache reidrata entre as telas). O card
-                  carrega estado de erro e retry PRÓPRIOS: eventos que falham
-                  não derrubam a análise da comunidade. */}
-              <Cascata i={10} className="flex [&>*]:flex-1">
-                <OcupacaoEventos
-                  ocupacao={ocupacao}
-                  loading={eventosLoading}
-                  error={eventosError}
-                  onRetry={onRetryEventos}
-                />
-              </Cascata>
-              {/* Sem fonte (impedimento HIFI-REC): nenhum agregado por forma
-                  de pagamento chega ao cliente — nada de donut fabricado. */}
-              <Cascata i={11} className="flex [&>*]:flex-1">
-                <EmBreveV3
-                  titulo="Formas de pagamento"
-                  icon={<CreditCard aria-hidden />}
-                  causa="Cada pagamento registra se foi PIX ou cartão, mas ainda não existe um total por forma de pagamento. Quando ele existir, o gráfico aparece aqui."
-                />
-              </Cascata>
-            </div>
+                O critério, que vale para qualquer tela com filtro: bloco que o
+                filtro da tela não alcança não pertence àquela tela. Aquela
+                banda era a única coisa aqui que o seletor de club não recortava
+                — trocar de club não mudava uma linha dela, e era essa a
+                incongruência que o dono sentiu. Com ela fora, TUDO nesta tela
+                obedece ao seletor. */}
           </>
         )}
       </div>

@@ -397,7 +397,7 @@
   --modal-width-sm: 480px;
   --modal-width-md: 560px;
   --modal-width-lg: 640px;
-  --modal-overlay-bg: rgba(0,0,0,0.6);
+  --modal-overlay-bg: rgba(0,0,0,0.82);
   --modal-overlay-blur: 4px;
   --toast-width: 360px;
   --toast-border-left: 3px;
