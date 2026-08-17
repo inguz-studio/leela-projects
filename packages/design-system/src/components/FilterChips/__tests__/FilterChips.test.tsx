@@ -17,7 +17,12 @@
 //   - O NOME DA FACETA É VISÍVEL. É o motivo MEDIDO da troca: a fileira só
 //     nomeava a faceta no `aria-label`, e Membros mostrava dois "Todos" colados
 //     sem dizer qual era Status e qual era Papel. O gatilho da lista carrega o
-//     nome em texto.
+//     nome em texto. ⛔ Nas DUAS facetas desde 2026-08-17 (lane FILTROS-FIX):
+//     até aqui só a empilhável cumpria, e a exclusiva tinha um teste travando
+//     justamente o defeito. Ver a nota no caso reescrito.
+//   - A FACETA TEM LARGURA DE CONTEÚDO. Também de 17/08, e a asserção aqui é de
+//     CLASSE: jsdom não faz layout, então quem prova a fileira é
+//     `scripts/gate-visual-filtros.mjs`, no navegador.
 //   - QUAL LISTA. `multiple` é `FilterMenu` (menuitemcheckbox), exclusiva é
 //     `Combobox` — usar o menu de checkbox para escolha exclusiva anunciaria
 //     "marcado" onde a semântica é "selecionado".
@@ -77,7 +82,7 @@ describe('FilterChips · a forma não depende da contagem', () => {
   it('com 3 valores, faceta exclusiva é lista — nunca fileira de chips', () => {
     render(<Controlada options={TRES} />);
     expect(screen.queryByRole('group')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Status' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Status:/ })).toBeInTheDocument();
   });
 
   it('com 3 valores, faceta empilhável é lista — nunca fileira de chips', () => {
@@ -88,11 +93,11 @@ describe('FilterChips · a forma não depende da contagem', () => {
 
   it('três e quatro valores produzem a MESMA anatomia (exclusiva)', () => {
     const { unmount } = render(<Controlada options={TRES} />);
-    const comTres = screen.getByRole('button', { name: 'Status' }).className;
+    const comTres = screen.getByRole('button', { name: /^Status:/ }).className;
     unmount();
 
     render(<Controlada options={QUATRO} />);
-    expect(screen.getByRole('button', { name: 'Status' }).className).toBe(comTres);
+    expect(screen.getByRole('button', { name: /^Status:/ }).className).toBe(comTres);
   });
 
   it('três e quatro valores produzem a MESMA anatomia (empilhável)', () => {
@@ -123,10 +128,35 @@ describe('FilterChips · o nome da faceta é visível', () => {
     expect(screen.getByRole('button', { name: /Status: Todos/ })).toHaveTextContent('Status: Todos');
   });
 
-  it('exclusiva: o gatilho mostra o nome como nome acessível e o valor como texto', () => {
+  // ⛔ REESCRITO EM 2026-08-17 PELA LANE FILTROS-FIX, e a versão antiga fica
+  // aqui para o registro: ela dizia *"o gatilho mostra o nome como nome
+  // acessível e o valor como texto"* e passava verde com o gatilho desenhando
+  // só `Todos`. Ou seja, travava o contrário do que o handoff da conversão
+  // prometeu — *"o gatilho da lista mostra `Status: Todos`, em texto, para todo
+  // mundo"* — e do que o cabeçalho desta própria suíte já dizia três linhas
+  // acima. Membros voltou a mostrar `Todos` colado em `Todos`, que é a queixa
+  // que a conversão inteira existia para matar. Um teste que descreve o defeito
+  // com voz de contrato é pior que teste nenhum, e por isso foi trocado.
+  it('exclusiva: o gatilho mostra o nome da faceta e o que está aplicado', () => {
     render(<Controlada />);
-    const gatilho = screen.getByRole('button', { name: 'Status' });
-    expect(gatilho).toHaveTextContent('Todos');
+    const gatilho = screen.getByRole('button', { name: /^Status:/ });
+    expect(gatilho).toHaveTextContent('Status: Todos');
+  });
+
+  // As duas facetas ficam indistinguíveis na barra: mesmo desenho de texto, e
+  // o nome acessível é o próprio texto nas duas (nenhum `aria-label` escondendo
+  // o valor aplicado de quem usa leitor de tela — WCAG 2.5.3).
+  it('as duas facetas nomeiam do mesmo jeito, e o nome acessível é o texto', () => {
+    const { unmount } = render(<Controlada />);
+    const exclusiva = screen.getByRole('button', { name: /^Status:/ });
+    expect(exclusiva.getAttribute('aria-label')).toBeNull();
+    expect(exclusiva.textContent).toContain('Status: Todos');
+    unmount();
+
+    render(<Controlada multiple />);
+    const empilhavel = screen.getByRole('button', { name: /^Status:/ });
+    expect(empilhavel.getAttribute('aria-label')).toBeNull();
+    expect(empilhavel.textContent).toContain('Status: Todos');
   });
 
   it('empilhável: o gatilho resume quantos recortes estão aplicados', async () => {
@@ -135,6 +165,42 @@ describe('FilterChips · o nome da faceta é visível', () => {
     await userEvent.click(gatilho);
     await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: /Rascunho/ }));
     expect(screen.getByRole('button', { name: /Status: 1/ })).toBeInTheDocument();
+  });
+});
+
+describe('FilterChips · a faceta tem largura de conteúdo', () => {
+  // ⛔ O DEFEITO DE 2026-08-17 (gate visual, lane FILTROS-FIX). O gatilho do
+  // `Combobox` nasce `w-full` porque a peça é um campo de formulário na origem.
+  // Dentro da barra de filtro isso empilha: o contêiner de facetas é
+  // `flex-wrap` com largura por conteúdo, `width:100%` resolve contra largura
+  // indefinida e cada faceta reivindica a linha inteira. Membros, Desafios e
+  // Comunicados desenharam TRÊS fileiras no desktop com este JSX.
+  //
+  // ⚠️ O QUE ESTE TESTE NÃO PROVA, escrito para ninguém confiar demais nele: a
+  // asserção é de CLASSE, não de geometria. jsdom não faz layout, então nenhum
+  // teste daqui vê fileira. Quem prova a fileira é
+  // `scripts/gate-visual-filtros.mjs`, que mede no navegador. Este caso existe
+  // só para que a remoção da classe quebre perto de quem a removeu.
+  it('exclusiva: o gatilho não é de largura total', () => {
+    render(<Controlada options={QUATRO} />);
+    const gatilho = screen.getByRole('button', { name: /^Status:/ });
+    expect(gatilho.className).toContain('w-auto');
+    expect(gatilho.className.split(/\s+/)).not.toContain('w-full');
+  });
+
+  it('exclusiva: o consumidor ainda vence a largura padrão', () => {
+    render(
+      <FilterChips
+        label="Faceta"
+        options={TRES}
+        selected={[]}
+        onChange={() => {}}
+        className="w-full"
+      />,
+    );
+    const gatilho = screen.getByRole('button', { name: /^Faceta:/ });
+    expect(gatilho.className.split(/\s+/)).not.toContain('w-auto');
+    expect(gatilho.className.split(/\s+/)).toContain('w-full');
   });
 });
 
@@ -161,14 +227,14 @@ describe('FilterChips · qual lista, e o que ela devolve', () => {
 
   it('exclusiva abre o Combobox do DS, não a caixa do sistema operacional', async () => {
     render(<Controlada options={QUATRO} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Status:/ }));
     expect(await screen.findByPlaceholderText('Buscar…')).toBeInTheDocument();
   });
 
   it('exclusiva: escolher troca o recorte, e "Todos" limpa', async () => {
     const spy = vi.fn();
     render(<Controlada options={QUATRO} onChangeSpy={spy} />);
-    const gatilho = screen.getByRole('button', { name: 'Status' });
+    const gatilho = screen.getByRole('button', { name: /^Status:/ });
     await userEvent.click(gatilho);
     await userEvent.click(await screen.findByText('Agendado'));
     expect(spy).toHaveBeenLastCalledWith(['agendado']);
@@ -183,7 +249,7 @@ describe('FilterChips · qual lista, e o que ela devolve', () => {
   it('o id sentinela do "Todos" nunca escapa em onChange', async () => {
     const spy = vi.fn();
     render(<Controlada options={QUATRO} onChangeSpy={spy} />);
-    const gatilho = screen.getByRole('button', { name: 'Status' });
+    const gatilho = screen.getByRole('button', { name: /^Status:/ });
     await userEvent.click(gatilho);
     await userEvent.click(await screen.findByText('Agendado'));
     await userEvent.click(gatilho);
@@ -198,11 +264,16 @@ describe('FilterChips · qual lista, e o que ela devolve', () => {
     render(
       <Controlada options={[{ id: 'rascunho', label: 'Rascunho', count: 12 }]} allCount={64} />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Status:/ }));
     expect(await screen.findByText('Rascunho · 12')).toBeInTheDocument();
-    // "Todos · 64" aparece DUAS vezes de propósito, e é o desenho certo: no
-    // gatilho (o que está aplicado) e na lista (a opção que limpa o filtro).
-    expect(await screen.findAllByText('Todos · 64')).toHaveLength(2);
+    // O total aplicado aparece nos DOIS lugares de propósito — no gatilho e na
+    // linha que limpa o filtro —, mas com grafias diferentes desde 17/08: o
+    // gatilho carrega o nome da faceta (`Status: Todos · 64`) e a linha da
+    // lista não (`Todos · 64`), porque dentro da lista a faceta já é o título.
+    expect(await screen.findByText('Todos · 64')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Status:/ })).toHaveTextContent(
+      'Status: Todos · 64',
+    );
   });
 });
 
@@ -212,7 +283,7 @@ describe('FilterChips · disabled (a condição de reabertura do ADR-020)', () =
   // existir; com ela, a exceção morre.
   it('exclusiva desabilitada não abre a lista', async () => {
     render(<Controlada options={QUATRO} disabled />);
-    const gatilho = screen.getByRole('button', { name: 'Status' });
+    const gatilho = screen.getByRole('button', { name: /^Status:/ });
     expect(gatilho).toBeDisabled();
     await userEvent.click(gatilho);
     expect(screen.queryByPlaceholderText('Buscar…')).toBeNull();
@@ -228,7 +299,7 @@ describe('FilterChips · disabled (a condição de reabertura do ADR-020)', () =
 
   it('sem a prop, a faceta continua ativa', () => {
     render(<Controlada options={QUATRO} />);
-    expect(screen.getByRole('button', { name: 'Status' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Status:/ })).not.toBeDisabled();
   });
 });
 

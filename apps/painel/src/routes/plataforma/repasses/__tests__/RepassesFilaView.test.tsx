@@ -55,7 +55,7 @@ describe('RepassesFilaView', () => {
     render(
       <RepassesFilaView {...base} itens={itens} loading={false} error={null} onEstadoFilterChange={onEstadoFilterChange} />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Estado' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Estado:/ }));
     await userEvent.click(await screen.findByRole('option', { name: /Solicitados/ }));
     expect(onEstadoFilterChange).toHaveBeenCalledWith('solicitado');
   });

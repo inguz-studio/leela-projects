@@ -43,6 +43,21 @@ export interface ComboboxProps {
   multiple?: boolean;
   /** Texto do trigger quando nada está selecionado. */
   placeholder?: string;
+  /**
+   * Nome do campo NO PRÓPRIO GATILHO, antes do valor aplicado: `Status: Todos`.
+   *
+   * POR QUE EXISTE. Num formulário o nome do campo vive no `<label>` acima, e o
+   * gatilho só precisa do valor. Numa barra de filtro não há label acima: as
+   * facetas ficam ombro a ombro com a busca, e sem o nome no gatilho o
+   * organizador de Membros lê `Todos` do lado de `Todos` sem nada dizendo qual
+   * é Status e qual é Papel — a queixa medida em 2026-08-17. É o mesmo desenho
+   * que o `FilterMenu` já faz na faceta empilhável (`${label}: ${resumo}`), e é
+   * o que faltava para as duas facetas ficarem indistinguíveis na barra.
+   *
+   * Fica opcional de propósito: quem usa o `Combobox` como campo de formulário
+   * não passa nada e o gatilho segue mostrando só o valor.
+   */
+  triggerPrefix?: string;
   /** Placeholder do campo de busca. */
   searchPlaceholder?: string;
   /** Texto quando a busca não acha nada. */
@@ -65,6 +80,7 @@ export function Combobox({
   onValueChange,
   multiple = false,
   placeholder = 'Selecione…',
+  triggerPrefix,
   searchPlaceholder = 'Buscar…',
   emptyText = 'Nada encontrado.',
   disabled = false,
@@ -85,6 +101,9 @@ export function Combobox({
     }
     return options.find((o) => o.value === selected[0])?.label ?? placeholder;
   }, [selected, options, multiple, placeholder]);
+
+  const textoDoGatilho =
+    triggerPrefix === undefined ? triggerLabel : `${triggerPrefix}: ${triggerLabel}`;
 
   function handleSelect(optionValue: string): void {
     if (multiple) {
@@ -121,7 +140,7 @@ export function Combobox({
           className,
         )}
       >
-        <span className="truncate">{triggerLabel}</span>
+        <span className="truncate">{textoDoGatilho}</span>
         <ChevronsUpDown aria-hidden className="h-[var(--spacing-4)] w-[var(--spacing-4)] shrink-0 text-[var(--text-tertiary)]" />
       </PopoverTrigger>
       <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] min-w-[var(--popover-min-width)]" align="start">

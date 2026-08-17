@@ -83,7 +83,7 @@ describe('TenantsList', () => {
         onOpenTenant={noop}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Status:/ }));
     await userEvent.click(await screen.findByRole('option', { name: /Aguardando/ }));
     expect(onFilterChange).toHaveBeenCalledWith('pending');
   });

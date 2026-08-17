@@ -64,9 +64,11 @@ describe('FilterBar · nome e estrutura', () => {
     const barra = screen.getByRole('toolbar');
     expect(within(barra).getByRole('searchbox', { name: /Buscar comunicado/ })).toBeInTheDocument();
     // A faceta é uma LISTA desde 17/08 (leva 20): o gatilho, não um
-    // `role="group"` de chips. Ver `FilterChips.test.tsx` para o contrato.
+    // `role="group"` de chips. O nome do gatilho é o TEXTO dele —
+    // `Filtrar por status: Todos` —, e não mais um `aria-label` que escondia o
+    // valor aplicado. Ver `FilterChips.test.tsx` para o contrato.
     expect(
-      within(barra).getByRole('button', { name: 'Filtrar por status' }),
+      within(barra).getByRole('button', { name: /^Filtrar por status:/ }),
     ).toBeInTheDocument();
     expect(within(barra).getByRole('status')).toHaveTextContent('Mostrando 12 de 40 comunicados');
     expect(within(barra).getByRole('button', { name: '+ Novo comunicado' })).toBeInTheDocument();

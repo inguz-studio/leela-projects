@@ -51,9 +51,9 @@ describe('MembrosList', () => {
   // colados e o nome de cada faceta só no `aria-label`.
   it('status × papel é interseção (Ativos ∩ Membros)', async () => {
     renderList();
-    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Status:/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'Ativos' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Papel' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Papel:/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'Membros' }));
     // Ativos = {Camila(admin), Felipe(owner)}; Membros = {Larissa(novo), Thiago(inativo)}
     // Interseção vazia → EmptyState.

@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **7 itens abertos, contados à mão:** 5 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **8 itens abertos, contados à mão:** 6 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -66,6 +66,16 @@ A medição de 17/08 achou "Inscritos" aparecendo 4× e a porcentagem de preench
 - **O que fica com você:** aprovar os três cortes (header, countdown, painéis de modalidade) e decidir se a pill de inscritos fica ou sai da sub-nav.
 - **Opções:** **cortar os três** (**default proposto** — header larga inscritos e dias, countdown larga a porcentagem repetida no ministat, painéis de modalidade largam o trio e o total já mostrados no countdown) · para a pill: **manter** (o papel de afordância vira exceção nomeada na regra de casa única, vale para os clubes também) ou **cortar junto** (sub-nav fica só com rótulos, como as outras nove abas).
 - **Onde aterrissa:** `EventoShell.tsx`, `CountdownHero.tsx`, `ModalidadesPanels.tsx`, `_lib/subnav.ts`. Detalhe completo em `02-rodadas/2026-08-17-carga-cognitiva/03-spec-reordenacao.md` (Movimentos 1 a 4).
+
+### FILTRO-ALTURA-1 · as duas facetas da barra de filtro têm alturas diferentes
+
+Os filtros em lista já ficam alinhados ao lado da pesquisa, numa fileira só, com o nome da faceta visível — a queixa de 17/08 está paga e medida. Sobrou uma diferença de forma que a sua fala não alcançou: a faceta de escolha única tem 40px (anatomia de campo) e a de escolha múltipla, 32px (anatomia de botão). Em Comunicados as três dividem a mesma fileira e a diferença aparece.
+
+- **Caso de uso:** a Marina abre Comunicados e vê `Status: Todos` e `Todos` altos, com `Canal: Todos` mais baixo no meio deles, como se fossem controles de dois tipos diferentes.
+- **Job story:** quando eu filtro uma lista, eu quero que os filtros pareçam a mesma coisa, para não ficar procurando diferença onde não há.
+- **O que fica com você:** qual das duas alturas vira a altura da faceta.
+- **Opções:** **subir a múltipla para 40px** (**default proposto** — o campo de busca ao lado tem 38px, então 40 é quem já está pareado; sobe só o gatilho do `FilterMenu`) · **descer a única para 32px**, barra mais leve mas descolada da busca · manter as duas, se a diferença de altura for leitura de tipo para você.
+- **Onde aterrissa:** `FilterMenu.tsx` (o `size` do gatilho) ou `FilterChips.tsx` (a altura da faceta exclusiva), com `gate-visual-filtros` re-rodado nos dois temas. Puxa junto as duas facetas cruas de Inscritos (`Todos os kits`, `Todas as modalidades`), que são `Combobox` direto e não ganham o nome da faceta. Detalhe em `.nirvana/handoffs/leela-filtros-fix-20260817.md`.
 
 ## Ações que só você pode executar
 

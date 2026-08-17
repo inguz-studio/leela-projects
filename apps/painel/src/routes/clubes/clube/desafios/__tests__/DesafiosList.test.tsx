@@ -44,7 +44,7 @@ describe('DesafiosList', () => {
 
   it('status é exclusivo (Encerrados esconde os ativos)', async () => {
     renderList();
-    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Status:/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'Encerrados' }));
     expect(screen.getByText('Foco Run')).toBeInTheDocument();
     expect(screen.queryByText('Meia Maratona Floripa')).not.toBeInTheDocument();

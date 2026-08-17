@@ -124,7 +124,7 @@ describe('InscritosView', () => {
     renderView({ inscritos, loading: false, error: null, modalidades: ['10k'] });
     // A faceta é LISTA desde 17/08 (leva 20, ADR-019 superado): o total do
     // recorte fica no gatilho, e a contagem por status vive dentro da lista.
-    const gatilho = screen.getByRole('button', { name: 'Status' });
+    const gatilho = screen.getByRole('button', { name: /^Status:/ });
     expect(gatilho).toHaveTextContent('Todos · 5');
     await userEvent.click(gatilho);
     expect(await screen.findByText('Pendente · 1')).toBeInTheDocument();
