@@ -407,5 +407,24 @@
     "tag-py":         "5px",
     "label-spacing":  "0.06em",
     "band-size":      "1.0625rem"
+  },
+  "bottomnav": {
+    "$description": "NAV-MOBILE (leva 20, 17/08): a barra FLUTUANTE horizontal inferior abaixo de lg. Altura 58 com raio 22 e respiro de 12 das tres bordas, quatro slots com icone 22 (traco 2 — o mesmo do rail) sobre rotulo de 0.6875rem, indicador deslizante na duracao/easing do pill do rail. `safe-b` e o entalhe do iOS e `space` e o espaco que a PAGINA reserva embaixo para nada ficar atras da barra: os dois sao CSS-only e o tema RN os ignora, como ja ignora `rail-motion`.",
+    "height":        "58px",
+    "radius":        "22px",
+    "margin":        "{spacing.3}",
+    "px":            "{spacing.1-5}",
+    "gap":           "{spacing.1}",
+    "max-w":         "480px",
+    "item-radius":   "16px",
+    "item-gap":      "3px",
+    "icon-size":     "22px",
+    "icon-stroke":   "2",
+    "label-size":    "{font.size.xs-plus}",
+    "badge-size":    "16px",
+    "badge-px":      "{spacing.1}",
+    "motion":        "{motion.duration.normal}",
+    "safe-b":        "env(safe-area-inset-bottom, 0px)",
+    "space":         "calc(var(--bottomnav-height) + var(--bottomnav-margin) * 2 + var(--bottomnav-safe-b))"
   }
 }

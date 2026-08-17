@@ -525,7 +525,23 @@ export const brasaTheme: FlatTokens = {
   "v3-cal-nav": "30px",
   "v3-tag-py": "5px",
   "v3-label-spacing": "0.06em",
-  "v3-band-size": "1.0625rem"
+  "v3-band-size": "1.0625rem",
+  "bottomnav-height": "58px",
+  "bottomnav-radius": "22px",
+  "bottomnav-margin": "12px",
+  "bottomnav-px": "6px",
+  "bottomnav-gap": "4px",
+  "bottomnav-max-w": "480px",
+  "bottomnav-item-radius": "16px",
+  "bottomnav-item-gap": "3px",
+  "bottomnav-icon-size": "22px",
+  "bottomnav-icon-stroke": "2",
+  "bottomnav-label-size": "0.6875rem",
+  "bottomnav-badge-size": "16px",
+  "bottomnav-badge-px": "4px",
+  "bottomnav-motion": "240ms",
+  "bottomnav-safe-b": "env(safe-area-inset-bottom, 0px)",
+  "bottomnav-space": "calc(var(--bottomnav-height) + var(--bottomnav-margin) * 2 + var(--bottomnav-safe-b))"
 };
 
 export const wineTheme: FlatTokens = {
@@ -1065,7 +1081,23 @@ export const wineTheme: FlatTokens = {
   "v3-cal-nav": "30px",
   "v3-tag-py": "5px",
   "v3-label-spacing": "0.06em",
-  "v3-band-size": "1.0625rem"
+  "v3-band-size": "1.0625rem",
+  "bottomnav-height": "58px",
+  "bottomnav-radius": "22px",
+  "bottomnav-margin": "12px",
+  "bottomnav-px": "6px",
+  "bottomnav-gap": "4px",
+  "bottomnav-max-w": "480px",
+  "bottomnav-item-radius": "16px",
+  "bottomnav-item-gap": "3px",
+  "bottomnav-icon-size": "22px",
+  "bottomnav-icon-stroke": "2",
+  "bottomnav-label-size": "0.6875rem",
+  "bottomnav-badge-size": "16px",
+  "bottomnav-badge-px": "4px",
+  "bottomnav-motion": "240ms",
+  "bottomnav-safe-b": "env(safe-area-inset-bottom, 0px)",
+  "bottomnav-space": "calc(var(--bottomnav-height) + var(--bottomnav-margin) * 2 + var(--bottomnav-safe-b))"
 };
 
 export const darkWineTheme: FlatTokens = {
@@ -1573,5 +1605,21 @@ export const darkWineTheme: FlatTokens = {
   "v3-cal-nav": "30px",
   "v3-tag-py": "5px",
   "v3-label-spacing": "0.06em",
-  "v3-band-size": "1.0625rem"
+  "v3-band-size": "1.0625rem",
+  "bottomnav-height": "58px",
+  "bottomnav-radius": "22px",
+  "bottomnav-margin": "12px",
+  "bottomnav-px": "6px",
+  "bottomnav-gap": "4px",
+  "bottomnav-max-w": "480px",
+  "bottomnav-item-radius": "16px",
+  "bottomnav-item-gap": "3px",
+  "bottomnav-icon-size": "22px",
+  "bottomnav-icon-stroke": "2",
+  "bottomnav-label-size": "0.6875rem",
+  "bottomnav-badge-size": "16px",
+  "bottomnav-badge-px": "4px",
+  "bottomnav-motion": "240ms",
+  "bottomnav-safe-b": "env(safe-area-inset-bottom, 0px)",
+  "bottomnav-space": "calc(var(--bottomnav-height) + var(--bottomnav-margin) * 2 + var(--bottomnav-safe-b))"
 };
