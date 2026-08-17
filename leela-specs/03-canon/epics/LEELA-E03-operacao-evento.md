@@ -36,7 +36,7 @@ O valor entregue é operar a Meia Maratona Floripa 2026 (453 inscritos, R$ 85.61
 
 ## Regras de negócio aplicáveis
 
-- **RN-200** — Após a 1ª venda, edição de preço do evento/kit é bloqueada.
+- **RN-200** — Após a 1ª venda, edição de preço do evento/kit é bloqueada. ⚠️ **O kit sai por ordem do dono em 17/08 (RN-575, no [[LEELA-E04-config-vendas]]): editável, com efeito só para frente. Evento e lote continuam bloqueados. Enunciado marcado, não apagado — ele descreve o código no ar até a onda D subir.**
 - **RN-201** — Publicar o evento gera URL pública (`beh.ro/{slug}`) + QR automaticamente.
 - **RN-202** — Inscrito tem `kit`: `kit_ouro` | `kit_prata` | `kit_basico` | `sem_kit`.
 - **RN-203** — Inscrito tem `chipNumero` (nulo até a entrega).
@@ -2660,3 +2660,61 @@ o que muda é o que a pessoa lê, não o que o código identifica.
 vetável) e S1259 (RN-572, rótulo). Nenhum construído por esta lane.
 
 **Onde entra na fila:** card do backlog, ancorado nos três épicos por superfície.
+
+## Delta o kit vira conjunto de itens cadastrados, e a RN-200 perde o kit (SPEC-LEVA22 · 2026-08-17)
+
+> Rodada `02-rodadas/2026-08-17-leva22/`. Leva 22 do dono, no mesmo dia das levas 17, 18 e 19.
+> Uma regra nova aqui — a **RN-576** — e a **RN-200 marcada**, nunca apagada. ⛔ Nada construído
+> por esta lane.
+
+### RN-576 (nova, dona · 2026-08-17) · o kit é um conjunto de itens cadastrados
+
+**Um kit é composto por itens que já existem no catálogo de itens do evento. "O que está incluso"
+deriva dessa composição em vez de ser digitado, e a contagem de itens do kit é a contagem dos
+itens referenciados.** Texto livre deixa de ser porta de entrada.
+
+Na íntegra: *"Somente posso adicionar itens no kits, que já estejam cadatrados como um item
+indivudal, Pois um kit é um conjunto de itens, e essa contagem deve ser feita a partir disso."*
+
+**Ela nasce barata, e a medição explica por quê: as duas coisas já existem e não se falam.** Há
+catálogo real — `interface ItemKit` (`packages/core/src/eventos/kit.ts:535`), coleção
+`itensKit/{itemId}`, vínculo N:N em `item.kits` (`:566`, fonte de verdade da RN-215) — e há, **em
+paralelo**, uma lista de texto livre, `Kit.itens: string[]` (`:92`), que o próprio core descreve
+como *"a visão é decorativa"* (`:57-58`). As duas convivem na mesma tela do editor, com estado
+separado desde a declaração (`KitEditor.tsx:124-126` contra `:107`), e **nada lê uma para
+preencher a outra**.
+
+Então a regra não manda construir catálogo: manda **parar de aceitar texto livre e derivar**.
+**Nenhuma migração de dado** — os dois campos já são gravados, e `ItemKit.nome` é exatamente o
+texto que hoje se digita.
+
+⚠️ **O que ela não resolve, e é a única parte cara: quantidade não existe.** `ItemKit` não tem
+campo de quantidade e `Kit.itens` é string solta. A coluna "Qtd." da tabela que o dono pediu exige
+campo novo no core e nas Rules. **Por isso a tabela sem quantidade sobe na onda A e com quantidade
+na onda D.**
+
+**A borda do acervo.** Kits que já existem têm `Kit.itens` com strings que podem não casar com
+nenhum `ItemKit`. **A regra morde na escrita, nunca na leitura** — mesma disciplina que a RN-559
+aplicou ao piso de venda. Documento legado continua legível, a tela **sinaliza** o que não casa, e
+o organizador resolve item a item. Regra que inutiliza documento vivo é defeito, não rigor.
+
+**Falsificação:** tentar gravar em "o que está incluso" um texto que não corresponde a nenhum item
+do catálogo — recusa nomeada. Abrir um kit legado com string órfã — abre, mostra, marca.
+
+**Onde aterrissa:** tela em `kits/KitEditor.tsx:445-471` e `:556-602`. Onda D de
+`02-rodadas/2026-08-17-leva22/04-fila-em-ondas.md`, com a tabela sem quantidade na onda A.
+
+### ⚠️ A RN-200 fica marcada: o kit sai, o evento e o lote ficam
+
+A ordem do dono na mesma leva (*"Quero alterar a RN-200"*) faz nascer a **RN-575** no
+[[LEELA-E04-config-vendas]], que **recorta o kit de dentro da RN-200 sem revogá-la**. O enunciado
+de `:39` — *"Após a 1ª venda, edição de preço do evento/kit é bloqueada"* — **permanece escrito** e
+continua descrevendo o código que está no ar até a onda D subir; a partir dela, ele vale para
+**evento e lote**, e o kit passa a responder à RN-575, com efeito só para frente.
+
+Marcado e não apagado pela mesma disciplina da RN-211, da RN-470 e da RN-416 — a casa já pagou
+caro por revogação silenciosa, e a RN-470 é o precedente que fixou a régua.
+
+**Não confundir com a RN-497:** ela derrubou uma extensão que existia apenas em comentário de
+código, trata do **lote**, e este épico é explícito em `:2193` e `:2213` de que a RN-200
+permanecia inalterada. **A RN-575 é a primeira alteração real do enunciado.**

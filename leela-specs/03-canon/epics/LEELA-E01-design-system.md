@@ -1007,3 +1007,103 @@ Prova: critério de aceite em todo dispatch de UI (harness injeta, texto na `gov
 aba Resumo com a razão escrita em `:12-13` — *"no Resumo ela seria o mesmo nome duas vezes"*. Era o
 único lugar do painel onde esta redundância tinha sido vista, nomeada e resolvida. A RN-573
 generaliza o que aquele arquivo já fazia por conta própria.
+
+## Delta o menu terciário vira padrão nomeado (SPEC-LEVA22 · 2026-08-17)
+
+> Rodada `02-rodadas/2026-08-17-leva22/`. Leva 22 do dono, no mesmo dia das levas 17, 18 e
+> 19. Uma regra nova aqui — a **RN-574** — e um defeito de cânone que a mesma leva expôs e
+> que **não** vira regra nova, porque a regra dele já existe e é o componente que a
+> desobedece. ⛔ Nada construído por esta lane.
+
+### RN-574 (nova, dona · 2026-08-17) · o terciário é padrão nomeado, e ele não rola a página
+
+**Navegação terciária com painel é padrão nomeado do design system.** Seção dentro de uma
+página troca o conteúdo **no lugar**, sem mover o scroll; o estado da seção vive na URL, para
+o endereço continuar colável; o indicador de seção ativa **desliza** entre posições; e a peça
+é uma só, com orientação horizontal ou vertical, **nunca uma variante por nível de
+profundidade**.
+
+O que ela separa, e é a razão de existir: navegação entre **rotas** (`SubNav`/`AreaSubNav`,
+semântica de `nav` e `aria-current`) e troca de **painel** dentro de uma rota (semântica de
+`tablist`). As duas se pareciam e faziam coisas diferentes. O critério agora é escrito: seção
+que é destino de link e carrega dado próprio continua rota; seção que é parte de uma mesma
+coisa vira painel.
+
+**Ela nasce da fala do dono elogiando o único menu do painel que está fora do cânone.** O
+terciário de Configurações dos Clubs é bespoke — `<ul>` de `<button>` escrita à mão dentro da
+rota (`clubes/clube/configuracoes/ConfiguracoesView.tsx:160-179`) — e é o **único** lugar do
+painel com scroll spy por `IntersectionObserver` mais `scrollIntoView` (`:124-147`), a ponto
+de o próprio teste do arquivo usar a palavra "âncora". Os três níveis acima dele já são
+`AreaSubNav`. E este épico já dizia, em `03-canon/canone-de-componentes.md:234-235`, que
+variante por profundidade não deveria existir. O dono elogiou a exceção e pediu que ela
+virasse regra; a medição mostrou que o caminho é publicá-la, não propagá-la.
+
+**A onda compõe, não inventa.** O `Tabs` já troca conteúdo no lugar com a11y de tablist
+completa (`Tabs.tsx:137-152`); falta nele exatamente o que esta regra exige — estado na URL
+(`:37-46`) e indicador deslizante (`:111-115`), este último com a mecânica pronta e testada
+no `SubNav.tsx:98-112`, que é código para promover ao componente comum.
+
+**O que ela acrescenta às três vizinhas.** A RN-558 exige que instância de padrão nomeado use
+o componente do cânone; a RN-568 diz que composição recorrente de controles também é padrão
+nomeado; a RN-573 julga o que a tela diz. **Esta julga como a seção se comporta** — uma tela
+pode usar o componente certo, com os tokens certos, sem redundância nenhuma, e ainda assim
+jogar o leitor oitocentos pixels para baixo a cada clique.
+
+**Ela estende a D-1008-R18** a um componente que aquela decisão deixou de fora de propósito:
+a barra do padrão novo nasce sem fundo e sem borda inferior, como o `SubNav`, com AA por
+estado medido contra o fundo da página. Escrito aqui em vez de aplicado em silêncio, pela
+razão que a revogação por silêncio da RN-470 deixou como lição.
+
+⚠️ **Condicionada ao vetável TERCIARIO-1**, e o número é consumido de qualquer jeito para não
+virar buraco — disciplina da RN-546, da RN-552 e da RN-557. A leitura "abas fixas mata o
+formato âncora" é o default e é o que resolve a queixa; a palavra "fixas" também admite ler
+como barra sticky sobre conteúdo rolável, e ele perguntou *"me fiz claro?"*.
+
+**Efeito colateral declarado:** com painéis exclusivos, o `Ctrl+F` do navegador deixa de
+achar texto de outra seção — e o `forceMount` **não** salva, porque o navegador não busca em
+conteúdo oculto. É o preço real da troca no lugar, registrado para não ser descoberto depois
+como defeito.
+
+**Falsificação:** clicar numa aba e medir `window.scrollY` antes e depois; se mudar, a regra
+está violada. E abrir o endereço de uma aba não-primeira em janela nova: se cair na primeira,
+o estado não está na URL.
+
+### ⛔ O `Card` canônico desobedece à §2.16, e isso não é regra nova
+
+A leva 22 trouxe *"os cards dos kits estão com linhas de borda que já falei expressamente que
+nao devem ter"*. A apuração achou algo maior que a tela de kits, e ele **não consome número**
+porque a regra que o rege já existe.
+
+O guia visual diz, na letra (`04-engenharia/governanca-design.md:38`, §2.16): *"Flat por
+padrão. Sem borda decorativa. Exceções permitidas: input, divider, card selecionado, upload
+dashed, card crítico com border-left Vulcão."* **Card comum não está na lista.**
+
+E o `Card` do design system nasce com `border border-border` na receita base
+(`packages/design-system/src/components/Card/Card.tsx:72`), declarando o que faz sem disfarce
+no próprio cabeçalho: *"border-border é decorativa (frame shadcn), fora do gate 1.4.11"*.
+**Borda decorativa por escrito, num sistema cuja regra é não ter borda decorativa.**
+
+**Alcance medido:** 48 arquivos dos apps importam `Card`, 43 instâncias diretas, e **nenhuma**
+mata a borda por `className`. O `KpiCard` (`KpiCard.tsx:64-72`) não tem borda — então a tela
+de kits mostra hoje **duas superfícies de card diferentes na mesma dobra**, e a de baixo é a
+que está fora da régua. As outras seis peças do DS com `border border-border` são todas
+superfície **flutuante** (`DropdownMenu`, `Popover`, `Toast`, `Tooltip`, `Command`), onde a
+borda separa do que está atrás e é funcional. O `Card` é a única superfície **dentro da
+página** com moldura.
+
+**Como isso chegou aqui:** a lane AJUSTES-DONO pagou a D-1008-R11 em `a60690c2` trocando um
+`<article>` cru (raio e fundo, zero borda) pelo `Card` canônico. Era a correção certa de
+procedência, e ela importou a borda junto. **Não é defeito da lane; é defeito da receita que
+a lane obedeceu.**
+
+⚠️ **Duas travas para quem for consertar.** A própria lane da R11 escreveu o teste que
+congela a borda (`kits/__tests__/superficie-cartoes.test.tsx:80`, `:93`,
+`toContain('border-border')`) — código e teste mudam no mesmo commit. E matar a borda devolve
+a separação inteira a `bg-card` e `shadow-elev-1`: no tema **wine** o card é `#FFFFFF` sobre
+página `#FDFAF7`, quase nada, e é **o tema onde fechar esta queixa pode reabrir a
+D-1008-R11**. O aceite não é "a borda sumiu", é "o contêiner continua legível nos três temas,
+sem borda", com conferência visual por tema. Se a sombra não bastar no claro, a resposta é
+ajustar elevação ou superfície do tema — nunca devolver a borda.
+
+**Onde aterrissa:** onda A da `02-rodadas/2026-08-17-leva22/04-fila-em-ondas.md` (A1 e A2), e
+o cânone `03-canon/canone-de-componentes.md` ganha a linha do padrão terciário na onda B.
