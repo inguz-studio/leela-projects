@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **5 itens abertos, contados à mão:** 3 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **6 itens abertos, contados à mão:** 4 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -46,6 +46,16 @@ Isto não foi consertado de propósito: o token `--popover` é lido por TODO men
 - **Opções:** **parear o painel flutuante com a família da superfície elevada de cada tema** (**default proposto** — `--surface-raised-opaque` como ponto de partida, com AA de texto e borda medido nos três temas antes de trocar) · manter como está, se o que te incomodou for outra coisa · escolher um tratamento próprio para painel flutuante, que aí é decisão de marca e não pareamento.
 - **Onde aterrissa:** `--popover` em `packages/design-system/tokens/shadcn.json` e a conferência visual de menu, seleção e busca nos três temas. **Vale olhar primeiro no tema claro**, onde a distância é maior e mais visível (superfície elevada `#FFFFFF` contra painel `#F5F1EC`) — se você responder sobre o claro, a resposta provavelmente vale para os três.
 - **Detalhe completo:** `02-rodadas/2026-08-13-decisoes-dono/01-decisoes-dono.md` §16.2.
+
+### NAV-MOBILE-1 · a navegação mobile do produtor: o quinto item e as duas anatomias
+
+Você cravou a barra flutuante inferior de quatro e o perfil no topo direito, e ela está construída. Sobraram duas escolhas que a sua fala não alcançou: o rail tem **cinco** áreas e a barra tem quatro slots, e o painel master tem **doze** destinos, que não cabem em quatro de jeito nenhum. O default em vigor deixa Parcerias fora da barra e mantém o menu antigo só no master — o que significa duas navegações mobile diferentes dentro do mesmo produto.
+
+- **Caso de uso:** a Marina usa o painel no celular o dia todo e alcança Visão geral, Eventos, Clubs e CRM num toque; para abrir Parcerias ela desce até o fim da Visão geral e toca no bloco, dois toques, igual ao que custava antes.
+- **Job story:** quando eu opero o painel pelo celular, eu quero as áreas do meu dia a um toque, para não pagar pedágio de menu dez vezes por dia.
+- **O que fica com você:** confirmar quais quatro áreas ficam na barra, onde mora a quinta, e se o master pode continuar com o menu antigo.
+- **Opções:** **(a) Parcerias como bloco na Visão geral** (**default proposto** — é a área mais nova e a única cujo trabalho não é diário; a barra fica com quatro destinos de verdade) · **(b) o quarto slot vira "Mais"**, abrindo uma folha com CRM e Parcerias — mas aí a barra tem três destinos e um menu, o que contraria "quatro botões" · **(c) Parcerias volta para dentro de Clubs**, o que desfaz a D-1008-R17 de 15/08. Para o master: **manter o menu antigo lá** (**default**, doze destinos não cabem em quatro) ou forçar a mesma anatomia nas duas superfícies.
+- **Onde aterrissa:** `apps/painel/src/shell/sidebar.ts` (`ITENS_DA_BARRA_MOBILE`) — trocar a lista é uma linha. Supersede a D-1008-R5 no produtor, com a superação já escrita. Detalhe e balanço de pixel em `.nirvana/handoffs/leela-nav-mobile-20260817.md`.
 
 ## Ações que só você pode executar
 
