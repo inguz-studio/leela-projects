@@ -28,14 +28,23 @@
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AppShell, SCROLL_Y_ONLY, SidebarRail } from '@leela/design-system';
-import { shellRailItems } from './sidebar';
+import {
+  AppShell,
+  BottomNav,
+  DropdownMenu,
+  IconButton,
+  RESPIRO_BOTTOMNAV,
+  SCROLL_Y_ONLY,
+  SidebarRail,
+  cn,
+} from '@leela/design-system';
+import { shellBottomNavItems, shellRailItems } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
 import { usePaineisDaConta } from './paineis';
 import { nomeDoPainelAtual, travessia } from './AlternadorDePainel';
 import { useSair } from './sair';
-import { LogOut, Settings } from 'lucide-react';
+import { CircleUserRound, LogOut, Settings } from 'lucide-react';
 
 export interface RootShellProps {
   children: React.ReactNode;
@@ -48,6 +57,7 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   const eventosAtivos = useEventosAtivosBadge();
   const paineis = usePaineisDaConta();
   const { sair } = useSair();
+  const [menuPerfilMobile, setMenuPerfilMobile] = React.useState(false);
 
   // DELTA-UX-T4 (D-1008-R6): o perfil do rodapé do rail virou TRIGGER do
   // popover do perfil — DropdownMenu canônico ancorado acima (L-021), com
@@ -126,11 +136,63 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
     ),
   };
 
+  // ---------------------------------------------------------------------------
+  // NAV-MOBILE (leva 20). O dono, na íntegra: *"Já o Menu no formato mobile,
+  // pode ser uma barra flutuante, horizontal a ficar na parte inferior da tela.
+  // e a parte de logout, configurações, na barra superior no lado direito, com
+  // o ícone de perfil."*
+  //
+  // A D-1008-R5 (10/08) decidiu que o drawer off-canvas ficava abaixo de `lg` e
+  // que só a pele mudava. Ela fica **SUPERADA nesta superfície** por esta
+  // decisão, e a superação sai ESCRITA porque revogação por silêncio é como a
+  // RN-470 quase se perdeu. Nada foi apagado: o `variant="drawer"` do
+  // SidebarRail segue no DS e segue montado aqui — a superfície do super-admin
+  // continua com ele, porque doze destinos não cabem em quatro slots e barra
+  // que abandona destino é pior que drawer. Quem decide qual das duas é
+  // `shellBottomNavItems`, devolvendo `null` na plataforma.
+  //
+  // O POPOVER É O QUE JÁ EXISTE. `menuPerfil` acima é o MESMO objeto que
+  // alimenta o rodapé do rail desde a D-1008-R6, com os mesmos itens da leva 16
+  // (Configurações e Sair, cada um com ícone, Sair por último). Aqui ele só
+  // ganha um segundo gatilho — nenhum popover novo nasceu, nenhuma lista de
+  // ações foi copiada. Duas listas com os mesmos dois itens é exatamente a
+  // duplicata que a leva 15 apagou do rail.
+  //
+  // O NOME DO LANDMARK é "Navegação inferior", e não "Navegação principal" como
+  // o rail: os dois vivem no mesmo documento (um é `hidden lg:block`, o outro é
+  // `lg:hidden`), e dois landmarks de navegação com o mesmo nome não se
+  // distinguem na lista de marcos do leitor de tela.
+  const itensDaBarra = shellBottomNavItems(location.pathname, navigate, eventosAtivos);
+  const gatilhoDoPerfilMobile = (
+    <DropdownMenu
+      open={menuPerfilMobile}
+      onOpenChange={setMenuPerfilMobile}
+      actions={menuPerfil.actions}
+      menuLabel={menuPerfil.menuLabel}
+      align="right"
+      trigger={
+        <IconButton aria-label={nome ? `${nome} — menu do perfil` : 'Menu do perfil'}>
+          <CircleUserRound aria-hidden />
+        </IconButton>
+      }
+    />
+  );
+
   return (
     <AppShell
       sidebar={<SidebarRail {...propsDoRail} />}
       sidebarFlutuante
       drawerSidebar={<SidebarRail variant="drawer" {...propsDoRail} />}
+      {...(itensDaBarra
+        ? { bottomNav: <BottomNav items={itensDaBarra} ariaLabel="Navegação inferior" /> }
+        : {})}
+      // A marca só aparece no rail, e abaixo de `lg` o rail não existe. Sem este
+      // slot ela sumiria da tela inteira no mobile — e no produtor, onde o
+      // hambúrguer também sai, a barra superior ficaria com o lado esquerdo vazio.
+      topBarStart={
+        <img src="/leela-logo-brasa.svg" alt="Leela" className="h-[var(--rail-brand-logo-h)] w-auto" />
+      }
+      topBarEnd={gatilhoDoPerfilMobile}
       // GLOW DA PÁGINA na RAIZ da moldura (protótipo: background-image no flex
       // que contém nav+main): o rail é vidro translúcido e precisa do glow POR
       // BAIXO — pintado só no contêiner que rola, a faixa do rail ficava sobre
@@ -166,7 +228,18 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
           sobre a página, e o glow precisa existir POR BAIXO dele. O token
           continua sendo a única fonte (`none` fora do modo vidro: a
           administração segue preta). GlowDaPagina.test.tsx acompanhou. */}
-      <div className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY}`}>
+      {/* RESPIRO_BOTTOMNAV (NAV-MOBILE): a barra FLUTUA sobre o conteúdo, então
+          o contêiner que rola reserva o espaço embaixo — senão o último bloco de
+          toda página nasce escondido atrás dela, que é a lição S113 (área que
+          abandona quem entra é defeito) com outra roupa. O respiro entra SÓ onde
+          a barra existe: acima de `lg` o token zera pelo próprio `lg:pb-0`, e na
+          plataforma, que não tem barra, ele nem é aplicado — respiro sem barra é
+          buraco no fim da página.
+
+          A ordem no `cn` é a de sempre: `SCROLL_Y_ONLY` fica DEPOIS do que pode
+          conflitar com ele (regra do cabeçalho de utils/scroll). O respiro é
+          padding, não overflow, então não disputa. */}
+      <div className={cn('relative flex flex-col flex-1', itensDaBarra && RESPIRO_BOTTOMNAV, SCROLL_Y_ONLY)}>
         {children}
       </div>
     </AppShell>

@@ -38,6 +38,7 @@ import { AlertsPanel } from './_components/AlertsPanel';
 import { StaffScopeNote } from './_components/StaffScopeNote';
 import { OcupacaoEventos } from './_components/OcupacaoEventos';
 import { EmBreveV3 } from './_components/EmBreveV3';
+import { ParceriasNoMobile } from './_components/ParceriasNoMobile';
 import type { OcupacaoDosEventos } from './_lib/ocupacao';
 import type { ItemDaAgenda } from './_lib/agenda';
 import type { CountdownView } from './_lib/countdown';
@@ -206,6 +207,15 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           onRetry={kpisError === 'unknown' ? onRetryOverview : undefined}
           onNavigate={onNavigate}
         />
+      </Cascata>
+
+      {/* NAV-MOBILE (leva 20) · a casa do QUINTO item — só abaixo de `lg`, onde
+          a barra de quatro deixou Parcerias de fora. Acima disso o rail ainda o
+          carrega, e o bloco seria a redundância que a RN-573 desta mesma rodada
+          proíbe. Último da grade de propósito: é atalho de área, não trabalho do
+          dia — não disputa a dobra com o que a pessoa veio ver. */}
+      <Cascata i={7} className="lg:hidden">
+        <ParceriasNoMobile onNavigate={onNavigate} />
       </Cascata>
     </div>
   );

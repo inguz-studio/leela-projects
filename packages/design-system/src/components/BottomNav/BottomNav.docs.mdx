@@ -1,0 +1,57 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './BottomNav.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# BottomNav
+
+A barra flutuante horizontal inferior do mobile. Abaixo de `lg` o rail some do fluxo, e até a leva 20 o que restava era o drawer off-canvas: dois toques para qualquer destino, mais os 800 ms de abertura do overlay. Num destino que se alcança dez vezes por dia, oitocentos milissegundos deixam de ser marca e viram pedágio.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Quatro slots, e o quinto tem casa
+
+O rail do produtor tem cinco itens. Quatro cabem na barra; o quinto não vira um botão "Mais", porque aí a barra teria três destinos e um menu — que é outra coisa. O destino que sai da barra ganha um bloco com caminho na tela de entrada, e o caminho até ele fica em dois toques, o mesmo que custava antes.
+
+## O indicador é o do rail, deitado
+
+Um elemento só, que viaja quando a seleção troca — mesma tinta, mesmo halo, mesma duração e mesmo easing do pill vertical do `SidebarRail`. A posição vem de medição do item ativo, não de conta de design, então rótulo longo e rótulo curto acertam o alvo igual.
+
+<Canvas of={Stories.PrimeiroAtivo} />
+
+## O número precisa dizer de quê
+
+O badge visual é decorativo. Quem lê por áudio ouve o `badgeLabel`: "3" ao lado de "Eventos" não diz o que são três.
+
+<Canvas of={Stories.ComBadge} />
+
+## Nenhum aceso é um estado
+
+URL legada que só redireciona não é destino de menu nenhum. Nesse caso o pill não entra no DOM, em vez de acender o item errado.
+
+<Canvas of={Stories.SemAtivo} />
+
+## O respiro da página não é opcional
+
+A barra flutua sobre o conteúdo. O contêiner que rola leva `RESPIRO_BOTTOMNAV`, senão o último bloco da página nasce escondido atrás dela. O valor é um token só — `--bottomnav-space`, que já soma altura, as duas margens e o entalhe do iOS —, então mudar a altura da barra não pede varredura por telas.
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="BottomNav"
+  snippet={`import { BottomNav, bottomNavIcon, RESPIRO_BOTTOMNAV } from '@leela/design-system';
+
+<BottomNav
+  items={[
+    { id: 'visao-geral', label: 'Visão geral', icon: bottomNavIcon(LayoutDashboard), href: '/', active: true },
+    { id: 'eventos', label: 'Eventos', icon: bottomNavIcon(Ticket), href: '/eventos' },
+    { id: 'clubs', label: 'Clubs', icon: bottomNavIcon(Heart), href: '/clubes' },
+    { id: 'crm', label: 'CRM', icon: bottomNavIcon(User), href: '/crm' },
+  ]}
+/>`}
+  contract={contract}
+/>

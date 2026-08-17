@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { RootShell } from '../RootShell';
 import { _resetEventosBadgeCache } from '../eventosBadge';
+import { PLATFORM_NAV } from '../../routes/plataforma/_lib/nav';
 
 // Sessão do rodapé (B4) + fonte do nav-badge (T2): usuário nomeado, claims com
 // tenant e 2 eventos ativos + 1 encerrado — sem Firebase real.
@@ -339,22 +340,33 @@ describe('RootShell · popover do perfil (Configurações + alternador)', () => 
 });
 
 // =============================================================================
-// O MENU MOBILE no chrome v3 (DELTA-UX-T3 · D-1008-R5).
+// O MENU MOBILE no chrome v3 (DELTA-UX-T3 · D-1008-R5) — SUPERADO no produtor
+// pela leva 20, e vivo no super-admin.
 //
-// O Drawer < lg montava a Sidebar clássica (be-hero, 240px, seções
-// OPERAÇÃO/CONTA) — a única superfície do painel fora do DS novo. Agora o
-// conteúdo do drawer é o PRÓPRIO SidebarRail em `variant="drawer"` (pele v3:
-// sempre aberto, altura total, sem toggle), com as MESMAS props do rail
-// desktop — itens, marca, nome do painel e popover do perfil. A anatomia
-// off-canvas não mudou: portal, scrim condicional (item 5 do REFACTOR) e
-// focus-trap seguem sendo do Drawer do AppShell — o que os casos de
-// AppShell.test.tsx já provam; aqui se prova a FIAÇÃO do painel.
+// O que a D-1008-R5 decidiu, e por quê: o Drawer < lg montava a Sidebar
+// clássica (be-hero, 240px, seções OPERAÇÃO/CONTA), a única superfície do
+// painel fora do DS novo; ela passou a montar o PRÓPRIO SidebarRail em
+// `variant="drawer"`, e a anatomia off-canvas foi preservada de propósito — o
+// dono, na íntegra: *"o menu no formato mobile também nao está no DS novo"*.
+//
+// O que a leva 20 mudou, e por quê. O dono, na íntegra: *"Já o Menu no formato
+// mobile, pode ser uma barra flutuante, horizontal a ficar na parte inferior da
+// tela. e a parte de logout, configurações, na barra superior no lado direito,
+// com o ícone de perfil."* Na superfície do PRODUTOR a barra flutuante
+// substitui o drawer, e com ela some o hambúrguer: dois caminhos para a mesma
+// navegação na mesma largura é a duplicata que a leva 15 apagou do rail. Os
+// casos abaixo mudaram de SUPERFÍCIE, não de conteúdo — a anatomia de drawer
+// segue provada, agora onde ela ainda vive.
+//
+// Nada foi apagado: `variant="drawer"` segue no DS e segue montado aqui. A
+// razão de o super-admin continuar com ele está medida — são doze destinos, e
+// quatro slots não os comportam.
 //
 // jsdom não aplica CSS: o rail desktop (hidden lg:block) coexiste no DOM com
 // o drawer aberto — por isso TODA query destes casos é scoped no dialog.
 // =============================================================================
 
-describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
+describe('RootShell · menu mobile no chrome v3 (drawer < lg, superfície da plataforma)', () => {
   async function abrirDrawer(): Promise<void> {
     await userEvent.click(screen.getByRole('button', { name: 'Abrir menu de navegação' }));
   }
@@ -363,7 +375,7 @@ describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
   }
 
   it('o drawer monta o rail v3 sempre aberto — a Sidebar clássica saiu da moldura', async () => {
-    renderAt('/');
+    renderAt('/plataforma/tenants');
     await abrirDrawer();
     const drawerNav = within(dialogo()).getByRole('navigation', { name: 'Navegação principal' });
     expect(drawerNav).toHaveAttribute('data-rail-open', '1');
@@ -373,32 +385,31 @@ describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
     // Sem toggle: quem fecha o off-canvas é o Drawer (scrim/Esc).
     expect(within(dialogo()).queryByRole('button', { name: 'Abrir menu' })).toBeNull();
     expect(within(dialogo()).queryByRole('button', { name: 'Recolher menu' })).toBeNull();
-    // Os 6 destinos do produtor, rótulos em fluxo (anatomia aberta). O nome
-    // acessível pode carregar o badge de eventos ativos ("Eventos 2") — o
-    // badge é anatomia do rail aberto e chega por fetch, daí o prefixo.
-    expect(within(drawerNav).getAllByRole('link')).toHaveLength(5);
-    expect(within(drawerNav).getByRole('link', { name: /^Eventos/ })).toBeVisible();
+    // Os destinos COM ROTA da nav do super-admin, rótulos em fluxo (anatomia
+    // aberta). `billing` é informativo (badge "em breve") e não vira link.
+    const comRota = PLATFORM_NAV.filter((i) => i.href).length;
+    expect(within(drawerNav).getAllByRole('link')).toHaveLength(comRota);
   });
 
   it('o drawer NOMEIA o painel (papel-duplo vale no mobile também)', async () => {
-    renderAt('/');
+    renderAt('/plataforma/tenants');
     await abrirDrawer();
-    expect(within(dialogo()).getByText('Painel Profissional')).toBeInTheDocument();
+    expect(within(dialogo()).getByText('Painel Master')).toBeInTheDocument();
   });
 
   it('o popover do perfil também vive no drawer (trigger nomeado, F5 vale < lg)', async () => {
-    renderAt('/');
+    renderAt('/plataforma/tenants');
     await abrirDrawer();
     const trigger = within(dialogo()).getByRole('button', { name: 'Marina Castelo' });
     expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
   });
 
   it('navegar por um item do drawer fecha o drawer e troca a rota (contrato do AppShell)', async () => {
-    renderAt('/');
+    renderAt('/plataforma/tenants');
     await abrirDrawer();
-    await userEvent.click(within(dialogo()).getByRole('link', { name: /^Eventos/ }));
+    await userEvent.click(within(dialogo()).getByRole('link', { name: 'Macro' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByTestId('path')).toHaveTextContent('/eventos');
+    expect(screen.getByTestId('path')).toHaveTextContent('/plataforma/macro');
   });
 
   it('/plataforma: o drawer monta a nav própria do super-admin no mesmo chrome', async () => {
@@ -410,5 +421,114 @@ describe('RootShell · menu mobile no chrome v3 (drawer < lg)', () => {
       'page',
     );
     expect(within(drawerNav).queryByRole('link', { name: 'Visão geral' })).toBeNull();
+  });
+});
+
+// =============================================================================
+// NAV-MOBILE (leva 20) — a barra flutuante inferior e o perfil no topo direito.
+// =============================================================================
+
+describe('RootShell · NAV-MOBILE: a barra inferior do produtor', () => {
+  function barra(): HTMLElement {
+    return screen.getByRole('navigation', { name: 'Navegação inferior' });
+  }
+
+  it('a barra monta no produtor com os quatro destinos e o ativo aceso', () => {
+    renderAt('/eventos');
+    expect(within(barra()).getAllByRole('link')).toHaveLength(4);
+    expect(within(barra()).getByRole('link', { name: /^Eventos/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('o rótulo de cada destino fica no FLUXO — nada de quatro glifos mudos', () => {
+    renderAt('/');
+    for (const rotulo of ['Visão geral', 'Eventos', 'Clubs', 'CRM']) {
+      expect(within(barra()).getByText(rotulo)).toBeVisible();
+    }
+  });
+
+  it('clicar num item navega por SPA, sem recarregar o documento', async () => {
+    renderAt('/');
+    await userEvent.click(within(barra()).getByRole('link', { name: 'Clubs' }));
+    expect(screen.getByTestId('path')).toHaveTextContent('/clubes');
+  });
+
+  it('o hambúrguer SAIU do produtor — a navegação mobile é uma só', () => {
+    renderAt('/');
+    expect(screen.queryByRole('button', { name: 'Abrir menu de navegação' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('a plataforma NÃO ganha barra — lá o drawer fica (doze destinos)', () => {
+    renderAt('/plataforma/tenants');
+    expect(screen.queryByRole('navigation', { name: 'Navegação inferior' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Abrir menu de navegação' })).toBeInTheDocument();
+  });
+
+  it('a página reserva o espaço embaixo — nada fica atrás da barra', () => {
+    renderAt('/');
+    const rolagem = screen.getByTestId('path').parentElement;
+    expect(rolagem?.className).toContain('pb-[var(--bottomnav-space)]');
+    expect(rolagem?.className).toContain('lg:pb-0');
+  });
+
+  it('e não reserva onde a barra não existe — respiro sem barra é buraco', () => {
+    renderAt('/plataforma/tenants');
+    const rolagem = screen.getByTestId('path').parentElement;
+    expect(rolagem?.className).not.toContain('pb-[var(--bottomnav-space)]');
+  });
+});
+
+describe('RootShell · NAV-MOBILE: o perfil no topo direito', () => {
+  function gatilho(): HTMLElement {
+    return screen.getByRole('button', { name: 'Marina Castelo — menu do perfil' });
+  }
+
+  it('o gatilho existe no produtor, com nome acessível e aria-haspopup', () => {
+    renderAt('/');
+    expect(gatilho()).toHaveAttribute('aria-haspopup', 'menu');
+  });
+
+  it('e existe também na plataforma — sair não pode depender da superfície', () => {
+    renderAt('/plataforma/tenants');
+    expect(gatilho()).toHaveAttribute('aria-haspopup', 'menu');
+  });
+
+  // O ponto da lane: o popover é O QUE JÁ EXISTE. Mesmos itens, mesma ordem e o
+  // mesmo `menuLabel` do rodapé do rail (leva 16) — nenhuma lista foi copiada, e
+  // é por isso que o caso afirma a IDENTIDADE do conteúdo, não a existência de
+  // um menu qualquer.
+  it('abre o popover canônico com Configurações e Sair — Sair por ÚLTIMO', async () => {
+    renderAt('/');
+    await userEvent.click(gatilho());
+    const menu = screen.getByRole('menu', { name: 'Menu do perfil' });
+    const itens = within(menu).getAllByRole('menuitem');
+    expect(itens.map((i) => i.textContent?.trim())).toEqual(['Configurações', 'Sair']);
+  });
+
+  it('Configurações leva a /conta — o único caminho para a conta no mobile', async () => {
+    renderAt('/');
+    await userEvent.click(gatilho());
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Configurações' }));
+    expect(screen.getByTestId('path')).toHaveTextContent('/conta');
+  });
+
+  // A travessia é do MESMO objeto de ações do rodapé do rail — não uma segunda
+  // lista montada aqui. Se alguém copiar as ações em vez de reusá-las, este caso
+  // é o que cai: a regra 1 do alternador (só oferece a quem alcança os dois
+  // lados) mora num lugar só.
+  it('a travessia entra no popover do topo quando a conta alcança os dois lados', async () => {
+    cracha.atual = {
+      tenantId: 'castelo-producoes',
+      role: 'tenant_owner',
+      platformAdmin: true,
+    };
+    renderAt('/');
+    await userEvent.click(gatilho());
+    await waitFor(() =>
+      expect(screen.getByRole('menuitem', { name: 'Acessar painel master' })).toBeInTheDocument(),
+    );
   });
 });
