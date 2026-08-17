@@ -222,3 +222,25 @@ fileira de chips. Em 375 a quebra é o desenho certo e ele não cobra fileira ú
 | `9978a951` | as 6 telas que a peça converteu sozinha ganham teste da interação nova |
 | `8f5a30e0` | cânone §1.1, registro da leva 20, ADRs marcados, catraca 2 → 0 |
 | `e3c36e36` | o gate visual do filtro em lista, com o antes medido |
+| `697dc7a0` | `V1-KANBAN.md` volta a LF (o commit do card gravou CRLF no blob e o merge seguinte leu o arquivo como reescrito inteiro) |
+| `a94a6914` | card do kanban e este handoff |
+| `da02178b` | **merge `--no-ff` na `main`** |
+
+## Fechamento
+
+**Merge:** `da02178b`, `--no-ff` na `main`, empurrado. A `main` andou **três vezes** durante o
+fechamento (MODAL-LOTE + SPEC-LEVA22, depois ENG-INSIGHTS, depois NAV-MOBILE), então a `main` foi
+puxada para a branch e o smoke re-rodado do zero a cada volta.
+
+**Conflitos, todos em arquivo de registro e todos resolvidos por conteúdo, não por lado:**
+`01-decisoes-dono.md` ficou com a leva 20 e a leva 22 (soma, em ordem cronológica, frontmatter
+fundido); `V1-KANBAN.md` ficou com os cards da FILTROS-LISTA e da MODAL-LOTE, e no último merge
+cedeu a S046 para a versão da NAV-MOBILE, que a pagou — as três linhas de ponteiro que esta lane
+tinha escrito para as lanes vizinhas foram **apagadas em vez de duplicadas**, porque as lanes
+aterrissaram e os cards reais dizem mais do que o ponteiro.
+
+⚠️ **Resíduo declarado:** o worktree `C:\dev\leela-wt-filtroslista` foi **desregistrado do git**
+(`git worktree list` não o mostra mais) e apagado, menos por uma casca vazia em `apps/painel` que
+um processo de teste ainda segurava na hora do fechamento. Não matei processo de node à força:
+outras lanes rodam em paralelo nesta máquina e derrubar worker alheio é caro. Um `rmdir` depois que
+a máquina esvaziar fecha o resto.
