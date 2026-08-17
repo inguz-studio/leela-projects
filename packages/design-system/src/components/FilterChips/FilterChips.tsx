@@ -44,12 +44,19 @@
  * ZERO MOTOR PRÓPRIO. Nada aqui desenha popover ou lista: a peça compõe
  * `FilterMenu` e `Combobox` do barril.
  *
+ * A FACETA TEM LARGURA DE CONTEÚDO, e isso é contrato, não estilo. Ela vive
+ * ombro a ombro com a busca e com as outras facetas numa fileira só; qualquer
+ * largura elástica aqui empurra a vizinha para a linha de baixo. Ver a nota do
+ * `w-auto` na faceta exclusiva — foi exatamente assim que a barra de Membros
+ * nasceu com três fileiras no desktop.
+ *
  * AA: nenhum par novo — `FilterMenu` e `Combobox` já rodam na matriz de
  * contraste nos três temas, e o grupo não pinta nada.
  */
 
 import { FilterMenu } from '../FilterMenu';
 import { Combobox } from '../Combobox';
+import { cn } from '../../utils/cn';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -132,10 +139,42 @@ function FilterChips({
   // O `Combobox` devolve string em modo single. A opção vazia é o "Todos": ela
   // precisa de um valor real porque `value=""` no `Command` não é selecionável,
   // então o id do "tudo" é explícito e nunca escapa desta peça.
+  //
+  // ⛔ `w-auto` NÃO É COSMÉTICO, É O CONSERTO DE 2026-08-17 (lane FILTROS-FIX).
+  // O gatilho do `Combobox` nasce `w-full` porque a peça é, na origem, um CAMPO
+  // DE FORMULÁRIO: dentro de um `FieldGroup` ela ocupa a coluna inteira, e ali
+  // isso está certo. Numa barra de filtro está errado, e o modo como quebra não
+  // é óbvio: o contêiner de facetas da `FilterBar` é `flex-wrap` e tem largura
+  // por CONTEÚDO (shrink-to-fit), então `width:100%` resolve contra uma largura
+  // indefinida e cada faceta reivindica a linha toda. Duas facetas exclusivas
+  // viram duas FILEIRAS, uma embaixo da outra, ao lado da busca — foi o que o
+  // gate visual mediu em Membros, Desafios e Comunicados (3 fileiras, barra de
+  // 113px contra os 49px do hub de Eventos, que só usa `FilterMenu` e por isso
+  // escapou). Nenhum teste de unidade pega isso: o JSX é idêntico nas quatro
+  // telas e só a geometria em execução difere — a prova é o gate, não o DOM.
+  //
+  // O conserto mora AQUI, e não no `Combobox`: quem promete "faceta de filtro"
+  // é esta peça, e faceta de filtro tem largura de conteúdo, como o gatilho do
+  // `FilterMenu` ao lado dela. O `Combobox` continua `w-full` para quem o usa
+  // como campo. `cn` é tailwind-merge, então a classe do consumidor ainda vence
+  // a nossa se ele precisar de outra largura.
+  //
+  // ⛔ O NOME DA FACETA É TEXTO, e não `aria-label` — a outra metade do conserto
+  // de 2026-08-17. O handoff da conversão prometeu, com todas as letras, que
+  // *"o gatilho da lista mostra `Status: Todos`, em texto, para todo mundo"*, e
+  // a faceta EMPILHÁVEL cumpriu (o `FilterMenu` compõe `${label}: ${resumo}`).
+  // A exclusiva não: ela passava o nome em `aria-label` e desenhava só o valor,
+  // então Membros voltou a mostrar `Todos` colado em `Todos` — a queixa que a
+  // conversão inteira existia para matar, sobrevivendo dentro da conversão.
+  // O `aria-label` sai junto de propósito: com o nome no texto, ele passaria a
+  // ESCONDER o valor aplicado de quem usa leitor de tela ("Status" no lugar de
+  // "Status: Ativos") e ainda quebraria a 2.5.3 do WCAG, que pede que o nome
+  // acessível contenha o rótulo visível. Sem ele, o nome acessível é o próprio
+  // texto — exatamente como no `FilterMenu` ao lado.
   const ID_TUDO = '__todos__';
   return (
     <Combobox
-      aria-label={label}
+      triggerPrefix={label}
       placeholder={allLabel}
       disabled={disabled}
       value={selected[0] ?? ID_TUDO}
@@ -147,7 +186,7 @@ function FilterChips({
         { value: ID_TUDO, label: rotulo(allLabel, allCount) },
         ...options.map((o) => ({ value: o.id, label: rotulo(o.label, o.count) })),
       ]}
-      {...(className !== undefined ? { className } : {})}
+      className={cn('w-auto', className)}
     />
   );
 }
