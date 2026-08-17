@@ -7,15 +7,23 @@ import contract from './LLM.txt?raw';
 
 # FilterChips
 
-A faceta de UM filtro. A peça conta as opções e escolhe o desenho: fileira de `Chip` abaixo de quatro valores, `FilterMenu` (empilhável) ou `Combobox` (exclusiva) a partir de quatro. O limiar do cânone §1 fica fechado por construção — a tela não escolhe, e por isso não erra.
+A faceta de UM filtro de listagem, sempre em LISTA: `FilterMenu` quando é empilhável, `Combobox` quando é exclusiva. A tela não escolhe a forma, e por isso não erra.
 
 <Canvas of={Stories.Default} />
 
 <Controls />
 
-## O limiar
+## A contagem de opções não muda a forma
 
-<Canvas of={Stories.AcimaDoLimiar} />
+Até 16/08 esta peça CONTAVA as opções: abaixo de quatro desenhava uma fileira de `Chip`, de quatro em diante virava lista. O limiar morreu em 17/08, por decisão do dono (leva 20), e a razão foi medida: a fileira não mostra o NOME da faceta. Em Membros o organizador via `Todos · Ativos · Novos · Inativos · Todos · Owner · Admins · Membros` — dois "Todos" colados, sem nada dizendo onde acaba Status e começa Papel. O nome só existia no `aria-label`. O gatilho da lista o traz em texto.
+
+<Canvas of={Stories.QualquerContagem} />
+
+## O padrão inteiro: ao lado da pesquisa, numa fileira só
+
+O dono, na íntegra: *"eles devem ficar alinhados ao lado do pesquisador, assim como em DEsafios. Para padronizar."* A faceta é metade do padrão; a outra metade é a posição. Quem hospeda é a `FilterBar` — e o campo de busca vizinho não pode levar `w-full`, senão come a fileira e empurra as facetas para baixo.
+
+<Canvas of={Stories.AoLadoDaPesquisa} />
 
 ## Handoff para IA
 

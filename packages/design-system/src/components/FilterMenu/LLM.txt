@@ -10,12 +10,13 @@ verdict: APPROVE (showroom leela-build-2d6ee98d — refino filtros/subnav)
 import { FilterMenu, type FilterMenuProps, type FilterMenuOption } from '@leela/design-system'
 
 ## Quando usar
-Filtrar uma listagem/tabela por uma FACETA de 4+ valores em MULTI-seleção (marcar Ativos + Encerrados de uma vez). Limiar Polaris: <4 valores → Chips; 4+ → este dropdown. Compõe DropdownMenu + itens menuitemcheckbox; vazio = sem filtro ("Todos"); o gatilho resume a seleção ("Status: 2").
+Filtrar uma listagem/tabela por uma FACETA em MULTI-seleção (marcar Ativos + Encerrados de uma vez), com QUALQUER número de valores. O limiar Polaris de 4 valores governou esta peça até 16/08 e foi SUPERADO em 17/08 por decisão do dono: filtro de listagem é lista, sempre. Compõe DropdownMenu + itens menuitemcheckbox; vazio = sem filtro ("Todos"); o gatilho resume a seleção ("Status: 2").
+Na prática você raramente monta este componente direto: quem escolhe entre ele e o Combobox é a FilterChips, pelo `multiple`.
 
 ## Quando NÃO usar
-- Seleção ÚNICA exclusiva (radio-like): com 4+ valores use Select; com <4 use Chips/Radio.
-- Faceta de <4 valores: use Chip em fileira (o próprio limiar manda).
+- Seleção ÚNICA exclusiva (radio-like): use Combobox. Um menu de menuitemcheckbox anunciaria "marcado" onde a semântica é "selecionado".
 - Menu de AÇÕES (editar/excluir): use DropdownMenu direto (itens menuitem, fecham ao clicar).
+- Fileira de Chip como filtro primário: proibida desde 17/08 (leva 20).
 
 ## Props válidas
 - label: string   (obrigatório) — rótulo da faceta; aparece no gatilho e nomeia o menu.
@@ -24,7 +25,8 @@ Filtrar uma listagem/tabela por uma FACETA de 4+ valores em MULTI-seleção (mar
 - onChange: (next: string[]) => void   (obrigatório)
 - allLabel: string   (default: 'Todos')
 - align: 'left' | 'right'   (default: 'left')
-- className: string   (default: undefined)
+- disabled: boolean   (default: false) — desliga o gatilho; sem gatilho não há menu (ADR-020).
+- className: string   (default: undefined) — classe do PAINEL do menu, não do gatilho.
 Nenhuma outra prop existe.
 
 ## Comportamento
