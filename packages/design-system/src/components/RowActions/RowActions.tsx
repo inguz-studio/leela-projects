@@ -191,6 +191,13 @@ function RowActions({
     <TooltipProvider delayDuration={0}>
       <div
         data-row-actions=""
+        // `data-row-stop` é o que a `Table` procura em `isInteractiveTarget`
+        // para NÃO disparar `onRowClick`. Os ícones já são `<button>` e por isso
+        // já param o clique sozinhos — o que sobra é o VÃO entre eles: numa
+        // tabela com linha clicável, acertar 4px entre dois ícones abria o
+        // detalhe da linha em vez de nada. Marcar o invólucro fecha isso por
+        // construção, em vez de pedir a cada tela que lembre.
+        data-row-stop=""
         className={cn('inline-flex items-center justify-end gap-[var(--spacing-1)]', className)}
       >
         {visiveis.map((acao) => {

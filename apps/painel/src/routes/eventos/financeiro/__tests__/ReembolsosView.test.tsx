@@ -69,7 +69,10 @@ describe('ReembolsosView — join do nome do inscrito (R3)', () => {
     const user = userEvent.setup({ delay: null });
     const onDecidir = vi.fn();
     renderView({ nomeInscrito: () => 'Marina Souza', onDecidir });
-    await user.click(screen.getByRole('button', { name: 'Aprovar' }));
+    // Ação por ÍCONE (decisão do dono, 17/08): o nome acessível diz DE QUEM é o
+    // reembolso — numa fila, "Aprovar" sozinho não identifica a linha.
+    expect(screen.getByRole('button', { name: 'Recusar reembolso de Marina Souza' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Aprovar reembolso de Marina Souza' }));
     expect(onDecidir).toHaveBeenCalledWith(
       expect.objectContaining({ estado: 'em_analise' }),
       'aprovar',

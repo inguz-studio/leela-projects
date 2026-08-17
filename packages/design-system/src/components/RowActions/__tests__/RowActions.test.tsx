@@ -61,6 +61,21 @@ describe('RowActions — nome acessível', () => {
   });
 });
 
+describe('RowActions — convivência com linha clicável', () => {
+  /**
+   * Os ícones são `<button>` e já param o clique sozinhos. O que este teste
+   * guarda é o VÃO entre eles: numa tabela com `onRowClick`, acertar os poucos
+   * pixels entre dois ícones abria o detalhe da linha. A `Table` procura
+   * `[data-row-stop]` em `isInteractiveTarget`.
+   */
+  it('o invólucro carrega data-row-stop — o vão entre ícones não vaza para a linha', () => {
+    const { container } = render(<RowActions actions={[acao()]} />);
+    const inv = container.querySelector('[data-row-actions]');
+    expect(inv).toBeTruthy();
+    expect(inv?.hasAttribute('data-row-stop')).toBe(true);
+  });
+});
+
 describe('RowActions — vocabulário fechado', () => {
   it('o mesmo verbo desenha o MESMO ícone em instâncias diferentes', () => {
     const { container: a } = render(<RowActions actions={[acao({ label: 'Ver A' })]} />);

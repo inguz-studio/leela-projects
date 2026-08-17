@@ -8,7 +8,7 @@
 // quando não há reembolso/transferência (nunca dado fake).
 // =============================================================================
 
-import { Badge, Button, EmptyState, Skeleton, Table, type TableColumn } from '@leela/design-system';
+import { Badge, EmptyState, RowActions, Skeleton, Table, type TableColumn } from '@leela/design-system';
 import type { BadgeProps } from '@leela/design-system';
 import type { EstadoReembolso, Reembolso, Transferencia } from '@leela/core';
 import { formatDinheiro, formatDataHoraCurta } from '../_lib/format';
@@ -175,24 +175,28 @@ export function ReembolsosView({
             caption="Reembolsos do evento por estado"
             renderActions={(r) =>
               r.estado === 'em_analise' ? (
-                <div className="flex items-center gap-[var(--spacing-2)]">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={decidindo}
-                    onClick={() => onDecidir(r, 'aprovar')}
-                  >
-                    Aprovar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={decidindo}
-                    onClick={() => onDecidir(r, 'recusar')}
-                  >
-                    Recusar
-                  </Button>
-                </div>
+                // Ícone no lugar do escrito (decisão do dono, 17/08). O rótulo
+                // carrega DE QUEM é o reembolso: numa fila de decisão, "Aprovar"
+                // sozinho não diz o que se está aprovando.
+                <RowActions
+                  actions={[
+                    {
+                      id: 'aprovar',
+                      label: `Aprovar reembolso de ${rotuloInscrito(r.inscritoId)}`,
+                      verbo: 'aprovar',
+                      onClick: () => onDecidir(r, 'aprovar'),
+                      disabled: decidindo,
+                    },
+                    {
+                      id: 'recusar',
+                      label: `Recusar reembolso de ${rotuloInscrito(r.inscritoId)}`,
+                      verbo: 'recusar',
+                      onClick: () => onDecidir(r, 'recusar'),
+                      destructive: true,
+                      disabled: decidindo,
+                    },
+                  ]}
+                />
               ) : null
             }
           />

@@ -16,6 +16,7 @@ import {
   FilterBar,
   FilterChips,
   ResultCount,
+  RowActions,
   SearchInput,
   Skeleton,
   Table,
@@ -265,21 +266,30 @@ export function AfiliadosPage(): JSX.Element {
               data={filtrados}
               keyExtractor={(a) => a.refCodigo}
               caption="Afiliados do evento"
+              // Ícone, não escrito (decisão do dono de 17/08). O rótulo nomeia
+              // o AFILIADO da linha: numa lista de links rastreáveis, "Copiar
+              // link" sem dono é o erro que faz o organizador mandar o link do
+              // influenciador errado.
               renderActions={(a) => (
-                <div className="flex items-center gap-[var(--spacing-2)]">
-                  <Button variant="ghost" onClick={() => copiarLink(a)}>
-                    Copiar link
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setEmEdicao(a);
-                      setModalAberto(true);
-                    }}
-                  >
-                    Editar
-                  </Button>
-                </div>
+                <RowActions
+                  actions={[
+                    {
+                      id: 'copiar',
+                      label: `Copiar link de ${a.nome}`,
+                      verbo: 'copiar',
+                      onClick: () => copiarLink(a),
+                    },
+                    {
+                      id: 'editar',
+                      label: `Editar afiliado ${a.nome}`,
+                      verbo: 'editar',
+                      onClick: () => {
+                        setEmEdicao(a);
+                        setModalAberto(true);
+                      },
+                    },
+                  ]}
+                />
               )}
             />
           )}

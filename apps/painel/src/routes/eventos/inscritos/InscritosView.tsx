@@ -32,12 +32,14 @@ import {
   FilterBar,
   Pagination,
   ResultCount,
+  RowActions,
   SearchInput,
   Skeleton,
   Table,
   Tabs,
   useToast,
   type ComboboxOption,
+  type RowAction,
   type TableColumn,
 } from '@leela/design-system';
 import { INSCRITOS_PAGE_SIZE } from '@leela/api-client';
@@ -281,35 +283,33 @@ export function InscritosView({
         emptyTitle="Nenhum inscrito encontrado"
         emptyDescription="Ajuste a busca ou os filtros para ver resultados."
         onRowClick={setSelecionado}
-        renderActions={(r) => (
-          <span className="flex items-center gap-[var(--spacing-3)]">
-            {/* RN-397: QR SOB DEMANDA. A ação só existe para quem tem
-                ingresso emitido — oferecer "ver QR" sem token abriria um
-                modal vazio no meio do atendimento. `stopPropagation` porque
-                a linha inteira abre o slide-in. */}
-            {r.qrToken !== undefined && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setQrAberto(r);
-                }}
-                aria-label={`Ver QR do ingresso de ${r.atletaNome}`}
-                className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-brand)] hover:underline"
-              >
-                Ver QR
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setSelecionado(r)}
-              aria-label={`Ver detalhe de ${r.atletaNome}`}
-              className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-brand)] hover:underline"
-            >
-              Detalhe
-            </button>
-          </span>
-        )}
+        renderActions={(r) => {
+          // Ícone, não escrito (decisão do dono de 17/08): as DUAS ações desta
+          // linha são `ver` — o que as distingue é o RÓTULO, que nomeia o
+          // atleta. É ele que vira `aria-label` e dica, então o balcão nunca
+          // fica com dois olhos anônimos lado a lado.
+          const acoes: RowAction[] = [];
+          // RN-397: QR SOB DEMANDA. A ação só existe para quem tem ingresso
+          // emitido — oferecer "ver QR" sem token abriria um modal vazio no
+          // meio do atendimento. Clique em botão não dispara o `onRowClick`
+          // da Table (ela ignora alvos dentro de `button`), então abrir o QR
+          // segue SEM abrir o slide-in junto.
+          if (r.qrToken !== undefined) {
+            acoes.push({
+              id: 'qr',
+              label: `Ver QR do ingresso de ${r.atletaNome}`,
+              verbo: 'ver',
+              onClick: () => setQrAberto(r),
+            });
+          }
+          acoes.push({
+            id: 'detalhe',
+            label: `Ver detalhe de ${r.atletaNome}`,
+            verbo: 'ver',
+            onClick: () => setSelecionado(r),
+          });
+          return <RowActions actions={acoes} />;
+        }}
       />
     );
   }
