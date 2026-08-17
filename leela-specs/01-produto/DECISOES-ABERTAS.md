@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **6 itens abertos, contados à mão:** 4 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **7 itens abertos, contados à mão:** 5 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -56,6 +56,16 @@ Você cravou a barra flutuante inferior de quatro e o perfil no topo direito, e 
 - **O que fica com você:** confirmar quais quatro áreas ficam na barra, onde mora a quinta, e se o master pode continuar com o menu antigo.
 - **Opções:** **(a) Parcerias como bloco na Visão geral** (**default proposto** — é a área mais nova e a única cujo trabalho não é diário; a barra fica com quatro destinos de verdade) · **(b) o quarto slot vira "Mais"**, abrindo uma folha com CRM e Parcerias — mas aí a barra tem três destinos e um menu, o que contraria "quatro botões" · **(c) Parcerias volta para dentro de Clubs**, o que desfaz a D-1008-R17 de 15/08. Para o master: **manter o menu antigo lá** (**default**, doze destinos não cabem em quatro) ou forçar a mesma anatomia nas duas superfícies.
 - **Onde aterrissa:** `apps/painel/src/shell/sidebar.ts` (`ITENS_DA_BARRA_MOBILE`) — trocar a lista é uma linha. Supersede a D-1008-R5 no produtor, com a superação já escrita. Detalhe e balanço de pixel em `.nirvana/handoffs/leela-nav-mobile-20260817.md`.
+
+### EVT-CARGA · a dobra do evento repete o mesmo número várias vezes
+
+A medição de 17/08 achou "Inscritos" aparecendo 4× e a porcentagem de preenchimento 2× na primeira dobra da Visão geral do evento; em 375px isso empurra o primeiro número novo para 60px abaixo da dobra. A spec propõe três cortes na mesma tela, todos com default proposto; só a pill de inscritos da sub-nav não tem default meu — ela também é afordância de navegação, e a resposta vale para as 11 barras do painel (evento e clubes).
+
+- **Caso de uso:** o Castelo abre a Visão geral do evento no celular e o primeiro número que ele ainda não viu nasce atrás de quatro repetições do mesmo "120 inscritos".
+- **Job story:** quando eu abro o evento no celular, eu quero ver informação nova sem rolar, para não pagar pedágio por um número que já vi três vezes.
+- **O que fica com você:** aprovar os três cortes (header, countdown, painéis de modalidade) e decidir se a pill de inscritos fica ou sai da sub-nav.
+- **Opções:** **cortar os três** (**default proposto** — header larga inscritos e dias, countdown larga a porcentagem repetida no ministat, painéis de modalidade largam o trio e o total já mostrados no countdown) · para a pill: **manter** (o papel de afordância vira exceção nomeada na regra de casa única, vale para os clubes também) ou **cortar junto** (sub-nav fica só com rótulos, como as outras nove abas).
+- **Onde aterrissa:** `EventoShell.tsx`, `CountdownHero.tsx`, `ModalidadesPanels.tsx`, `_lib/subnav.ts`. Detalhe completo em `02-rodadas/2026-08-17-carga-cognitiva/03-spec-reordenacao.md` (Movimentos 1 a 4).
 
 ## Ações que só você pode executar
 
