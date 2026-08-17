@@ -34,12 +34,20 @@
 // falsificação mora no primeiro caso: a mesma sonda, com o aviso FECHADO,
 // acha os controles.
 //
-// O painel é montado INTEIRO (`App`) de propósito: oito dos nove controles são
-// da moldura (toggle + seis destinos do rail + o hambúrguer do Drawer mobile —
-// HIFI-REC trocou a Sidebar clássica pelo SidebarRail ≥ lg), que o `RootShell`
-// desenha ACIMA do gate. Um teste que montasse só o gate mediria um controle e
-// passaria verde com o menu de pé. A lista da review original (oito, por
-// textContent) está preservada acima como registro histórico da sonda DEF-R1.
+// O painel é montado INTEIRO (`App`) de propósito: onze dos doze controles são
+// da moldura (toggle + cinco destinos do rail + o gatilho do perfil no topo +
+// os quatro da barra flutuante inferior — HIFI-REC trocou a Sidebar clássica
+// pelo SidebarRail ≥ lg, e a leva 20 trocou o hambúrguer pela barra abaixo de
+// lg), que o `RootShell` desenha ACIMA do gate. Um teste que montasse só o gate
+// mediria um controle e passaria verde com o menu de pé. A lista da review
+// original (oito, por textContent) está preservada acima como registro
+// histórico da sonda DEF-R1.
+//
+// ⛔ A conta subiu de 9 para 12 na leva 20, e o número importa: a barra inferior
+// coexiste com o rail no MESMO documento (cada um atrás do seu breakpoint), e
+// isso significa que o véu passou a ter mais fundo para neutralizar, não menos.
+// O caso "com o aviso aberto, nenhum controle do fundo continua alcançável" é
+// quem prova que a barra nova entrou na subárvore inerte junto com o resto.
 // =============================================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -166,8 +174,25 @@ const CONTROLES_DO_FUNDO: readonly string[] = [
   // D-1008-R17: o slot que era de "Marcas" — mesmo nó, rótulo novo.
   'A:Parcerias',
   // Leva 15: 'A:Configurações' saiu do menu principal.
-  'BUTTON:Abrir menu de navegação',
+  //
+  // NAV-MOBILE (leva 20). Onde estava 'BUTTON:Abrir menu de navegação' — o
+  // hambúrguer do Drawer — agora está o gatilho do perfil, e esta linha é a
+  // prova nominal de que o hambúrguer saiu do DOM na superfície do produtor em
+  // vez de ficar escondido por CSS: a sonda mede DOM, não pixel, e ela não o
+  // acha mais. (Nesta conta em vitrine o botão não tem nome de pessoa, então o
+  // rótulo cai no genérico.)
+  'BUTTON:Menu do perfil',
   'BUTTON:Como receber o código Leela',
+  // Os QUATRO da barra flutuante inferior, e eles vêm DEPOIS do conteúdo de
+  // propósito: navegação de rodapé se alcança no fim da ordem de tabulação,
+  // depois do que a pessoa veio fazer. São os mesmos destinos do rail, e a
+  // duplicação de nome é real — os dois existem no mesmo documento, cada um
+  // atrás do seu breakpoint, e é por isso que os landmarks têm nomes distintos
+  // ('Navegação principal' × 'Navegação inferior').
+  'A:Visão geral',
+  'A:Eventos',
+  'A:Clubs',
+  'A:CRM',
 ];
 
 beforeEach(() => {
