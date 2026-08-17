@@ -2,10 +2,16 @@
 // InscritoSlideIn (presentational) — S203-T3. Testa comportamento do usuário:
 // máscara de PII + revelação, disclosure de saúde, abas no DOM, pagamento real
 // e EmptyStates honestos. Sem QueryClient (dados chegam por props).
+//
+// Desde a UI-ACOES-MOTION o painel é o `Drawer` do DS (cânone §8), então o que
+// se cobra aqui mudou de natureza em dois pontos: o diálogo vive num PORTAL
+// (`container` do render fica vazio sempre — a busca é por `role="dialog"`), e
+// o fechamento é ANIMADO (o nó sobrevive ao `inscrito=null` pelo tempo do token
+// de saída). O resto do arquivo continua cobrando comportamento de usuário.
 // =============================================================================
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Inscrito, Pagamento, Pedido } from '@leela/core';
 import type { PedidoEPagamentoDoInscrito } from '@leela/api-client';
@@ -72,8 +78,10 @@ function pagamentoCartao(): Pagamento {
   };
 }
 
-function renderSlide(over: Partial<Parameters<typeof InscritoSlideIn>[0]> = {}) {
-  const props: Parameters<typeof InscritoSlideIn>[0] = {
+function propsDoSlide(
+  over: Partial<Parameters<typeof InscritoSlideIn>[0]> = {},
+): Parameters<typeof InscritoSlideIn>[0] {
+  return {
     inscrito: inscritoComDados(),
     pedidoEPagamento: null,
     loadingPagamento: false,
@@ -82,7 +90,10 @@ function renderSlide(over: Partial<Parameters<typeof InscritoSlideIn>[0]> = {}) 
     agora: AGORA,
     ...over,
   };
-  return render(<InscritoSlideIn {...props} />);
+}
+
+function renderSlide(over: Partial<Parameters<typeof InscritoSlideIn>[0]> = {}) {
+  return render(<InscritoSlideIn {...propsDoSlide(over)} />);
 }
 
 describe('InscritoSlideIn — cabeçalho e abas', () => {
@@ -96,8 +107,110 @@ describe('InscritoSlideIn — cabeçalho e abas', () => {
   });
 
   it('null → não renderiza (painel fechado)', () => {
-    const { container } = renderSlide({ inscrito: null });
-    expect(container).toBeEmptyDOMElement();
+    // O `Drawer` monta num portal: `container` fica vazio aberto ou fechado, e
+    // cobrar isso não provava nada. O que prova é a ausência do diálogo.
+    renderSlide({ inscrito: null });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('o nome acessível NOMEIA o diálogo sem repetir o título visível', () => {
+    renderSlide();
+    // O `Drawer` publica o `title` num <h2> sr-only. Se ele fosse só o nome do
+    // atleta, "Marina Silva" estaria no DOM duas vezes — e quem navega por
+    // leitor de tela ouviria o mesmo texto sem saber que diálogo abriu.
+    expect(
+      screen.getByRole('dialog', { name: 'Detalhe do inscrito Marina Silva' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Marina Silva')).toHaveLength(1);
+  });
+});
+
+describe('InscritoSlideIn — vias de fechamento (comportamento do Drawer)', () => {
+  it('Esc fecha — sem listener local, é o useDialogBehavior do DS', async () => {
+    const onClose = vi.fn();
+    renderSlide({ onClose });
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('clique na cortina fecha', async () => {
+    const onClose = vi.fn();
+    renderSlide({ onClose });
+    await userEvent.click(screen.getByTestId('drawer-overlay'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('o botão Fechar continua fechando', async () => {
+    const onClose = vi.fn();
+    renderSlide({ onClose });
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('o foco entra no painel ao abrir (focus trap, não um focus() no título)', () => {
+    renderSlide();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Saída animada (UI-ACOES-MOTION · cânone §8)
+//
+// O painel hand-rolled sumia no mesmo tick em que o pai zerava o inscrito: as
+// classes de slide nunca rodaram um frame porque o nó já não existia. O que
+// estes casos prendem é o oposto disso — o nó SOBREVIVE ao fechamento, marcado
+// como `closed` e com o conteúdo ainda dentro, e só então sai do DOM.
+//
+// A duração aqui é sintética e plantada no token, como na suíte do DS: o teste
+// prova o mecanismo sem conhecer o ritmo do produto.
+// ---------------------------------------------------------------------------
+
+const SAIDA = 500;
+
+describe('InscritoSlideIn — o painel sai deslizando, não por corte', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    document.documentElement.style.setProperty('--motion-overlay-exit-duration', `${SAIDA}ms`);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document.documentElement.style.removeProperty('--motion-overlay-exit-duration');
+  });
+
+  it('fechar mantém o painel no DOM com data-state="closed" até a animação terminar', () => {
+    const props = propsDoSlide();
+    const { rerender } = render(<InscritoSlideIn {...props} />);
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-state', 'open');
+
+    // É assim que o pai fecha: `InscritosView` faz `setSelecionado(null)`.
+    rerender(<InscritoSlideIn {...props} inscrito={null} />);
+
+    const saindo = screen.getByRole('dialog');
+    expect(saindo).toHaveAttribute('data-state', 'closed');
+    // Volta pela borda por onde entrou — e a animação é gated por motion-safe.
+    expect(saindo.className).toContain('motion-safe:data-[state=closed]:slide-out-to-right');
+
+    act(() => {
+      vi.advanceTimersByTime(SAIDA - 1);
+    });
+    expect(screen.queryByRole('dialog')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('o conteúdo continua no painel durante a saída (não é uma caixa vazia deslizando)', () => {
+    const props = propsDoSlide();
+    const { rerender } = render(<InscritoSlideIn {...props} />);
+    rerender(<InscritoSlideIn {...props} inscrito={null} />);
+
+    const saindo = screen.getByRole('dialog');
+    expect(within(saindo).getByRole('heading', { name: 'Marina Silva' })).toBeInTheDocument();
+    expect(within(saindo).getByRole('tab', { name: 'Geral' })).toBeInTheDocument();
   });
 });
 

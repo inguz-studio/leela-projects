@@ -1,10 +1,18 @@
 // =============================================================================
 // InscritoSlideIn — painel deslizante RICO de detalhe do inscrito (S203-T3).
 //
-// Abre à direita ao clicar numa linha. Acessível (role=dialog, aria-modal,
-// foco no título, fecha por overlay / botão / Esc). PRESENTATIONAL: recebe o
-// inscrito (`[reg]`) e o join pedido→pagamento (`[pag]`) já resolvidos por
-// props — o fetch vive no container `InscritoSlideInConnected` (ADR-010).
+// Abre à direita ao clicar numa linha. O painel É o `Drawer` do DS (cânone §8,
+// "painel lateral"): até a UI-ACOES-MOTION isto aqui era uma cortina e um
+// `<aside role="dialog">` escritos à mão, com um listener de Esc próprio e um
+// `focus()` no título — sem portal, sem focus trap, sem trava de rolagem, sem
+// retorno de foco ao abridor e, o que o dono viu, sem animação nenhuma: o painel
+// aparecia e sumia por corte. O `Drawer` traz as seis coisas de uma vez, e a
+// sétima de graça: `usePresencaOverlay` segura o nó no DOM até o slide de volta
+// terminar, com o gate `prefers-reduced-motion` valendo no CSS e no JS.
+//
+// PRESENTATIONAL: recebe o inscrito (`[reg]`) e o join pedido→pagamento
+// (`[pag]`) já resolvidos por props — o fetch vive no container
+// `InscritoSlideInConnected` (ADR-010).
 //
 // 4 abas (§2.7): Geral `[reg]` + Pagamento `[pag]` com DADO REAL; Comunicação
 // `[com]` e Histórico `[hist]` dependem do módulo de comunicação (FABLE-G, não
@@ -29,6 +37,7 @@ import {
   Button,
   ConfirmModal,
   Divider,
+  Drawer,
   EmptyState,
   IconButton,
   SCROLL_Y_ONLY,
@@ -124,29 +133,40 @@ const STATUS_PAGAMENTO_LABEL: Record<StatusPagamento, string> = {
   cancelado: 'Cancelado',
 };
 
-export function InscritoSlideIn({
-  inscrito,
-  pedidoEPagamento,
-  loadingPagamento,
-  erroPagamento,
-  onClose,
-  onEstornar,
-  estornando = false,
-  agora = new Date(),
-}: InscritoSlideInProps): JSX.Element | null {
-  const tituloRef = React.useRef<HTMLHeadingElement>(null);
+/** O que o painel precisa para se desenhar — retido durante a saída animada. */
+interface ConteudoDoPainel {
+  inscrito: Inscrito;
+  pedidoEPagamento: PedidoEPagamentoDoInscrito | null;
+  loadingPagamento: boolean;
+  erroPagamento: Error | null;
+}
 
-  React.useEffect(() => {
-    if (!inscrito) return;
-    tituloRef.current?.focus();
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose();
+export function InscritoSlideIn(props: InscritoSlideInProps): JSX.Element | null {
+  const { onClose, onEstornar, estornando = false, agora = new Date() } = props;
+
+  // O painel sai DESLIZANDO, e deslizar leva tempo. O pai fecha do único jeito
+  // que ele sabe — zera o inscrito (`setSelecionado(null)`) —, e nesse instante
+  // o `Drawer` ainda segura o nó no DOM pelo tempo do token de saída. Sem reter
+  // o último conteúdo, o que desliza para fora nesses milissegundos é um painel
+  // vazio (ou, na aba Pagamento, o EmptyState de "sem pedido"), que denuncia o
+  // corte no lugar de escondê-lo. O que fica retido não é dado novo: é a mesma
+  // inscrição que a lista do pai e o cache da query já mantêm em memória.
+  const ultimoConteudo = React.useRef<ConteudoDoPainel | null>(null);
+  if (props.inscrito) {
+    ultimoConteudo.current = {
+      inscrito: props.inscrito,
+      pedidoEPagamento: props.pedidoEPagamento,
+      loadingPagamento: props.loadingPagamento,
+      erroPagamento: props.erroPagamento,
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [inscrito, onClose]);
+  }
 
-  if (!inscrito) return null;
+  const conteudo = ultimoConteudo.current;
+  // Nunca houve inscrito em foco: nada a montar, nem para sair.
+  if (conteudo === null) return null;
+
+  const { inscrito, pedidoEPagamento, loadingPagamento, erroPagamento } = conteudo;
+  const aberto = props.inscrito !== null;
 
   const status = statusInscritoBadge(inscrito.status);
 
@@ -193,52 +213,47 @@ export function InscritoSlideIn({
   ];
 
   return (
-    <>
-      <button
-        type="button"
-        aria-label="Fechar detalhe"
-        onClick={onClose}
-        className="fixed inset-0 z-40 bg-[var(--modal-overlay-bg)] backdrop-blur-[var(--modal-overlay-blur)]"
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="inscrito-slidein-titulo"
-        // Painel lateral: rola só na vertical. O eixo x era `visible` e o CSS o
-        // promovia a `auto` (CSS Overflow 3 §3.1), então em tela estreita o
-        // `max-w-[calc(100vw-…)]` fazia nascer uma barra horizontal ao lado da
-        // vertical. Regra e constantes no DS: utils/scroll.
-        className={`fixed right-0 top-0 z-50 flex h-full w-[var(--modal-width-md)] max-w-[calc(100vw-var(--spacing-8))] flex-col gap-[var(--spacing-5)] bg-[var(--surface-raised)] p-[var(--spacing-6)] shadow-[var(--elevation-3)] ${SCROLL_Y_ONLY}`}
-      >
-        <div className="flex items-start justify-between gap-[var(--spacing-4)]">
-          <div className="flex items-center gap-[var(--spacing-3)]">
-            <Avatar size="md" name={inscrito.atletaNome} />
-            <div className="flex flex-col gap-[var(--spacing-1)]">
-              <h2
-                ref={tituloRef}
-                id="inscrito-slidein-titulo"
-                tabIndex={-1}
-                className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)] focus:outline-none"
-              >
-                {inscrito.atletaNome}
-              </h2>
-              <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-                {inscrito.modalidade || 'Modalidade não definida'}
-              </span>
-            </div>
+    <Drawer
+      open={aberto}
+      onOpenChange={(estaAberto) => {
+        if (!estaAberto) onClose();
+      }}
+      // O `Drawer` publica este texto como nome acessível num `<h2>` sr-only. Ele
+      // NOMEIA o painel; o nome do atleta continua visível logo abaixo, no
+      // cabeçalho. Repetir "Marina Silva" nos dois lugares deixaria o leitor de
+      // tela anunciando o mesmo texto duas vezes e não diria de que diálogo se
+      // trata — que é justamente o trabalho do nome acessível.
+      title={`Detalhe do inscrito ${inscrito.atletaNome}`}
+      side="right"
+      // Painel lateral: rola só na vertical. O eixo x era `visible` e o CSS o
+      // promovia a `auto` (CSS Overflow 3 §3.1), então em tela estreita nascia
+      // uma barra horizontal ao lado da vertical. Regra e constantes no DS:
+      // utils/scroll.
+      className={`w-[var(--modal-width-md)] gap-[var(--spacing-5)] p-[var(--spacing-6)] ${SCROLL_Y_ONLY}`}
+    >
+      <div className="flex items-start justify-between gap-[var(--spacing-4)]">
+        <div className="flex items-center gap-[var(--spacing-3)]">
+          <Avatar size="md" name={inscrito.atletaNome} />
+          <div className="flex flex-col gap-[var(--spacing-1)]">
+            <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+              {inscrito.atletaNome}
+            </h2>
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+              {inscrito.modalidade || 'Modalidade não definida'}
+            </span>
           </div>
-          <Badge variant={status.variant}>{status.label}</Badge>
         </div>
+        <Badge variant={status.variant}>{status.label}</Badge>
+      </div>
 
-        <Tabs tabs={tabs} aria-label="Seções do detalhe do inscrito" />
+      <Tabs tabs={tabs} aria-label="Seções do detalhe do inscrito" />
 
-        <div className="mt-auto pt-[var(--spacing-2)]">
-          <Button variant="secondary" onClick={onClose}>
-            Fechar
-          </Button>
-        </div>
-      </aside>
-    </>
+      <div className="mt-auto pt-[var(--spacing-2)]">
+        <Button variant="secondary" onClick={onClose}>
+          Fechar
+        </Button>
+      </div>
+    </Drawer>
   );
 }
 
