@@ -1,0 +1,1208 @@
+[
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 99
+    },
+    "buscaW": 448,
+    "fileiras": 2,
+    "ys": [
+      416,
+      466,
+      466
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Novos",
+          "Inativos"
+        ],
+        "box": {
+          "x": 128,
+          "y": 466,
+          "w": 291,
+          "h": 32
+        }
+      },
+      {
+        "label": "Papel",
+        "chips": [
+          "Todos",
+          "Owner",
+          "Admins",
+          "Membros"
+        ],
+        "box": {
+          "x": 435,
+          "y": 466,
+          "w": 310,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 55
+    },
+    "buscaW": 320,
+    "fileiras": 1,
+    "ys": [
+      416,
+      419,
+      419
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Rascunhos",
+          "Encerrados"
+        ],
+        "box": {
+          "x": 460,
+          "y": 419,
+          "w": 346,
+          "h": 32
+        }
+      },
+      {
+        "label": "Modelo",
+        "chips": [
+          "Modelo A",
+          "Modelo B",
+          "Modelo C"
+        ],
+        "box": {
+          "x": 822,
+          "y": 419,
+          "w": 266,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 99
+    },
+    "buscaW": 320,
+    "fileiras": 2,
+    "ys": [
+      416,
+      466,
+      466,
+      466
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Enviados",
+          "Agendados",
+          "Rascunhos"
+        ],
+        "box": {
+          "x": 128,
+          "y": 466,
+          "w": 363,
+          "h": 32
+        }
+      },
+      {
+        "label": "Canal",
+        "chips": [
+          "Push",
+          "Email"
+        ],
+        "box": {
+          "x": 507,
+          "y": 466,
+          "w": 125,
+          "h": 32
+        }
+      },
+      {
+        "label": "Origem",
+        "chips": [
+          "Todos",
+          "Manual",
+          "Automatizada"
+        ],
+        "box": {
+          "x": 648,
+          "y": 466,
+          "w": 264,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 348,
+      "w": 1288,
+      "h": 49
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      348
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 128,
+          "y": 348,
+          "w": 138,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 642,
+      "w": 720,
+      "h": 129
+    },
+    "buscaW": 448,
+    "fileiras": 2,
+    "ys": [
+      642,
+      691,
+      691
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Novos",
+          "Inativos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 691,
+          "w": 291,
+          "h": 32
+        }
+      },
+      {
+        "label": "Papel",
+        "chips": [
+          "Todos",
+          "Owner",
+          "Admins",
+          "Membros"
+        ],
+        "box": {
+          "x": 331,
+          "y": 691,
+          "w": 310,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 129
+    },
+    "buscaW": 320,
+    "fileiras": 2,
+    "ys": [
+      620,
+      669,
+      669
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Rascunhos",
+          "Encerrados"
+        ],
+        "box": {
+          "x": 24,
+          "y": 669,
+          "w": 346,
+          "h": 32
+        }
+      },
+      {
+        "label": "Modelo",
+        "chips": [
+          "Modelo A",
+          "Modelo B",
+          "Modelo C"
+        ],
+        "box": {
+          "x": 386,
+          "y": 669,
+          "w": 266,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 177
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      620,
+      669,
+      669,
+      717
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Enviados",
+          "Agendados",
+          "Rascunhos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 669,
+          "w": 363,
+          "h": 32
+        }
+      },
+      {
+        "label": "Canal",
+        "chips": [
+          "Push",
+          "Email"
+        ],
+        "box": {
+          "x": 403,
+          "y": 669,
+          "w": 125,
+          "h": 32
+        }
+      },
+      {
+        "label": "Origem",
+        "chips": [
+          "Todos",
+          "Manual",
+          "Automatizada"
+        ],
+        "box": {
+          "x": 24,
+          "y": 717,
+          "w": 264,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 452,
+      "w": 720,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      452
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 452,
+          "w": 138,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 777,
+      "w": 327,
+      "h": 177
+    },
+    "buscaW": 327,
+    "fileiras": 3,
+    "ys": [
+      777,
+      827,
+      875
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Novos",
+          "Inativos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 827,
+          "w": 291,
+          "h": 32
+        }
+      },
+      {
+        "label": "Papel",
+        "chips": [
+          "Todos",
+          "Owner",
+          "Admins",
+          "Membros"
+        ],
+        "box": {
+          "x": 24,
+          "y": 875,
+          "w": 310,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 737,
+      "w": 327,
+      "h": 217
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      737,
+      787,
+      875
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Rascunhos",
+          "Encerrados"
+        ],
+        "box": {
+          "x": 24,
+          "y": 787,
+          "w": 327,
+          "h": 72
+        }
+      },
+      {
+        "label": "Modelo",
+        "chips": [
+          "Modelo A",
+          "Modelo B",
+          "Modelo C"
+        ],
+        "box": {
+          "x": 24,
+          "y": 875,
+          "w": 266,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 755,
+      "w": 327,
+      "h": 265
+    },
+    "buscaW": 320,
+    "fileiras": 4,
+    "ys": [
+      755,
+      805,
+      893,
+      941
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Enviados",
+          "Agendados",
+          "Rascunhos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 805,
+          "w": 327,
+          "h": 72
+        }
+      },
+      {
+        "label": "Canal",
+        "chips": [
+          "Push",
+          "Email"
+        ],
+        "box": {
+          "x": 24,
+          "y": 893,
+          "w": 125,
+          "h": 32
+        }
+      },
+      {
+        "label": "Origem",
+        "chips": [
+          "Todos",
+          "Manual",
+          "Automatizada"
+        ],
+        "box": {
+          "x": 24,
+          "y": 941,
+          "w": 264,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 576,
+      "w": 327,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      576
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 576,
+          "w": 138,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 99
+    },
+    "buscaW": 448,
+    "fileiras": 2,
+    "ys": [
+      416,
+      466,
+      466
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Novos",
+          "Inativos"
+        ],
+        "box": {
+          "x": 128,
+          "y": 466,
+          "w": 283,
+          "h": 32
+        }
+      },
+      {
+        "label": "Papel",
+        "chips": [
+          "Todos",
+          "Owner",
+          "Admins",
+          "Membros"
+        ],
+        "box": {
+          "x": 427,
+          "y": 466,
+          "w": 304,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 55
+    },
+    "buscaW": 320,
+    "fileiras": 1,
+    "ys": [
+      416,
+      419,
+      419
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Rascunhos",
+          "Encerrados"
+        ],
+        "box": {
+          "x": 460,
+          "y": 419,
+          "w": 337,
+          "h": 32
+        }
+      },
+      {
+        "label": "Modelo",
+        "chips": [
+          "Modelo A",
+          "Modelo B",
+          "Modelo C"
+        ],
+        "box": {
+          "x": 813,
+          "y": 419,
+          "w": 265,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 55
+    },
+    "buscaW": 320,
+    "fileiras": 1,
+    "ys": [
+      416,
+      419,
+      419,
+      419
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Enviados",
+          "Agendados",
+          "Rascunhos"
+        ],
+        "box": {
+          "x": 460,
+          "y": 419,
+          "w": 356,
+          "h": 32
+        }
+      },
+      {
+        "label": "Canal",
+        "chips": [
+          "Push",
+          "Email"
+        ],
+        "box": {
+          "x": 832,
+          "y": 419,
+          "w": 123,
+          "h": 32
+        }
+      },
+      {
+        "label": "Origem",
+        "chips": [
+          "Todos",
+          "Manual",
+          "Automatizada"
+        ],
+        "box": {
+          "x": 971,
+          "y": 419,
+          "w": 257,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 348,
+      "w": 1288,
+      "h": 49
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      348
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 128,
+          "y": 348,
+          "w": 137,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 642,
+      "w": 720,
+      "h": 129
+    },
+    "buscaW": 448,
+    "fileiras": 2,
+    "ys": [
+      642,
+      691,
+      691
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Novos",
+          "Inativos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 691,
+          "w": 283,
+          "h": 32
+        }
+      },
+      {
+        "label": "Papel",
+        "chips": [
+          "Todos",
+          "Owner",
+          "Admins",
+          "Membros"
+        ],
+        "box": {
+          "x": 323,
+          "y": 691,
+          "w": 304,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 129
+    },
+    "buscaW": 320,
+    "fileiras": 2,
+    "ys": [
+      620,
+      669,
+      669
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Rascunhos",
+          "Encerrados"
+        ],
+        "box": {
+          "x": 24,
+          "y": 669,
+          "w": 337,
+          "h": 32
+        }
+      },
+      {
+        "label": "Modelo",
+        "chips": [
+          "Modelo A",
+          "Modelo B",
+          "Modelo C"
+        ],
+        "box": {
+          "x": 377,
+          "y": 669,
+          "w": 265,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 177
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      620,
+      669,
+      669,
+      717
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Enviados",
+          "Agendados",
+          "Rascunhos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 669,
+          "w": 356,
+          "h": 32
+        }
+      },
+      {
+        "label": "Canal",
+        "chips": [
+          "Push",
+          "Email"
+        ],
+        "box": {
+          "x": 396,
+          "y": 669,
+          "w": 123,
+          "h": 32
+        }
+      },
+      {
+        "label": "Origem",
+        "chips": [
+          "Todos",
+          "Manual",
+          "Automatizada"
+        ],
+        "box": {
+          "x": 24,
+          "y": 717,
+          "w": 257,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 452,
+      "w": 720,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      452
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 452,
+          "w": 137,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 777,
+      "w": 327,
+      "h": 177
+    },
+    "buscaW": 327,
+    "fileiras": 3,
+    "ys": [
+      777,
+      827,
+      875
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Novos",
+          "Inativos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 827,
+          "w": 283,
+          "h": 32
+        }
+      },
+      {
+        "label": "Papel",
+        "chips": [
+          "Todos",
+          "Owner",
+          "Admins",
+          "Membros"
+        ],
+        "box": {
+          "x": 24,
+          "y": 875,
+          "w": 304,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 737,
+      "w": 327,
+      "h": 217
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      737,
+      787,
+      875
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Ativos",
+          "Rascunhos",
+          "Encerrados"
+        ],
+        "box": {
+          "x": 24,
+          "y": 787,
+          "w": 327,
+          "h": 72
+        }
+      },
+      {
+        "label": "Modelo",
+        "chips": [
+          "Modelo A",
+          "Modelo B",
+          "Modelo C"
+        ],
+        "box": {
+          "x": 24,
+          "y": 875,
+          "w": 265,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 755,
+      "w": 327,
+      "h": 265
+    },
+    "buscaW": 320,
+    "fileiras": 4,
+    "ys": [
+      755,
+      805,
+      893,
+      941
+    ],
+    "facetasEmFileiraDeChip": [
+      {
+        "label": "Status",
+        "chips": [
+          "Todos",
+          "Enviados",
+          "Agendados",
+          "Rascunhos"
+        ],
+        "box": {
+          "x": 24,
+          "y": 805,
+          "w": 327,
+          "h": 72
+        }
+      },
+      {
+        "label": "Canal",
+        "chips": [
+          "Push",
+          "Email"
+        ],
+        "box": {
+          "x": 24,
+          "y": 893,
+          "w": 123,
+          "h": 32
+        }
+      },
+      {
+        "label": "Origem",
+        "chips": [
+          "Todos",
+          "Manual",
+          "Automatizada"
+        ],
+        "box": {
+          "x": 24,
+          "y": 941,
+          "w": 257,
+          "h": 32
+        }
+      }
+    ],
+    "facetasEmLista": []
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 554,
+      "w": 327,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      554
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 554,
+          "w": 137,
+          "h": 32
+        }
+      }
+    ]
+  }
+]
