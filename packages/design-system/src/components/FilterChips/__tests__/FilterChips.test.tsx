@@ -1,19 +1,29 @@
 // =============================================================================
-// FilterChips — a faceta de um filtro, com o limiar do cânone §1 fechado por
-// construção.
+// FilterChips — a faceta de um filtro de listagem. Sempre LISTA.
 //
-// O que este arquivo trava, e cada bloco existe por um fato medido no
-// inventário de 2026-08-12 (§4.1):
+// ⛔ ESTE ARQUIVO MUDOU DE CONTRATO EM 2026-08-17 (leva 20, lane FILTROS-LISTA).
+// Até 16/08 ele travava o LIMIAR: três valores desenhavam fileira de chips,
+// quatro viravam menu, e havia teste falsificando os dois lados do corte. O
+// dono decidiu que filtro de listagem é lista em qualquer contagem, então o
+// corte não existe mais e os testes dele foram REESCRITOS, não removidos em
+// silêncio — o que era "com 3 valores desenha a fileira" virou "com 3 valores
+// desenha a lista igual", que é a mesma pergunta com a resposta nova.
 //
-//   - o LIMIAR. Doze facetas viraram fileira sem que ninguém contasse os
-//     valores, porque não havia contra o quê reprovar. Aqui a contagem é da
-//     peça, e o teste falsifica os dois lados do corte.
-//   - o CHIP DE "TODOS". Oito das doze o tinham, quatro não. A peça decide, e
-//     a decisão é diferente por modo — o teste prova as duas.
-//   - a COMPOSIÇÃO. A peça não pode desenhar chip nem popover próprio: a
-//     prova é por IDENTIDADE DE ASSINATURA contra o `Chip` renderizado
-//     sozinho, o mesmo desenho de prova que a Onda 0 usou no `ConfirmModal`.
-//     Reinlinar o motor quebra o teste.
+// O que este arquivo trava agora:
+//
+//   - A FORMA NÃO DEPENDE DA CONTAGEM. É o coração da decisão: três e quatro
+//     valores produzem a mesma anatomia. Um teste por contagem, para que
+//     reintroduzir o limiar quebre aqui e não em produção.
+//   - O NOME DA FACETA É VISÍVEL. É o motivo MEDIDO da troca: a fileira só
+//     nomeava a faceta no `aria-label`, e Membros mostrava dois "Todos" colados
+//     sem dizer qual era Status e qual era Papel. O gatilho da lista carrega o
+//     nome em texto.
+//   - QUAL LISTA. `multiple` é `FilterMenu` (menuitemcheckbox), exclusiva é
+//     `Combobox` — usar o menu de checkbox para escolha exclusiva anunciaria
+//     "marcado" onde a semântica é "selecionado".
+//   - O `disabled`, que o ADR-020 nomeou como condição de reabertura e que
+//     esta lane pagou.
+//   - A COMPOSIÇÃO: a peça não desenha popover nem lista próprios.
 // =============================================================================
 
 import * as React from 'react';
@@ -21,7 +31,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FilterChips, type FilterChipsOption } from '../FilterChips';
-import { Chip } from '../../Chip';
 
 const TRES: FilterChipsOption[] = [
   { id: 'rascunho', label: 'Rascunho' },
@@ -43,11 +52,12 @@ function Controlada({
   onChangeSpy?: (next: string[]) => void;
   allLabel?: string;
   allCount?: number;
+  disabled?: boolean;
 }) {
   const [selected, setSelected] = React.useState<string[]>([]);
   return (
     <FilterChips
-      label="Filtrar por status"
+      label="Status"
       options={options}
       multiple={multiple}
       selected={selected}
@@ -60,121 +70,105 @@ function Controlada({
   );
 }
 
-describe('FilterChips · abaixo do limiar (a fileira)', () => {
-  it('agrupa a faceta com o rótulo que o leitor de tela ouve', () => {
-    render(<Controlada />);
-    expect(screen.getByRole('group', { name: 'Filtrar por status' })).toBeInTheDocument();
+describe('FilterChips · a forma não depende da contagem', () => {
+  // O teste que substitui o antigo "com 3 valores desenha a fileira". A fileira
+  // de chips era reconhecível pelo `role="group"`; nenhuma contagem a produz
+  // mais.
+  it('com 3 valores, faceta exclusiva é lista — nunca fileira de chips', () => {
+    render(<Controlada options={TRES} />);
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Status' })).toBeInTheDocument();
   });
 
-  it('mostra uma opção por valor, e nenhuma some atrás de gatilho', () => {
-    render(<Controlada />);
-    const grupo = screen.getByRole('group');
-    for (const o of TRES) {
-      expect(within(grupo).getByRole('button', { name: o.label })).toBeInTheDocument();
-    }
+  it('com 3 valores, faceta empilhável é lista — nunca fileira de chips', () => {
+    render(<Controlada options={TRES} multiple />);
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(screen.getByRole('button', { name: /Status: Todos/ })).toBeInTheDocument();
   });
 
-  // A faceta exclusiva SEMPRE tem por onde sair. Quatro das doze medidas só
-  // destravavam clicando de novo no chip ativo — afordância que nada na tela
-  // anuncia.
-  it('faceta exclusiva traz o chip de "Todos", ativo quando nada está aplicado', () => {
-    render(<Controlada />);
-    expect(screen.getByRole('button', { name: 'Todos' })).toHaveAttribute('aria-pressed', 'true');
+  it('três e quatro valores produzem a MESMA anatomia (exclusiva)', () => {
+    const { unmount } = render(<Controlada options={TRES} />);
+    const comTres = screen.getByRole('button', { name: 'Status' }).className;
+    unmount();
+
+    render(<Controlada options={QUATRO} />);
+    expect(screen.getByRole('button', { name: 'Status' }).className).toBe(comTres);
   });
 
-  it('faceta empilhável NÃO traz o chip de "Todos" — vazio já é o estado tudo', () => {
+  it('três e quatro valores produzem a MESMA anatomia (empilhável)', () => {
+    const { unmount } = render(<Controlada options={TRES} multiple />);
+    const comTres = screen.getByRole('button', { name: /Status: Todos/ }).className;
+    unmount();
+
+    render(<Controlada options={QUATRO} multiple />);
+    expect(screen.getByRole('button', { name: /Status: Todos/ }).className).toBe(comTres);
+  });
+
+  // Uma opção só continua sendo lista. O limiar antigo teria desenhado um chip
+  // solto; este caso existe para que ninguém reintroduza um corte "pequeno".
+  it('com 1 valor ainda é lista', () => {
+    render(<Controlada options={[TRES[0]!]} multiple />);
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(screen.getByRole('button', { name: /Status: Todos/ })).toBeInTheDocument();
+  });
+});
+
+describe('FilterChips · o nome da faceta é visível', () => {
+  // O fato medido em 17/08: na fileira, Membros mostrava
+  // `Todos · Ativos · Novos · Inativos · Todos · Owner · Admins · Membros` —
+  // dois "Todos" colados, sem nada dizendo onde acaba uma faceta e começa a
+  // outra. O nome existia só no `aria-label`. Aqui ele é TEXTO.
+  it('empilhável: o gatilho mostra o nome da faceta e o que está aplicado', () => {
     render(<Controlada multiple />);
-    expect(screen.queryByRole('button', { name: 'Todos' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Status: Todos/ })).toHaveTextContent('Status: Todos');
   });
 
-  it('exclusiva: escolher troca o recorte inteiro', async () => {
-    const spy = vi.fn();
-    render(<Controlada onChangeSpy={spy} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Rascunho' }));
-    expect(spy).toHaveBeenCalledWith(['rascunho']);
-    await userEvent.click(screen.getByRole('button', { name: 'Enviado' }));
-    expect(spy).toHaveBeenLastCalledWith(['enviado']);
+  it('exclusiva: o gatilho mostra o nome como nome acessível e o valor como texto', () => {
+    render(<Controlada />);
+    const gatilho = screen.getByRole('button', { name: 'Status' });
+    expect(gatilho).toHaveTextContent('Todos');
   });
 
-  it('exclusiva: "Todos" limpa a seleção', async () => {
-    const spy = vi.fn();
-    render(<Controlada onChangeSpy={spy} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Agendado' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Todos' }));
-    expect(spy).toHaveBeenLastCalledWith([]);
+  it('empilhável: o gatilho resume quantos recortes estão aplicados', async () => {
+    render(<Controlada multiple />);
+    const gatilho = screen.getByRole('button', { name: /Status: Todos/ });
+    await userEvent.click(gatilho);
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: /Rascunho/ }));
+    expect(screen.getByRole('button', { name: /Status: 1/ })).toBeInTheDocument();
+  });
+});
+
+describe('FilterChips · qual lista, e o que ela devolve', () => {
+  it('empilhável abre um FilterMenu de menuitemcheckbox', async () => {
+    render(<Controlada options={QUATRO} multiple />);
+    await userEvent.click(screen.getByRole('button', { name: /Status: Todos/ }));
+    const menu = screen.getByRole('menu', { name: 'Status' });
+    expect(within(menu).getAllByRole('menuitemcheckbox')).toHaveLength(4);
   });
 
   it('empilhável: marca e desmarca cada valor sem tocar nos vizinhos', async () => {
     const spy = vi.fn();
     render(<Controlada multiple onChangeSpy={spy} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Rascunho' }));
+    const gatilho = () => screen.getByRole('button', { name: /Status:/ });
+    await userEvent.click(gatilho());
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: /Rascunho/ }));
     expect(spy).toHaveBeenLastCalledWith(['rascunho']);
-    await userEvent.click(screen.getByRole('button', { name: 'Enviado' }));
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: /Enviado/ }));
     expect(spy).toHaveBeenLastCalledWith(['rascunho', 'enviado']);
-    await userEvent.click(screen.getByRole('button', { name: 'Rascunho' }));
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: /Rascunho/ }));
     expect(spy).toHaveBeenLastCalledWith(['enviado']);
   });
 
-  it('formata a contagem numa grafia só — "Rascunho · 12"', () => {
-    render(
-      <Controlada
-        options={[{ id: 'rascunho', label: 'Rascunho', count: 12 }]}
-        allCount={64}
-      />,
-    );
-    expect(screen.getByRole('button', { name: 'Rascunho · 12' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Todos · 64' })).toBeInTheDocument();
-  });
-
-  it('aceita className no grupo', () => {
-    render(
-      <FilterChips
-        label="Faceta"
-        options={TRES}
-        selected={[]}
-        onChange={() => {}}
-        className="teste-faceta"
-      />,
-    );
-    expect(screen.getByRole('group')).toHaveClass('teste-faceta');
-  });
-});
-
-describe('FilterChips · o limiar do cânone §1', () => {
-  // Três valores é fileira; quatro é menu. O corte é o do cânone e ele fica
-  // AQUI, não na tela — um script não sabe quantos valores a faceta tem em
-  // execução, e foi por isso que doze passaram batido.
-  it('com 3 valores desenha a fileira', () => {
-    render(<Controlada options={TRES} multiple />);
-    expect(screen.getByRole('group', { name: 'Filtrar por status' })).toBeInTheDocument();
-  });
-
-  it('com 4 valores e faceta empilhável troca para o FilterMenu', async () => {
-    render(<Controlada options={QUATRO} multiple />);
-    expect(screen.queryByRole('group')).toBeNull();
-    const gatilho = screen.getByRole('button', { name: /Filtrar por status: Todos/ });
-    await userEvent.click(gatilho);
-    const menu = screen.getByRole('menu', { name: 'Filtrar por status' });
-    expect(within(menu).getAllByRole('menuitemcheckbox')).toHaveLength(4);
-  });
-
-  // Escolha exclusiva com 4+ valores é `Combobox`, e a régua não é minha: está
-  // escrita no cabeçalho do próprio `FilterMenu`. Um menu de
-  // `menuitemcheckbox` anunciaria "marcado" onde a semântica é "selecionado".
-  it('com 4 valores e faceta exclusiva troca para o Combobox', async () => {
+  it('exclusiva abre o Combobox do DS, não a caixa do sistema operacional', async () => {
     render(<Controlada options={QUATRO} />);
-    expect(screen.queryByRole('group')).toBeNull();
-    const gatilho = screen.getByRole('button', { name: 'Filtrar por status' });
-    expect(gatilho).toHaveTextContent('Todos');
-    await userEvent.click(gatilho);
-    // O painel do DS, não a caixa do sistema operacional.
+    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
     expect(await screen.findByPlaceholderText('Buscar…')).toBeInTheDocument();
   });
 
-  it('o Combobox da faceta exclusiva abre com "Todos" na lista e devolve seleção vazia', async () => {
+  it('exclusiva: escolher troca o recorte, e "Todos" limpa', async () => {
     const spy = vi.fn();
     render(<Controlada options={QUATRO} onChangeSpy={spy} />);
-    const gatilho = screen.getByRole('button', { name: 'Filtrar por status' });
+    const gatilho = screen.getByRole('button', { name: 'Status' });
     await userEvent.click(gatilho);
     await userEvent.click(await screen.findByText('Agendado'));
     expect(spy).toHaveBeenLastCalledWith(['agendado']);
@@ -189,7 +183,7 @@ describe('FilterChips · o limiar do cânone §1', () => {
   it('o id sentinela do "Todos" nunca escapa em onChange', async () => {
     const spy = vi.fn();
     render(<Controlada options={QUATRO} onChangeSpy={spy} />);
-    const gatilho = screen.getByRole('button', { name: 'Filtrar por status' });
+    const gatilho = screen.getByRole('button', { name: 'Status' });
     await userEvent.click(gatilho);
     await userEvent.click(await screen.findByText('Agendado'));
     await userEvent.click(gatilho);
@@ -199,34 +193,81 @@ describe('FilterChips · o limiar do cânone §1', () => {
       expect(JSON.stringify(chamada[0])).not.toContain('__todos__');
     }
   });
+
+  it('formata a contagem numa grafia só — "Rascunho · 12"', async () => {
+    render(
+      <Controlada options={[{ id: 'rascunho', label: 'Rascunho', count: 12 }]} allCount={64} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    expect(await screen.findByText('Rascunho · 12')).toBeInTheDocument();
+    // "Todos · 64" aparece DUAS vezes de propósito, e é o desenho certo: no
+    // gatilho (o que está aplicado) e na lista (a opção que limpa o filtro).
+    expect(await screen.findAllByText('Todos · 64')).toHaveLength(2);
+  });
+});
+
+describe('FilterChips · disabled (a condição de reabertura do ADR-020)', () => {
+  // O diretório global de eventos desliga o recorte por status enquanto o
+  // recorte por tenant está ativo. Sem esta prop, o ADR-020 tinha razão de
+  // existir; com ela, a exceção morre.
+  it('exclusiva desabilitada não abre a lista', async () => {
+    render(<Controlada options={QUATRO} disabled />);
+    const gatilho = screen.getByRole('button', { name: 'Status' });
+    expect(gatilho).toBeDisabled();
+    await userEvent.click(gatilho);
+    expect(screen.queryByPlaceholderText('Buscar…')).toBeNull();
+  });
+
+  it('empilhável desabilitada não abre o menu', async () => {
+    render(<Controlada options={QUATRO} multiple disabled />);
+    const gatilho = screen.getByRole('button', { name: /Status: Todos/ });
+    expect(gatilho).toBeDisabled();
+    await userEvent.click(gatilho);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('sem a prop, a faceta continua ativa', () => {
+    render(<Controlada options={QUATRO} />);
+    expect(screen.getByRole('button', { name: 'Status' })).not.toBeDisabled();
+  });
 });
 
 describe('FilterChips · composição (zero motor próprio)', () => {
-  // A prova é por IDENTIDADE DE ASSINATURA: a className do chip dentro da
-  // faceta tem de ser byte a byte a do `Chip` renderizado sozinho. Reinlinar o
-  // motor — ou "ajustar só um detalhe" com classe própria — quebra o teste.
-  it('o chip da fileira é o Chip do DS, com a assinatura idêntica', () => {
-    const { unmount } = render(<Chip active={false}>Rascunho</Chip>);
-    const assinatura = screen.getByRole('button', { name: 'Rascunho' }).className;
-    unmount();
-
-    render(<Controlada multiple />);
-    expect(screen.getByRole('button', { name: 'Rascunho' }).className).toBe(assinatura);
-  });
-
-  it('o chip ativo também mantém a assinatura do Chip ativo', () => {
-    const { unmount } = render(<Chip active>Todos</Chip>);
-    const assinatura = screen.getByRole('button', { name: 'Todos' }).className;
-    unmount();
-
-    render(<Controlada />);
-    expect(screen.getByRole('button', { name: 'Todos' }).className).toBe(assinatura);
-  });
-
-  it('não desenha input, select nem popover próprio na fileira', () => {
-    const { container } = render(<Controlada />);
-    expect(container.querySelector('input')).toBeNull();
+  // A peça não pode desenhar lista, popover nem campo próprio: ela compõe
+  // `FilterMenu` e `Combobox`. Um `<select>` aqui seria a violação que o cânone
+  // proíbe com todas as letras ("filtro nunca é Select").
+  it('não desenha select nativo em nenhum dos dois modos', () => {
+    const { container, unmount } = render(<Controlada options={QUATRO} />);
     expect(container.querySelector('select')).toBeNull();
-    expect(container.querySelectorAll('button')).toHaveLength(TRES.length + 1);
+    unmount();
+
+    const { container: c2 } = render(<Controlada options={QUATRO} multiple />);
+    expect(c2.querySelector('select')).toBeNull();
+  });
+
+  it('fechada, a faceta ocupa um controle só — a lista vive no portal', () => {
+    const { container } = render(<Controlada options={QUATRO} multiple />);
+    expect(container.querySelectorAll('button')).toHaveLength(1);
+  });
+
+  // ⚠️ ASSIMETRIA HERDADA, registrada em vez de escondida: `className` chega ao
+  // GATILHO na faceta exclusiva (`Combobox`) e ao PAINEL do menu na empilhável
+  // (`DropdownMenu.className` é documentado como "classe extra do PAINEL"). Com
+  // o menu fechado, a classe da empilhável não existe no DOM. Não é defeito
+  // desta lane e não foi consertado aqui — mexer na semântica do `DropdownMenu`
+  // atinge todos os consumidores dele. Fica o teste do caso que se pode
+  // afirmar, e o aviso para quem estilizar uma faceta empilhável e não vir
+  // efeito no gatilho.
+  it('aceita className na faceta exclusiva (chega ao gatilho)', () => {
+    render(
+      <FilterChips
+        label="Faceta"
+        options={TRES}
+        selected={[]}
+        onChange={() => {}}
+        className="teste-faceta"
+      />,
+    );
+    expect(document.querySelector('.teste-faceta')).not.toBeNull();
   });
 });

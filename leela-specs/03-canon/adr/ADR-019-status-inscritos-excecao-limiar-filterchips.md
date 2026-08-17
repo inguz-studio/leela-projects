@@ -81,3 +81,42 @@ condição de reabertura explícita abaixo.
   clique-direto vale mais que o limite genérico; ou (b) `STATUS_INSCRITO` cai
   para 3 valores por decisão de produto. O que vier primeiro reabre esta
   instância para conversão.
+
+---
+
+## ⛔ SUPERADO em 2026-08-17 pela decisão do dono (leva 20)
+
+> Lane FILTROS-LISTA · trace `leela-redesign-v2-20260810` · registro em
+> `02-rodadas/2026-08-17-decisoes-dono/01-decisoes-dono.md`, leva 20 item 1.
+
+**A fala, na íntegra:** *"novamente, voco colocol pills no lugar de filtros, em Membros, em duas
+fileiras, quanto poderiamos apenas ter filtros. Isso ficou confuso na tela de clubes, na hora de
+filtrar colunas, quero que voce aplique o componente dos filtros em lista. e eles devem ficar
+alinhados ao lado do pesquisador, assim como em DEsafios. Para padronizar. (me refiro a rota dos
+clubes), mas isos deve ser aplicar no projeto inteiro."*
+
+**O que caiu.** Este ADR inteiro se apoiava numa régua: *"onda que baixa o número de divergências e
+sobe o número de passos não fecha"*. A régua não era errada — ela só não era a régua do dono. Ele
+pediu clareza de padrão, e pagou por ela o clique que este ADR protegia. Quem manda no padrão é
+ele, então a régua de cliques perde e fica escrito que perdeu.
+
+**Nenhuma das duas condições de reabertura precisou se cumprir.** A (a) pedia à `FilterChips` um
+jeito de honrar limiar maior; a (b), que `STATUS_INSCRITO` caísse para três valores. O que
+aconteceu foi maior: **o limiar deixou de existir**, então não há limiar a honrar. Isso vale a
+lição — uma condição de reabertura escrita como "a peça ganha um escape hatch" pressupõe que a
+regra sobrevive. Ela pode simplesmente morrer.
+
+**O que a medição de 17/08 acrescentou, e que este ADR não tinha como ver.** A fileira não mostra o
+NOME da faceta: ele só existia no `aria-label`. Em Membros o organizador via
+`Todos · Ativos · Novos · Inativos · Todos · Owner · Admins · Membros` — dois "Todos" colados, sem
+nada dizendo onde acaba Status e começa Papel. O clique economizado saía caro em legibilidade, e
+esta conta não estava na balança de 16/08.
+
+**Estado do código.** `InscritosView.tsx` usa `FilterChips` para a faceta de status, dentro da
+`FilterBar` (ela morava solta abaixo dela). A contagem por status continua: vive na lista, e o
+total do recorte fica no gatilho. `faceta-crua` cai de 2 para 0 na catraca do `gate-canon`.
+
+**O que NÃO mudou:** o `setStatus('pendente')` do banner de inadimplência. O caminho mais usado da
+dor #1 nunca passou por este controle e continua a um clique.
+
+**Fica válido deste ADR:** o registro de que a exceção existiu e por quê. Não apagar.

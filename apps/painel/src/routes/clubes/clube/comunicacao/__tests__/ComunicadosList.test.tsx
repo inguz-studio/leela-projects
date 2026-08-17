@@ -26,9 +26,12 @@ describe('ComunicadosList', () => {
     expect(screen.getByText('Mostrando 3 de 3 comunicados')).toBeInTheDocument();
   });
 
+  // Três facetas em fileira de chips eram três linhas em 768px — a prova
+  // medida de que só a forma de lista sobrevive ao número de facetas (leva 20).
   it('filtro de status (Enviados) esconde os demais', async () => {
     renderList();
-    await userEvent.click(screen.getByRole('button', { name: 'Enviados' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Enviados' }));
     expect(screen.getByText('Longão de sábado')).toBeInTheDocument();
     expect(screen.queryByText('Aviso agendado')).not.toBeInTheDocument();
   });

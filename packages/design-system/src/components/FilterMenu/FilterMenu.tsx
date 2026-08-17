@@ -1,10 +1,12 @@
 /**
  * FilterMenu — filtro de faceta multi-seleção (checkbox em lista) num dropdown.
  *
- * PADRÃO (design-principles §a seleção de controle + §b filtros; direção Vitor
- * 2026-07-11): uma faceta com 4+ valores não cabe como fileira de Chips — o
- * limiar Polaris manda <4 → lista de escolha visível (chips), 4+ → dropdown.
- * Aqui a faceta vira uma lista de checkboxes multi-seleção dentro do dropdown.
+ * PADRÃO (decisão do dono, 2026-08-17, leva 20): filtro de listagem é LISTA,
+ * qualquer que seja o número de valores, e fica ao lado do campo de pesquisa,
+ * numa fileira só. O limiar Polaris de quatro valores (<4 → fileira de chips)
+ * governou esta peça até 16/08 e foi SUPERADO — ver o cabeçalho de
+ * `FilterChips`, que registra a fala e o motivo medido (a fileira esconde o
+ * NOME da faceta; o gatilho daqui o mostra: `Status: Todos`).
  *
  * REUSO-first: compõe o DropdownMenu (motor WAI-APG de portal/teclado/foco/
  * click-fora) com itens `menuitemcheckbox` (não fecham ao marcar) — NÃO é um
@@ -14,9 +16,9 @@
  *
  * Semântica: multi-seleção. Marcar uma opção não afeta as outras (checkbox, não
  * radio) — serve à varredura ("ver Ativos + Encerrados de uma vez"). Para
- * seleção ÚNICA exclusiva com 4+ valores, use Combobox (governança §8 — o
- * Select nativo ficou restrito a formulário simples de baixa cardinalidade);
- * com <4, use Chips.
+ * seleção ÚNICA exclusiva, use Combobox (governança §8 — o Select nativo ficou
+ * restrito a formulário simples de baixa cardinalidade). Quem escolhe entre os
+ * dois é a `FilterChips`, pelo `multiple`; a tela não decide forma.
  */
 
 import * as React from 'react';
@@ -45,6 +47,12 @@ export interface FilterMenuProps {
   /** Texto do estado sem seleção. Default: "Todos". */
   allLabel?: string;
   align?: 'left' | 'right';
+  /**
+   * Faceta desligada em bloco (ADR-020: status desabilitado enquanto o recorte
+   * por tenant está ativo). Desabilita o GATILHO — sem gatilho não há menu —, o
+   * que mantém o estado num lugar só em vez de espalhar guarda por handler.
+   */
+  disabled?: boolean;
   className?: string;
 }
 
@@ -59,6 +67,7 @@ function FilterMenu({
   onChange,
   allLabel = 'Todos',
   align = 'left',
+  disabled = false,
   className,
 }: FilterMenuProps): JSX.Element {
   const [open, setOpen] = React.useState(false);
@@ -85,8 +94,11 @@ function FilterMenu({
 
   return (
     <DropdownMenu
-      open={open}
-      onOpenChange={setOpen}
+      open={disabled ? false : open}
+      onOpenChange={(next) => {
+        if (disabled) return;
+        setOpen(next);
+      }}
       actions={actions}
       align={align}
       menuLabel={label}
@@ -99,6 +111,7 @@ function FilterMenu({
         <Button
           variant="ghost"
           size="sm"
+          disabled={disabled}
           className="bg-[var(--surface-sunken)] text-[var(--text-primary)]"
         >
           <span>{`${label}: ${summary}`}</span>

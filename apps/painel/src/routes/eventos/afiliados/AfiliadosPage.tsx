@@ -232,7 +232,6 @@ export function AfiliadosPage(): JSX.Element {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 shortcutLabel={null}
-                className="w-full max-w-md"
               />
             }
             facets={

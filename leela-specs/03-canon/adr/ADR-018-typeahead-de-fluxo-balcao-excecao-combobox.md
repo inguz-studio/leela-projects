@@ -86,3 +86,38 @@ dado pessoal, com condição de reabertura explícita abaixo.
   (resultado inline sem popover), o `Combobox` ganha `mode="flow"` no DS e os dois
   consumidores migram juntos — dois usos justificam a peça; um uso, documentado,
   não.
+
+---
+
+## ⚠️ PARCIALMENTE SUPERADO em 2026-08-17 (leva 20) — a régua caiu, a exceção continua
+
+> Lane FILTROS-LISTA · trace `leela-redesign-v2-20260810` · registro em
+> `02-rodadas/2026-08-17-decisoes-dono/01-decisoes-dono.md`, leva 20 item 1.
+
+A decisão do dono de 17/08 derrubou o critério de aceite que os ADRs 018, 019 e 020 compartilhavam:
+*"onda que baixa o número de divergências e sobe o número de passos não fecha"*. Ele pediu clareza
+de padrão e pagou por ela o clique que essa régua protegia. Onde a régua de cliques era o único
+argumento — ADR-019 e ADR-020 —, a exceção morreu na mesma data.
+
+**Aqui ela não era o único argumento, e por isso este ADR fica de pé.** Este registro é honesto
+sobre o que a decisão alcança e o que ela não alcança:
+
+- **A perna que caiu:** "converter custaria um clique a mais no balcão" deixou de ser motivo
+  suficiente por si só. Se um dia a conversão for possível sem perda de capacidade, o clique não a
+  segura.
+- **A perna que continua de pé:** o `Combobox` do DS é picker de popover e **não tem** modo de
+  resultado inline. É ausência de capacidade, não preferência de gosto. Converter hoje não trocaria
+  um padrão por outro melhor: trocaria por um que não existe.
+- **A fronteira que a decisão do dono não cruza:** a fala é sobre **filtro de listagem** — a faceta
+  ao lado da pesquisa. `AtendimentoPanel.tsx` não tem faceta nenhuma; ele tem um campo de busca com
+  resultado inline. O padrão novo do cânone §1.1 não governa esta tela, e dizer que governa seria
+  esticar a fala do dono para além do que ela diz.
+
+**Consequência prática, sem silêncio:** a construção de `Combobox mode="flow"` entra na fila
+nomeada da lane FILTROS-LISTA (handoff `leela-filtros-lista-20260817.md`, seção de fechamento) como
+trabalho de DS, não de tela. Até lá `AtendimentoPanel.tsx` segue contando 1 em
+`barra-de-filtro-crua` na catraca do `gate-canon` — número que esta lane **não** baixou e não
+finge ter baixado.
+
+**Condição de reabertura, inalterada:** um segundo consumidor do padrão "resultado inline sem
+popover" abre a lane de DS e os dois migram juntos.

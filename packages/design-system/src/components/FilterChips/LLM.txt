@@ -2,16 +2,16 @@
 schema: llm-txt/1.0
 component: FilterChips
 version: 0.0.1
-generated_at: "2026-08-12"
+generated_at: "2026-08-17"
 source: src/components/FilterChips
-verdict: NASCEU NA ONDA C0 (CANONE-1) — cânone escrito no mesmo commit
+verdict: NASCEU NA ONDA C0 (CANONE-1); O LIMIAR DE 4 VALORES MORREU EM 17/08 (leva 20, decisão do dono)
 
 ## Import canônico
 import { FilterChips, type FilterChipsProps, type FilterChipsOption } from '@leela/design-system'
 Só painel: a peça compõe FilterMenu e Combobox, que são Radix. A superfície pública (ADR-017) não tem faceta.
 
 ## Quando usar
-A faceta de UM filtro de lista ou tabela: status, canal, origem, tipo, papel. Sempre que a tela for desenhar uma fileira de Chips ligada a um estado de filtro, é esta peça.
+A faceta de UM filtro de lista ou tabela: status, canal, origem, tipo, papel. Ela sempre desenha uma LISTA (dropdown), qualquer que seja o número de opções, e mora AO LADO do campo de pesquisa, na mesma fileira.
 
 ## Quando NÃO usar
 A barra que hospeda busca, facetas e contador é FilterBar. Alternância entre recortes com PAINEL próprio é Tabs. Escolha que vira dado de formulário é Select (ou Combobox com busca) dentro de um Field — filtro nunca é Select, e esta peça nunca renderiza um.
@@ -24,21 +24,26 @@ A barra que hospeda busca, facetas e contador é FilterBar. Alternância entre r
 - multiple: boolean   (default: false)   — empilhável × exclusiva
 - allLabel: string   (default: 'Todos')
 - allCount: number    — o total do recorte, mostrado no estado sem seleção
-- className: string
+- disabled: boolean   (default: false)   — desliga a faceta em bloco (ADR-020)
+- className: string   — chega ao GATILHO na exclusiva, ao PAINEL na empilhável
 
 ## O que a peça decide sozinha (não passe prop para isso)
-- menos de 4 opções  → fileira de Chip dentro de role="group" com aria-label
-- 4+ e multiple      → FilterMenu (itens menuitemcheckbox)
-- 4+ e exclusiva     → Combobox (a régua já estava no cabeçalho do FilterMenu)
-- chip de "Todos"    → existe em faceta exclusiva, não existe em empilhável
+- multiple  → FilterMenu (itens menuitemcheckbox); o gatilho resume "Canal: 2"
+- exclusiva → Combobox; o gatilho mostra o valor aplicado e "Todos" abre a lista
+- A CONTAGEM DE OPÇÕES NÃO DECIDE NADA. Havia um limiar de 4 valores — abaixo
+  dele a peça desenhava fileira de Chip. Ele morreu em 17/08 por decisão do
+  dono. Três opções e trinta desenham a mesma coisa.
 
 ## Tokens consumidos (nenhum valor cru permitido)
-- --spacing-2 (o gap da fileira). O resto é dos componentes compostos.
+- Nenhum direto: a peça não pinta nada, só compõe FilterMenu e Combobox.
 
 ## Proibido (do/don't)
 DON'T: montar `<div role="group" aria-label="Filtrar por X">` + Chip.map() na tela. São doze cópias medidas, e a montagem é o que diverge — não o Chip.
 DON'T: usar Select para filtrar. O cânone §1 escreve "filtro nunca é Select", e a regra `leela-canon/filtro-fora-do-canone` reprova.
 DON'T: passar `selected` com mais de um id quando `multiple` é false.
+DON'T: incluir a opção "Todos" em `options`. A peça desenha a dela; mandar as duas produz duas linhas de "Todos".
+DON'T: reintroduzir fileira de pills como filtro primário. O dono cobrou isso DUAS vezes ("novamente", 17/08), e a segunda cobrança é a que matou o limiar.
+DON'T: dar `w-full` ao SearchInput vizinho. Ele come a fileira inteira e empurra as facetas para uma segunda linha — foi exatamente o defeito de Membros.
 DO: passar `count` quando a contagem existir — a peça formata "Rascunho · 12" igual em todas as telas.
 
 ## Exemplo mínimo (válido, copiável)

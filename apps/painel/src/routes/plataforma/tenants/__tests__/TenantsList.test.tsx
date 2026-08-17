@@ -69,7 +69,9 @@ describe('TenantsList', () => {
     expect(screen.getByText('Mostrando 1 de 3 tenants')).toBeInTheDocument();
   });
 
-  it('chip de filtro mostra a contagem por status e dispara onFilterChange', async () => {
+  // A faceta é LISTA desde 17/08 (leva 20): a contagem por status vive dentro
+  // da lista, e o gatilho carrega o nome da faceta em texto.
+  it('a lista de filtro mostra a contagem por status e dispara onFilterChange', async () => {
     const onFilterChange = vi.fn();
     render(
       <TenantsList
@@ -81,8 +83,8 @@ describe('TenantsList', () => {
         onOpenTenant={noop}
       />,
     );
-    const chip = screen.getByRole('button', { name: /Aguardando/ });
-    await userEvent.click(chip);
+    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(await screen.findByRole('option', { name: /Aguardando/ }));
     expect(onFilterChange).toHaveBeenCalledWith('pending');
   });
 

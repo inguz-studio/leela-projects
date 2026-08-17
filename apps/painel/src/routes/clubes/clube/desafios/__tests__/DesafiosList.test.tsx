@@ -28,9 +28,14 @@ describe('DesafiosList', () => {
     expect(screen.getByText('Mostrando 3 de 3 desafios')).toBeInTheDocument();
   });
 
-  it('chip modelo "C" + busca "Floripa" → só a Meia Maratona Floripa (aceite)', async () => {
+  // Desafios foi a tela que o dono nomeou como referência ("assim como em
+  // DEsafios"). Ela acertava a POSIÇÃO — facetas ao lado da busca, fileira
+  // única — e errava a FORMA: as duas facetas eram fileira de chips. Por isso
+  // a referência também converteu (leva 20, cânone §1.1).
+  it('modelo "C" + busca "Floripa" → só a Meia Maratona Floripa (aceite)', async () => {
     renderList();
-    await userEvent.click(screen.getByRole('button', { name: 'Modelo C' }));
+    await userEvent.click(screen.getByRole('button', { name: /Modelo: Todos/ }));
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'Modelo C' }));
     await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar desafio por nome' }), 'Floripa');
     expect(screen.getByText('Meia Maratona Floripa')).toBeInTheDocument();
     expect(screen.queryByText('Constância 30 dias')).not.toBeInTheDocument();
@@ -39,7 +44,8 @@ describe('DesafiosList', () => {
 
   it('status é exclusivo (Encerrados esconde os ativos)', async () => {
     renderList();
-    await userEvent.click(screen.getByRole('button', { name: 'Encerrados' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Encerrados' }));
     expect(screen.getByText('Foco Run')).toBeInTheDocument();
     expect(screen.queryByText('Meia Maratona Floripa')).not.toBeInTheDocument();
   });

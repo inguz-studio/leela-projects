@@ -115,16 +115,20 @@ describe('InscritosView', () => {
   });
 
   // ── Visibilidade de pagamento (dor #1) ────────────────────────────────────
-  it('mostra contagens de status nos filtros (Todos/Confirmado/Pendente/Cancelado)', () => {
+  it('mostra contagens de status nos filtros (Todos/Confirmado/Pendente/Cancelado)', async () => {
     const inscritos = [
       ...muitosInscritos(3, 'confirmado'),
       mkInscrito({ id: 'p1', atletaNome: 'Pedro Pendente', status: 'pendente' }),
       mkInscrito({ id: 'c1', atletaNome: 'Carla Cancel', status: 'cancelado' }),
     ];
     renderView({ inscritos, loading: false, error: null, modalidades: ['10k'] });
-    expect(screen.getByText('Todos · 5')).toBeInTheDocument();
-    expect(screen.getByText('Pendente · 1')).toBeInTheDocument();
-    expect(screen.getByText('Cancelado · 1')).toBeInTheDocument();
+    // A faceta é LISTA desde 17/08 (leva 20, ADR-019 superado): o total do
+    // recorte fica no gatilho, e a contagem por status vive dentro da lista.
+    const gatilho = screen.getByRole('button', { name: 'Status' });
+    expect(gatilho).toHaveTextContent('Todos · 5');
+    await userEvent.click(gatilho);
+    expect(await screen.findByText('Pendente · 1')).toBeInTheDocument();
+    expect(await screen.findByText('Cancelado · 1')).toBeInTheDocument();
   });
 
   it('banner de inadimplência aparece com N pendentes e filtra ao clicar em "Ver pendentes"', async () => {

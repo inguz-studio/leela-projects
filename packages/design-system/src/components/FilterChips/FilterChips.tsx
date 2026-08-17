@@ -1,54 +1,53 @@
 /**
- * FilterChips — a faceta de UM filtro, com o limiar do cânone fechado por
- * construção.
+ * FilterChips — a faceta de UM filtro de listagem. Sempre em LISTA.
  *
  * POR QUE EXISTE. Inventário de 2026-08-12, §4.1: doze telas montaram à mão o
  * mesmo `<div role="group" aria-label="Filtrar por X">` + `Chip.map()`, e sete
  * delas compartilham até a classe de espaçamento. O `Chip` é canônico e está
  * certo; o que se repetiu doze vezes é a MONTAGEM — e é a montagem que decide
- * se existe o chip de "Todos", se a faceta é exclusiva ou empilhável, se o chip
- * mostra contagem e como o leitor de tela ouve o grupo. Hoje isso é escolha de
- * cada tela, e as telas escolheram diferente: oito têm o chip "Todos", quatro
- * não; uma mostra contagem, onze não.
+ * se a faceta é exclusiva ou empilhável, se mostra contagem e como o leitor de
+ * tela ouve o grupo.
  *
- * O LIMIAR É DA PEÇA, NÃO DO GATE. O cânone §1 manda `FilterMenu` em faceta de
- * quatro ou mais valores (a regra Polaris que o próprio `FilterMenu` cita) e
- * `Chip` com `active` abaixo disso. Doze facetas foram montadas como fileira
- * sem que ninguém contasse os valores, porque não havia contra o quê reprovar —
- * e um script não sabe quantos valores uma faceta tem em execução, já que o
- * array vem de `_lib`, de query ou de prop. A peça sabe: ela RECEBE a lista.
- * Regra que precisa de dado de execução não vira lint; vira componente.
+ * ⛔ O LIMIAR MORREU EM 2026-08-17, POR DECISÃO DO DONO (leva 20). Até aqui
+ * esta peça CONTAVA as opções: abaixo de quatro desenhava fileira de `Chip`,
+ * de quatro em diante virava `FilterMenu`/`Combobox`. O dono, na íntegra:
+ * *"novamente, voco colocol pills no lugar de filtros, em Membros, em duas
+ * fileiras, quanto poderiamos apenas ter filtros. (...) quero que voce aplique
+ * o componente dos filtros em lista. e eles devem ficar alinhados ao lado do
+ * pesquisador, assim como em DEsafios. Para padronizar."* Filtro de listagem é
+ * lista, e ponto — a contagem de opções não decide mais nada.
  *
- * QUAL DROPDOWN, E POR QUE DOIS. Acima do limiar a escolha não é uma só, e a
- * régua já estava escrita no cabeçalho do `FilterMenu`: *"para seleção ÚNICA
- * exclusiva com 4+ valores, use `Combobox`; com <4, use `Chips`"*. O
- * `FilterMenu` é multi-seleção por construção (itens `menuitemcheckbox`), e
- * usá-lo para escolha exclusiva anunciaria "marcado" onde a semântica é
- * "selecionado". Então: `multiple` acima do limiar é `FilterMenu`, exclusiva
- * acima do limiar é `Combobox`. Os dois são canônicos e os dois mostram o que
- * está aplicado — nenhum deles é `Select`, que o cânone proíbe com essas
+ * A RÉGUA QUE PERDEU, ESCRITA PARA NÃO VOLTAR POR ESQUECIMENTO. O limiar
+ * existia para poupar clique: fileira mostra tudo de uma vez, menu cobra abrir.
+ * Três ADRs (018, 019, 020) recusaram converter telas em nome dessa economia, e
+ * a régua deles era "onda que sobe passo não fecha". A régua do dono é outra e
+ * vence: clareza do padrão. O que a medição de 17/08 mostrou é que o clique
+ * economizado saía caro em outro lugar — a fileira não mostra o NOME da faceta.
+ * Em Membros o organizador via `Todos · Ativos · Novos · Inativos · Todos ·
+ * Owner · Admins · Membros`: dois "Todos" colados, sem nada dizendo onde acaba
+ * Status e começa Papel. O nome só existia no `aria-label`, ou seja, só para
+ * quem usa leitor de tela. A lista resolve isso por construção: o gatilho é
+ * `Status: Todos`, com o nome da faceta VISÍVEL e o valor aplicado junto.
+ *
+ * QUAL LISTA, E POR QUE DUAS. `FilterMenu` é multi-seleção por construção
+ * (itens `menuitemcheckbox`) e usá-lo para escolha exclusiva anunciaria
+ * "marcado" onde a semântica é "selecionado". Então: `multiple` é `FilterMenu`,
+ * exclusiva é `Combobox`. Os dois são canônicos, os dois mostram o que está
+ * aplicado, e nenhum é `Select` — que o cânone proíbe para filtro com essas
  * palavras.
  *
- * O CHIP DE "TODOS" DEIXA DE SER ESCOLHA DE TELA. Em faceta exclusiva ele
- * SEMPRE existe: limpar um filtro exclusivo clicando de novo no chip ativo é
- * afordância escondida — nada na tela diz que ele destrava —, e quatro das doze
- * facetas medidas não tinham outra saída. Em faceta empilhável ele não existe:
- * seleção vazia já é o estado "tudo", e cada chip destrava sozinho e visível
- * pelo `aria-pressed`.
+ * O "TODOS" NÃO É MAIS UM CHIP, E CONTINUA EXISTINDO. Em faceta exclusiva ele
+ * é a primeira linha do `Combobox` (limpar filtro exclusivo precisa de saída
+ * visível — clicar de novo no valor ativo é afordância escondida). Em faceta
+ * empilhável ele é o resumo do gatilho quando nada está marcado.
  *
- * ZERO MOTOR PRÓPRIO. Nada aqui desenha chip, popover ou lista: a peça compõe
- * `Chip`, `FilterMenu` e `Combobox` do barril. A lição é a do `ConfirmModal`,
- * que duplicava `<textarea>` e `<input type="checkbox">` DENTRO do design
- * system e ficou parado numa decisão de estilo que o canônico já tinha
- * atualizado.
+ * ZERO MOTOR PRÓPRIO. Nada aqui desenha popover ou lista: a peça compõe
+ * `FilterMenu` e `Combobox` do barril.
  *
- * AA: nenhum par novo — `Chip`, `FilterMenu` e `Combobox` já rodam na matriz de
+ * AA: nenhum par novo — `FilterMenu` e `Combobox` já rodam na matriz de
  * contraste nos três temas, e o grupo não pinta nada.
  */
 
-import * as React from 'react';
-import { cn } from '../../utils/cn';
-import { Chip } from '../Chip';
 import { FilterMenu } from '../FilterMenu';
 import { Combobox } from '../Combobox';
 
@@ -79,15 +78,15 @@ export interface FilterChipsProps {
   allLabel?: string;
   /** Contagem do estado sem seleção — o total do recorte. */
   allCount?: number;
+  /**
+   * Faceta desligada em bloco. Nasceu do ADR-020: o diretório global de eventos
+   * desabilita o recorte por status enquanto o recorte por tenant está ativo
+   * (os dois são mutuamente exclusivos na leitura de dado). Era a capacidade
+   * que faltava à peça e que o ADR nomeou como condição de reabertura.
+   */
+  disabled?: boolean;
   className?: string;
 }
-
-/**
- * O limiar do cânone §1, e a única constante desta peça. Abaixo dele a fileira
- * mostra todas as opções de uma vez; a partir dele a fileira vira parede e o
- * canônico é o menu.
- */
-const LIMIAR_DE_DROPDOWN = 4;
 
 /** "Rascunho · 12" — a grafia que a faceta de inscritos já usava. */
 function rotulo(texto: string, count: number | undefined): string {
@@ -106,18 +105,18 @@ function FilterChips({
   multiple = false,
   allLabel = 'Todos',
   allCount,
+  disabled = false,
   className,
 }: FilterChipsProps): JSX.Element {
-  const marcados = React.useMemo(() => new Set(selected), [selected]);
-
-  // ── Acima do limiar · faceta empilhável ────────────────────────────────────
-  if (options.length >= LIMIAR_DE_DROPDOWN && multiple) {
+  // ── Faceta empilhável ──────────────────────────────────────────────────────
+  if (multiple) {
     return (
       <FilterMenu
         label={label}
         allLabel={allLabel}
         selected={selected}
         onChange={onChange}
+        disabled={disabled}
         options={options.map((o) => ({
           id: o.id,
           label: o.label,
@@ -128,63 +127,28 @@ function FilterChips({
     );
   }
 
-  // ── Acima do limiar · faceta exclusiva ─────────────────────────────────────
+  // ── Faceta exclusiva ───────────────────────────────────────────────────────
   //
   // O `Combobox` devolve string em modo single. A opção vazia é o "Todos": ela
   // precisa de um valor real porque `value=""` no `Command` não é selecionável,
   // então o id do "tudo" é explícito e nunca escapa desta peça.
-  if (options.length >= LIMIAR_DE_DROPDOWN) {
-    const ID_TUDO = '__todos__';
-    return (
-      <Combobox
-        aria-label={label}
-        placeholder={allLabel}
-        value={selected[0] ?? ID_TUDO}
-        onValueChange={(v) => {
-          const escolhido = Array.isArray(v) ? v[0] : v;
-          onChange(escolhido === undefined || escolhido === ID_TUDO ? [] : [escolhido]);
-        }}
-        options={[
-          { value: ID_TUDO, label: rotulo(allLabel, allCount) },
-          ...options.map((o) => ({ value: o.id, label: rotulo(o.label, o.count) })),
-        ]}
-        {...(className !== undefined ? { className } : {})}
-      />
-    );
-  }
-
-  // ── Abaixo do limiar · a fileira ───────────────────────────────────────────
+  const ID_TUDO = '__todos__';
   return (
-    <div
-      role="group"
+    <Combobox
       aria-label={label}
-      className={cn('flex flex-wrap items-center gap-[var(--spacing-2)]', className)}
-    >
-      {multiple ? null : (
-        <Chip active={selected.length === 0} onClick={() => onChange([])}>
-          {rotulo(allLabel, allCount)}
-        </Chip>
-      )}
-      {options.map((o) => (
-        <Chip
-          key={o.id}
-          active={marcados.has(o.id)}
-          onClick={() => {
-            if (multiple) {
-              onChange(
-                marcados.has(o.id) ? selected.filter((s) => s !== o.id) : [...selected, o.id],
-              );
-              return;
-            }
-            // Exclusiva: o chip ativo NÃO destrava no próprio clique — quem
-            // limpa é o "Todos", que está do lado e diz o que faz.
-            onChange([o.id]);
-          }}
-        >
-          {rotulo(o.label, o.count)}
-        </Chip>
-      ))}
-    </div>
+      placeholder={allLabel}
+      disabled={disabled}
+      value={selected[0] ?? ID_TUDO}
+      onValueChange={(v) => {
+        const escolhido = Array.isArray(v) ? v[0] : v;
+        onChange(escolhido === undefined || escolhido === ID_TUDO ? [] : [escolhido]);
+      }}
+      options={[
+        { value: ID_TUDO, label: rotulo(allLabel, allCount) },
+        ...options.map((o) => ({ value: o.id, label: rotulo(o.label, o.count) })),
+      ]}
+      {...(className !== undefined ? { className } : {})}
+    />
   );
 }
 

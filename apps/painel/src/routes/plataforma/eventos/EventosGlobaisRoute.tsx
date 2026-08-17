@@ -27,7 +27,7 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Chip, Combobox, type TableColumn } from '@leela/design-system';
+import { Badge, Combobox, FilterChips, type TableColumn } from '@leela/design-system';
 import type { Evento } from '@leela/core';
 import { ListaGlobal } from '../_components/ListaGlobal';
 import { useEventosGlobais } from '../_data/listasGlobais';
@@ -114,30 +114,25 @@ export function EventosGlobaisRoute(): JSX.Element {
         />
 
         {/*
-          Status: controle segmentado. EXCEÇÃO REGISTRADA à FilterChips —
-          ADR-020: FILTROS_STATUS_EVENTO tem 4 valores reais, o limiar exato em
-          que a peça troca a fileira por um Combobox de popover (cânone §1,
-          "4+ exclusiva = Combobox"), e a faceta também precisa de `disabled`
-          durante o recorte por tenant — capacidade que a FilterChips não tem.
-          Mesmo mecanismo do ADR-019 (InscritosView), segundo consumidor
-          nomeado da mesma condição de reabertura.
+          Status. Era a fileira de `Chip` à mão do ADR-020, que a mantinha por
+          dois motivos: o limiar de quatro valores e a falta de `disabled` na
+          peça. O ADR está SUPERADO pela decisão do dono de 17/08 (leva 20) —
+          filtro de listagem é lista — e o `disabled` foi pago no mesmo commit,
+          que era a condição de reabertura escrita no próprio ADR.
+
+          O "Todos" sai do `options`: a `FilterChips` desenha o dela sozinha, e
+          mandar os dois produziria duas linhas de "Todos" na lista.
         */}
-        <div
-          role="group"
-          aria-label="Filtrar por status"
-          className="flex flex-wrap gap-[var(--spacing-2)]"
-        >
-          {FILTROS_STATUS_EVENTO.map((opt) => (
-            <Chip
-              key={opt.id}
-              active={opt.id === status}
-              disabled={porTenant}
-              onClick={() => setStatus(opt.id)}
-            >
-              {opt.label}
-            </Chip>
-          ))}
-        </div>
+        <FilterChips
+          label="Status"
+          options={FILTROS_STATUS_EVENTO.filter((o) => o.id !== 'todos').map((o) => ({
+            id: o.id,
+            label: o.label,
+          }))}
+          selected={status === 'todos' ? [] : [status]}
+          onChange={(next) => setStatus((next[0] as FiltroStatusEvento | undefined) ?? 'todos')}
+          disabled={porTenant}
+        />
       </div>
 
       {porTenant ? (
