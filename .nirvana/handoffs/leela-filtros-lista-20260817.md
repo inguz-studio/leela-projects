@@ -149,6 +149,18 @@ barulho, porque os dois lados acham que o outro fez.
 | Suíte do painel (3 fatias seriais, cobertura completa de `src/`) | **256 arquivos · 2883 casos · 0 reprovados** |
 | `gate-canon` | **PASS** |
 
+**Depois do merge da `main` na branch** (a `main` andou durante a lane: entraram MODAL-LOTE,
+SPEC-LEVA22 e ENG-INSIGHTS, e o MODAL-LOTE mexe em `Modal`/`Dialog`, que são peças de uso amplo).
+Tudo re-rodado do zero na árvore mesclada:
+
+| Gate | Resultado |
+|---|---|
+| `tsc --noEmit` painel e design-system | **exit 0** nos dois |
+| `eslint` painel e design-system (`--max-warnings 0`) | **exit 0** nos dois |
+| Suíte do design-system | **92 arquivos · 2118 casos · 0 reprovados** |
+| Suíte do painel (3 fatias seriais) | **256 arquivos · 2902 casos · 0 reprovados** |
+| `gate-canon` | **PASS** — `faceta-crua.painel = 0`, nenhuma família subiu |
+
 **Catraca, antes × depois:** `faceta-crua.painel` **2 → 0**. Nenhuma outra família mudou, e
 **nenhum bump** foi feito para acomodar nada. As duas facetas que saíram são exatamente as que os
 ADR-019 e ADR-020 protegiam.
