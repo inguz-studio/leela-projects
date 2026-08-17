@@ -161,6 +161,24 @@ Tudo re-rodado do zero na árvore mesclada:
 | Suíte do painel (3 fatias seriais) | **256 arquivos · 2902 casos · 0 reprovados** |
 | `gate-canon` | **PASS** — `faceta-crua.painel = 0`, nenhuma família subiu |
 
+**Depois do SEGUNDO merge da `main`** (a NAV-MOBILE aterrissou enquanto esta lane fechava e trouxe
+o `BottomNav` para o DS). Tudo re-rodado outra vez:
+
+| Gate | Resultado |
+|---|---|
+| `tsc --noEmit` e `eslint` painel e design-system | **exit 0** nos quatro |
+| Suíte do design-system | **94 arquivos · 2174 casos · 0 reprovados** |
+| Suíte do painel (3 fatias seriais) | **257 arquivos · 2925 casos · 0 reprovados** |
+| `gate-canon` | **PASS** — `faceta-crua.painel = 0` |
+
+⚠️ **A armadilha do `dist` defasado apareceu, e é conhecida.** A primeira passada da fatia 3
+reprovou **108 casos** com `bottomNavIcon is not a function`. Nada disso é filtro: o painel resolve
+`@leela/design-system` pelo `exports` do pacote, ou seja, pelo `dist`, e o `BottomNav` que a
+NAV-MOBILE acabara de publicar não estava construído nesta árvore. `pnpm --filter @leela/core
+--filter @leela/design-system build` e as 74 fatias voltaram verdes. **Merge que traz peça nova do
+DS exige rebuild antes do smoke** — quem ler 108 vermelhos depois de um merge deve conferir o
+`dist` antes de suspeitar do próprio diff.
+
 **Catraca, antes × depois:** `faceta-crua.painel` **2 → 0**. Nenhuma outra família mudou, e
 **nenhum bump** foi feito para acomodar nada. As duas facetas que saíram são exatamente as que os
 ADR-019 e ADR-020 protegiam.
