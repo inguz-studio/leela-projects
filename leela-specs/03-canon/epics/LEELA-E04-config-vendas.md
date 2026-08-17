@@ -2562,3 +2562,104 @@ e **não pôde ser executada** nesta máquina: o `firebase-tools` 15 exige JDK 2
 ambiente tem o 17. O que roda em qualquer máquina, e roda verde, é o teste de espelho que amarra o
 número da Rule ao número do core. **Nada foi para o ar** — a RN-559 entra no próximo pacote de
 deploy.
+
+## Delta o preço do kit abre, e a S316 vira Modalidades (SPEC-LEVA22 · 2026-08-17)
+
+> Rodada `02-rodadas/2026-08-17-leva22/`. Leva 22 do dono, no mesmo dia das levas 17, 18 e 19.
+> Uma regra nova aqui — a **RN-575** — e a **MODALIDADES-1 fechada pelo desenho dele**, que
+> re-ancora a S316 inteira. ⛔ Nada construído por esta lane.
+
+### RN-575 (nova, dona · 2026-08-17) · o preço do kit é editável, e só vale para frente
+
+**O organizador pode editar o preço de um kit a qualquer momento, inclusive depois da primeira
+venda. O efeito é estritamente prospectivo: nenhum pedido já realizado muda de valor, em nenhuma
+superfície.** Preço de **evento** e de **lote** continuam congelados após a primeira venda.
+
+Na íntegra: *"Quero alterar a RN-200, o organizador pode editar os preços dos kits, se achar
+necessário, só que isso nao deve afetar pedidos já realizados. apenas da edição para frente."*
+
+**A RN-200 não é revogada — é recortada.** Ela dizia *"Após a 1ª venda, edição de preço do
+evento/kit é bloqueada"* (`LEELA-E03-operacao-evento.md:39`). O kit sai; o evento e o lote ficam.
+O enunciado **não é apagado**: fica legível e **marcado** no épico dono, pela mesma disciplina que
+a RN-211, a RN-470 e a RN-416 receberam — ele continua explicando o comportamento do código que
+está no ar até a onda D subir, e continua valendo inteiro para os outros dois preços.
+
+⚠️ **Correção a uma premissa herdada do brief da lane.** O brief afirmava que a RN-497 já havia
+revogado parte da RN-200. **Não revogou.** A RN-497 derrubou uma extensão que existia apenas em
+comentário de código, trata do **lote**, e este épico é explícito em `:2193` e `:2213`.
+
+**Veredito medido do snapshot: SNAPSHOT-PARCIAL, e a metade que vale dinheiro já está pronta.** O
+preço do kit é somado dentro de `pedido.itens[].valorBase` no ato da compra
+(`packages/core/src/checkout/saleState.ts:294-300` →
+`functions/src/checkout/createInscricaoCharge.ts:1361`) e **nunca é relido**; `ItemPedido`
+(`packages/core/src/pedidos/pedido.ts:123-145`) não tem campo de kit. **Liberar a edição hoje não
+altera um centavo de pedido nenhum** — o dinheiro já obedece à regra antes de ela existir. Isso
+**rebaixa** a prioridade da blindagem de valor na onda D, contra o que o brief supunha.
+
+**As duas lacunas que a ordem abre, e que a regra cobre:**
+
+1. **O pedido passa a carimbar o preço do kit na linha.** Sem isso ninguém prova depois quanto de
+   uma compra foi kit — hoje não incomoda porque o preço é imutável, e liberar a edição cega a
+   série histórica. Molde pronto no mesmo repositório: `pagamento.taxaCongelada` (RN-179,
+   `packages/core/src/pedidos/pagamento.ts:468`).
+2. **Nome e composição também não reescrevem compra antiga.** Renomear um kit muda o que a
+   confirmação de uma compra passada mostra (`CheckoutFlow.tsx:2052`) e trocar itens muda o
+   checklist do balcão (`_lib/balcao.ts:260`). Nenhuma Rule impede. **"Pedidos já realizados
+   intocados" cobre isso**, sem dinheiro no meio — e passa a ser a parte prioritária da onda D.
+
+**Borda nomeada e não resolvida:** o gatilho das três travas é `evento.qtdInscritos > 0`, que
+conta qualquer status, inclusive PIX pendente (RN-487). Editar durante uma cotação viva pode
+cobrar um número e ter mostrado outro. **Congelar na janela, recusar, ou aceitar com aviso** — a
+spec nomeia e não decide.
+
+**Falsificação:** criar pedido, editar o preço do kit e reler as seis superfícies pós-compra
+(slide-in, confirmação, minhas compras, ingresso, PDF, e-mail) — todas mostram o valor antigo. E
+tentar editar preço de **lote** com venda: continua recusado, com o teste da RN-200 verde.
+
+**Onde aterrissa:** travas em `KitEditor.tsx:86`, `firestore.rules:1030-1033` e
+`functions/src/eventos/guardPreco.ts:31-49`. Onda D de `02-rodadas/2026-08-17-leva22/04-fila-em-ondas.md`.
+
+### MODALIDADES-1 fecha, e a S316 é re-ancorada no desenho do dono
+
+Na íntegra: *"já perdi as contars em dizer que nao consigo encontrar aonde adicionar modalidades
+emum evento. Essa área deve ser ali em Lotes. E chamaremos de Modalidades ao invés de Lotes, no
+menu secundário. Ali posso ou adicoinar uma modalidade ou um lote dentro da modalidade."*
+
+**Ele não escolheu entre a fase A e a fase B da proposta acima — deu a forma.** A área de Lotes
+vira **"Modalidades"** no menu secundário do evento, e dentro dela se adiciona **ou uma
+modalidade, ou um lote dentro de uma modalidade**: modalidade é pai, lote é filho. Isso é a fase B
+com hierarquia declarada, e **supersede o default de "fase A agora"** que o painel propunha desde
+11/08. A **MODALIDADES-1 sai do painel** na mesma aterrissagem.
+
+**A S316 inteira é re-ancorada nesse desenho**, e uma tarefa muda de tamanho:
+
+| Tarefa | O que muda contra o desenho | Tam. |
+|---|---|---|
+| `S316-T1` · porta única no servidor (RN-500) | inalterada — callable transacional, motivo e trilha | ⚔ |
+| `S316-T2` · renome como migração atômica (RN-501) | inalterada — cinco alvos num commit, pai antes dos filhos | ⚔⚔ |
+| `S316-T3` · recusa nomeando quem impede (RN-502) | inalterada | ⚔ |
+| `S316-T4` · a tela | ⚠️ **cresceu**: sai de Configurações gerais e vira a hierarquia pai/filho na aba renomeada | ⚔ |
+| `S316-T5` · evento degradado (RN-505) | inalterada | ⚔ |
+| `S316-T6` · docId do lote larga o nome da modalidade | inalterada, só documentos novos | — |
+| `S316-T7` · **o renome da aba** (nova) | copy das três telas, morte dos textos de lacuna | — |
+
+**Por que a T4 cresceu de — para ⚔:** antes era uma seção de chips reusando componente existente
+numa tela existente; agora é a reestruturação da tela de lotes, com hierarquia, estado novo para
+modalidade sem lote, e a régua de não piorar o caminho frequente. O número não mudou; o trabalho
+mudou, e registrar isso é o que impede a fila de mentir.
+
+⛔ **A ordem que a medição impõe: renome e conteúdo sobem juntos.** A tela de Lotes hoje declara na
+cara que **não** edita modalidades (`lotes/LotesView.tsx:75-78`). Chamá-la de "Modalidades" sem
+entregar a `S316-T4` recria o círculo fechado que a DIAG-PAINEL-LACUNAS pagou para desfazer, **com
+o agravante de que agora o nome prometeria** o que a tela continua não fazendo. A T7 nasce última.
+
+**A lição de processo, e ela é nossa.** A MODALIDADES-1 estava formalmente correta: item no
+painel, contexto, caso de uso, job story, opções com default proposto. E mesmo assim ele cobrou
+três vezes entre 10/08 e 17/08. **Proposta vetável que fica semanas sem resposta não é decisão
+aguardando — é pendência que o dono re-cobra como falha nossa**, porque do lado dele o que se vê é
+a tela igual. A régua que fecha isso: item de painel com default proposto e sem resposta em **duas
+janelas do dono** entra na fila pelo default, com o veto seguindo aberto. **Não vale para dinheiro
+nem para dado pessoal**, que continuam sempre dele.
+
+**Onde aterrissa:** spec em `02-rodadas/2026-08-17-leva22/02-spec-modalidades-pai-filho.md`, onda
+C da fila da mesma rodada, custo do renome medido em `00-medicao-kits-caixa-e-terciario.md` §13.

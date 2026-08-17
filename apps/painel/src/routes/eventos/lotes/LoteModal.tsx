@@ -192,15 +192,22 @@ export function LoteModal({
       onOpenChange={onOpenChange}
       title={lote ? `Editar ${lote.nome}` : `Novo lote · ${modalidade}`}
       description={`Modalidade ${modalidade} · lote-por-modalidade (ADR-012)`}
+      // Botões CANÔNICOS de rodapé de dialog (MODAL-LOTE · 17/08): fragmento
+      // direto, sem `<div>` de embrulho. O `Modal` já entrega o container do
+      // footer com `flex items-center justify-end gap-[--spacing-3]` — o
+      // `<div>` que existia aqui antes duplicava exatamente essas classes por
+      // cima, o mesmo desvio do padrão que o `ConfirmModal` (a referência
+      // canônica) nunca teve. Zero mudança visual: dois `flex justify-end
+      // gap-3` aninhados renderizam idênticos a um só.
       footer={
-        <div className="flex justify-end gap-[var(--spacing-3)]">
+        <>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancelar
           </Button>
           <Button variant="primary" onClick={() => void salvar()} disabled={busy}>
             Salvar lote
           </Button>
-        </div>
+        </>
       }
     >
       <div className="flex flex-col gap-[var(--spacing-4)]">
