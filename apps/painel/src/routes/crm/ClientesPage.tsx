@@ -124,7 +124,6 @@ export function ClientesPage(): JSX.Element {
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Início do nome (ex.: Ana)"
                   shortcutLabel={null}
-                  className="w-full max-w-md"
                 />
               }
               actions={

@@ -183,7 +183,6 @@ export function AssessoriasPage(): JSX.Element {
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome, documento ou e-mail do responsável"
                 shortcutLabel={null}
-                className="w-full max-w-md"
               />
             }
           />

@@ -305,7 +305,6 @@ export function MarcasPage(): JSX.Element {
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Nome da marca (ex.: CDL)"
                   shortcutLabel={null}
-                  className="w-full max-w-md"
                 />
               }
             />
