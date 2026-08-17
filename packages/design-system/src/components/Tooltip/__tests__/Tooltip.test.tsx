@@ -68,11 +68,44 @@ describe('Tooltip (shadcn stock + aliases brasa)', () => {
     expect(content.className).toContain('shadow-elev-2');
   });
 
-  it('motion stock devolvido (A2): TooltipContent carrega animate-in (tokenizado via preset)', () => {
+  it('motion tokenizado via preset E atrás de motion-safe (governança §3)', () => {
     renderOpenTooltip();
     const content = screen.getByTestId('tt-content');
-    expect(content.className).toContain('animate-in');
-    expect(content.className).toContain('data-[state=closed]:animate-out');
+    expect(content.className).toContain('motion-safe:animate-in');
+    expect(content.className).toContain('motion-safe:data-[state=closed]:animate-out');
+    // Nenhuma classe de animação SOLTA: `animate-in` sem o gate voltaria a
+    // animar para quem pediu menos movimento, e a regressão é invisível a olho.
+    expect(content.className).not.toMatch(/(^|\s)animate-(in|out)\b/);
+  });
+
+  /**
+   * PORTAL — o conserto do T1, afirmado no nível canônico.
+   *
+   * Sem portal o Radix renderiza a dica como IRMÃ do gatilho, e qualquer
+   * ancestral com retângulo de recorte a corta. Foi o que aconteceu no rail
+   * recolhido: 99px de dica, 0px visível, porque o contêiner dos itens rola
+   * (`overflow-x:hidden`). O teste monta exatamente essa armadilha — gatilho
+   * dentro de um contêiner que recorta — e exige que a dica nasça FORA dele.
+   */
+  it('conteúdo é portalizado: escapa de ancestral que recorta (overflow hidden)', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <div data-testid="recorta" className="overflow-y-auto overflow-x-hidden">
+          <Tooltip open>
+            <TooltipTrigger>Salvar</TooltipTrigger>
+            <TooltipContent data-testid="tt-content">Atalho: Ctrl+S</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>,
+    );
+
+    const content = screen.getByTestId('tt-content');
+    const recorta = screen.getByTestId('recorta');
+
+    expect(recorta.contains(screen.getByRole('button', { name: 'Salvar' }))).toBe(true);
+    expect(recorta.contains(content)).toBe(false);
+    expect(container.contains(content)).toBe(false);
+    expect(document.body.contains(content)).toBe(true);
   });
 
   it('aceita className extra sem perder as classes base (cn merge)', () => {

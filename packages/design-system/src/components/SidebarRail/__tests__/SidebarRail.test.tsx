@@ -10,7 +10,7 @@
 
 import * as React from 'react';
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LayoutDashboard, Ticket } from 'lucide-react';
 import { SidebarRail, railNavIcon } from '../SidebarRail';
 
@@ -56,13 +56,45 @@ describe('SidebarRail — estado fechado (default do protótipo)', () => {
     expect(screen.getByRole('link', { name: 'Visão Geral' })).toBeTruthy();
   });
 
-  it('tooltip decorativo por item (aria-hidden, como o [data-rail-tip] do protótipo)', () => {
+  it('dica só existe quando acionada (Radix monta no open) — fechada, nada no DOM', () => {
+    renderRail();
+    expect(document.querySelectorAll('[data-rail-tip]').length).toBe(0);
+  });
+
+  /**
+   * O CONSERTO DO T1, afirmado onde ele pode falhar.
+   *
+   * O defeito não era de estilo: a dica era filha do contêiner de rolagem dos
+   * itens, que carrega `SCROLL_Y_ONLY` (`overflow-x:hidden`) e recorta na
+   * largura do rail — 99px de dica, 0px visível. `z-index` não resolve recorte
+   * de overflow; só sair da caixa resolve.
+   *
+   * Por isso o que se afirma aqui é PROCEDÊNCIA DO NÓ, não classe: a dica não
+   * pode estar dentro da árvore do rail. Um teste de className passaria verde
+   * com a dica recortada de novo — foi exatamente assim que o defeito
+   * sobreviveu ao P-REC-6.
+   */
+  it('dica é PORTALIZADA: nasce fora da árvore do rail, longe do overflow que recortava', async () => {
     const { container } = renderRail();
-    const tips = container.querySelectorAll('[data-rail-tip]');
-    expect(tips.length).toBe(2);
-    for (const tip of tips) {
-      expect(tip.getAttribute('aria-hidden')).toBe('true');
-      expect(tip.className).toContain('left-[calc(100%+var(--rail-tip-gap))]');
+    // Radix abre no `pointermove` e filtra `pointerType: 'touch'` — num toque a
+    // dica não faz sentido, porque não há cursor parado sobre o item.
+    fireEvent.pointerMove(screen.getByRole('link', { name: 'Visão Geral' }), {
+      pointerType: 'mouse',
+    });
+
+    const tip = await waitFor(() => {
+      const encontrada = document.querySelector('[data-rail-tip]');
+      expect(encontrada).toBeTruthy();
+      return encontrada as HTMLElement;
+    });
+
+    expect(tip.textContent).toContain('Visão Geral');
+    expect(container.contains(tip)).toBe(false);
+    expect(document.body.contains(tip)).toBe(true);
+
+    // E nenhum ancestral da dica recorta — a prova de que o portal serviu.
+    for (let no = tip.parentElement; no && no !== document.body; no = no.parentElement) {
+      expect(no.className).not.toContain('overflow-x-hidden');
     }
   });
 
@@ -283,14 +315,21 @@ describe('SidebarRail — variant="drawer" (menu mobile no chrome v3)', () => {
 // F4 (DELTA-UX) — tooltip do rail fechado visível também por teclado
 // ---------------------------------------------------------------------------
 
-describe('SidebarRail — F4: tooltip por focus-visible, não só hover', () => {
-  it('todo tooltip carrega o par group-focus-visible além do group-hover', () => {
-    const { container } = renderRail();
-    const tips = container.querySelectorAll('[data-rail-tip]');
-    expect(tips.length).toBe(2);
-    for (const tip of tips) {
-      expect(tip.className).toContain('group-hover/item:opacity-100');
-      expect(tip.className).toContain('group-focus-visible/item:opacity-100');
-    }
+describe('SidebarRail — F4: tooltip por teclado, não só hover', () => {
+  /**
+   * A dívida F4 foi paga à mão com `group-focus-visible/item` enquanto a dica
+   * era artesanal. Com o `Tooltip` canônico quem abre no foco é o Radix, então
+   * o teste deixa de afirmar CLASSE e passa a afirmar COMPORTAMENTO — que é o
+   * que a pessoa navegando por Tab recebe.
+   */
+  it('foco de teclado abre a dica, sem passar o mouse', async () => {
+    renderRail();
+    fireEvent.focus(screen.getByRole('link', { name: 'Eventos' }));
+
+    await waitFor(() => {
+      const tip = document.querySelector('[data-rail-tip]');
+      expect(tip).toBeTruthy();
+      expect(tip?.textContent).toContain('Eventos');
+    });
   });
 });
