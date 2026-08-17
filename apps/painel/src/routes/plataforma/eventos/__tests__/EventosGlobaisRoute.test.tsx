@@ -171,7 +171,7 @@ describe('EventosGlobaisRoute · recorte', () => {
   it('a lista de status pede o filtro AO HOOK (servidor), não peneira na tela', async () => {
     renderRota();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Status:/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'Publicado' }));
 
     expect(mocks.useEventosGlobais).toHaveBeenLastCalledWith(
@@ -190,7 +190,7 @@ describe('EventosGlobaisRoute · recorte', () => {
     );
     // `disabled` na FilterChips (a condição de reabertura que o ADR-020 pediu
     // e que a lane de 17/08 pagou): o gatilho inteiro desliga, não cada valor.
-    expect(screen.getByRole('button', { name: 'Status' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Status:/ })).toBeDisabled();
     expect(
       screen.getByText(/O status filtra a lista do sistema inteiro/)
     ).toBeInTheDocument();
