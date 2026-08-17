@@ -932,3 +932,78 @@ re-mediu tudo, e o que a declaração escondia vale mais que o que ela dizia:
 Área, sub-área e terciária são o mesmo menu: **não existe variante por nível de profundidade**, e a
 borda inferior do `SubNav` não é configurável. Separar a barra do conteúdo é trabalho do espaço da
 moldura, nunca de traço.
+
+## Delta a informação repetida vira regra, e a medição prova que o defeito só dói no celular (2026-08-17 · leva 17 do dono · lane `CARGA-COGNITIVA-SPEC`)
+
+O dono cobrou uma revisão de carga cognitiva na área interna do evento e apontou o caso: nome,
+data, contagem de inscritos e dias para a prova no header, e o mesmo conjunto logo abaixo no card
+de contagem regressiva. A frase que fecha o argumento é dele — a informação repetida *"só ocupa
+espaço, e prejudica principalmente a experiencia de tablet e mobile."*
+
+⛔ **A cobrança já tinha sido feita antes e não existe em registro nenhum.** Não há card, item de
+painel, linha de rodada nem regra. A fala anterior morreu no meio de outra conversa. A confissão
+está escrita sem maquiagem em `02-rodadas/2026-08-17-decisoes-dono/01-decisoes-dono.md`, junto da
+regra de conserto: fala do dono sobre produto vira item registrado na mesma janela, sempre.
+
+**A medição, e ela achou mais do que a queixa.** Oito fatos e vinte e uma aparições na primeira
+dobra da Visão geral do evento; a contagem de inscritos sozinha aparece **quatro vezes** (header,
+pill da sub-nav, ministat do countdown e legenda dos painéis de modalidade). Na varredura completa
+das abas internas, **44 redundâncias puras em 77 pares**. Na amostra de controle das outras áreas,
+**15 duras em 31 telas**, com os clubes concentrando a pior parte porque a sub-nav de lá também
+carrega contador em pill — o mesmo defeito do evento com um canal a mais.
+
+**O número que explica a sobrevivência do defeito.** Medido no navegador, com o build do HEAD, nos
+três viewports: em desktop o primeiro número que a tela não repetiu nasce em y = 439 e cabe folgado;
+em 375 ele nasce em **y = 870, sessenta pixels abaixo da dobra de 810**, com header e countdown
+ocupando 83% da tela. O defeito é invisível em desktop e é a experiência inteira no celular, que é
+onde o dono o viu.
+
+**Três casos de fonte dupla achados de graça.** Receita no evento (`OverviewKpis` lê
+`evento.receitaConfirmada`, `ModalidadesPanels` lê `fin.receitaBruta`), membros ativos no clube
+(lista carregada contra agregado gravado) e o bruto do tenant na plataforma (retrato de
+`platform/rollups` contra soma viva de `repasse.ts`). Hoje os pares batem; nada garante que
+continuem batendo, e quando divergirem a tela vai mostrar dois números com o mesmo nome.
+
+**A segunda pergunta do dono, sobre Engajamento, tem resposta barata.** A banda "Eventos" daquela
+tela não é bloco dela: é o `OcupacaoEventos` da Visão geral, importado, e a Visão geral já o monta
+(`OverviewContent.tsx:191`). Tirá-la não migra nada — apaga uma segunda montagem. E é a única banda
+que o seletor de clube do topo não recorta, o que está declarado no próprio código
+(`EngajamentoPage.tsx:54-56`) como se fosse desenho. **O critério que sustenta o corte serve para
+qualquer tela com filtro: bloco que o filtro da tela não alcança não pertence àquela tela.**
+
+Spec vetável com oito movimentos em `02-rodadas/2026-08-17-carga-cognitiva/03-spec-reordenacao.md`;
+fila retroativa R0-R6 com 64 itens em `04-fila-em-ondas.md`; processo permanente na
+`04-engenharia/governanca-design.md §9`.
+
+### RN-573 · nenhum fato aparece duas vezes na mesma dobra sem papel distinto declarado (nova · 2026-08-17 · CARGA-COGNITIVA-SPEC)
+
+Nenhum número ou fato aparece duas vezes ou mais na mesma dobra sem **papel distinto declarado**.
+Cada informação tem uma casa por pergunta; aparição fora de casa é resumo com caminho, nunca cópia.
+
+As duas palavras de "papel distinto declarado" carregam peso. *Distinto*: as duas aparições
+respondem a perguntas diferentes — total ao lado da própria decomposição, alvo de confirmação
+destrutiva, campo editável, prévia do que será gravado, log de sessão, nome acessível ao lado de
+ícone. *Declarado*: está escrito no código ou no cânone, não deduzido por quem revisa. Sem a segunda
+palavra a regra vira opinião, e a lição da §8 é que opinião não reprova nada — ela é vinculante
+desde 19/07 e a varredura de 11/08 achou 223 divergências.
+
+**A dobra é o julgamento, não o arquivo.** Dois componentes distintos que caem juntos na tela estão
+na mesma tela para quem lê.
+
+**O que ela alcança e as vizinhas não alcançavam.** A RN-558 julga procedência (a peça é a do
+cânone?); a RN-568 julga composição recorrente (esta montagem já apareceu três vezes?). As duas
+olham para **como a peça foi feita**. A RN-573 olha para **o que a tela diz**, e por isso pega o
+caso que escapa das duas: uma tela pode usar o `Card` canônico, com os tokens certos, passar no
+gate de marca e no de procedência, e ainda assim mostrar o mesmo número quatro vezes. Foi o que a
+medição achou.
+
+Prova: critério de aceite em todo dispatch de UI (harness injeta, texto na `governanca-design.md
+§9`) e o gate `leela-redundancia`, especificado na onda R0, no molde do `leela-canon` — baseline por
+área, nasce em `warn`, vira `error` na contagem zero. **Nada é revogado; ela é adição.**
+
+### Precedente que já existia sozinho
+
+`apps/painel/src/routes/plataforma/tenants/TenantFichaLayout.tsx:57` suprime a faixa de identidade na
+aba Resumo com a razão escrita em `:12-13` — *"no Resumo ela seria o mesmo nome duas vezes"*. Era o
+único lugar do painel onde esta redundância tinha sido vista, nomeada e resolvida. A RN-573
+generaliza o que aquele arquivo já fazia por conta própria.

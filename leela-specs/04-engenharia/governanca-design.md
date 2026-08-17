@@ -156,3 +156,86 @@ fila de trabalho, não licença.
 **Fora do projeto.** O dono registrou a mesma diretriz um nível acima, para a casa inteira:
 *"é primordial que nossa software forge utilize a prática de snippets e design system."* Vale em
 qualquer projeto que a software-forge execute, e não só na Leela.
+
+## 9. Redundância de informação na mesma dobra (2026-08-17 · RN-573 · PERMANENTE)
+
+> Critério de aceite de toda entrega de UI, injetado pelo harness em todo dispatch.
+> Nasce da leva 17 do dono, e a fala dele é a definição mais curta do defeito:
+> informação repetida *"só ocupa espaço, e prejudica principalmente a experiencia de
+> tablet e mobile."*
+
+### A regra
+
+**Nenhum número ou fato aparece duas vezes ou mais na mesma dobra sem papel distinto
+declarado.** Cada informação tem uma casa por pergunta; aparição fora de casa é resumo
+com caminho, nunca cópia.
+
+Três precisões, porque a frase sozinha já foi lida errado:
+
+- **"Uma casa por pergunta"** permite a segunda aparição quando ela responde outra
+  pergunta, e obriga a segunda a dizer qual. Total ao lado da própria decomposição é
+  isso. Total ao lado do mesmo total não é.
+- **"Declarado"** é a metade que torna a regra conferível. O papel distinto está escrito
+  no código ou no cânone, não deduzido por quem revisa. Sem isso a regra vira opinião,
+  e a lição da §8 é que opinião não reprova nada.
+- **A dobra julga, não o arquivo.** Dois componentes distintos que caem juntos na tela
+  estão na mesma tela para quem lê. Um header em `EventoShell.tsx` e um card em
+  `CountdownHero.tsx` são a mesma dobra.
+
+### Papéis distintos que a régua aceita
+
+Total ao lado da decomposição visível · alvo de confirmação destrutiva · campo editável
+de formulário · prévia do que será gravado · log de sessão · nome acessível ao lado de
+ícone. A lista cresce por decisão registrada, nunca por interpretação de quem revisa.
+
+### Por que ela é regra dura e não estilo
+
+Duas cópias do mesmo fato lidas de **fontes diferentes** divergem, e a tela passa a
+mostrar dois números com o mesmo nome. A varredura de 17/08 achou o caso vivo três
+vezes, em três áreas: receita no evento (`OverviewKpis` lê `evento.receitaConfirmada`,
+`ModalidadesPanels` lê `fin.receitaBruta`), membros ativos no clube (lista carregada
+contra agregado gravado no documento) e o bruto do tenant na plataforma (retrato de
+`platform/rollups` contra soma viva de `repasse.ts`). Nenhum é erro de cálculo. Os três
+são esta regra faltando.
+
+### O precedente que já existia sozinho
+
+`apps/painel/src/routes/plataforma/tenants/TenantFichaLayout.tsx:57` chama
+`precisaDeFaixaDeIdentidade(ativa)` para suprimir a faixa de identidade na aba Resumo,
+com a razão escrita em `:12-13` — *"no Resumo ela seria o mesmo nome duas vezes"*. Era o
+único lugar do painel onde esta redundância tinha sido vista, nomeada e resolvida. Esta
+seção generaliza o que aquele arquivo já fazia por conta própria.
+
+### O que a §9 alcança e a §8 não alcançava
+
+A §8 e a RN-558 julgam **procedência** (a peça é a do cânone?). A RN-568 julga
+**composição recorrente** (esta montagem já apareceu três vezes?). As duas olham para
+como a peça foi feita. A §9 olha para **o que a tela diz**, e por isso pega um caso que
+nenhuma das outras pega: uma tela pode usar o `Card` canônico, com os tokens certos,
+passar no gate de marca e no de procedência, e ainda assim mostrar o mesmo número quatro
+vezes. Foi exatamente o que a medição de 17/08 achou na Visão geral do evento.
+
+### Como se mede
+
+Duas provas, e a segunda só onde a dobra muda.
+
+1. **Contagem de duras da área**, antes e depois, com arquivo e linha de cada fonte. O
+   molde é `02-rodadas/2026-08-17-carga-cognitiva/00-medicao-area-interna-evento.md`.
+2. **Pixel nos três viewports** (desktop, 768, 375): altura do cabeçalho, topo do
+   primeiro número não duplicado, e se ele cabe sem rolar. É a prova que separa o
+   defeito que incomoda no celular do que passa despercebido no desktop — e a razão de
+   este defeito ter sobrevivido tanto tempo é que ninguém olhava a segunda coluna.
+
+### O gate
+
+`leela-redundancia`, especificado na onda **R0** e construído junto com ela. Mesmo
+desenho do `leela-canon`: baseline por área, nasce em `warn`, vira `error` quando a
+contagem da área chega a zero. Enquanto o gate não existir, o critério vale pela revisão
+humana com esta seção na mão, e todo dispatch de UI a carrega como aceite.
+
+### A campanha retroativa
+
+Fila em ondas **R0 a R6**, 64 itens, em
+`02-rodadas/2026-08-17-carga-cognitiva/04-fila-em-ondas.md`. A área interna do evento é a
+onda 1 por ordem do dono, não por ranking. As letras são R para não colidir com as ondas
+C0-C6 da conformidade de controles, que estão vivas.
