@@ -77,3 +77,37 @@ condição de reabertura explícita abaixo.
   DS; ou (b) `FILTROS_STATUS_EVENTO` cai para 3 valores reais por decisão de
   produto. O que vier primeiro reabre as duas instâncias (ADR-019 e este) para
   conversão na mesma lane.
+
+---
+
+## ⛔ SUPERADO em 2026-08-17 pela decisão do dono (leva 20)
+
+> Lane FILTROS-LISTA · trace `leela-redesign-v2-20260810` · registro em
+> `02-rodadas/2026-08-17-decisoes-dono/01-decisoes-dono.md`, leva 20 item 1.
+> Cai junto com o ADR-019, como os dois previram ("o que vier primeiro reabre as duas instâncias").
+
+**A fala, na íntegra:** *"novamente, voco colocol pills no lugar de filtros, em Membros, em duas
+fileiras, quanto poderiamos apenas ter filtros. (...) quero que voce aplique o componente dos
+filtros em lista. e eles devem ficar alinhados ao lado do pesquisador, assim como em DEsafios. Para
+padronizar. (...) mas isos deve ser aplicar no projeto inteiro."*
+
+**Este ADR tinha duas pernas, e as duas caíram por motivos diferentes.**
+
+1. **O limiar de quatro valores** — superado pela decisão do dono: filtro de listagem é lista em
+   qualquer contagem. A régua de cliques perdeu para a régua de clareza.
+2. **A falta de `disabled` na `FilterChips`** — esta não foi superada, foi **paga**. A prop entrou
+   na `FilterMenu` e na `FilterChips` no mesmo commit da peça, com teste dos dois modos. Era
+   exatamente a condição de reabertura (a) escrita aqui: *"a `FilterChips` ganha `disabled`"*. A
+   dívida foi quitada, não perdoada.
+
+Registrar a diferença importa: a segunda perna teria caído mesmo sem o dono, no dia em que alguém
+pagasse a prop. A primeira só caiu porque ele decidiu.
+
+**Estado do código.** `EventosGlobaisRoute.tsx` usa `FilterChips label="Status" disabled={porTenant}`.
+O gatilho inteiro desliga durante o recorte por tenant — o estado fica num lugar só, em vez de uma
+guarda por handler. O `todos` sai de `options` (`FILTROS_STATUS_EVENTO.filter(...)`), porque a peça
+desenha o "Todos" dela e mandar os dois produziria duas linhas iguais na lista. `faceta-crua` cai
+de 2 para 0 na catraca do `gate-canon`.
+
+**Fica válido deste ADR:** o registro da exceção e, sobretudo, o mecanismo — um ADR que nomeia a
+capacidade que falta na peça é o que faz a capacidade ser construída. Não apagar.

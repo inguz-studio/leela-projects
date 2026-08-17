@@ -1,6 +1,6 @@
 ---
-tags: [leela, decisoes-dono, leva17, leva18, leva19, carga-cognitiva, navegacao, e01, e02, e03, e05]
-aliases: [Leva 17, Leva 18, Leva 19, Decisões do dono 17/08]
+tags: [leela, decisoes-dono, leva17, leva18, leva19, leva20, carga-cognitiva, navegacao, filtros, e01, e02, e03, e05]
+aliases: [Leva 17, Leva 18, Leva 19, Leva 20, Decisões do dono 17/08]
 atualizado: 2026-08-17
 ---
 
@@ -266,3 +266,116 @@ que não aparece nesta seção parece rodada que esqueceu de registrar.
 | NAV-MOBILE-2 | Quais quatro, e onde fica Parcerias? | spec, Movimento 8 |
 | NAV-MOBILE-3 | O drawer sai no profissional e fica no master? | spec, Movimento 8 |
 | NAV-MOBILE-4 | Perfil sozinho, ou perfil e configurações separados? | spec, Movimento 8 |
+
+---
+
+# Leva 20 · o padrão de filtro, os KPI de engajamento e a barra mobile
+
+**Na íntegra:**
+
+> *"novamente, voco colocol pills no lugar de filtros, em Membros, em duas fileiras, quanto
+> poderiamos apenas ter filtros. Isso ficou confuso na tela de clubes, na hora de filtrar colunas,
+> quero que voce aplique o componente dos filtros em lista. e eles devem ficar alinhados ao lado do
+> pesquisador, assim como em DEsafios. Para padronizar. (me refiro a rota dos clubes), mas isos deve
+> ser aplicar no projeto inteiro. Nao houve o manejamento dos KPI cards, de enagajemtno, nao estou
+> localizando os insights da Leela, (que eu havia enviado no template do mockup feito no claude
+> design). Já o Menu no formato mobile, pode ser uma barra flutuante, horizontal a ficar na parte
+> inferior da tela. e a parte de logout, configurações, na barra superior no lado direito, com o
+> ícone de perfil."*
+
+Três assuntos numa fala só, e cada um cai numa lane diferente. O registro inteiro mora aqui; os
+ponteiros dizem quem constrói.
+
+## 20.1 · Filtro de listagem é lista, ao lado da pesquisa (2ª cobrança)
+
+> Build na lane **FILTROS-LISTA** (`filtros-lista`), trace `leela-redesign-v2-20260810`.
+
+A palavra que abre a fala é *"novamente"*, e ela é o fato mais importante desta leva. A onda C4
+aplicou `FilterChips` em Membros seguindo a spec da conformidade e o limiar do ADR-019 à risca: o
+padrão estava **certo pela régua da esteira e errado pelo gosto do dono**. Quem manda no padrão é
+ele. Isto não é conserto de defeito, é troca de régua, e por isso a decisão sobe ao cânone em vez de
+virar um card de tela.
+
+**O padrão novo, com as duas metades obrigatórias** (cânone §1.1):
+
+1. **A forma é lista.** `FilterChips` desenha `FilterMenu` (empilhável) ou `Combobox` (exclusiva).
+   A contagem de opções não decide nada. Fileira de pills como filtro primário está proibida.
+2. **A posição é a mesma fileira do campo de pesquisa.** A `FilterBar` hospeda e o `SearchInput`
+   fica na largura padrão do DS.
+
+**A anatomia medida antes de escrever o padrão** (desktop 1440, painel de pé, 17/08):
+
+| Tela | Fileiras | Altura da barra | Largura da busca | Facetas |
+|---|---:|---:|---:|---|
+| Desafios (a referência dele) | 1 | 55px | 320px | 2, em fileira de chips |
+| Membros (a queixa dele) | 2 | 99px | 448px | 2, em fileira de chips |
+| Comunicados | 2 | 99px | 320px | 3, em fileira de chips |
+| Eventos (hub) | 1 | 49px | — | 1, em lista |
+
+O que a medição mostrou e a suposição não teria mostrado: **Membros e Desafios tinham composição
+JSX idêntica**. A única diferença era uma classe no campo de busca (`w-full max-w-md`). Um teste de
+unidade veria o mesmo código nas duas telas e passaria verde nas duas. E Comunicados prova que
+largura sozinha não resolve: com a busca já na largura padrão, três facetas em fileira ainda quebram
+a linha.
+
+**A referência do dono cumpria metade do padrão.** Desafios acertava a posição e errava a forma,
+então ela também converteu. O hub de Eventos, que ninguém citou, já era o padrão inteiro.
+
+**O motivo medido da troca, além do gosto.** Na fileira, o nome da faceta só existia no
+`aria-label`. Em Membros o organizador via `Todos · Ativos · Novos · Inativos · Todos · Owner ·
+Admins · Membros`: dois "Todos" colados, sem nada dizendo onde acaba Status e começa Papel. O
+gatilho da lista mostra `Status: Todos` — nome e valor aplicado, em texto, para todo mundo.
+
+**Três ADRs caem, e ficam escritos.** ADR-019 e ADR-020 recusavam converter em nome do clique
+economizado; a régua deles (*"onda que sobe passo não fecha"*) perdeu para a régua da clareza. O
+ADR-020 pedia `disabled` na peça como condição de reabertura, e a prop foi **paga** no mesmo commit
+— a dívida foi quitada, não perdoada. O ADR-018 (typeahead do balcão) fica **parcialmente**
+superado: a régua de cliques caiu, mas a perna dele que continua de pé é ausência de capacidade no
+DS (`Combobox` não tem modo de resultado inline), e o balcão não tem faceta nenhuma, então o padrão
+novo não governa aquela tela. Esticar a fala do dono até lá seria inventar decisão.
+
+## 20.2 · Os KPI de engajamento e os insights da Leela
+
+> ⚠ **Só registro nesta lane.** Build na lane **ENG-INSIGHTS** (`eng-insights`).
+
+Duas queixas coladas numa frase, e são coisas diferentes:
+
+- **Os KPI cards de engajamento não foram manejados.** Cobrança de trabalho que a leva anterior
+  deixou passar, não pedido novo.
+- **Os insights da Leela sumiram.** O dono diz que os enviou *"no template do mockup feito no claude
+  design"* e não os localiza no produto. Isto é rastro de insumo do próprio dono que não chegou à
+  tela — a lane ENG-INSIGHTS tem de achar o mockup antes de desenhar qualquer coisa, porque o
+  material existe e é dele.
+
+## 20.3 · A barra mobile flutuante, e o perfil no canto superior direito
+
+> ⚠ **Só registro nesta lane.** Build na lane **NAV-MOBILE** (`nav-mobile`).
+
+**Esta leva responde dois dos quatro vetáveis que a leva 19 deixou em aberto**, e é por isso que ela
+não pode ser lida sozinha:
+
+- **NAV-MOBILE-1 respondido.** *"barra flutuante, horizontal a ficar na parte inferior da tela"* —
+  a leitura do maestro (barra inferior) estava certa, e ele acrescentou **flutuante**, que a leitura
+  não tinha. Flutuante muda o desenho: a barra passa por cima do conteúdo em vez de reservar altura,
+  o que conversa direto com o aviso da leva 19 de que altura em 375 é o que a leva 17 está brigando
+  para liberar.
+- **NAV-MOBILE-4 respondido.** *"a parte de logout, configurações, na barra superior no lado
+  direito, com o ícone de perfil"* — **um** botão, o de perfil, no topo à direita, abrindo o popover
+  que a leva 16 já fechou com Configurações e Sair. O default do maestro estava certo.
+
+**Continuam em aberto:** NAV-MOBILE-2 (quais quatro dos cinco itens do rail, e onde fica Parcerias)
+e NAV-MOBILE-3 (o drawer sai no profissional e fica no master).
+
+## Regras de negócio desta leva
+
+Nenhuma nova. A mudança de filtro é **cânone**, não regra de negócio: ela governa a forma de um
+controle, não o comportamento de um dado. A linha entrou em `03-canon/canone-de-componentes.md`
+§1.1, que é onde uma decisão de padrão vincula sem consumir número.
+
+## O que fica com o dono
+
+| Item | Pergunta | Onde |
+|---|---|---|
+| FILTRO-1 | Gate visual das telas convertidas (antes × depois, 375/768/desktop, 2 temas) | handoff `leela-filtros-lista-20260817.md` |
+| NAV-MOBILE-2 | Quais quatro, e onde fica Parcerias | leva 19, spec Movimento 8 |
+| NAV-MOBILE-3 | O drawer sai no profissional e fica no master | leva 19, spec Movimento 8 |

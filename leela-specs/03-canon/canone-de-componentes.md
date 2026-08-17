@@ -37,16 +37,73 @@ não exceção. Regra completa em `04-engenharia/governanca-design.md` §8.
 | Escolha única, poucas opções, em formulário | `Select` | até ~7 opções conhecidas, sem busca |
 | Ordenação de lista (reordena, não retira) | `Select` | decisão da Onda C5 (2026-08-16), `02-rodadas/2026-08-12-conformidade-controles/03-fila-em-ondas.md` — o cânone não tinha linha para isto: não é filtro (nada some da lista) e não é campo de formulário (não vira dado). A forma bate com a linha de cima — escolha única, poucas opções, sem busca —, então o veredicto é o mesmo componente, não peça nova. `prefixosDeFiltro` da regra 3 excluiu `"ordenar"`: reordenar declara papel diferente de filtrar, no mesmo rótulo que o autor escreve |
 | Escolha com busca, cardinalidade alta | `Combobox` | quando rolar é pior que digitar; anatomia Popover + Command |
-| Filtro de lista ou tabela | `FilterMenu` | filtro nunca é `Select`; ele mostra o que está aplicado |
-| A faceta de UM filtro (a fileira ou o menu) | `FilterChips` | recebe as opções e **conta**: fileira de `Chip` abaixo de 4, `FilterMenu` (empilhável) ou `Combobox` (exclusiva) a partir de 4 |
+| Filtro de lista ou tabela | `FilterChips` | **sempre lista, ao lado da pesquisa, numa fileira só** — ver §1.1. Filtro nunca é `Select` e nunca é fileira de pills; a lista mostra o nome da faceta e o que está aplicado |
+| A faceta de UM filtro, por dentro | `FilterMenu` (empilhável) ou `Combobox` (exclusiva) | quem escolhe entre os dois é a `FilterChips`, pelo `multiple`. A tela não monta nenhum dos dois direto para filtrar listagem |
 | Menu de ações sobre um item | `DropdownMenu` | ação, não valor; se o resultado é um dado, é `Select`/`Combobox` |
 | Âncora flutuante genérica | `Popover` + `PopoverTrigger` / `PopoverContent` / `PopoverAnchor` / `PopoverClose` | direto só quando o conteúdo não é lista |
 | Lista filtrável dentro de painel | `Command` + `CommandInput` / `CommandList` / `CommandEmpty` / `CommandGroup` / `CommandItem` | primitivo do `Combobox` |
-| Alternância entre recortes do mesmo dado | `Chip` com `active`, ou `Tabs` | chip para filtro empilhável; tab para recorte exclusivo com painel |
+| Alternância entre recortes do mesmo dado | `Chip` com `active`, ou `Tabs` | ver a fronteira do `Chip` em §1.1 — chip **não** é filtro de listagem; tab para recorte exclusivo com painel |
 | Busca com resultado inline, sem popover ("modo de fluxo") | `SearchInput` + lista própria — exceção registrada, **ADR-018** | `Combobox` é picker de popover; o balcão (`AtendimentoPanel.tsx`) não pode pagar o clique de abrir um gatilho antes de buscar (RN-205). Único consumidor hoje; um segundo justifica `Combobox` ganhar `mode="flow"` |
 
 **Proibido:** `<select>` nativo para filtro ou seleção rica. A lista dele é desenhada pelo sistema
 operacional e não aceita os tokens do DS.
+
+## 1.1 Filtro de listagem: lista, ao lado da pesquisa, numa fileira só
+
+**Decisão do dono, 2026-08-17 (leva 20), na íntegra:** *"novamente, voco colocol pills no lugar de
+filtros, em Membros, em duas fileiras, quanto poderiamos apenas ter filtros. Isso ficou confuso na
+tela de clubes, na hora de filtrar colunas, quero que voce aplique o componente dos filtros em
+lista. e eles devem ficar alinhados ao lado do pesquisador, assim como em DEsafios. Para
+padronizar. (me refiro a rota dos clubes), mas isos deve ser aplicar no projeto inteiro."*
+
+O padrão tem **duas metades, e as duas são obrigatórias** — cada uma sozinha deixa o defeito de pé.
+
+**Metade 1 · a FORMA é lista.** A faceta é `FilterChips`, que desenha `FilterMenu` (empilhável) ou
+`Combobox` (exclusiva). A contagem de opções não decide nada: três valores e trinta desenham a
+mesma coisa. Fileira de pills como filtro primário está proibida.
+
+**Metade 2 · a POSIÇÃO é a mesma fileira do campo de pesquisa.** A `FilterBar` hospeda, e o
+`SearchInput` vizinho fica na largura padrão do DS (`--search-width`). ⛔ **Nunca dê `w-full` ou
+`flex-1` ao campo de busca de uma listagem:** ele come a linha inteira e empurra as facetas para
+baixo.
+
+### A anatomia medida, e por que ela decidiu o padrão
+
+Desafios é o exemplo que o dono nomeou. Medido em 17/08 no desktop (1440), com o painel de pé:
+
+| Tela | Fileiras | Altura da barra | Largura da busca | Facetas |
+|---|---:|---:|---:|---|
+| Desafios (a referência dele) | **1** | 55px | 320px (default do DS) | 2, em fileira de chips |
+| Membros (a queixa dele) | **2** | 99px | 448px (`w-full max-w-md`) | 2, em fileira de chips |
+| Comunicados | **2** | 99px | 320px (default do DS) | 3, em fileira de chips |
+| Eventos (hub) | **1** | 49px | — | 1, **em lista** |
+
+**O que a medição mostrou, e que a suposição não teria mostrado.** Membros e Desafios têm composição
+JSX **idêntica** — mesma `FilterBar`, mesmas duas facetas de três opções. A única diferença era uma
+classe no campo de busca. Um teste de unidade veria o mesmo código nas duas telas e passaria verde
+nas duas.
+
+E Comunicados prova que largura sozinha não resolve: com a busca já na largura padrão, **três**
+facetas em fileira de chips ainda quebram a linha. Só a forma de lista faz a fileira única
+sobreviver ao número de facetas — é por isso que as duas metades andam juntas.
+
+**A referência do dono cumpria metade do padrão.** Desafios acertava a posição e errava a forma;
+o hub de Eventos, que ninguém citou, já era o padrão inteiro. Isso está escrito porque "faça como
+em Desafios" seria instrução incompleta se copiada ao pé da letra — Desafios **também** converteu.
+
+### O que a lista dá e a fileira não dava
+
+Na fileira, o nome da faceta só existia no `aria-label`. Em Membros o organizador via
+`Todos · Ativos · Novos · Inativos · Todos · Owner · Admins · Membros`: **dois "Todos" colados**,
+sem nada dizendo onde acaba Status e começa Papel. O gatilho da lista mostra `Status: Todos` — nome
+e valor aplicado, em texto, para todo mundo. É o mesmo ganho que a `FilterMenu` já entregava no hub
+de Eventos desde antes desta decisão.
+
+### A fronteira do `Chip`, em uma linha
+
+`Chip` continua canônico e **não** é filtro de listagem: ele serve a alternância de recorte sem
+lista por trás (modo de visualização, "Top 5 × Todos") e a seleção de tags em formulário. Se há uma
+lista sendo recortada e um campo de pesquisa por perto, é `FilterChips`.
 
 ## 2. Data e hora
 
