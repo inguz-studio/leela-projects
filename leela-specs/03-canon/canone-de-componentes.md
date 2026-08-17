@@ -226,6 +226,7 @@ quatro vias de fechamento do DoD de Tela: cancelar, X, overlay, Esc.
 |---|---|
 | Moldura da aplicação | `AppShell` |
 | Menu lateral | `Sidebar` / `SidebarRail` — marca e rodapé por `SidebarBrand` / `SidebarFooter` |
+| Navegação primária abaixo de `lg`, até cinco destinos | `BottomNav` — barra flutuante horizontal inferior; `lg:hidden` é anatomia da peça, e o contêiner que rola leva `RESPIRO_BOTTOMNAV` |
 | Trilha | `Breadcrumb` |
 | Cabeçalho de página | `PageHeader` |
 | Navegação de área | `SubNav` — ativa com sublinhado Brasa 2px e contador pill; barra transparente e **sem borda inferior**, em qualquer nível |
@@ -240,6 +241,15 @@ um exemplo de que voce naoe stá retulizando e padronizando os componentes."* Oi
 painel passavam a prop; clubs, que não passava, era o único certo. A borda inferior agora é travada
 em `border-b-0` **depois** do `className`, pela mesma mecânica de `twMerge` da trava de rolagem —
 separar a barra do conteúdo é trabalho do espaço da moldura, nunca de traço.
+
+**A navegação mobile tem DUAS anatomias, e a escolha é da superfície.** O `BottomNav` nasceu na leva
+20 pela fala do dono — *"Já o Menu no formato mobile, pode ser uma barra flutuante, horizontal a
+ficar na parte inferior da tela"* — e ele supersede o drawer off-canvas (D-1008-R5) **na superfície
+do produtor**, onde cinco destinos viram quatro slots mais uma casa para o quinto. Na superfície do
+super-admin o drawer **fica**: são doze destinos, e barra que abandona destino é pior que drawer.
+O `AppShell` carrega a regra em vez de descrevê-la — com `bottomNav` o hambúrguer não é renderizado
+e o drawer não é montado, e sem `bottomNav` os dois seguem intactos. Nenhum modo da peça deixa a
+superfície sem navegação abaixo de `lg`, que é o que impede rota inalcançável no mobile.
 
 O consumidor único no painel é `apps/painel/src/components/nav/AreaSubNav.tsx`: ele fia a navegação
 de SPA (`tabsComNavSpa`) que estava copiada em onze pontos de render, e é o que garante `href` real
