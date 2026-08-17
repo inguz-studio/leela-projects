@@ -54,9 +54,38 @@ const FOCUSABLE =
 // que entra guarda o valor original e trava; o ÚLTIMO que sai destrava.
 let travasDeRolagem = 0;
 let overflowOriginal: string | null = null;
+let paddingRightOriginal: string | null = null;
+
+// ---------------------------------------------------------------------------
+// Compensação de GUTTER (MODAL-LOTE · 17/08, fala do dono: "tem scroll bar
+// aparecendo")
+// ---------------------------------------------------------------------------
+// `overflow: hidden` no body FAZ a barra de rolagem nativa da página sumir —
+// e a página GANHA de volta a faixa de pixels que a barra ocupava. Numa tela
+// com scrollbar clássica (Windows/Chrome, a mesma medida no SubNav/scroll.ts)
+// isso é um layout shift toda vez que QUALQUER overlay do DS abre: o conteúdo
+// alarga alguns pixels para a direita e volta a encolher ao fechar — o tipo
+// de tremor que lê como "scrollbar aparecendo/sumindo" mesmo sem nenhuma
+// barra nova de verdade. `innerWidth - clientWidth` é exatamente a largura
+// que a barra ocupava (0 em overlay-scrollbar de macOS/mobile — nada a
+// compensar aí). Compensar com `padding-right` do mesmo tamanho mantém a
+// borda direita do conteúdo parada. Não usamos `scrollbar-gutter: stable`
+// porque o suporte de browser não é unânime nos alvos do produto ainda.
+function larguraDaBarraNativa(): number {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return 0;
+  return window.innerWidth - document.documentElement.clientWidth;
+}
 
 function travarRolagem(): void {
-  if (travasDeRolagem === 0) overflowOriginal = document.body.style.overflow;
+  if (travasDeRolagem === 0) {
+    overflowOriginal = document.body.style.overflow;
+    paddingRightOriginal = document.body.style.paddingRight;
+    const gutter = larguraDaBarraNativa();
+    if (gutter > 0) {
+      const paddingAtual = Number.parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+      document.body.style.paddingRight = `${paddingAtual + gutter}px`;
+    }
+  }
   travasDeRolagem += 1;
   document.body.style.overflow = 'hidden';
 }
@@ -65,7 +94,9 @@ function destravarRolagem(): void {
   travasDeRolagem = Math.max(0, travasDeRolagem - 1);
   if (travasDeRolagem > 0) return;
   document.body.style.overflow = overflowOriginal ?? '';
+  document.body.style.paddingRight = paddingRightOriginal ?? '';
   overflowOriginal = null;
+  paddingRightOriginal = null;
 }
 
 // ---------------------------------------------------------------------------
