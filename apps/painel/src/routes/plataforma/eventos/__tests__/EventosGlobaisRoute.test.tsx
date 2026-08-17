@@ -165,10 +165,14 @@ describe('EventosGlobaisRoute · estados', () => {
 });
 
 describe('EventosGlobaisRoute · recorte', () => {
-  it('chip de status pede o filtro AO HOOK (servidor), não peneira na tela', async () => {
+  // A faceta é LISTA desde 17/08 (leva 20, ADR-020 superado): abre o gatilho
+  // "Status" e escolhe o valor. O que o teste trava continua sendo o mesmo — o
+  // recorte vai AO HOOK, não peneira na tela.
+  it('a lista de status pede o filtro AO HOOK (servidor), não peneira na tela', async () => {
     renderRota();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Publicado' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Publicado' }));
 
     expect(mocks.useEventosGlobais).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: 'publicado' })
@@ -184,7 +188,9 @@ describe('EventosGlobaisRoute · recorte', () => {
     expect(mocks.useEventosGlobais).toHaveBeenLastCalledWith(
       expect.objectContaining({ tenantId: 'passo-certo' })
     );
-    expect(screen.getByRole('button', { name: 'Publicado' })).toBeDisabled();
+    // `disabled` na FilterChips (a condição de reabertura que o ADR-020 pediu
+    // e que a lane de 17/08 pagou): o gatilho inteiro desliga, não cada valor.
+    expect(screen.getByRole('button', { name: 'Status' })).toBeDisabled();
     expect(
       screen.getByText(/O status filtra a lista do sistema inteiro/)
     ).toBeInTheDocument();

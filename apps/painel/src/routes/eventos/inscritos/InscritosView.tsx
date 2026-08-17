@@ -27,9 +27,9 @@ import {
   Button,
   Checkbox,
   CheckboxField,
-  Chip,
   Combobox,
   FilterBar,
+  FilterChips,
   Pagination,
   ResultCount,
   RowActions,
@@ -364,6 +364,26 @@ export function InscritosView({
         }
         facets={
           <>
+            {/*
+              Status da inscrição (dor #1, "não sei quem pagou). Era a fileira de
+              `Chip` à mão do ADR-019 — a exceção que trocava o padrão por um
+              clique. O ADR está SUPERADO pela decisão do dono de 17/08 (leva
+              20): filtro de listagem é lista, ao lado da pesquisa, na mesma
+              fileira. A faceta volta para a peça e, de quebra, para DENTRO da
+              barra: ela morava solta abaixo dela, que era a segunda metade do
+              defeito que o dono apontou em Membros.
+            */}
+            <FilterChips
+              label="Status"
+              options={STATUS_INSCRITO.map((s) => ({
+                id: s,
+                label: statusInscritoBadge(s).label,
+                count: contagem[s],
+              }))}
+              selected={status ? [status] : []}
+              onChange={(next) => setStatus((next[0] as StatusInscrito | undefined) ?? null)}
+              allCount={contagem.total}
+            />
             <div className="min-w-[var(--spacing-24)]">
               <Combobox
                 aria-label="Filtrar por kit"
@@ -396,31 +416,6 @@ export function InscritosView({
           />
         }
       />
-
-      {/*
-        Status: controle segmentado VISÍVEL com contagens (faceta de pagamento,
-        dor #1). EXCEÇÃO REGISTRADA à FilterChips — ADR-019: STATUS_INSCRITO tem
-        4 valores, o limiar exato em que a peça troca a fileira por um Combobox
-        de popover (cânone §1, "4+ exclusiva = Combobox"). Um clique direto no
-        chip viraria abrir+escolher no Combobox, custo extra na interação mais
-        usada da tela — a onda não paga esse passo a mais. Chip é canônico; a
-        MONTAGEM segue à mão até a peça ganhar um jeito de honrar um limiar
-        maior quando o autor da tela pedir explicitamente.
-      */}
-      <div
-        className="flex flex-wrap items-center gap-[var(--spacing-2)]"
-        role="group"
-        aria-label="Filtrar por status"
-      >
-        <Chip active={status === null} onClick={() => setStatus(null)}>
-          {`Todos · ${contagem.total}`}
-        </Chip>
-        {STATUS_INSCRITO.map((s) => (
-          <Chip key={s} active={status === s} onClick={() => setStatus(s)}>
-            {`${statusInscritoBadge(s).label} · ${contagem[s]}`}
-          </Chip>
-        ))}
-      </div>
 
       {/* A1 (revisão r1) · "selecionar todos" no MOBILE: o checkbox de selecionar
           a página inteira vive no header da tabela (col.__select), e o thead some
