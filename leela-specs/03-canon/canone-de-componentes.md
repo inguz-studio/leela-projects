@@ -182,12 +182,30 @@ generalidade que a medição não achou.
 | Dado tabular | `Table` + `TableColumn` |
 | Paginação | `Pagination` |
 | Lista de eventos | `EventRow` dentro de `<ul>` |
+| Ações de UMA linha de tabela | `RowActions` — botões de **ícone**, nunca texto; entra pelo `renderActions` do `Table` |
 | Barra de ações sobre a lista | `Toolbar` |
 | Barra de busca, facetas e contador da lista | `FilterBar` — compõe `Toolbar`; o `role="search"` fica no `SearchInput`, não na barra |
 | Contagem da lista recortada ("Mostrando X de Y") | `ResultCount` — canal de ARIA por prop, default polido; com `temMais` o total não aparece |
 
 `<table>` cru é permitido em um caso: tabela `sr-only` pareada com gráfico, para leitor de tela. Não
 é atalho de estilo; é a versão acessível do dado.
+
+**Ação de linha é ÍCONE, e o ícone sai do verbo.** Decisão do dono em 2026-08-17, na íntegra: *"E
+nas ações, de tabelas, quero que ao invés de escritos, utilzemos ícones de ação, que ao clicar,
+abrimos modais, ou direcionamos para páginas. Como por exemplo 'detalhes'."* O inventário da lane
+mediu **40 ações em texto, em 21 tabelas de 20 arquivos, com 25 rótulos distintos para 17 verbos** —
+três grafias só para "ver". O `RowActions` fecha isso pela API: a prop é `verbo`, de uma união
+FECHADA, e o consumidor **não escolhe o ícone** — o desenho sai de `ICONES_DE_ACAO`, dentro do DS.
+É o que faz "mesmo verbo, mesmo ícone" ser cobrado pelo compilador em vez da revisão.
+
+Sinônimo de rótulo não vira verbo novo: "Detalhe", "Detalhes" e "Ver termos" são todos `ver`, e o
+que muda é o `label` — que segue livre, é obrigatório e vira o `aria-label`. **Verbo novo entra como
+linha em `ICONES_DE_ACAO` mais linha aqui, no mesmo commit**, com a mesma disciplina do token novo
+(governança §5) e da escala fechada do `Stack`.
+
+A dica do `Tooltip` é reforço VISUAL e nunca o único canal do nome: o nome acessível é o `aria-label`
+do `IconButton`, que existe com a dica fechada. A catraca `acao-de-tabela-em-texto` do
+`scripts/gate-canon.mjs` conta o que ainda não converteu, e ela só desce.
 
 ## 8. Modal e overlay
 
