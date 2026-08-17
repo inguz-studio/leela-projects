@@ -50,16 +50,6 @@ function props(over: Partial<EngajamentoViewProps> = {}): EngajamentoViewProps {
       { id: 'Corrida de rua', rotulo: 'Corrida de rua', membros: 90 },
       { id: 'Ciclismo', rotulo: 'Ciclismo', membros: 44 },
     ],
-    ocupacao: {
-      linhas: [
-        { slug: 'corrida-da-ilha', nome: 'Corrida da Ilha', inscritos: 42, capacidade: 50, ocupacao: 0.84 },
-        { slug: 'pedal-do-norte', nome: 'Pedal do Norte', inscritos: 12, capacidade: 40, ocupacao: 0.3 },
-      ],
-      semCapacidade: 0,
-    },
-    eventosLoading: false,
-    eventosError: false,
-    onRetryEventos: vi.fn(),
     loading: false,
     error: null,
     semClubes: false,
@@ -81,12 +71,12 @@ async function abrirAjuda(bloco: string): Promise<HTMLElement> {
 }
 
 describe('EngajamentoView · o que tem fonte', () => {
-  it('mostra os quatro números da comunidade', () => {
+  it('mostra os números da comunidade que são desta casa', () => {
     render(<EngajamentoView {...props()} />);
     const topo = screen.getByRole('region', { name: 'Números da comunidade' });
-    expect(within(topo).getByText('Clubs')).toBeInTheDocument();
     expect(within(topo).getByText('138')).toBeInTheDocument();
     expect(within(topo).getByText('51')).toBeInTheDocument();
+    expect(within(topo).getByText('3')).toBeInTheDocument();
   });
 
   it('diz que participações são dos desafios em andamento — não do total histórico', () => {
@@ -134,6 +124,148 @@ describe('EngajamentoView · o que tem fonte', () => {
     render(<EngajamentoView {...props()} />);
     const ajuda = await abrirAjuda('Desafios ligados a um evento');
     expect(ajuda).toHaveTextContent(/intenção declarada no desafio, não inscrição confirmada/i);
+  });
+});
+
+/**
+ * Manejamento dos KPI cards pela régua da casa-única (RN-573), cobrado pelo
+ * dono na leva 20: "não houve o manejamento dos KPI cards, de engajamento".
+ */
+describe('EngajamentoView · manejamento dos KPI cards (régua da casa-única)', () => {
+  it('o KPI "Clubs" morreu — a casa dele é o hub de clubs', () => {
+    render(<EngajamentoView {...props()} />);
+    const topo = screen.getByRole('region', { name: 'Números da comunidade' });
+    expect(within(topo).queryByText('Clubs')).not.toBeInTheDocument();
+  });
+
+  it('a contagem de clubs vira resumo COM CAMINHO na legenda de "Membros ativos"', () => {
+    render(<EngajamentoView {...props()} />);
+    const topo = screen.getByRole('region', { name: 'Números da comunidade' });
+    expect(within(topo).getByText('somados entre 2 clubs')).toBeInTheDocument();
+  });
+
+  it('com um único club no recorte a legenda some — "entre 1 club" é ruído', () => {
+    render(
+      <EngajamentoView
+        {...props({
+          resumo: { clubes: 1, membrosAtivos: 138, desafiosAtivos: 3, participacoes: 51 },
+        })}
+      />
+    );
+    const topo = screen.getByRole('region', { name: 'Números da comunidade' });
+    expect(within(topo).queryByText(/somados entre/)).not.toBeInTheDocument();
+  });
+
+  it('sobram os três KPIs do club, na hierarquia da spec (Movimento 7)', () => {
+    render(<EngajamentoView {...props()} />);
+    const topo = screen.getByRole('region', { name: 'Números da comunidade' });
+    const rotulos = ['Membros ativos', 'Participações', 'Desafios ativos'];
+    for (const r of rotulos) expect(within(topo).getByText(r)).toBeInTheDocument();
+    // A ordem é a da pergunta que a tela responde: quem é a comunidade, quanto
+    // ela se mexe, o que a move.
+    const texto = topo.textContent ?? '';
+    expect(texto.indexOf('Membros ativos')).toBeLessThan(texto.indexOf('Participações'));
+    expect(texto.indexOf('Participações')).toBeLessThan(texto.indexOf('Desafios ativos'));
+  });
+
+  it('a régua de KPIs fica ACIMA da primeira faixa, como no template do dono', () => {
+    const { container } = render(<EngajamentoView {...props()} />);
+    const texto = container.textContent ?? '';
+    expect(texto.indexOf('Membros ativos')).toBeLessThan(
+      texto.indexOf('A comunidade em si: quem está, como chegou e o que move o grupo.')
+    );
+  });
+});
+
+/**
+ * ENG-INSIGHTS — o bloco que o dono mandou no template (l.439) e que tinha
+ * ZERO ocorrência no painel até esta leva.
+ *
+ * A regra dura é a mesma da tela: nenhum número inventado. Cada insight sai de
+ * uma derivação que a tela já fazia, e carrega o CAMINHO para a casa do fato —
+ * é o que o torna resumo com caminho em vez de cópia (RN-573).
+ */
+describe('EngajamentoView · Insights da Leela', () => {
+  it('o bloco existe, nomeado, na posição do template (acima da faixa "Clubs")', () => {
+    const { container } = render(<EngajamentoView {...props()} />);
+    expect(screen.getByRole('region', { name: 'Insights da Leela' })).toBeInTheDocument();
+    const texto = container.textContent ?? '';
+    expect(texto.indexOf('Insights da Leela')).toBeLessThan(
+      texto.indexOf('A comunidade em si: quem está, como chegou e o que move o grupo.')
+    );
+  });
+
+  it('NÃO promete janela temporal que o dado não tem (o template dizia "4 semanas")', () => {
+    render(<EngajamentoView {...props()} />);
+    const bloco = screen.getByRole('region', { name: 'Insights da Leela' });
+    expect(within(bloco).getByText(/leitura automática dos números deste recorte/i)).toBeInTheDocument();
+    expect(within(bloco).queryByText(/4 semanas|últimas semanas|últimos \d+ dias/i)).not.toBeInTheDocument();
+  });
+
+  it('lê os membros parados com o número REAL e o denominador da MESMA fonte', () => {
+    render(<EngajamentoView {...props()} />);
+    const bloco = screen.getByRole('region', { name: 'Insights da Leela' });
+    // 10 parados de 138 = 8 + 120 + 10, a soma das próprias situações — nunca
+    // o KPI de membros ativos, que sai do agregado e divergiria.
+    expect(within(bloco).getByText('10 de 138 membros estão parados')).toBeInTheDocument();
+    expect(within(bloco).getByText('Atenção')).toBeInTheDocument();
+  });
+
+  it('lê os desafios sem evento como OPORTUNIDADE, com o número real', () => {
+    render(<EngajamentoView {...props()} />);
+    const bloco = screen.getByRole('region', { name: 'Insights da Leela' });
+    expect(
+      within(bloco).getByText('1 de 3 desafios não apontam para um evento')
+    ).toBeInTheDocument();
+    expect(within(bloco).getByText('Oportunidade')).toBeInTheDocument();
+  });
+
+  it('todo insight leva à CASA do próprio fato — sem caminho seria cópia', () => {
+    render(<EngajamentoView {...props()} />);
+    const bloco = screen.getByRole('region', { name: 'Insights da Leela' });
+    expect(within(bloco).getByRole('link', { name: 'Ver situação dos membros' })).toHaveAttribute(
+      'href',
+      '#situacao-dos-membros'
+    );
+    expect(within(bloco).getByRole('link', { name: 'Ver a ponte com eventos' })).toHaveAttribute(
+      'href',
+      '#ponte-com-eventos'
+    );
+    // E a casa existe de verdade: âncora que não aterrissa é caminho quebrado.
+    expect(document.getElementById('situacao-dos-membros')).not.toBeNull();
+    expect(document.getElementById('ponte-com-eventos')).not.toBeNull();
+  });
+
+  it('insight de zero não nasce — aviso sem fato é ruído com cara de alerta', () => {
+    render(
+      <EngajamentoView
+        {...props({
+          situacao: [
+            { id: 'novo', rotulo: 'Novos (7 dias)', total: 8 },
+            { id: 'ativo', rotulo: 'Ativos', total: 120 },
+            { id: 'inativo', rotulo: 'Parados há 30 dias ou mais', total: 0 },
+          ],
+          ponte: [
+            { id: 'com-evento', rotulo: 'Ligados a um evento', total: 3 },
+            { id: 'sem-evento', rotulo: 'Sem evento vinculado', total: 0 },
+          ],
+        })}
+      />
+    );
+    const bloco = screen.getByRole('region', { name: 'Insights da Leela' });
+    expect(within(bloco).getByText('Nada pedindo atenção neste recorte.')).toBeInTheDocument();
+    expect(within(bloco).queryByText('Atenção')).not.toBeInTheDocument();
+  });
+
+  it('nenhum número do template do dono foi copiado para a tela', () => {
+    const { container } = render(<EngajamentoView {...props()} />);
+    const texto = container.textContent ?? '';
+    // Os três insights do mockup eram literais de desenho (R$ 1.240, 9 Pix
+    // pendentes, 3 inscrições incompletas, 142 compradores, 2,3x). Nenhum tem
+    // fonte nesta tela, e nenhum pode aparecer nela.
+    expect(texto).not.toMatch(/1\.240|2,3x|142 compradores/);
+    expect(texto).not.toMatch(/inscrições incompletas/i);
+    expect(texto).not.toMatch(/Pix/i);
   });
 });
 
@@ -364,71 +496,50 @@ describe('EngajamentoView · modalidades da comunidade (estudo · bloco 4, vers�
   });
 });
 
-describe('EngajamentoView · banda Eventos (estudo · D-1008-R15)', () => {
-  it('a banda existe com a legenda do estudo', () => {
+/**
+ * R2 · ENG-CARGA-1 — a banda Eventos SAIU.
+ *
+ * Os casos abaixo afirmam a AUSÊNCIA, e isso é de propósito: é o que impede a
+ * banda de voltar por descuido. Enquanto os testes afirmavam a presença dela,
+ * a redundância estava protegida por suíte verde.
+ *
+ * A remoção foi PURA. Os dois blocos daquela banda (`OcupacaoEventos` e o
+ * "Formas de pagamento") continuam montados na Visão geral, no mesmo
+ * componente e na mesma fonte — nada migrou, nada se perdeu. O que morreu foi
+ * uma segunda montagem.
+ */
+describe('EngajamentoView · a banda Eventos saiu (R2 · ENG-CARGA-1)', () => {
+  it('não existe mais faixa "Eventos" nem a legenda do estudo', () => {
     render(<EngajamentoView {...props()} />);
-    expect(screen.getByRole('heading', { name: 'Eventos' })).toBeInTheDocument();
-    // BLQ-07: "provas" era a categoria do evento na voz da plataforma, logo
-    // abaixo de um título que já diz "Eventos".
+    expect(screen.queryByRole('heading', { name: 'Eventos' })).not.toBeInTheDocument();
     expect(
-      screen.getByText('O resultado: ocupação dos eventos e como as pessoas pagam.')
-    ).toBeInTheDocument();
+      screen.queryByText('O resultado: ocupação dos eventos e como as pessoas pagam.')
+    ).not.toBeInTheDocument();
   });
 
-  it('a ocupação é REAL: inscritos sobre vagas por evento, no componente canônico da VG', () => {
+  it('a ocupação dos eventos não é mais montada aqui — ela vive na Visão geral', () => {
     render(<EngajamentoView {...props()} />);
-    const bloco = screen.getByRole('region', { name: 'Ocupação dos últimos eventos' });
     expect(
-      within(bloco).getByRole('img', {
-        name: 'Corrida da Ilha: 42 de 50 vagas (84%)',
-      })
-    ).toBeInTheDocument();
-    expect(
-      within(bloco).getByRole('img', { name: 'Pedal do Norte: 12 de 40 vagas (30%)' })
-    ).toBeInTheDocument();
+      screen.queryByRole('region', { name: 'Ocupação dos últimos eventos' })
+    ).not.toBeInTheDocument();
   });
 
-  it('evento sem capacidade não vira barra — a nota diz quantos ficaram de fora', () => {
-    render(
-      <EngajamentoView
-        {...props({
-          ocupacao: {
-            linhas: [
-              { slug: 'a', nome: 'Prova A', inscritos: 10, capacidade: 20, ocupacao: 0.5 },
-            ],
-            semCapacidade: 2,
-          },
-        })}
-      />
-    );
-    expect(
-      screen.getByText('2 eventos ficaram de fora por não ter capacidade definida.')
-    ).toBeInTheDocument();
-  });
-
-  it('erro na leitura de eventos fica CONTIDO no card — a análise da comunidade segue de pé', () => {
-    const onRetryEventos = vi.fn();
-    render(<EngajamentoView {...props({ eventosError: true, ocupacao: null, onRetryEventos })} />);
-    const bloco = screen.getByRole('region', { name: 'Ocupação dos últimos eventos' });
-    expect(
-      within(bloco).getByText('Não foi possível carregar a ocupação dos seus eventos.')
-    ).toBeInTheDocument();
-    // Os vizinhos de outra fonte não caem junto.
-    expect(screen.getByRole('region', { name: 'Números da comunidade' })).toBeInTheDocument();
-  });
-
-  it('formas de pagamento se nomeia, diz a causa e escreve "Em breve" — sem donut fabricado', () => {
+  it('"Formas de pagamento" não é mais montado aqui — o irmão dele vive na Visão geral', () => {
     render(<EngajamentoView {...props()} />);
-    const secao = screen.getByRole('region', { name: 'Formas de pagamento' });
-    expect(within(secao).getByText('Em breve')).toBeInTheDocument();
-    // BLQ-16: "doc", "agregado" e "varre documentos" saíram — e com eles o
-    // "chega ao cliente", que numa tela de organizadora lê como se o COMPRADOR
-    // não recebesse algo.
-    expect(
-      within(secao).getByText(/ainda não existe um total por forma de pagamento/i)
-    ).toBeInTheDocument();
-    expect(within(secao).queryByText(/agregado|doc de pagamento|chega ao cliente/i)).not.toBeInTheDocument();
-    expect(within(secao).queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Formas de pagamento' })).not.toBeInTheDocument();
+  });
+
+  /**
+   * O critério do corte, virado teste: o seletor de club recorta TUDO. Se um
+   * bloco novo entrar sem obedecer ao recorte, é aqui que ele aparece — a tela
+   * não pode mais falar de evento do organizador em lugar nenhum.
+   */
+  it('nenhum nome de evento do organizador sobrou na tela', () => {
+    const { container } = render(<EngajamentoView {...props()} />);
+    const texto = container.textContent ?? '';
+    expect(texto).not.toMatch(/Corrida da Ilha/);
+    expect(texto).not.toMatch(/Pedal do Norte/);
+    expect(texto).not.toMatch(/vagas/i);
   });
 });
 
