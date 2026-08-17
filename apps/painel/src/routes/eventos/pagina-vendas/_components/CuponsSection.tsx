@@ -17,10 +17,19 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Badge, Button, ConfirmModal, EmptyState, Skeleton, Table, useToast } from '@leela/design-system';
+import {
+  Badge,
+  Button,
+  ConfirmModal,
+  EmptyState,
+  RowActions,
+  Skeleton,
+  Table,
+  useToast,
+} from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import type { Cupom } from '@leela/core';
-import { Copy, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { CupomModal } from './CupomModal';
 import { useCupomMutations, useCupons } from '../../_data/cupons';
 import { estadoCupomBadge, labelDesconto, labelUsos } from '../_lib/cupomForm';
@@ -151,24 +160,35 @@ export function CuponsSection({ eventoId, agora = new Date() }: CuponsSectionPro
           emptyTitle="Nenhum cupom criado"
           emptyDescription="Crie um cupom para oferecer desconto no checkout deste evento."
           renderActions={(cupom) => (
-            <div className="flex items-center gap-[var(--spacing-2)]">
-              <Button variant="ghost" size="sm" onClick={() => void copiarCodigo(cupom.codigo)}>
-                <Copy className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
-                Copiar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => abrirEdicao(cupom)}>
-                Editar
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCupomParaRemover(cupom)}
-                disabled={cupomUsado(cupom)}
-                title={cupomUsado(cupom) ? 'Cupom já usado não pode ser removido' : undefined}
-              >
-                Remover
-              </Button>
-            </div>
+            // Ícone no lugar do escrito (decisão do dono, 17/08). O `title` que
+            // explicava o bloqueio virou parte do `label` — que no RowActions é
+            // o nome acessível E o texto da dica.
+            <RowActions
+              actions={[
+                {
+                  id: 'copiar',
+                  label: `Copiar código do cupom ${cupom.codigo}`,
+                  verbo: 'copiar',
+                  onClick: () => void copiarCodigo(cupom.codigo),
+                },
+                {
+                  id: 'editar',
+                  label: `Editar cupom ${cupom.codigo}`,
+                  verbo: 'editar',
+                  onClick: () => abrirEdicao(cupom),
+                },
+                {
+                  id: 'remover',
+                  label: cupomUsado(cupom)
+                    ? `Remover cupom ${cupom.codigo} (já usado, não pode ser removido)`
+                    : `Remover cupom ${cupom.codigo}`,
+                  verbo: 'remover',
+                  onClick: () => setCupomParaRemover(cupom),
+                  destructive: true,
+                  disabled: cupomUsado(cupom),
+                },
+              ]}
+            />
           )}
         />
       )}

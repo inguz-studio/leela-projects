@@ -50,6 +50,7 @@ import {
   Input,
   MetricGrid,
   Modal,
+  RowActions,
   SectionHeader,
   Skeleton,
   Stack,
@@ -57,6 +58,7 @@ import {
   useToast,
   type BadgeProps,
   type TableColumn,
+  type VerboDeAcao,
 } from '@leela/design-system';
 import {
   LIMIAR_BAIXA_SKU_DEFAULT,
@@ -122,11 +124,17 @@ const BADGE_ESTADO: Record<
   em_estoque: { variant: 'vitoria', rotulo: 'Em estoque' },
 };
 
-// Rótulo da AÇÃO que leva ao estado alvo (a matriz canônica do core decide o
-// alvo — aqui só se nomeia o botão; `em_estoque` é terminal → sem ação).
-const ROTULO_ACAO: Partial<Record<EstadoAprovisionamento, string>> = {
-  encomendado: 'Encomendar',
-  em_estoque: 'Receber',
+// Rótulo e VERBO da ação que leva ao estado alvo (a matriz canônica do core
+// decide o alvo — aqui só se nomeia a ação; `em_estoque` é terminal → sem ação).
+// Desde a conversão para ícone (decisão do dono de 17/08) o par anda junto: o
+// verbo é do vocabulário FECHADO do `RowActions` (quem desenha é o DS) e o
+// rótulo abre o nome acessível da linha. Separá-los em dois mapas era o convite
+// para "Receber" ganhar o ícone de encomenda no primeiro estado novo.
+const ACAO_ALVO: Partial<
+  Record<EstadoAprovisionamento, { rotulo: string; verbo: VerboDeAcao }>
+> = {
+  encomendado: { rotulo: 'Encomendar', verbo: 'encomendar' },
+  em_estoque: { rotulo: 'Receber', verbo: 'receber' },
 };
 
 /** Próximo estado da máquina LINEAR (RN-226) — null quando terminal. */
@@ -398,18 +406,27 @@ export function DistribuicaoView({
       header: 'Ação',
       render: (r) => {
         const alvo = proximoEstado(r.estado);
-        if (alvo === null) {
+        const acao = alvo === null ? undefined : ACAO_ALVO[alvo];
+        if (alvo === null || acao === undefined) {
           // `em_estoque` é terminal (RN-226) — nada a fazer.
           return <span className="text-[var(--text-tertiary)]">—</span>;
         }
+        // Ícone, não escrito (decisão do dono de 17/08). O rótulo carrega o SKU
+        // inteiro porque a tabela repete o mesmo item em várias linhas: sem o
+        // corte e o tamanho no nome, quatro pacotes de encomenda ficariam com o
+        // mesmo nome acessível e a compra sairia do tamanho errado.
+        const corte = r.corte === 'unissex' ? '' : ` ${CORTE_LABEL[r.corte].toLowerCase()}`;
         return (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setTransicao({ row: r, alvo })}
-          >
-            {ROTULO_ACAO[alvo]}
-          </Button>
+          <RowActions
+            actions={[
+              {
+                id: 'transicao',
+                label: `${acao.rotulo} ${nomeDoItem(r.itemId)}${corte} tamanho ${r.tamanho}`,
+                verbo: acao.verbo,
+                onClick: () => setTransicao({ row: r, alvo }),
+              },
+            ]}
+          />
         );
       },
     },

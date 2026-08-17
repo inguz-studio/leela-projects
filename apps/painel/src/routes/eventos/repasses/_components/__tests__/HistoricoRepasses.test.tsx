@@ -85,8 +85,12 @@ describe('HistoricoRepasses (E09s-L3-T4)', () => {
         onRetry={noop}
       />,
     );
-    // Exatamente 1 botão de comprovante (o do pago).
-    expect(screen.getAllByRole('button', { name: 'Ver comprovante' })).toHaveLength(1);
+    // Exatamente 1 botão de comprovante (o do pago). Ação por ÍCONE (decisão do
+    // dono, 17/08): o nome acessível traz o NÚMERO do comprovante daquela linha.
+    expect(
+      screen.getAllByRole('button', { name: 'Ver comprovante do repasse REP-2026-0007' }),
+    ).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Ver comprovante do repasse / })).toHaveLength(1);
   });
 
   it('abrir um pago → comprovante numerado + mascarado + aviso RN-356', async () => {
@@ -98,7 +102,9 @@ describe('HistoricoRepasses (E09s-L3-T4)', () => {
         onRetry={noop}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Ver comprovante' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Ver comprovante do repasse REP-2026-0008' }),
+    );
     const dialog = screen.getByRole('dialog');
     expect(norm(dialog.textContent)).toContain('REP-2026-0008');
     expect(norm(dialog.textContent)).toContain('****1234');

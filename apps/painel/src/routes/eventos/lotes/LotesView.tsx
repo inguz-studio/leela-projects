@@ -11,7 +11,7 @@
 // uma. Modalidade sem lote → dica + botão para configurar o primeiro.
 // =============================================================================
 
-import { Badge, Button, Card, EmptyState, Skeleton, Table } from '@leela/design-system';
+import { Badge, Button, Card, EmptyState, RowActions, Skeleton, Table } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import { capacidadeDoLote, loteAtivo, precoVigente, type Evento, type Lote } from '@leela/core';
 import { Plus } from 'lucide-react';
@@ -250,37 +250,48 @@ function ModalidadeBloco({
           // lote já encerrado não tem venda para interromper, e um lote
           // agendado (janela não aberta) sai por Remover.
           const desativavel = loteDesativavel(lote, agora);
+          const imutavel = loteImutavel(lote);
           return (
-            <div className="flex items-center gap-[var(--spacing-2)]">
-              <Button variant="ghost" size="sm" onClick={() => onEditarLote(lote)}>
-                Editar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => onAjustarCapacidade(lote)}>
-                Capacidade
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDesativarLote(lote)}
-                disabled={!desativavel}
-                title={
-                  desativavel
-                    ? 'Encerra a venda deste lote agora; as inscrições já vendidas continuam válidas'
-                    : 'Este lote já não está vendendo'
-                }
-              >
-                Desativar
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemoverLote(lote)}
-                disabled={loteImutavel(lote)}
-                title={loteImutavel(lote) ? 'Lote com venda não pode ser removido' : undefined}
-              >
-                Remover
-              </Button>
-            </div>
+            // Ícone no lugar do escrito (decisão do dono, 17/08). O `title` que
+            // explicava o bloqueio virou parte do `label`: no RowActions o
+            // rótulo É o nome acessível E a dica, então a razão do bloqueio
+            // continua chegando pelos dois canais, sem atributo paralelo.
+            <RowActions
+              actions={[
+                {
+                  id: 'editar',
+                  label: `Editar lote ${lote.nome}`,
+                  verbo: 'editar',
+                  onClick: () => onEditarLote(lote),
+                },
+                {
+                  id: 'capacidade',
+                  label: `Ajustar capacidade do lote ${lote.nome}`,
+                  verbo: 'capacidade',
+                  onClick: () => onAjustarCapacidade(lote),
+                },
+                {
+                  id: 'desativar',
+                  label: desativavel
+                    ? `Desativar lote ${lote.nome} (encerra a venda agora)`
+                    : `Desativar lote ${lote.nome} (já não está vendendo)`,
+                  verbo: 'desativar',
+                  onClick: () => onDesativarLote(lote),
+                  destructive: true,
+                  disabled: !desativavel,
+                },
+                {
+                  id: 'remover',
+                  label: imutavel
+                    ? `Remover lote ${lote.nome} (já vendeu, não pode ser removido)`
+                    : `Remover lote ${lote.nome}`,
+                  verbo: 'remover',
+                  onClick: () => onRemoverLote(lote),
+                  destructive: true,
+                  disabled: imutavel,
+                },
+              ]}
+            />
           );
         }}
       />

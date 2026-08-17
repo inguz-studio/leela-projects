@@ -21,6 +21,28 @@
  * num wrapper interno (ícone+rótulo) e o tooltip vive fora dele, preservando
  * as duas intenções (rótulo não vaza na animação de largura; tooltip aparece).
  *
+ * ⛔ E MESMO ASSIM A DICA SAÍA CORTADA (UI-ACOES-MOTION · T1, 17/08). O dono, na
+ * íntegra: *"os tooltips, do menu, quando ele está recolhido, aparecem de
+ * maneira, cortada, dentro do próprio menu."* O P-REC-6 tirou o recorte do ITEM
+ * e não viu o recorte de CIMA: o contêiner dos itens ROLA, e quem rola carrega
+ * `SCROLL_Y_ONLY` (`overflow-y:auto` + `overflow-x:hidden`), que estabelece
+ * retângulo de recorte na largura do rail. Medido no rail recolhido: dica de
+ * 99px de largura, 0px visível — 100% recortada, com o `<nav>` em
+ * `overflow-x: visible` (o recorte nunca foi do nav). `z-index` não resolvia,
+ * porque `z-index` não vence recorte de overflow — só sair da caixa vence, e
+ * sair da caixa é PORTAL.
+ *
+ * Por isso a dica do rail deixou de ser artesanal e passou a ser o `Tooltip`
+ * canônico (§8 do cânone; shadcn-first da governança §8, que lista "tooltip"
+ * entre os controles que nenhuma peça recria à mão). O portal entrou no próprio
+ * `TooltipContent`, então o conserto vale para o sistema inteiro e não só aqui.
+ * `data-rail-tip` segue no conteúdo como gancho de teste e de gate visual.
+ *
+ * Consequência de a11y, declarada: o Radix liga a dica ao item por
+ * `aria-describedby` enquanto ela está ABERTA. O NOME acessível continua vindo
+ * do `sr-only` do item — que existe com a dica fechada, que é o que importa —, e
+ * a dica entra como DESCRIÇÃO. Mesmo desenho do sidebar do shadcn.
+ *
  * A11y: nav landmark; toggle com `aria-expanded` + nome que troca
  * (Abrir/Recolher menu); item ativo com `aria-current="page"`; tooltip
  * `role="tooltip"` oculto de leitor (o rótulo acessível é o texto do item,
@@ -33,6 +55,7 @@ import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SCROLL_Y_ONLY } from '../../utils/scroll';
 import { DropdownMenu, type DropdownMenuAction } from '../DropdownMenu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../Tooltip';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -275,7 +298,14 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
         </RodapeComp>
       ));
 
+    // O provider mora AQUI, não no consumidor: a dica é anatomia do rail
+    // fechado, e exigir que cada app lembre de embrulhar o shell num
+    // `TooltipProvider` transformaria um detalhe do Radix em pegadinha de
+    // integração — com o sintoma sendo o rail perder a dica em silêncio.
+    // `delayDuration={0}` preserva o comportamento anterior: a dica artesanal
+    // acendia no primeiro frame do hover, sem espera.
     return (
+      <TooltipProvider delayDuration={0}>
       <nav
         ref={ref}
         aria-label="Navegação principal"
@@ -421,6 +451,7 @@ const SidebarRail = React.forwardRef<HTMLElement, SidebarRailProps>(
 
         {rodape}
       </nav>
+      </TooltipProvider>
     );
   },
 );
@@ -444,7 +475,11 @@ function RailNavItem({ item, open, itemRef }: RailNavItemProps): JSX.Element {
     'aria-current': item.active ? ('page' as const) : undefined,
     onClick: item.onClick,
     className: cn(
-      'group/item relative flex items-center w-full shrink-0',
+      // `relative` segue necessário: é o que põe o item ACIMA do pill
+      // deslizante (DOM anterior). O `group/item` saiu junto com a dica
+      // artesanal — era ele que acendia o tooltip no hover e no foco, e agora
+      // quem faz isso é o Radix.
+      'relative flex items-center w-full shrink-0',
       'h-[var(--rail-item-h)] rounded-[var(--rail-item-radius)]',
       'gap-[var(--rail-item-gap)] whitespace-nowrap no-underline',
       'text-[length:var(--rail-item-size)] font-[var(--font-weight-medium)]',
@@ -495,45 +530,48 @@ function RailNavItem({ item, open, itemRef }: RailNavItemProps): JSX.Element {
           {item.badge}
         </span>
       ) : null}
-      {!open ? (
-        <span
-          role="tooltip"
-          aria-hidden
-          data-rail-tip=""
-          className={cn(
-            'pointer-events-none absolute top-1/2 z-20',
-            'left-[calc(100%+var(--rail-tip-gap))]',
-            'flex items-center h-[var(--rail-tip-h)] px-[var(--rail-tip-px)]',
-            'rounded-[var(--rail-tip-radius)] bg-[var(--surface-high)] text-[var(--text-primary)]',
-            'text-[length:var(--rail-tip-size)] font-[var(--font-weight-semibold)]',
-            'whitespace-nowrap shadow-elev-3',
-            'opacity-0 [transform:translateY(-50%)_translateX(calc(-1*var(--spacing-1-5)))]',
-            'group-hover/item:opacity-100 group-hover/item:[transform:translateY(-50%)_translateX(0)]',
-            // F4 (DELTA-UX): o rótulo visível também por TECLADO — hover-only
-            // deixava quem navega por Tab sem o tooltip (o nome acessível já
-            // estava no sr-only; isto é o rótulo VISÍVEL).
-            'group-focus-visible/item:opacity-100 group-focus-visible/item:[transform:translateY(-50%)_translateX(0)]',
-            'transition-[opacity,transform] duration-[var(--motion-duration-fast)]',
-            'motion-reduce:transition-none',
-          )}
-        >
-          {item.label}
-        </span>
-      ) : null}
     </>
   );
 
-  if (Comp === 'a') {
-    return (
+  const control =
+    Comp === 'a' ? (
       <a href={item.href} ref={itemRef} {...sharedProps}>
         {content}
       </a>
+    ) : (
+      <button type="button" ref={itemRef} {...sharedProps}>
+        {content}
+      </button>
     );
-  }
+
+  // Rail ABERTO não tem dica: o rótulo já está no fluxo (contrato do protótipo).
+  if (open) return control;
+
+  // Rail FECHADO: dica canônica e PORTALIZADA — é o portal que a tira do
+  // recorte do contêiner de rolagem. `side="right"` reproduz a posição do
+  // protótipo; o afastamento sai do MESMO token de antes (`--rail-tip-gap`),
+  // aplicado como margem porque `sideOffset` do Radix só aceita número e a
+  // medida é token. Hover E foco de teclado vêm de graça do Radix — era a
+  // dívida F4 da DELTA-UX, antes resolvida à mão com `group-focus-visible`.
   return (
-    <button type="button" ref={itemRef} {...sharedProps}>
-      {content}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>{control}</TooltipTrigger>
+      <TooltipContent
+        side="right"
+        sideOffset={0}
+        data-rail-tip=""
+        className={cn(
+          'ml-[var(--rail-tip-gap)]',
+          'flex items-center h-[var(--rail-tip-h)] px-[var(--rail-tip-px)] py-0',
+          'rounded-[var(--rail-tip-radius)] border-0',
+          'bg-[var(--surface-high)] text-[var(--text-primary)]',
+          'text-[length:var(--rail-tip-size)] font-[var(--font-weight-semibold)]',
+          'whitespace-nowrap shadow-elev-3',
+        )}
+      >
+        {item.label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

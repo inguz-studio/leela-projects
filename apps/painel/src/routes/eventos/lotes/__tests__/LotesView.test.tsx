@@ -71,7 +71,9 @@ describe('LotesView', () => {
 
   it('bloqueia Remover para lotes com venda (RN-200/300)', () => {
     renderView();
-    const removers = screen.getAllByRole('button', { name: 'Remover' });
+    // Ação por ÍCONE (decisão do dono, 17/08): o nome acessível é o rótulo
+    // específico da linha, não mais o escrito "Remover".
+    const removers = screen.getAllByRole('button', { name: /^Remover lote / });
     // L1 (150/150) e L2 (120/300) vendidos>0 → desabilitados; L3 (0) habilitado.
     const desabilitados = removers.filter((b) => (b as HTMLButtonElement).disabled);
     expect(desabilitados).toHaveLength(2);
@@ -137,7 +139,9 @@ describe('LotesView', () => {
     const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
     const linhas = within(bloco).getAllByRole('row');
     // L2 é o lote ATIVO no instante de referência (fev–abr, agora = 01/03).
-    const desativarL2 = within(linhas[2] as HTMLElement).getByRole('button', { name: 'Desativar' });
+    const desativarL2 = within(linhas[2] as HTMLElement).getByRole('button', {
+      name: 'Desativar lote Lote 2 (encerra a venda agora)',
+    });
     expect(desativarL2).toBeEnabled();
     await userEvent.click(desativarL2);
     expect(onDesativarLote).toHaveBeenCalledWith(expect.objectContaining({ ordem: 2 }));
@@ -147,8 +151,18 @@ describe('LotesView', () => {
     renderView();
     const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
     const linhas = within(bloco).getAllByRole('row');
-    // L1 esgotado (150/150) e L3 agendado (janela em abril) não têm venda a parar.
-    expect(within(linhas[1] as HTMLElement).getByRole('button', { name: 'Desativar' })).toBeDisabled();
-    expect(within(linhas[3] as HTMLElement).getByRole('button', { name: 'Desativar' })).toBeDisabled();
+    // L1 esgotado (150/150) e L3 agendado (janela em abril) não têm venda a
+    // parar — e o rótulo do ícone DIZ isso (a razão do bloqueio é o nome
+    // acessível, o mesmo texto que a dica mostra).
+    expect(
+      within(linhas[1] as HTMLElement).getByRole('button', {
+        name: 'Desativar lote Lote 1 (já não está vendendo)',
+      }),
+    ).toBeDisabled();
+    expect(
+      within(linhas[3] as HTMLElement).getByRole('button', {
+        name: 'Desativar lote Lote 3 (já não está vendendo)',
+      }),
+    ).toBeDisabled();
   });
 });

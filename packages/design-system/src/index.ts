@@ -115,6 +115,12 @@ export type { AppShellProps } from './components/AppShell';
 // ── Table densa & apoio (S001-3-T2) ─────────────────────────────────────────
 export { Table } from './components/Table';
 export type { TableProps, TableColumn } from './components/Table';
+// Ações de linha por ÍCONE (UI-ACOES-MOTION · T2, decisão do dono de 17/08).
+// O vocabulário verbo→ícone mora no componente e é FECHADO: o consumidor
+// escolhe o verbo, nunca o desenho — é o que mantém "mesmo verbo, mesmo ícone"
+// entre as 21 tabelas do painel.
+export { RowActions, ICONES_DE_ACAO } from './components/RowActions';
+export type { RowAction, RowActionsProps, VerboDeAcao } from './components/RowActions';
 export { EmptyState, type EmptyStateProps } from './components/EmptyState';
 // Estados de sistema (404/403/500/offline/manutenção) — LEELA-E07 · S500-T1.
 export { SystemStateScreen } from './components/SystemStateScreen';

@@ -6,7 +6,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Badge, Button, Skeleton, Table, type TableColumn } from '@leela/design-system';
+import { Badge, RowActions, Skeleton, Table, type TableColumn } from '@leela/design-system';
 import type { Repasse } from '@leela/core';
 import { formatBRL, formatData } from '../_lib/format';
 import { badgeEstado } from '../_lib/estadoRepasse';
@@ -78,9 +78,19 @@ export function HistoricoRepasses({
           emptyDescription="Quando você solicitar um saque, ele aparece aqui com o status atualizado."
           renderActions={(r) =>
             r.estado === 'pago' ? (
-              <Button variant="ghost" size="sm" onClick={() => setComprovante(r)}>
-                Ver comprovante
-              </Button>
+              // Ícone no lugar do escrito (decisão do dono, 17/08). O número do
+              // comprovante entra no rótulo; quando ele ainda não veio, o valor
+              // identifica a linha em vez de um "Ver comprovante" solto.
+              <RowActions
+                actions={[
+                  {
+                    id: 'comprovante',
+                    label: `Ver comprovante do repasse ${r.comprovanteNumero ?? formatBRL(r.valor)}`,
+                    verbo: 'ver',
+                    onClick: () => setComprovante(r),
+                  },
+                ]}
+              />
             ) : null
           }
         />

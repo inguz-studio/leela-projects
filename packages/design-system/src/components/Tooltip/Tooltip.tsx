@@ -22,6 +22,22 @@
  *
  * A11y (Radix Tooltip): role="tooltip", abre em focus/hover, fecha em Esc,
  * conteúdo associado ao trigger — WAI-APG tooltip pattern.
+ *
+ * PORTAL (UI-ACOES-MOTION · T1, 2026-08-17). O conteúdo sai em
+ * `TooltipPrimitive.Portal`, ancorado no `document.body`. Sem ele o Radix
+ * renderiza a dica NO LUGAR, como irmã do gatilho — e aí QUALQUER ancestral que
+ * estabeleça retângulo de recorte a corta. Não é hipótese: no rail recolhido a
+ * dica media 99px de largura com 0px visível, 100% recortada, porque o
+ * contêiner dos itens carrega `SCROLL_Y_ONLY` (`overflow-y:auto` +
+ * `overflow-x:hidden`) e a dica é posicionada FORA da largura de 84px do rail.
+ * O `<nav>` não recortava nada (`overflow-x: visible`) — o recorte era do
+ * contêiner de rolagem, e por isso nenhum conserto de `z-index` resolveria:
+ * `z-index` não vence recorte de overflow, só sair da caixa vence.
+ *
+ * O conserto mora AQUI, uma vez, e não em cada tela: toda dica do sistema passa
+ * a nascer acima de qualquer overflow. É pré-requisito das ações de tabela por
+ * ícone (T2) — a `Table` densa rola dentro do próprio card, então uma dica sem
+ * portal seria recortada exatamente igual na primeira linha estreita.
  */
 
 import * as React from 'react';
@@ -39,19 +55,26 @@ const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
 >(({ className, sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitive.Content
-    ref={ref}
-    sideOffset={sideOffset}
-    className={cn(
-      'z-50 overflow-hidden rounded-md border border-border bg-popover',
-      'px-[var(--spacing-3)] py-[var(--spacing-1)]',
-      'text-[length:var(--font-size-base)] text-popover-foreground',
-      'shadow-elev-2',
-      'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-      className,
-    )}
-    {...props}
-  />
+  <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Content
+      ref={ref}
+      sideOffset={sideOffset}
+      className={cn(
+        'z-50 overflow-hidden rounded-md border border-border bg-popover',
+        'px-[var(--spacing-3)] py-[var(--spacing-1)]',
+        'text-[length:var(--font-size-base)] text-popover-foreground',
+        'shadow-elev-2',
+        // Motion atrás de `motion-safe:` (governança §3: "Motion sempre atrás de
+        // motion-safe:/prefers-reduced-motion"). As classes vinham stock do
+        // shadcn SEM o gate, e a dica era a última superfície flutuante do DS a
+        // animar para quem pediu menos movimento — Dialog, Modal, Drawer e
+        // DropdownMenu já gateavam desde a BUILD-MOTION (04/08).
+        'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95 motion-safe:data-[side=bottom]:slide-in-from-top-2 motion-safe:data-[side=left]:slide-in-from-right-2 motion-safe:data-[side=right]:slide-in-from-left-2 motion-safe:data-[side=top]:slide-in-from-bottom-2',
+        className,
+      )}
+      {...props}
+    />
+  </TooltipPrimitive.Portal>
 ));
 TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 

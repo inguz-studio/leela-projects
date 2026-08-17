@@ -3,17 +3,35 @@
  *
  * PROVENIÊNCIA: composição própria sobre <input type="search"> nativo (role
  * searchbox de graça) — o Input do DS é o campo de formulário 40px com label;
- * a busca do mockup é um contêiner raised de 320px com ícone e atalho `kbd`.
+ * a busca do mockup é um contêiner de 320px com ícone e atalho `kbd`.
  *   - dimensões/tipo por token (--search-*), radius sm;
- *   - foco no CONTÊINER (focus-within): borda --border-focus + halo
- *     --border-focus-ring-shadow (o box-shadow 3px do mockup, literal por
- *     tema no semantic — alpha não compõe com var() hex);
- *   - kbd: mono 10px sobre surface-sunken (par tertiary×sunken coberto pela
- *     matriz via tertiary×base — sunken é mais escuro que base no brasa).
+ *   - kbd: mono 10px, keycap RAISED sobre o campo inset (par tertiary×raised
+ *     coberto pela matriz de contraste).
+ *
+ * FLAT COMO OS VIZINHOS (2026-08-17, direção do Vitor — "os pesquisadores estão
+ * fora do padrão dos filtros também, do nosso estilo mais flat"). Esta peça
+ * ficou de fora da varredura GATE-DS-W1 (2026-07-18, "não estamos respeitando o
+ * estilo flat, sem linhas de borda") e por isso era o ÚNICO campo do DS ainda
+ * desenhado como caixa outline: fill `surface-raised` (mais claro que a página)
+ * + linha `border-default` visível. No wine isso saía branco puro contornado ao
+ * lado de facetas `#F5F1EC` sem linha — a busca lia como cartão, e não como
+ * campo da barra.
+ *
+ * A receita agora é a MESMA do resto da família de campo (`Input` default,
+ * `Combobox`, `Select`, `Textarea`, `Calendar`): fill inset `surface-sunken` +
+ * caixa de borda preservada com cor `--input-border-flat` (= transparent) +
+ * foco por ring de 2px. Os tokens são os de campo de propósito, e não uma cópia
+ * local: se a casa um dia reacender a borda funcional do campo flat (como o
+ * S-R9-04-T2 tentou), a busca acompanha em vez de divergir de novo — que foi
+ * exatamente como esta peça se afastou.
+ *
+ * O par que o `FilterChips` monta acima do limiar é um `Combobox`; ele e a busca
+ * agora nascem do mesmo desenho, lado a lado na mesma barra.
  *
  * A11y: input real (searchbox), `aria-label` com default; kbd é decorativo
- * (aria-hidden — o atalho é anunciado pelo aria-keyshortcuts do input).
- * §2.16 flat — borda funcional de input, não decorativa.
+ * (aria-hidden — o atalho é anunciado pelo aria-keyshortcuts do input). Foco
+ * visível de 2px em `--border-focus` (governança §3), agora pelo ring do campo
+ * e não pelo halo de 3px a 15% de alpha, que não cumpria a régua dos 2px.
  */
 
 import * as React from 'react';
@@ -64,11 +82,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           'flex items-center',
           'w-[var(--search-width)]',
           'gap-[var(--search-gap)] px-[var(--search-px)] py-[var(--search-py)]',
-          'bg-[var(--surface-raised)] rounded-[var(--radius-sm)]',
-          'border border-[var(--border-default)]',
+          'bg-[var(--surface-sunken)] rounded-[var(--radius-sm)]',
+          'border-[length:var(--input-border-width)] border-[color:var(--input-border-flat)]',
           'transition-[border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-easing-default)]',
-          'focus-within:border-[var(--border-focus)]',
-          'focus-within:shadow-[var(--border-focus-ring-shadow)]',
+          'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0',
           className,
         )}
       >
@@ -97,8 +114,13 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             className={cn(
               'shrink-0 font-mono',
               'text-[length:var(--search-kbd-font-size)] text-[var(--text-tertiary)]',
-              'bg-[var(--surface-sunken)]',
-              'border border-[var(--border-subtle)] rounded-[var(--search-kbd-radius)]',
+              // Keycap RAISED sobre o campo agora inset: com o contêiner em
+              // `surface-sunken`, um kbd também sunken sumiria (no wine os dois
+              // tokens são o MESMO #F5F1EC) e sobraria só a linha da borda para
+              // identificá-lo — o oposto de flat. Invertido, o keycap se separa
+              // pelo fill nos três temas e a borda decorativa sai.
+              'bg-[var(--surface-raised)]',
+              'rounded-[var(--search-kbd-radius)]',
               'px-[var(--search-kbd-px)] py-[var(--search-kbd-py)]',
             )}
           >

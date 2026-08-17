@@ -1,6 +1,10 @@
 {
-  "medidoEm": "2026-08-16",
+  "medidoEm": "2026-08-17",
   "contagens": {
+    "acao-de-tabela-em-texto": {
+      "painel": 24,
+      "landing": 0
+    },
     "superficie-crua": {
       "painel": 107,
       "landing": 6

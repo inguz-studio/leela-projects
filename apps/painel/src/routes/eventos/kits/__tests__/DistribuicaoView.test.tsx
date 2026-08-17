@@ -7,6 +7,13 @@ import type { Aprovisionamento, ItemKit, Kit } from '@leela/core';
 import { mkInscrito, ts } from '../../_test/fixtures';
 
 const AGORA = ts(new Date('2026-04-27T09:00:00Z'));
+
+// O nome acessível da ação de linha depois da conversão para ÍCONE (decisão do
+// dono de 17/08). Ele mora numa constante porque é aceite, não detalhe: o
+// desenho sozinho não diz QUAL camiseta é, então o rótulo carrega o SKU inteiro
+// — e é ele que o leitor de tela lê e a dica repete.
+const ACAO_ENCOMENDAR = 'Encomendar Camiseta oficial tamanho M';
+const ACAO_RECEBER = 'Receber Camiseta oficial tamanho M';
 const pool = [
   mkInscrito({ id: '1', kit: 'kit_ouro', modalidade: '21k', status: 'confirmado', checkinEm: AGORA }),
   mkInscrito({ id: '2', kit: 'kit_ouro', modalidade: '21k', status: 'confirmado' }),
@@ -275,7 +282,7 @@ describe('DistribuicaoView · o lado do estoque', () => {
       onTransicao,
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    await userEvent.click(screen.getByRole('button', { name: ACAO_ENCOMENDAR }));
     const input = screen.getByLabelText('Quantidade a encomendar');
     // String, e não número: o campo é de TEXTO com teclado numérico desde o
     // PARSE-1 — como `type="number"` a recusa do parser não tinha onde aparecer.
@@ -300,7 +307,7 @@ describe('DistribuicaoView · o lado do estoque', () => {
       onTransicao,
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Receber' }));
+    await userEvent.click(screen.getByRole('button', { name: ACAO_RECEBER }));
     const input = screen.getByLabelText('Quantidade recebida');
     expect(input).toHaveValue('10'); // última encomenda do historico (RN-226)
     await userEvent.clear(input);
@@ -319,8 +326,11 @@ describe('DistribuicaoView · o lado do estoque', () => {
       ],
       itens: [mkItem({})],
     });
-    expect(screen.queryByRole('button', { name: 'Encomendar' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Receber' })).not.toBeInTheDocument();
+    // Por PREFIXO do verbo: o rótulo agora carrega o SKU, e um teste preso ao
+    // nome inteiro passaria verde no dia em que o nome mudasse — justamente
+    // quando ele precisaria falhar.
+    expect(screen.queryByRole('button', { name: /^Encomendar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Receber/ })).not.toBeInTheDocument();
   });
 
   it('erro do servidor na transição vira Toast (mensagem sobe intacta)', async () => {
@@ -333,7 +343,7 @@ describe('DistribuicaoView · o lado do estoque', () => {
       onTransicao,
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    await userEvent.click(screen.getByRole('button', { name: ACAO_ENCOMENDAR }));
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() =>
@@ -430,7 +440,7 @@ describe('DistribuicaoView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', 
 describe('PARSE-1 · a recusa do parser tem onde aparecer no estoque', () => {
   it('é campo de TEXTO com teclado numérico', async () => {
     renderAba({ aprovisionamento: [mkAprov({ aEncomendar: 7 })], itens: [mkItem({})] });
-    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    await userEvent.click(screen.getByRole('button', { name: ACAO_ENCOMENDAR }));
     const campo = screen.getByLabelText('Quantidade a encomendar');
     expect(campo).toHaveAttribute('type', 'text');
     expect(campo).toHaveAttribute('inputmode', 'numeric');
@@ -443,7 +453,7 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer no estoque', () => {
       itens: [mkItem({})],
       onTransicao,
     });
-    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    await userEvent.click(screen.getByRole('button', { name: ACAO_ENCOMENDAR }));
     const campo = screen.getByLabelText('Quantidade a encomendar');
     fireEvent.change(campo, { target: { value: '2,5' } });
     expect(campo).toHaveValue('2,5');
@@ -464,7 +474,7 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer no estoque', () => {
       itens: [mkItem({})],
       onTransicao,
     });
-    await userEvent.click(screen.getByRole('button', { name: 'Encomendar' }));
+    await userEvent.click(screen.getByRole('button', { name: ACAO_ENCOMENDAR }));
     fireEvent.change(screen.getByLabelText('Quantidade a encomendar'), {
       target: { value: '1.000' },
     });

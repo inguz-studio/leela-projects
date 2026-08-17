@@ -91,7 +91,7 @@ function renderPage(lotes: Lote[]): void {
 async function desativar(nomeDoLote: string): Promise<void> {
   const usuario = userEvent.setup({ delay: null });
   const linha = screen.getByRole('row', { name: new RegExp(nomeDoLote) });
-  await usuario.click(within(linha).getByRole('button', { name: 'Desativar' }));
+  await usuario.click(within(linha).getByRole('button', { name: /^Desativar lote / }));
   const dialogo = await screen.findByRole('dialog');
   await usuario.click(within(dialogo).getByRole('button', { name: 'Desativar lote' }));
 }
@@ -148,7 +148,7 @@ describe('LotesPage · desativar lote (frente E)', () => {
     renderPage([mkLote({ modalidade: '5k', ordem: 1, vendidos: 120 })]);
     const usuario = userEvent.setup({ delay: null });
     const linha = screen.getByRole('row', { name: /Lote 1/ });
-    await usuario.click(within(linha).getByRole('button', { name: 'Desativar' }));
+    await usuario.click(within(linha).getByRole('button', { name: /^Desativar lote / }));
 
     const dialogo = await screen.findByRole('dialog');
     expect(dialogo).toHaveTextContent(/venda deste lote para/i);

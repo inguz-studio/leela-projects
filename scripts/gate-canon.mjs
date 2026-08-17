@@ -472,7 +472,87 @@ const CASCA_FATORADA = /<Toolbar\b|<ListaGlobal\b|<FilterBar\b/;
 const FRASE_DO_CONTADOR = /\b[Mm]ostrando\b/;
 const HELPER_DO_CONTADOR = /\b(contadorInscritos|rotuloContagem)\s*\(/;
 
+// ---------------------------------------------------------------------------
+// Ação de tabela escrita em TEXTO (UI-ACOES-MOTION · T2, 2026-08-17).
+//
+// O dono, na íntegra: *"E nas ações, de tabelas, quero que ao invés de
+// escritos, utilzemos ícones de ação"*. A contagem mede o que ainda não
+// converteu para `RowActions`, e ela só desce.
+//
+// A régua tem de olhar DENTRO de dois lugares, porque o inventário achou as
+// ações declaradas de dois jeitos e uma varredura de um jeito só nasce mentindo:
+//
+//   (a) `renderActions={(row) => (…)}` — o slot que o `Table` publica. É onde
+//       moram 35 das 40 ocorrências medidas.
+//   (b) uma COLUNA comum cujo `key` declara papel de ação (`acao`, `acoes`,
+//       `ficha`, `identificacao`), com o controle dentro do `render`. São as
+//       outras 5, em 4 tabelas, e uma régua presa ao `renderActions` não vê
+//       nenhuma delas.
+//
+// Conta `<Button` e `<button` cru; NÃO conta `<IconButton`, que é justamente a
+// forma convertida (`<Button` não casa com `<IconButton` porque o `<` tem de
+// vir colado). `<RowActions>` também não conta — é o destino.
+// ---------------------------------------------------------------------------
+
+/** Fim do valor `{…}` de um atributo JSX, a partir da `{` de abertura. */
+function fimDoBloco(fonte, inicio) {
+  let i = inicio;
+  let chaves = 0;
+  let aspas = null;
+  for (; i < fonte.length; i += 1) {
+    const c = fonte[i];
+    if (aspas) {
+      if (c === aspas && fonte[i - 1] !== '\\') aspas = null;
+    } else if (c === '"' || c === "'" || c === '`') {
+      aspas = c;
+    } else if (c === '{') {
+      chaves += 1;
+    } else if (c === '}') {
+      chaves -= 1;
+      if (chaves === 0) return i;
+    }
+  }
+  return fonte.length;
+}
+
+const KEY_DE_COLUNA_DE_ACAO = /key:\s*['"](acao|acoes|ficha|identificacao)['"]/g;
+const CONTROLE_COM_ROTULO = /<Button\b|<button\b/g;
+
+/** Trechos de um arquivo que declaram ações de linha. */
+function trechosDeAcaoDeLinha(fonte) {
+  const trechos = [];
+
+  for (const m of fonte.matchAll(/renderActions\s*=\s*\{/g)) {
+    const abre = m.index + m[0].length - 1;
+    const fecha = fimDoBloco(fonte, abre);
+    trechos.push({ tipo: 'renderActions', inicio: abre, texto: fonte.slice(abre, fecha) });
+  }
+
+  // Coluna de ação: sobe até a `{` do objeto que a declara e fecha nela.
+  for (const m of fonte.matchAll(KEY_DE_COLUNA_DE_ACAO)) {
+    let abre = -1;
+    let profundidade = 0;
+    for (let i = m.index; i >= 0; i -= 1) {
+      if (fonte[i] === '}') profundidade += 1;
+      else if (fonte[i] === '{') {
+        if (profundidade === 0) {
+          abre = i;
+          break;
+        }
+        profundidade -= 1;
+      }
+    }
+    if (abre < 0) continue;
+    const fecha = fimDoBloco(fonte, abre);
+    if (trechos.some((t) => abre >= t.inicio && abre <= t.inicio + t.texto.length)) continue;
+    trechos.push({ tipo: 'colunaDeAcao', inicio: abre, texto: fonte.slice(abre, fecha) });
+  }
+
+  return trechos;
+}
+
 const contagens = {
+  'acao-de-tabela-em-texto': {},
   'superficie-crua': {},
   'botao-cru-estilizado': {},
   'grade-crua': {},
@@ -486,6 +566,7 @@ const contagens = {
   'grupo-de-campos-cru': {},
 };
 const detalhes = {
+  'acao-de-tabela-em-texto': [],
   'superficie-crua': [],
   'botao-cru-estilizado': [],
   'grade-crua': [],
@@ -508,6 +589,7 @@ const detalhes = {
 const receitasDeGrid = {};
 
 for (const { app, dir } of APPS) {
+  contagens['acao-de-tabela-em-texto'][app] = 0;
   contagens['superficie-crua'][app] = 0;
   contagens['botao-cru-estilizado'][app] = 0;
   contagens['grade-crua'][app] = 0;
@@ -523,6 +605,17 @@ for (const { app, dir } of APPS) {
   for (const arquivo of varrer(dir)) {
     const fonte = readFileSync(arquivo, 'utf8');
     const caminho = rel(arquivo);
+
+    // ── Ação de tabela em texto (2026-08-17) ───────────────────────────────
+    for (const trecho of trechosDeAcaoDeLinha(fonte)) {
+      const controles = [...trecho.texto.matchAll(CONTROLE_COM_ROTULO)];
+      if (controles.length === 0) continue;
+      contagens['acao-de-tabela-em-texto'][app] += controles.length;
+      const linha = fonte.slice(0, trecho.inicio).split('\n').length;
+      detalhes['acao-de-tabela-em-texto'].push(
+        `${caminho}:${linha}  ${trecho.tipo} — ${controles.length} controle(s) com rótulo`,
+      );
+    }
 
     // ── As cinco contagens de 2026-08-12 ───────────────────────────────────
     //
