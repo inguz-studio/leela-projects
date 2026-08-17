@@ -20,8 +20,10 @@
 import {
   DEFAULT_SIDEBAR_NAV_ICONS,
   DEFAULT_SIDEBAR_SECTIONS,
+  bottomNavIcon,
   railNavIcon,
   sidebarNavIcon,
+  type BottomNavItem,
   type SidebarItem,
   type SidebarRailItem,
   type SidebarSection,
@@ -31,7 +33,7 @@ import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
 import { onClickSpa, type NavegarSpa } from '../lib/navSpa';
 
 /** id do item do produtor → rota conhecida do painel (undefined = inerte por ora). */
-const HREF_POR_ID: Record<string, string | undefined> = {
+export const HREF_POR_ID: Record<string, string | undefined> = {
   'visao-geral': '/',
   eventos: '/eventos',
   clubs: '/clubes',
@@ -216,6 +218,84 @@ export function shellRailItems(
       active: id === ativoId,
       ...(id === 'eventos' && typeof eventosAtivos === 'number' && eventosAtivos > 0
         ? { badge: eventosAtivos }
+        : {}),
+      ...(href ? { href, onClick: onClickSpa(navigate, href, pathname) } : {}),
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// NAV-MOBILE (leva 20) — a barra flutuante inferior do produtor.
+//
+// O dono, na íntegra: *"Já o Menu no formato mobile, pode ser uma barra
+// flutuante, horizontal a ficar na parte inferior da tela. e a parte de logout,
+// configurações, na barra superior no lado direito, com o ícone de perfil."*
+//
+// QUAIS QUATRO, E ONDE VIVE O QUINTO (vetável NAV-MOBILE-2, default do maestro
+// APLICADO e marcado). O rail tem CINCO itens desde a leva 15 — Visão geral,
+// Eventos, Clubs, CRM e Parcerias — e quatro slots não comportam cinco. Sai
+// Parcerias, e a razão é de USO, não de importância: é a área mais nova do
+// painel (E10, seed S811) e a única cujo trabalho não é diário. Ela ganha casa
+// na Visão geral, como bloco com caminho (destino "(a)" da spec), e o caminho
+// até ela continua custando dois toques — o mesmo que custava pelo drawer.
+//
+// As outras duas casas propostas foram recusadas com motivo: um quarto slot
+// "Mais" deixaria a barra com três destinos e um menu, o que contraria a fala;
+// devolver Parcerias para dentro de Clubs desfaria a D-1008-R17 de dois dias
+// atrás.
+//
+// A ASSIMETRIA ENTRE AS DUAS SUPERFÍCIES (vetável NAV-MOBILE-3, default
+// APLICADO). No produtor a barra supersede o drawer da D-1008-R5; no
+// super-admin o drawer FICA, e por isto esta função devolve `null` lá: a
+// PLATFORM_NAV tem doze destinos, quatro slots não os comportam, e barra que
+// abandona onze destinos transformaria uma decisão de conforto em rota
+// inalcançável. O `null` é o que faz o `AppShell` manter hambúrguer e drawer
+// naquela superfície — a escolha mora aqui, num lugar só, e é testável sem
+// renderizar nada.
+// ---------------------------------------------------------------------------
+
+/** Os QUATRO destinos da barra, na ordem da spec. */
+export const ITENS_DA_BARRA_MOBILE = ['visao-geral', 'eventos', 'clubs', 'crm'] as const;
+
+/** O quinto item do rail — fora da barra, com casa na Visão geral. */
+export const ITEM_FORA_DA_BARRA_MOBILE = 'parcerias';
+
+/** Onde o quinto item mora quando a barra não o carrega. */
+export const CASA_DO_QUINTO_ITEM = '/';
+
+/**
+ * Itens da barra flutuante inferior (< lg) para o pathname atual.
+ *
+ * `null` = esta superfície NÃO usa barra inferior (super-admin), e o drawer
+ * off-canvas segue sendo a navegação mobile dela.
+ * @pure
+ */
+export function shellBottomNavItems(
+  pathname: string,
+  navigate: NavegarSpa,
+  eventosAtivos?: number | null
+): BottomNavItem[] | null {
+  if (pathname.startsWith('/plataforma')) return null;
+
+  const ativoId = painelActiveId(pathname);
+  return ITENS_DA_BARRA_MOBILE.map((id): BottomNavItem => {
+    const entrada = DEFAULT_SIDEBAR_NAV_ICONS.find((e) => e.id === id);
+    if (!entrada) throw new Error(`item "${id}" não existe em DEFAULT_SIDEBAR_NAV_ICONS`);
+    const href = HREF_POR_ID[id];
+    return {
+      id,
+      label: entrada.label,
+      icon: bottomNavIcon(entrada.Icon),
+      active: id === ativoId,
+      // Mesma regra do rail: sem contagem não há badge — zero decorativo é
+      // proibido. O `badgeLabel` existe porque "3" ao lado de "Eventos" não diz
+      // o que são três, e no rail o número só aparece com o menu ABERTO, onde o
+      // rótulo já está do lado; aqui ele vive colado ao ícone o tempo todo.
+      ...(id === 'eventos' && typeof eventosAtivos === 'number' && eventosAtivos > 0
+        ? {
+            badge: eventosAtivos,
+            badgeLabel: `${eventosAtivos} ${eventosAtivos === 1 ? 'evento ativo' : 'eventos ativos'}`,
+          }
         : {}),
       ...(href ? { href, onClick: onClickSpa(navigate, href, pathname) } : {}),
     };
