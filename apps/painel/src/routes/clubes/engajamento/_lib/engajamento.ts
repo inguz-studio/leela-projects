@@ -325,6 +325,102 @@ export function resumirModalidades(
     .sort((a, b) => b.membros - a.membros || a.rotulo.localeCompare(b.rotulo, 'pt-BR'));
 }
 
+// ---------------------------------------------------------------------------
+// Insights da Leela — a camada de RESUMO COM CAMINHO (RN-573)
+// ---------------------------------------------------------------------------
+
+/**
+ * Tom do insight. `atencao` é o que está pesando contra a comunidade agora;
+ * `oportunidade` é o que está sobre a mesa e ninguém pegou. São os dois tons
+ * do template do dono (l.1484), e não existe um terceiro: um insight que não
+ * pede ação nem abre porta é uma frase decorativa.
+ */
+export type TomDoInsight = 'atencao' | 'oportunidade';
+
+/**
+ * Uma leitura automática dos números DESTE recorte.
+ *
+ * O `caminho` não é enfeite, é o que torna o bloco legal sob a RN-573. Um
+ * insight é, por construção, um número que já está desenhado mais abaixo na
+ * mesma tela — e a regra-mãe diz que aparição fora da casa do dado é "resumo
+ * COM CAMINHO, nunca cópia". Então todo insight carrega a âncora da casa do
+ * fato, e o papel distinto fica DECLARADO: o gráfico responde "como isto se
+ * distribui", o insight responde "o que nisso pede ação agora".
+ */
+export interface InsightDaLeela {
+  id: string;
+  tom: TomDoInsight;
+  tag: string;
+  titulo: string;
+  detalhe: string;
+  /** `id` do bloco que é a casa do fato — o destino do caminho. */
+  ancora: string;
+  /** Rótulo do link que leva à casa. */
+  caminho: string;
+}
+
+/**
+ * Os insights que o dado de HOJE sustenta, derivação por derivação.
+ *
+ * As duas leituras abaixo saem de números que esta mesma tela já derivou, e
+ * de nenhuma leitura nova: nada de fan-out, nada de query extra. Cada uma só
+ * nasce quando tem o que dizer — insight de zero ("nenhum membro parado") é
+ * ruído com cara de aviso.
+ *
+ * O DENOMINADOR VEM DA MESMA FONTE DO NUMERADOR, e isso é regra, não detalhe.
+ * A tentação era dividir os parados pelo KPI "Membros ativos", que sai do
+ * agregado `clube.qtdMembrosAtivos`; os parados saem da lista carregada. São
+ * dois caminhos de cálculo, e a RN-573 nasceu justamente do par que diverge
+ * (a amostra de controle achou o caso vivo na área do clube). Aqui o total é
+ * a soma das próprias situações.
+ * @pure
+ */
+export function derivarInsights(
+  situacao: readonly ContagemRotulada[] | null,
+  ponte: readonly ContagemRotulada[] | null
+): InsightDaLeela[] {
+  const insights: InsightDaLeela[] = [];
+
+  const parados = situacao?.find((c) => c.id === 'inativo')?.total ?? 0;
+  const totalMembros = (situacao ?? []).reduce((s, c) => s + c.total, 0);
+  if (parados > 0 && totalMembros > 0) {
+    insights.push({
+      id: 'membros-parados',
+      tom: 'atencao',
+      tag: 'Atenção',
+      titulo: `${formatInteiro(parados)} de ${formatInteiro(totalMembros)} membros estão parados`,
+      // O rótulo honesto da D-2 viaja junto: o dado NÃO afirma a última
+      // atividade da pessoa, afirma que nada foi registrado desde a entrada.
+      detalhe:
+        'Parado é quem entrou há 30 dias ou mais e não teve nenhum registro de atividade desde então. A distribuição inteira está na situação dos membros.',
+      ancora: 'situacao-dos-membros',
+      caminho: 'Ver situação dos membros',
+    });
+  }
+
+  const semEvento = ponte?.find((c) => c.id === 'sem-evento')?.total ?? 0;
+  const totalDesafios = (ponte ?? []).reduce((s, c) => s + c.total, 0);
+  if (semEvento > 0 && totalDesafios > 0) {
+    insights.push({
+      id: 'desafios-sem-evento',
+      tom: 'oportunidade',
+      tag: 'Oportunidade',
+      titulo: `${formatInteiro(semEvento)} de ${formatInteiro(totalDesafios)} desafios não apontam para um evento`,
+      detalhe:
+        'Vincular um desafio a um evento seu transforma a atividade da comunidade em preparação para ele. É intenção declarada no desafio, não inscrição confirmada.',
+      ancora: 'ponte-com-eventos',
+      caminho: 'Ver a ponte com eventos',
+    });
+  }
+
+  return insights;
+}
+
+/** Inteiro em pt-BR. Local para o arquivo seguir @pure e sem import de tela. */
+function formatInteiro(n: number): string {
+  return n.toLocaleString('pt-BR');
+}
+
 /**
  * Tamanho do recorte "Top" das modalidades — decisão de TELA, como o dos
  * desafios abaixo. O estudo desenha cinco barras.

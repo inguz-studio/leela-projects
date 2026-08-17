@@ -11,6 +11,7 @@ import {
   RANKING_MAX_DESAFIOS,
   pilarComMaiorMedia,
   ranquearDesafios,
+  derivarInsights,
   resumirComunidade,
   resumirEntrada,
   resumirModalidades,
@@ -359,5 +360,85 @@ describe('resumirModalidades · para onde a comunidade pende (estudo · bloco 4,
 
   it('sem club devolve vazio — a tela mostra o convite, não zeros', () => {
     expect(resumirModalidades([])).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Insights da Leela
+// ---------------------------------------------------------------------------
+
+/**
+ * O contrato aqui é o mesmo do resto do arquivo, com um agravante: um insight
+ * é uma FRASE que a Leela afirma sobre o negócio da pessoa. Número errado num
+ * gráfico é um gráfico errado; número errado num insight é a plataforma
+ * mentindo com voz de conselho.
+ */
+describe('derivarInsights', () => {
+  const situacao = [
+    { id: 'novo', rotulo: 'Novos (7 dias)', total: 8 },
+    { id: 'ativo', rotulo: 'Ativos', total: 120 },
+    { id: 'inativo', rotulo: 'Parados há 30 dias ou mais', total: 10 },
+  ];
+  const ponte = [
+    { id: 'com-evento', rotulo: 'Ligados a um evento', total: 2 },
+    { id: 'sem-evento', rotulo: 'Sem evento vinculado', total: 1 },
+  ];
+
+  it('o denominador dos parados é a SOMA DAS SITUAÇÕES, nunca o agregado de ativos', () => {
+    const [parados] = derivarInsights(situacao, null);
+    // 8 + 120 + 10 = 138. Se um dia alguém trocar por `qtdMembrosAtivos`, os
+    // dois caminhos de cálculo divergem e a frase passa a mentir — foi esse
+    // par que fez a RN-573 nascer.
+    expect(parados?.titulo).toBe('10 de 138 membros estão parados');
+    expect(parados?.tom).toBe('atencao');
+  });
+
+  it('todo insight carrega o caminho para a casa do fato (RN-573)', () => {
+    const insights = derivarInsights(situacao, ponte);
+    expect(insights).toHaveLength(2);
+    for (const i of insights) {
+      expect(i.ancora).toBeTruthy();
+      expect(i.caminho).toBeTruthy();
+    }
+    expect(insights[0]?.ancora).toBe('situacao-dos-membros');
+    expect(insights[1]?.ancora).toBe('ponte-com-eventos');
+  });
+
+  it('desafios sem evento viram oportunidade, com o total da própria banda', () => {
+    const [oportunidade] = derivarInsights(null, ponte);
+    expect(oportunidade?.titulo).toBe('1 de 3 desafios não apontam para um evento');
+    expect(oportunidade?.tom).toBe('oportunidade');
+  });
+
+  it('zero não vira insight — aviso sem fato é ruído com cara de alerta', () => {
+    const semParados = situacao.map((c) => (c.id === 'inativo' ? { ...c, total: 0 } : c));
+    const tudoLigado = ponte.map((c) => (c.id === 'sem-evento' ? { ...c, total: 0 } : c));
+    expect(derivarInsights(semParados, tudoLigado)).toEqual([]);
+  });
+
+  it('sem dado nenhum devolve vazio — a tela diz "nada pedindo atenção", não inventa', () => {
+    expect(derivarInsights(null, null)).toEqual([]);
+    expect(derivarInsights([], [])).toEqual([]);
+  });
+
+  it('a frase dos parados não afirma a ÚLTIMA atividade (D-2), que o dado não sustenta', () => {
+    const [parados] = derivarInsights(situacao, null);
+    expect(parados?.detalhe).toMatch(/não teve nenhum registro de atividade desde então/i);
+    expect(parados?.detalhe).not.toMatch(/última atividade|treinou/i);
+  });
+
+  it('a ponte segue rotulada como intenção, nunca como inscrição confirmada', () => {
+    const [oportunidade] = derivarInsights(null, ponte);
+    expect(oportunidade?.detalhe).toMatch(/intenção declarada no desafio, não inscrição confirmada/i);
+  });
+
+  it('milhar sai em pt-BR — a frase é para o organizador, não para o console', () => {
+    const muitos = [
+      { id: 'ativo', rotulo: 'Ativos', total: 9000 },
+      { id: 'inativo', rotulo: 'Parados há 30 dias ou mais', total: 1500 },
+    ];
+    expect(derivarInsights(muitos, null)[0]?.titulo).toBe(
+      '1.500 de 10.500 membros estão parados'
+    );
   });
 });
