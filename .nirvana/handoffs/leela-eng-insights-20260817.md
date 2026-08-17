@@ -181,7 +181,7 @@ Moldura e cabeçalho são o `CartaoV3` e o `EyebrowV3` das outras seis seções 
 | Fatias vizinhas (`routes/clubes` + `routes/overview`) | **517 verdes**, 56 arquivos |
 | `tsc --noEmit` (painel) | limpo |
 | `eslint` (área tocada) | exit 0 |
-| Gate visual | ver abaixo |
+| Gate visual | pendente — telas declaradas em "Fechamento" abaixo |
 
 **Nota sobre o `gate-canon`:** a primeira execução reprovou em duas catracas
 (`superficie-crua` 107→108 e `receita-de-grid` 23→24). As duas foram **consertadas na origem, não
@@ -199,3 +199,74 @@ suas outras réguas de KPI (`OverviewKpis.tsx`, `SaldoCards.tsx`).
 - **Ligação membro ↔ comprador** — derivação 3, e é a mesma que destrava "Conversão da base".
 - **RN-568 · a anatomia de faixa de aviso** — `AlertsPanel` e este bloco são duas montagens do mesmo
   tipo de item. Na **terceira**, promover ao DS em vez de clonar.
+
+## Fechamento (ENG-INSIGHTS-CLOSE, 17/08)
+
+A sessão que fez os 3 commits travou antes do merge. Esta lane de fechamento reprovou a herança —
+rodou todos os gates do zero no worktree, sem confiar em nenhum número do handoff original — e só
+então mergeou.
+
+**Regra da herança aplicada:** nenhum gate verde declarado acima foi aceito sem nova execução.
+
+### Gates re-provados do zero (worktree `C:\dev\leela-wt-enginsights`, antes do merge)
+
+| Gate | Resultado medido | Bate com o declarado? |
+|---|---|---|
+| `tsc --noEmit` (painel) | limpo, zero erro | sim |
+| `eslint src --max-warnings 0` (painel) | exit 0 | sim |
+| Testes `routes/clubes/engajamento` | **100 passed** (3 arquivos) | sim, bate com "100 verdes" |
+| Testes `routes/clubes` + `routes/overview` | **517 passed** (56 arquivos) | sim, bate com "517 verdes, 56 arquivos" |
+| `gate-canon` | **PASS**, todas as catracas em baseline (`superficie-crua.painel=107`, `receita-de-grid.painel=23` — os valores já corrigidos, não os 108/24 que a primeira execução original reprovou) | sim, PASS sem bump |
+
+### Pré-condição do merge e sincronia
+
+`git status --porcelain` em `C:\dev\LEELA` oscilou entre sujo e limpo por ~15 min enquanto
+`SPEC-LEVA22` e depois `MODAL-LOTE` aterrissavam em paralelo (`dc6f4181`, `998fb996`, `502cec39`,
+`044dce79`). Monitorado com poll de 3 min; a árvore fechou limpa e sincronizada com `origin/main`
+(`044dce79`, 0 ahead/0 behind) antes de qualquer merge.
+
+**Ordem usada (mais segura que mergear direto na main com lanes vizinhas ativas):**
+
+1. `git merge origin/main` **dentro da branch `eng-insights`** primeiro (worktree) — resolve
+   qualquer conflito na origem, não no merge commit da main. Auto-merge limpo, único arquivo com
+   merge automático foi `leela-specs/00-boards/V1-KANBAN.md` (soma de entradas de board, sem
+   conflito). Commit `1548b9f6`.
+2. Gates rodados de novo pós-sync (tsc limpo, eslint exit 0, `routes/clubes/engajamento` **100
+   passed**, `gate-canon` PASS mesma baseline) — o merge trouxe mudanças de `Modal`/`Dialog` do
+   design system (`MODAL-LOTE`) e não quebrou nada da área tocada.
+3. Push de `eng-insights` para origin (rede de segurança).
+4. Em `C:\dev\LEELA`: `git pull --ff-only origin main` (já estava em dia) → `git merge --no-ff
+   eng-insights` → smoke (`routes/clubes/engajamento` **100 passed** de novo, `tsc --noEmit` limpo)
+   → `git push origin main`.
+
+### Hash do merge
+
+```
+841bfd38 merge: ENG-INSIGHTS -- banda Eventos sai, KPIs manejados, Insights da Leela no ar [eng-insights-20260817]
+```
+
+Push limpo, sem rejeição: `044dce79..841bfd38 main -> main`. `origin/main` confirmado igual ao
+`HEAD` local (0 ahead/0 behind) depois do push.
+
+### Gate visual do maestro — telas a conferir
+
+Nenhuma foi vista renderizada por esta lane (restrição: sem navegador). Rota: `/clubes/engajamento`.
+Em cada tela, **desktop e 375px, 2 temas** (claro e escuro/wine, conforme a régua padrão do painel):
+
+1. **Régua de KPIs, sem recorte de club ("Todos os clubs")** — 3 cards: *Membros ativos* (com
+   legenda "somados entre N clubs"), *Participações*, *Desafios ativos*. Confirmar que "Clubs" **não
+   existe mais** como card próprio e que a legenda de "Membros ativos" aparece.
+2. **Régua de KPIs, com um club específico selecionado** — os mesmos 3 cards, mas a legenda
+   "somados entre N clubs" **some** (regra: com 1 club no recorte, "somados entre 1 club" é ruído).
+3. **Bloco "Insights da Leela", sem recorte** — largura total, logo abaixo da régua de KPIs e acima
+   da faixa "Clubs". Estado esperado: 0, 1 ou 2 `Alert`s (membros parados / desafios sem evento),
+   cada um com tag de tom ("Atenção"/"Oportunidade") em texto, título, corpo e link de caminho
+   sublinhado. Se nenhum disparar: linha única "Nada pedindo atenção neste recorte."
+4. **Bloco "Insights da Leela", com um club selecionado** — os mesmos insights, recortados pelo
+   club (números podem mudar ou zerar).
+5. **Ausência da banda Eventos** — confirmar que "Ocupação dos últimos eventos" e "Formas de
+   pagamento (em breve)" **não aparecem em nenhum lugar** da tela de Engajamento, com ou sem
+   recorte. (Seguem intactos na Visão geral — não fazem parte deste gate.)
+
+Nenhuma tela de evento foi tocada (os vetáveis EVT-CARGA continuam esperando a palavra do dono, como
+já registrado acima).
