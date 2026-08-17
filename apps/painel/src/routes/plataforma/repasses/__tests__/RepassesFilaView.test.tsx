@@ -48,12 +48,15 @@ describe('RepassesFilaView', () => {
     expect(screen.getByText(/Nenhum repasse na fila/i)).toBeInTheDocument();
   });
 
-  it('chip de estado mostra contagem e dispara onEstadoFilterChange', async () => {
+  // A faceta é LISTA desde 17/08 (leva 20): a contagem do recorte fica no
+  // gatilho e a contagem por estado, dentro da lista.
+  it('a lista de estado mostra contagem e dispara onEstadoFilterChange', async () => {
     const onEstadoFilterChange = vi.fn();
     render(
       <RepassesFilaView {...base} itens={itens} loading={false} error={null} onEstadoFilterChange={onEstadoFilterChange} />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /Solicitados/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Estado' }));
+    await userEvent.click(await screen.findByRole('option', { name: /Solicitados/ }));
     expect(onEstadoFilterChange).toHaveBeenCalledWith('solicitado');
   });
 

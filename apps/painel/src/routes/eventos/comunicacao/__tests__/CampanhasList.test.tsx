@@ -57,9 +57,13 @@ describe('CampanhasList', () => {
     expect(screen.getByText('Mostrando 3 de 3 campanhas')).toBeInTheDocument();
   });
 
+  // Canal é faceta empilhável e, desde 17/08 (leva 20), lista em qualquer
+  // contagem: o gatilho resume "Canal: Todos" e os valores são
+  // `menuitemcheckbox` dentro do FilterMenu.
   it('filtro de canal (e-mail) restringe a interseção', async () => {
     renderList();
-    await userEvent.click(screen.getByRole('button', { name: 'E-mail' }));
+    await userEvent.click(screen.getByRole('button', { name: /Canal: Todos/ }));
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'E-mail' }));
     expect(screen.getByText('Cupom amigos')).toBeInTheDocument(); // email
     expect(screen.getByText('Boas-vindas')).toBeInTheDocument(); // push+email
     expect(screen.queryByText('Kit pronto')).not.toBeInTheDocument(); // só push

@@ -44,10 +44,17 @@ describe('MembrosList', () => {
     expect(screen.getByText('Mostrando 1 de 4 membros')).toBeInTheDocument();
   });
 
+  // As duas facetas são LISTA desde 17/08 (leva 20): o teste abre o gatilho da
+  // faceta e escolhe o valor, em vez de clicar num chip solto. Foi esta tela que
+  // o dono usou para cobrar — ela mostrava `Todos · Ativos · Novos · Inativos ·
+  // Todos · Owner · Admins · Membros` em duas fileiras, com dois "Todos"
+  // colados e o nome de cada faceta só no `aria-label`.
   it('status × papel é interseção (Ativos ∩ Membros)', async () => {
     renderList();
-    await userEvent.click(screen.getByRole('button', { name: 'Ativos' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Membros' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Status' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Ativos' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Papel' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Membros' }));
     // Ativos = {Camila(admin), Felipe(owner)}; Membros = {Larissa(novo), Thiago(inativo)}
     // Interseção vazia → EmptyState.
     expect(screen.getByText(/nenhum membro encontrado/i)).toBeInTheDocument();
