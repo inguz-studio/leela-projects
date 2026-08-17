@@ -221,7 +221,8 @@ describe('véu do overlay · o token é opaco o bastante para ser véu', () => {
   it.each(TEMAS)('%s define --modal-overlay-bg com opacidade real', (arquivo) => {
     // Uma regra que resolve para `transparent` é o mesmo defeito com outra
     // roupa: o véu existe no CSS e não cobre nada. 0,5 é o piso do que ainda
-    // lê como véu; o valor do produto hoje é 0,6.
+    // lê como véu; o valor do produto hoje é 0,82 (MODAL-LOTE · 17/08, antes
+    // 0,6 — o dono via informação de segundo plano demais através do overlay).
     const css = readFileSync(resolve(RAIZ_DS, arquivo), 'utf8');
     const declaracoes = [...css.matchAll(/--modal-overlay-bg:\s*([^;]+);/g)]
       .map((m) => m[1]?.trim())

@@ -41,6 +41,20 @@
 //   [wine]  card #FFFFFF · velado rgb(101,100,99) · borda #8A837B
 //           borda vs cartão 3,74:1 · cartão vs velado 5,90:1
 //
+// ATUALIZAÇÃO (MODAL-LOTE · 17/08): `--modal-overlay-bg` — o mesmo token que
+// COMPÕE o véu desta cena — subiu de alfa 0,6 para 0,82 (pedido do dono sobre
+// o overlay do Modal/Drawer; este véu de onboarding reusa o TOKEN, não é
+// consumidor de Modal). O véu ficou mais escuro nos dois temas (brasa
+// rgb(5,5,5)→rgb(2,2,2); wine rgb(101,100,99)→rgb(46,45,44)) e os números
+// abaixo se moveram, mas nenhum cruzou o piso na direção errada — o wine
+// folga MAIS (5,90:1 → 13,74:1), porque um véu mais escuro separa melhor um
+// cartão branco. Remedidos direto dos temas do DS:
+//   [brasa] velado rgb(2,2,2) · borda vs velado 4,38:1 · (antes, subtle) 1,34:1
+//           · cartão vs velado 1,15:1 · borda vs cartão 3,82:1 (sem mudança,
+//           não depende do véu)
+//   [wine]  velado rgb(46,45,44) · cartão vs velado 13,74:1 · borda vs cartão
+//           3,74:1 (sem mudança)
+//
 // Aqui as mesmas contas rodam contra os arquivos de tema do DS, que é o texto
 // que o bundle embarca — sem pagar um build a cada `vitest run`.
 // =============================================================================
@@ -201,7 +215,9 @@ describe('borda do aviso · o limite do cartão passa no piso de 3:1 (1.4.11)', 
     // vez de escorregar.
     const cena = cenaDoAviso('themes/brasa.css', '--border-strong');
     expect(cena.bordaSobreCartao).toBeCloseTo(3.82, 2);
-    expect(cena.bordaSobreVelado).toBeCloseTo(4.3, 1);
+    // MODAL-LOTE (17/08): era 4,3 com --modal-overlay-bg a 0,6 de alfa; o véu
+    // ficou mais escuro (alfa 0,82) e a razão subiu — remedido, ver o cabeçalho.
+    expect(cena.bordaSobreVelado).toBeCloseTo(4.38, 2);
   });
 });
 
@@ -211,8 +227,11 @@ describe('borda do aviso · FALSIFICAÇÃO: o token antigo reprova', () => {
     // paleta que mudou, e os casos acima precisam ser relidos antes de crer
     // neles.
     const { bordaSobreVelado, cartaoSobreVelado } = cenaDoAviso('themes/brasa.css', '--border-subtle');
-    expect(bordaSobreVelado).toBeCloseTo(1.31, 2);
-    expect(cartaoSobreVelado).toBeCloseTo(1.13, 2);
+    // MODAL-LOTE (17/08): eram 1,31 e 1,13 com o véu a 0,6 de alfa — remedido
+    // junto com o caso acima (o token do véu é o mesmo). Continua reprovando
+    // bem abaixo do piso, que é o que este caso de falsificação exige.
+    expect(bordaSobreVelado).toBeCloseTo(1.34, 2);
+    expect(cartaoSobreVelado).toBeCloseTo(1.15, 2);
     expect(Math.max(bordaSobreVelado, cartaoSobreVelado)).toBeLessThan(PISO_LIMITE);
   });
 });

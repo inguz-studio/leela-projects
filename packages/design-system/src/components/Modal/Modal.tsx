@@ -42,6 +42,25 @@
  * reduce` o modal aparece e some sem animação nenhuma. Antes desta lane só o
  * `Drawer` respeitava isso — o `Modal` animava para todo mundo.
  *
+ * MODAL-LOTE (17/08, fala do dono na íntegra em .nirvana/briefs/
+ * leela-modal-lote-20260817-enriched.md — restrição ratificada: o GLASS da
+ * superfície fica, muda overlay/animação/scrollbar/botões):
+ *   - overlay mais opaco: `--modal-overlay-bg` (component.json, tier
+ *     COMPARTILHADO — 3 temas) de rgba(0,0,0,0.6) para rgba(0,0,0,0.82). A
+ *     animação centrada (linha acima) e o `motion-safe:` JÁ estavam corretos
+ *     — medidos e confirmados nesta lane, não uma regressão desta vez;
+ *   - scrollbar: NÃO nascia por falta de trava do body (essa já existia via
+ *     `useDialogBehavior`/travarRolagem) — nascia porque a MOLDURA inteira
+ *     (este `role="dialog"`) tinha `overflow-y-auto`, então um formulário
+ *     alto rolava header+corpo+footer juntos e a barra cortava o canto
+ *     arredondado + escondia os botões abaixo da dobra. Ver o comentário no
+ *     próprio JSX (marcador "MOLDURA NÃO ROLA") para a cirurgia;
+ *   - gutter: `travarRolagem`/`destravarRolagem` (useDialogBehavior.ts)
+ *     ganharam compensação de `padding-right` do tamanho da barra nativa que
+ *     o `overflow:hidden` do body faz sumir — sem isso, abrir QUALQUER
+ *     overlay do DS (Modal/Dialog/Drawer, todos compartilham o hook) empurra
+ *     a página alguns pixels para a direita.
+ *
  * 4 vias de fechamento:
  *   1. Botão X            3. Click no overlay
  *   2. Esc (hook)         4. Botão cancelar no footer (consumidor → onOpenChange(false))
@@ -152,36 +171,33 @@ function Modal({
           'bg-card',
           'rounded-[var(--radius-lg)]',
           'shadow-[var(--elevation-3)]',
-          'p-[var(--spacing-6)]',
+          // ---------------------------------------------------------------------
+          // MOLDURA NÃO ROLA (MODAL-LOTE · 17/08, fala do dono: "tem scroll bar
+          // aparecendo"). Até aqui a trava de rolagem (SCROLL_Y_ONLY) vivia NESTE
+          // div — o mesmo que tem `rounded-[--radius-lg]` e title+X+footer como
+          // filhos. Um formulário mais alto que `max-h` fazia a barra nascer na
+          // MOLDURA inteira: cortava o canto arredondado de cima (perto do X) e
+          // o rodapé (Cancelar/Salvar) rolava para FORA da vista, escondido
+          // abaixo da dobra do modal — o achado da medição com o LoteModal em
+          // :4602 (lote com venda, painel `Lotes já configurados` empurrando a
+          // altura). O DoD pede a barra "contida no corpo do modal, nunca na
+          // moldura" — a mesma regra que o `Dialog` público já cumpria (header/
+          // footer fixos, só o corpo rola). Aqui vira `flex flex-col` puro: quem
+          // rola é o wrapper do corpo, abaixo. O `gap-[--spacing-4]` PERMANECE
+          // no container externo — é ele que espaça header↔corpo e corpo↔footer
+          // exatamente como antes (o footer soma seu próprio `pt-2` em cima
+          // deste gap, de propósito: ver o comentário no footer).
+          // ---------------------------------------------------------------------
           'flex flex-col gap-[var(--spacing-4)]',
           'focus:outline-none',
           // Motion (A2 + BUILD-MOTION): fade + zoom, centrado (sem slide), gated
           'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95',
           'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
           className,
-          // ---------------------------------------------------------------------
-          // TRAVA DE ROLAGEM — DEPOIS do `className` DE PROPÓSITO
-          // (BUILD-SCROLL-PADRAO). O painel rola na vertical quando o formulário
-          // passa de `max-h`. O eixo X, que era `visible` e o CSS promovia a
-          // `auto`, agora é fechado: com `max-w-[calc(100vw-…)]`, qualquer filho
-          // largo (grade de campos, número sem quebra, rótulo comprido) desenhava
-          // uma barra horizontal DENTRO do modal, ao lado da vertical. Era esse o
-          // "scroll duplo" dos modais.
-          //
-          // Fechar não recorta nada de novo — o eixo promovido a `auto` já
-          // recortava — e `hidden` continua rolável por programa, então o campo
-          // que recebe foco por teclado continua sendo revelado. Filho largo de
-          // verdade (uma `Table`) traz o próprio contêiner de rolagem.
-          //
-          // `cn` é `twMerge` e resolve pelo ÚLTIMO: com a trava antes do
-          // `className`, um consumidor apagava o eixo em silêncio. Regra em
-          // utils/scroll.ts.
-          // ---------------------------------------------------------------------
-          SCROLL_Y_ONLY,
         )}
       >
-        {/* Header: título + X */}
-        <div className="flex items-start justify-between gap-[var(--spacing-4)]">
+        {/* Header: título + X — FORA da rolagem, sempre visível. */}
+        <div className="flex shrink-0 items-start justify-between gap-[var(--spacing-4)] p-[var(--spacing-6)] pb-0">
           <h2
             id={titleId}
             className={cn(
@@ -215,19 +231,44 @@ function Modal({
           </button>
         </div>
 
-        {description && (
-          <p
-            id={descriptionId}
-            className="text-[length:var(--font-size-base)] text-[var(--text-secondary)]"
-          >
-            {description}
-          </p>
-        )}
+        {/* Corpo — a ÚNICA região que rola (MODAL-LOTE · 17/08). `SCROLL_Y_ONLY`
+            já basta para o mínimo automático do item flex zerar (a superfície
+            com overflow ≠ visible tem min-height:auto tratado como 0 pela
+            spec do Flexbox — a mesma razão do `Dialog` público não precisar de
+            `min-h-0` explícito ao lado do dele).
+            Espaçamento acima/abaixo: NENHUM aqui de propósito — o `gap-4` do
+            flex EXTERNO (entre header, este wrapper e o footer) já é a mesma
+            régua que separava header↔conteúdo↔footer no painel de peça única.
+            Só o `px-6` (lateral) precisa ser repetido, porque o padding que
+            era do painel inteiro virou responsabilidade de cada faixa. Sem
+            footer, o wrapper fecha o próprio `pb-6` (o painel de peça única
+            também fechava em p-6 embaixo); com footer, quem fecha é ele —
+            fechar os dois dobraria o respiro antes dos botões. */}
+        <div
+          className={cn(
+            'flex flex-col gap-[var(--spacing-4)]',
+            'px-[var(--spacing-6)]',
+            footer ? undefined : 'pb-[var(--spacing-6)]',
+            SCROLL_Y_ONLY,
+          )}
+        >
+          {description && (
+            <p
+              id={descriptionId}
+              className="text-[length:var(--font-size-base)] text-[var(--text-secondary)]"
+            >
+              {description}
+            </p>
+          )}
 
-        {children}
+          {children}
+        </div>
 
+        {/* Footer soma `pt-2` em cima do `gap-4` externo (6 no total antes do
+            botão) — a mesma composição que já existia no painel de peça
+            única; preservada aqui, não inventada. */}
         {footer && (
-          <div className="flex items-center justify-end gap-[var(--spacing-3)] pt-[var(--spacing-2)]">
+          <div className="flex shrink-0 items-center justify-end gap-[var(--spacing-3)] p-[var(--spacing-6)] pt-[var(--spacing-2)]">
             {footer}
           </div>
         )}

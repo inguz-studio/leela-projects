@@ -120,6 +120,23 @@ Quem pegar a lane **NAV-MOBILE** precisa ler `01-decisoes-dono.md` §20.3 **ante
   ícone de perfil"*. **Um** botão, abrindo o popover que a leva 16 já fechou.
 - **Continuam abertos:** NAV-MOBILE-2 e NAV-MOBILE-3.
 
+## ⛔ Achado do merge: a leva 21 não tem registro
+
+O card da lane MODAL-LOTE, no kanban, diz que o registro da leva 21 mora *"no card da lane
+FILTROS-LISTA"*. **Não mora.** O brief desta lane a tornou dona do registro da leva **20** e não
+cita a 21 em nenhuma linha. Duas lanes leram o mesmo mapa de maneira diferente e a fala do dono
+ficou no vão — a mesma classe de falha que abre o `01-decisoes-dono.md`, reincidindo no mesmo dia.
+
+O trabalho da leva 21 **existe e está provado** (`.nirvana/handoffs/leela-modal-lote-20260817.md`,
+cinco itens com causa raiz medida). O que não existe é o registro da fala, e esta lane **não o
+escreveu** porque nenhum artefato transcreve o que o dono disse: escrever uma citação reconstruída
+seria inventar decisão. O buraco ficou **nomeado** em `01-decisoes-dono.md` (seção "⛔ Leva 21") e
+no card do kanban, com quem paga escrito: a primeira lane que tiver a fala em mãos.
+
+A lição, de processo: "o registro está na outra lane" só vale quando a outra lane recebeu a leva
+**por escrito no brief**. Ponteiro para registro que ninguém foi encarregado de escrever some sem
+barulho, porque os dois lados acham que o outro fez.
+
 ## Gates, com números reais
 
 | Gate | Resultado |

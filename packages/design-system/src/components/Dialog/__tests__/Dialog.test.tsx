@@ -11,7 +11,7 @@
 // overlay-click fecha, e fallback de retorno de foco sem returnFocusRef.
 // =============================================================================
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as React from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { Dialog } from '../Dialog';
@@ -91,6 +91,56 @@ describe('Dialog — contrato a11y', () => {
     expect(document.body.style.overflow).toBe('hidden');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(document.body.style.overflow).toBe('');
+  });
+});
+
+// MODAL-LOTE (17/08, fala do dono na íntegra: "tem scroll bar aparecendo").
+// A causa PRINCIPAL do sintoma era a moldura inteira rolando (provado em
+// scrollTrava.test.tsx — "Modal: rola em y, fecha x, na wrapper do CORPO, não
+// na moldura"). Esta é a causa SECUNDÁRIA: `overflow:hidden` no body faz a
+// barra nativa da página sumir e devolve a faixa de pixels que ela ocupava —
+// um layout shift de alguns pixels a cada abertura/fechamento de overlay, que
+// também lê como "coisa aparecendo/sumindo" mesmo sem barra nova nenhuma.
+// `travarRolagem`/`destravarRolagem` (useDialogBehavior.ts) compensam com
+// `padding-right` do tamanho exato da barra — provado aqui.
+describe('Dialog — compensação de gutter (MODAL-LOTE · 17/08)', () => {
+  let innerWidthDesc: PropertyDescriptor | undefined;
+  let clientWidthDesc: PropertyDescriptor | undefined;
+
+  beforeEach(() => {
+    innerWidthDesc = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+    clientWidthDesc = Object.getOwnPropertyDescriptor(document.documentElement, 'clientWidth');
+  });
+
+  afterEach(() => {
+    if (innerWidthDesc) Object.defineProperty(window, 'innerWidth', innerWidthDesc);
+    else delete (window as unknown as Record<string, unknown>).innerWidth;
+    if (clientWidthDesc) Object.defineProperty(document.documentElement, 'clientWidth', clientWidthDesc);
+    else delete (document.documentElement as unknown as Record<string, unknown>).clientWidth;
+  });
+
+  // `innerWidth - clientWidth` é a medida que useDialogBehavior usa — simulada
+  // aqui porque jsdom não calcula layout de verdade (clientWidth nasce 0).
+  function simularBarraNativa(pixels: number): void {
+    Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
+    Object.defineProperty(document.documentElement, 'clientWidth', {
+      value: 1024 - pixels,
+      configurable: true,
+    });
+  }
+
+  it('barra clássica (Windows/Chrome, ~15px): padding-right compensa, e some ao fechar', () => {
+    simularBarraNativa(15);
+    abrir();
+    expect(document.body.style.paddingRight).toBe('15px');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(document.body.style.paddingRight).toBe('');
+  });
+
+  it('barra overlay (macOS/mobile, gutter 0): padding-right não é tocado', () => {
+    simularBarraNativa(0);
+    abrir();
+    expect(document.body.style.paddingRight).toBe('');
   });
 });
 

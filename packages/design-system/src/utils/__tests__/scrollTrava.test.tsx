@@ -80,15 +80,25 @@ describe('todo contêiner de rolagem do DS declara os DOIS eixos', () => {
     expect(wrap.className).not.toContain('scrollbar-width:none');
   });
 
-  it('Modal: rola em y, fecha x', () => {
+  it('Modal: rola em y, fecha x — na wrapper do CORPO, não na moldura', () => {
+    // MODAL-LOTE (17/08): a trava morou no `role="dialog"` (a moldura
+    // inteira — header+corpo+footer) até esta lane. Um formulário mais alto
+    // que `max-h` rolava os TRÊS juntos: a barra cortava o canto arredondado
+    // de cima e escondia o rodapé (Cancelar/Salvar) abaixo da dobra. Agora só
+    // o wrapper do corpo (pai do filho renderizado abaixo) tem a trava —
+    // header e footer ficam fora da rolagem, sempre visíveis. Mesmo padrão
+    // já provado pelo `Dialog` público, no teste logo abaixo.
     render(
       <Modal open onOpenChange={vi.fn()} title="Editar">
-        conteúdo
+        <span data-testid="filho-do-modal">conteúdo</span>
       </Modal>,
     );
-    const painel = screen.getByRole('dialog');
-    expect(painel).toHaveClass('overflow-y-auto');
-    expect(painel).toHaveClass('overflow-x-hidden');
+    const corpo = screen.getByTestId('filho-do-modal').parentElement;
+    expect(corpo).toHaveClass('overflow-y-auto');
+    expect(corpo).toHaveClass('overflow-x-hidden');
+    // A MOLDURA não carrega overflow nenhum — quem rola é só o corpo.
+    const moldura = screen.getByRole('dialog');
+    expect(moldura.className).not.toMatch(/overflow-[xy]-/);
   });
 
   it('Dialog (corpo): rola em y, fecha x', () => {
@@ -179,15 +189,19 @@ describe('a trava sobrevive a override do consumidor (twMerge resolve pelo últi
   });
 
   it.each(OVERRIDES_HOSTIS)('Modal com className="%s" mantém o eixo travado', (override) => {
+    // `className` do consumidor cai na MOLDURA (paridade com o `Dialog`
+    // público), que não é mais quem rola — não há como colidir com a trava
+    // do corpo, porque as duas classes vivem em elementos diferentes agora.
     render(
       <Modal open onOpenChange={vi.fn()} title="Editar" className={override}>
-        conteúdo
+        <span data-testid="filho-do-modal">conteúdo</span>
       </Modal>,
     );
-    const painel = screen.getByRole('dialog');
-    expect(painel).toHaveClass('overflow-y-auto');
-    expect(painel).toHaveClass('overflow-x-hidden');
-    expect(painel).not.toHaveClass('overflow-x-auto');
+    const corpo = screen.getByTestId('filho-do-modal').parentElement;
+    expect(corpo).toHaveClass('overflow-y-auto');
+    expect(corpo).toHaveClass('overflow-x-hidden');
+    expect(corpo).not.toHaveClass('overflow-x-auto');
+    expect(screen.getByRole('dialog')).toHaveClass(override);
   });
 
   it.each(OVERRIDES_HOSTIS)('Dialog com bodyClassName="%s" mantém o eixo travado', (override) => {
@@ -226,13 +240,14 @@ describe('o que NÃO é eixo continua sobrescrevível', () => {
   it('Modal aceita padding do consumidor sem perder a trava', () => {
     render(
       <Modal open onOpenChange={vi.fn()} title="Editar" className="p-[var(--spacing-2)]">
-        conteúdo
+        <span data-testid="filho-do-modal">conteúdo</span>
       </Modal>,
     );
     const painel = screen.getByRole('dialog');
     expect(painel).toHaveClass('p-[var(--spacing-2)]');
     expect(painel).not.toHaveClass('p-[var(--spacing-6)]');
-    expect(painel).toHaveClass('overflow-x-hidden');
+    const corpo = screen.getByTestId('filho-do-modal').parentElement;
+    expect(corpo).toHaveClass('overflow-x-hidden');
   });
 });
 
@@ -248,14 +263,15 @@ describe('os componentes usam as constantes do padrão, não cópias', () => {
     }
   });
 
-  it('Modal carrega o SCROLL_Y_ONLY inteiro', () => {
+  it('Modal carrega o SCROLL_Y_ONLY inteiro (no corpo)', () => {
     render(
       <Modal open onOpenChange={vi.fn()} title="Editar">
-        conteúdo
+        <span data-testid="filho-do-modal">conteúdo</span>
       </Modal>,
     );
+    const corpo = screen.getByTestId('filho-do-modal').parentElement;
     for (const classe of SCROLL_Y_ONLY.split(' ')) {
-      expect(screen.getByRole('dialog')).toHaveClass(classe);
+      expect(corpo).toHaveClass(classe);
     }
   });
 

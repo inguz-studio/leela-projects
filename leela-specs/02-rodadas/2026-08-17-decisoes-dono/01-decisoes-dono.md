@@ -1,6 +1,6 @@
 ---
-tags: [leela, decisoes-dono, leva17, leva18, leva19, leva20, carga-cognitiva, navegacao, filtros, e01, e02, e03, e05]
-aliases: [Leva 17, Leva 18, Leva 19, Leva 20, Decisões do dono 17/08]
+tags: [leela, decisoes-dono, leva17, leva18, leva19, leva20, leva22, carga-cognitiva, navegacao, filtros, kits, modalidades, e01, e02, e03, e04, e05]
+aliases: [Leva 17, Leva 18, Leva 19, Leva 20, Leva 22, Decisões do dono 17/08]
 atualizado: 2026-08-17
 ---
 
@@ -379,3 +379,325 @@ controle, não o comportamento de um dado. A linha entrou em `03-canon/canone-de
 | FILTRO-1 | Gate visual das telas convertidas (antes × depois, 375/768/desktop, 2 temas) | handoff `leela-filtros-lista-20260817.md` |
 | NAV-MOBILE-2 | Quais quatro, e onde fica Parcerias | leva 19, spec Movimento 8 |
 | NAV-MOBILE-3 | O drawer sai no profissional e fica no master | leva 19, spec Movimento 8 |
+
+---
+
+# ⛔ Leva 21 · a fala do dono não chegou a este arquivo
+
+**Achado no merge da lane FILTROS-LISTA, 17/08.** Este bloco existe para o buraco não passar batido
+de novo — é a mesma classe de falha que abre este arquivo, e ela reincidiu no mesmo dia.
+
+O card da lane MODAL-LOTE, no `00-boards/V1-KANBAN.md`, cita a leva 21 e diz que o registro dela
+mora *"no card da lane FILTROS-LISTA"*. **Não mora.** O brief da FILTROS-LISTA a tornou dona do
+registro da **leva 20** (três itens: filtros, engajamento e nav mobile) e não mencionou a 21 em
+nenhuma linha. Duas lanes leram o mesmo mapa de maneira diferente, e a fala do dono ficou no vão.
+
+**O que existe, e onde:** os cinco itens da leva 21 (botões do `LoteModal`, glass da superfície,
+opacidade do overlay, animação de fade, scrollbar) estão **construídos e provados** em
+`.nirvana/handoffs/leela-modal-lote-20260817.md`, com causa raiz medida e alcance declarado. O
+trabalho não se perdeu; o **registro da fala** é que não aconteceu.
+
+**O que falta, e por que esta lane não preencheu:** a fala do dono **na íntegra**. O handoff da
+MODAL-LOTE descreve os cinco itens em terceira pessoa e não transcreve o que ele escreveu. Escrever
+aqui uma citação reconstruída seria inventar decisão, e é exatamente o vício que a §"Registro de
+falha de captura" deste arquivo condena. Fica o buraco nomeado em vez de um texto plausível.
+
+**Quem paga:** a primeira lane que tiver a fala em mãos abre `# Leva 21` neste arquivo, com a
+citação e os cinco itens desdobrados, e corrige o ponteiro do card da MODAL-LOTE no kanban.
+
+**A lição, que é de processo e não de lane:** "o registro está na outra lane" só vale quando a outra
+lane recebeu a leva **por escrito no brief**. Ponteiro para registro que ninguém foi encarregado de
+escrever é registro nenhum — e some sem barulho, porque os dois lados acham que o outro fez.
+
+---
+
+# Leva 22 · o terciário vira padrão, Modalidades toma o lugar de Lotes, kits arrumados
+
+> Rodada `02-rodadas/2026-08-17-leva22/`. Medição com arquivo:linha em
+> `00-medicao-kits-caixa-e-terciario.md`; specs e fila nos arquivos seguintes.
+> ⛔ Zero código de produto nesta lane — os builds são as quatro ondas nomeadas.
+
+**Na íntegra:**
+
+> *"Em configurações dos Clubs, está perfeita a solução de menu terciário (identidade,
+> pagina pblica, regras, moderação, admin avançada). quero que isso seja o padrão, para
+> outras áreas que demandem isos. Só que, ele está no formato de menu ancora. e acho que o
+> scroll dessa abas terciárias deveriam ser fixas, a nao ovimentar a tela inteira.(me fiz
+> claro?) ese formato de menu terciário poderia ser aplicado em configurações dos eventos
+> também. Onde a página de vendas deve ficar em Configurações, de eventos. nos kits, o que
+> está incluso, deve aparecer no formato de tabela. Organize melhro os espaçamentos, reduza
+> o tamanho das simulações das fotos dos kits, em 50%. AO Somente posso adicionar itens no
+> kits, que já estejam cadatrados como um item indivudal, POis um kit é um conjunto de
+> itens, e essa contagem deve ser feita a partir disso. Quero alterar a RN-200, o
+> organizador pode editar os preços dos kits, se achar necessário, só que isso nao deve
+> afetar pedidos já realizados.apenas da edição para frente. O Seletor de modalidades,
+> tambéme stá fora do padrão de design sistem, quando abro a listagem dele. Existem
+> breadcrumbs dentro de kits, isso nao faz sentido algum. E já perdi as contars em dizer
+> que nao consigo encontrar aonde adicionar modalidades emum evento. Essa área deve ser ali
+> em Lotes. E chamaremos de Modalidades ao invés de Lotes, no menu secundário.Ali posso ou
+> adicoinar uma modalidade ou um lote dentro da modalidade. Os alertas operacionais estão
+> fore do padao de alertas, que utilizamos em visão geral. Os alertas devem seguir aquele
+> padrão. O otão editar em kits (gerenciamento_ deve ficar alinado ao lado direito
+> superior, como ícone de edição, e não no lado esquerdo inferior. E os cards dos kits estão
+> com linhas de borda que já falei expressamente que nao devem ter. No luagr dos
+> breadcrums, deixe um botão de voltar. Em credenciamento, devemos simlpificar mais a ação,
+> que é de fazer o checkin. a visualização de informações de analise do credencieamenot,
+> pode ficar em ourta aba terciária dentro do mesmo também. NO caixa do evento, a tabela de
+> 'inscrições' toda unificada por kit modalidade e status, nao informa nada para o usuário.
+> Qual o intuito dela? Mostrar uma divisao de receita por forma de insicrção? Distribuição?"*
+
+## 22.0 · A contagem, refeita à mão
+
+O brief desta lane anunciava **14 itens**. Contando a fala instrução por instrução, dão
+**17**. A diferença não é discussão de método: são três pedidos que ficariam sem card se a
+conta de 14 fosse aceita sem conferência — o botão de voltar no lugar da trilha (item 11b),
+os espaçamentos (item 6) e a pergunta do caixa (item 17), que é a única que não é ordem.
+Fica escrito porque contagem herdada de brief é a forma mais barata de perder um pedido do
+dono, e esta lane nasceu de outra perda dessas.
+
+| # | O que ele pediu | Onda | Decide |
+|---|---|---|---|
+| 1 | Menu terciário dos Clubs vira **padrão da casa** | B | MODALIDADES-1 não; **RN-574** |
+| 2 | O terciário vira **abas fixas** — sem rolar a tela | B | RN-574 |
+| 3 | Terciário aplicado em **Configurações de eventos** | B | — |
+| 4 | **Página de vendas** passa a viver em Configurações | B | — |
+| 5 | "O que está incluso" vira **tabela** | A (sem Qtd.) / D (com Qtd.) | RN-576 |
+| 6 | **Espaçamentos** organizados | A | — |
+| 7 | Fotos dos kits **−50%** | A | ⚠ FOTOS-1 |
+| 8 | **Kit = conjunto de itens cadastrados**, contagem derivada | D | **RN-576** |
+| 9 | **RN-200 alterada** — preço de kit editável, só para frente | D | **RN-575** |
+| 10 | Seletor de modalidades **no padrão do DS** | A | — |
+| 11a | **Breadcrumbs em kits morrem** | A | — |
+| 11b | No lugar deles, **botão de voltar** | A | — |
+| 12 | **Modalidades no lugar de Lotes**, com lote dentro da modalidade | C | MODALIDADES-1 **fecha** |
+| 13 | **Alertas operacionais** no padrão da Visão Geral | A | — |
+| 14 | Botão editar vira **ícone no topo-direita** | A | — |
+| 15 | **Bordas dos cards de kit morrem** | A | ⚠ ver 22.2 |
+| 16 | **Credenciamento**: ação simplificada + análise em aba própria | B | ⚠ CRED-1 |
+| 17 | **Tabela do caixa**: "qual o intuito dela?" | — | **fica com ele** |
+
+## 22.1 · Cobrança repetida (a) — "já perdi as contas" sobre as modalidades
+
+Ele tem razão, e a trilha é rastreável. Não é contexto perdido: é uma proposta que ficou
+esperando.
+
+| Quando | O que aconteceu |
+|---|---|
+| 05/08 | A lane DIAG-PAINEL-LACUNAS mede o círculo fechado entre Lotes e Configurações e devolve a **S316** inteira, com seis tarefas. Nada construído. |
+| 10/08 | **D-1008-R13**, na íntegra: *"Nao consigo ver a configuração de modalidades em lotes. Está consufo, pois eu precisaria primeiramente configurar as modalidades e depois os lotes."* |
+| 10-11/08 | A resposta vira **proposta vetável** e entra no painel como **MODALIDADES-1**, com fase A e fase B e um default proposto. |
+| 12/08 | Ele volta a perguntar no chat: *"Sobre a tela de lotes, nós colocamos o cadastro de modalidade por lá?"* O painel registra que a resposta dele *"pode fechar direto, sem esperar nova rodada"*. |
+| 17/08 | *"já perdi as contas em dizer que nao consigo encontrar aonde adicionar modalidades"* — e desta vez ele **não escolhe entre as opções: dá o desenho**. |
+
+**A lição, e ela é de processo, não de produto.** A MODALIDADES-1 estava formalmente
+correta: item no painel, contexto, caso de uso, job story, opções com default. E mesmo
+assim ele cobrou três vezes. **Proposta vetável que fica semanas sem resposta não é uma
+decisão aguardando — é uma pendência que o dono re-cobra como falha nossa**, porque do lado
+dele o que se vê é a tela que continua igual. O default proposto existia justamente para
+isso e nunca foi exercido.
+
+Vale ao lado da confissão da leva 17, que é o defeito oposto e da mesma família: lá uma fala
+não virou registro nenhum; aqui virou registro exemplar e não virou tela. **Item registrado
+que espera também custa** — menos que o não registrado, e não zero. A régua que fecha as
+duas: item de painel com default proposto e sem resposta em **duas janelas do dono** entra
+na fila pelo default, com o veto seguindo aberto. Não vale para dinheiro nem para dado
+pessoal, que continuam sempre dele.
+
+## 22.2 · Cobrança repetida (b) — as bordas nos cards de kit
+
+Ele diz *"já falei expressamente que nao devem ter"*. Conferi o histórico, e o veredito é
+desconfortável: **é regressão, e foi a lane que consertou o pedido anterior dele que a
+introduziu.**
+
+Em 10/08 ele reclamou do **oposto** (D-1008-R11: *"nao consigo visualizar os bento cards
+[...] estao todas as informações flutuantes"*). A lane AJUSTES-DONO pagou em `a60690c2`
+trocando o `<article>` cru pelo `Card` canônico. O `<article>` tinha raio e fundo e **zero
+borda**; o `Card` traz `border border-border` na receita base. Diff e arquivo:linha em
+`00-medicao-kits-caixa-e-terciario.md` §1.
+
+**Não maquiando o que a medição achou por baixo:** a borda não é defeito da tela de kits, é
+a **receita canônica do `Card`**, e ela contradiz a régua da própria casa — *"flat por
+padrão, sem borda decorativa"* (`04-engenharia/governanca-design.md:38`, §2.16), cuja lista
+de exceções não inclui card comum. O componente declara isso na cara: *"border-border é
+decorativa (frame shadcn)"*. São **43 instâncias** de `<Card>` nos apps e **nenhuma** mata a
+borda. O `KpiCard`, na mesma dobra da tela de kits, não tem borda — duas superfícies
+diferentes na mesma tela, e a de baixo é a que está fora da régua.
+
+Então a resposta honesta às três hipóteses: **não é (b) fora do alcance nem (c) outra
+causa. É (a) regressão — e ela expôs um defeito de cânone maior que a tela.**
+
+⚠️ **Duas travas que a onda A carrega, e as duas já mordem.** A própria lane da R11 escreveu
+o teste que congela a borda (`superficie-cartoes.test.tsx:80`, `:93`, afirmando
+`toContain('border-border')`): a decisão de hoje contradiz a asserção, e os dois mudam no
+mesmo commit. E matar a borda devolve a separação inteira para fundo e sombra — no tema
+**wine** o card é `#FFFFFF` sobre página `#FDFAF7`, quase nada. **É o tema onde fechar esta
+leva pode reabrir a D-1008-R11 no mesmo gesto**, e por isso o aceite não é "a borda sumiu",
+é "o contêiner continua legível nos três temas, sem borda", com olho por tema.
+
+## 22.3 · As quatro decisões que fecham
+
+### MODALIDADES-1 · fechada pelo desenho do dono — sai do painel
+
+Ele não escolheu entre fase A e fase B: deu a forma. **A área de Lotes vira "Modalidades" no
+menu secundário do evento**, e dentro dela se adiciona **ou uma modalidade, ou um lote dentro
+de uma modalidade** — modalidade é pai, lote é filho. Isso é a fase B com hierarquia
+declarada, e supersede o default de "fase A agora" que o painel propunha.
+
+A **S316 inteira é re-ancorada nesse desenho** (spec em `02-spec-modalidades-pai-filho.md`;
+as seis tarefas revisadas contra ele, com tamanho refeito). ⚠️ **A ordem que a medição
+impõe:** o renome não sobe sozinho. A tela de Lotes hoje declara na cara que **não** edita
+modalidades (`lotes/LotesView.tsx:75-78`), então chamá-la de "Modalidades" sem entregar a
+`S316-T4` recria o círculo fechado que a DIAG-PAINEL-LACUNAS pagou para desfazer — o nome
+prometeria o que a tela continua não fazendo. **Renome e conteúdo sobem juntos.**
+
+### RN-200 · alterada por ordem do dono, com o veredito do snapshot
+
+**Preço de kit passa a ser editável pelo organizador, com efeito só para frente.** Nasce a
+**RN-575**, que recorta o kit de dentro da RN-200 sem revogá-la — evento e lote seguem
+congelados, e a RN-200 fica **marcada**, nunca apagada, pela mesma disciplina da RN-211 e da
+RN-470.
+
+**Veredito medido: SNAPSHOT-PARCIAL** (§15 da medição).
+
+**A metade que vale dinheiro já está pronta.** O preço do kit é somado dentro de
+`pedido.itens[].valorBase` na hora da compra (`saleState.ts:294-300` →
+`createInscricaoCharge.ts:1361`) e nunca é relido. `ItemPedido` não tem campo de kit.
+**Editar `kit.preco` hoje não muda um centavo de pedido nenhum** — a ordem do dono, na parte
+do dinheiro, já é satisfeita pela arquitetura. **Isso rebaixa a prioridade da blindagem de
+dinheiro na onda D:** não há pedido em risco.
+
+**As duas lacunas que a ordem abre, e que a RN precisa cobrir:**
+
+1. **Auditabilidade.** Sem `kitPreco` gravado, ninguém prova depois quanto daqueles R$ 180
+   foi kit. Hoje não incomoda porque o preço é imutável; **liberar a edição cega a série
+   histórica**. Molde pronto no repositório: `pagamento.taxaCongelada` (RN-179).
+2. **Nome e composição derivam do doc vivo.** Renomear um kit reescreve o que a confirmação
+   de uma compra antiga mostra (`CheckoutFlow.tsx:2052`) e trocar itens reescreve o
+   checklist do balcão (`_lib/balcao.ts:260`). Nenhuma Rule impede. **Se "pedidos já
+   realizados intocados" é o contrato, isto o viola sem tocar em dinheiro** — e é a parte da
+   onda D que passa a ter prioridade, no lugar da blindagem de valor.
+
+⚠️ **Correção a uma premissa do brief desta lane:** ele supunha que a RN-497 já havia
+revogado parte da RN-200. Não revogou. A RN-497 derrubou uma extensão que existia só em
+comentário de código, trata do **lote**, e o épico diz que a RN-200 *"permanece aqui,
+inalterada"* (`LEELA-E03-operacao-evento.md:2193`, `:2213`).
+
+### Kit = composição de itens cadastrados
+
+**Nasce a RN-576.** Item individual é a unidade; o kit referencia itens do catálogo; **a
+contagem deriva disso**. Só entra no kit o que já existe como item cadastrado.
+
+A medição barateia metade e encarece a outra (§6). **As duas coisas já existem e não se
+falam:** há catálogo real (`ItemKit`, coleção `itensKit/{itemId}`, vínculo N:N em
+`item.kits`) e, em paralelo, uma lista de **texto livre** (`Kit.itens: string[]`, que o
+próprio core chama de *"decorativa"*). Convivem na mesma tela do editor, com estado separado
+desde a declaração, e **nada lê um para preencher o outro**.
+
+Derivar "o que está incluso" do catálogo **não exige migração de dado** — os dois campos já
+são gravados e `ItemKit.nome` é exatamente o texto que hoje se digita. É trabalho de tela e
+de regra de precedência. **O que não existe é quantidade por item**, e é a única parte cara:
+uma coluna "Qtd." na tabela do item 5 pede campo novo no core e nas Rules. Por isso a tabela
+**sem** quantidade é onda A e **com** quantidade é onda D.
+
+### Menu terciário = padrão da casa, com abas fixas
+
+**Nasce a RN-574.** O padrão que ele elogiou entra no cânone como **padrão nomeado**, com a
+correção dele: **abas fixas que trocam o conteúdo no lugar, sem rolar a página**. A leitura
+*"morre o formato âncora"* fica marcada **vetável** — ele perguntou *"me fiz claro?"*, e a
+resposta honesta é que ficou, mas a pergunta merece confirmação antes de o componente virar
+lei em todas as áreas.
+
+Três fatos da medição mudam o tamanho (§10):
+
+- **É âncora mesmo**, confirmado por `IntersectionObserver` + `scrollIntoView`, e o teste
+  do arquivo até usa a palavra ("navegação âncora").
+- **É bespoke**, escrito à mão dentro da rota do club, e é o **único** lugar do painel com
+  esse padrão. Virar padrão da casa significa **criar o componente**, não repropagá-lo.
+- **O que ele chama de terciário é o quarto nível** na anatomia do código; os três de cima
+  já são canônicos. O cânone inclusive já diz que não deveria haver variante por
+  profundidade (`canone-de-componentes.md:234-235`). **O que ele elogiou é justamente o
+  único fora do cânone** — e é uma coluna vertical, não uma barra horizontal.
+
+**A onda B compõe, não constrói do zero:** o `Tabs` do DS já troca conteúdo no lugar sem
+rolar, com a11y completa. Faltam três coisas — estado na URL, indicador **deslizante**
+(exigido pela D-1008-R14, e a mecânica já existe pronta no `SubNav`, é código para promover)
+e a decisão de fundo, porque hoje `SubNav` (transparente) e `Tabs` (com `border-b`) divergem
+**de propósito** pela D-1008-R18.
+
+**Aplicação imediata:** Configurações de eventos, com a **página de vendas** dentro, e
+Credenciamento em duas abas (ação de check-in · análise).
+
+## 22.4 · O que a lane NÃO decidiu, e por quê
+
+### A tabela do caixa fica com o dono — medida, não decidida
+
+Ele perguntou o intuito. A resposta medida é que **ela não faz nenhuma das duas coisas que
+ele supôs** (§14).
+
+Não é divisão de receita: **não tem uma única coluna em R$**. São três colunas — Categoria ·
+Item · Inscritos. E é distribuição só num sentido degradado: **não existe chave composta
+kit×modalidade×status**, são três partições independentes empilhadas numa tabela só,
+distinguidas pela palavra na primeira coluna. Cada partição soma o mesmo total, então **a
+coluna somada de ponta a ponta dá 3× o número escrito no cabeçalho**, sem separador visual.
+Num evento de 3 modalidades × 2 kits × 4 status ela produz 9 linhas, não 24.
+
+**Ela nasceu como substituto declarado**, em 04/07, e nunca mais foi tocada em 11 commits
+seguintes ao redor dela. A spec S207 pedia matriz modalidade×lote e inscrições por forma de
+pagamento; o ADR é explícito que *"breakdown é uma matriz modalidade×lote — cada célula é um
+par real, não um produto cartesiano de dimensões independentes"*. O commit de nascimento
+registra a recusa: *"breakdown por forma de pagamento | dado inexistente no agregado"*. **A
+dependência que destravaria continua aberta** (FABLE-A, modelo de pedido/pagamento).
+
+E a redundância é grande: **um terço das linhas dela já está desenhado em barra 40px acima,
+na mesma dobra**, e **as três partições já existem, acionáveis, na tela de Inscritos** —
+chips de status clicáveis como filtro, mais selects de kit e modalidade. A Caixa mostra em
+leitura o que a outra tela serve em ação.
+
+**Vira o item CAIXA-1 no painel, com três opções e um default.** Não decido por ele: isto é
+o que a tela do dinheiro conta ao organizador.
+
+### FOTOS-1, CRED-1 e o vetável do terciário
+
+- **FOTOS-1.** "Reduzir 50%" não tem número para dividir: a galeria é `grid-cols-3` com
+  `w-full` e **zero px em qualquer lugar** (§4). Metade de "a largura da coluna" pode ser
+  teto de largura ou outra escada de colunas, e as duas dão resultados diferentes em mobile
+  — que é justamente onde ele reclamou na leva 17. O default entra na onda A e o veto fica
+  aberto.
+- **CRED-1.** O corte ação × análise **já existe no espaço** (60/40), com uma impureza: o
+  card "Ações rápidas" está do lado da análise **com três botões sem `onClick`** — botões
+  mortos na tela hoje. E a simplificação de maior efeito não é layout: **não existe scanner
+  em lugar nenhum do painel**, o ingresso tem QR na landing e no balcão o operador digita o
+  código na mesma caixa do nome. Virar duas abas é barato; tirar dois toques do check-in é
+  trabalho novo.
+- **O vetável do terciário** (a leitura "morre o âncora") segue aberto até ele confirmar.
+
+## Regras de negócio desta leva
+
+Três, e a faixa foi conferida por grep de `RN-574` a `RN-578` sobre o corpus fora do índice
+imediatamente antes do commit: **zero definições** — os quatro retornos são prosa de rodadas
+anteriores descrevendo as próprias varreduras, o molde de sempre.
+
+| RN | O quê | Épico |
+|---|---|---|
+| **RN-574** | Menu terciário é padrão nomeado, com abas fixas que trocam conteúdo no lugar | [[LEELA-E01-design-system]] |
+| **RN-575** | Preço de kit é editável, com efeito só para frente — recorta o kit da RN-200 | [[LEELA-E04-config-vendas]] |
+| **RN-576** | Kit é composição de itens cadastrados, e a contagem deriva do catálogo | [[LEELA-E03-operacao-evento]] |
+
+Delta em `02-rodadas/2026-08-17-leva22/05-rns-delta.md`.
+
+**Os outros catorze itens não consomem número, e isso é deliberado.** Bordas, botão editar,
+trilha, espaçamentos, alertas, seletor e fotos são **conformidade a régua que já existe** —
+a §2.16 do guia visual, a RN-558 (procedência) e a RN-568 (composição recorrente) já os
+cobrem, e escrever regra nova para eles criaria uma segunda definição do que já é lei. O
+caso das bordas é o mais claro: não falta regra, **falta o `Card` obedecer à que existe**.
+Fica registrado aqui porque decisão do dono que não aparece nesta seção parece rodada que
+esqueceu de registrar.
+
+## O que fica com o dono, nesta leva
+
+| Item | Pergunta | Onde |
+|---|---|---|
+| CAIXA-1 | A tabela de inscrições da Caixa: redesenhar com propósito, trocar por receita, ou remover? | painel + `03-spec-caixa-e-kit-composicao.md` §Parte 1 |
+| FOTOS-1 | "50%" das fotos do kit: teto de largura ou outra escada de colunas? | `04-fila-em-ondas.md`, onda A |
+| CRED-1 | O check-in ganha scanner, ou só o corte em duas abas? | `01-spec-menu-terciario.md` §Aplicação 2 |
+| TERCIARIO-1 | Confirmar que "abas fixas" mata o formato âncora — *"me fiz claro?"* | `01-spec-menu-terciario.md` |

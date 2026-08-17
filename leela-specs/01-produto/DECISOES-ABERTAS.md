@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **4 itens abertos, contados à mão:** 2 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **5 itens abertos, contados à mão:** 3 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -22,15 +22,15 @@ Todo endereço do produto ainda é o marcador `{DOMINIO_LEELA}`, e o remetente d
 - **O que fica com você:** cravar o domínio público da Leela.
 - **Onde aterrissa:** env dos dois apps, substituição do marcador nas specs e verificação DKIM/SPF/DMARC na Brevo. Puxa junto o item 66 e o placeholder `contato@leela.app`, que a porta de entrada do organizador já usa como CTA de "Falar com o time Leela".
 
-### MODALIDADES-1 · visibilidade agora ou editor completo na tela de lotes
+### CAIXA-1 · a tabela de inscrições da Caixa: o que ela deve contar
 
-As modalidades do evento nascem uma vez, na criação, e nenhuma tela do painel as mostra ou edita depois — quem configura lotes não enxerga a lista nem tem caminho até ela. A proposta que resolve isso está desenhada desde 05/08 (D-1008-R13) e nunca saiu do papel, presa dentro do épico E04. Você voltou a pedir por ela em 10/08 e de novo no chat de 12/08 (*"Sobre a tela de lotes, nós colocamos o cadastro de modalidade por lá?"*), e a sua resposta no chat pode fechar direto, sem esperar nova rodada.
+Você perguntou o intuito dela em 17/08, e a medição diz que ela não faz nenhuma das duas coisas que você supôs. Não é divisão de receita — não tem **nenhuma** coluna em reais, só Categoria, Item e Inscritos. E não é uma distribuição cruzada: são **três listas independentes empilhadas** (por kit, por modalidade, por status), então a coluna somada de ponta a ponta dá **3× o número do próprio cabeçalho**. Ela nasceu em 04/07 como substituto declarado da matriz que a spec pedia, e nunca mais foi tocada.
 
-- **Caso de uso:** o Castelo abre a tela de lotes para configurar preço e vaga, e não encontra onde ver as modalidades do evento — a informação existe, mas fica atrás de nenhuma porta.
-- **Job story:** quando eu configuro os lotes de um evento, eu quero enxergar e alcançar as modalidades dele no mesmo caminho, para não precisar adivinhar onde essa configuração mora.
-- **O que fica com você:** o ritmo da entrega — visibilidade agora, edição de verdade depois, ou as duas juntas — e se as modalidades ganham aba própria.
-- **Opções:** **fase A agora + fase B como onda seguinte já especificada** (**default proposto** — fase A é tela apenas, sem servidor: a seção de data e modalidades passa a listar as modalidades do evento e a tela de lotes ganha um caminho até lá; fase B sobe depois como onda própria, com a fila da S316 inteira — servidor, com integridade entre modalidade, lote, kit e campanha) · as duas fases de uma vez, pagando o custo de servidor já nesta entrada · modalidades ganhando aba própria entre kits e lotes, opção independente que soma a qualquer uma das duas de cima.
-- **Onde aterrissa:** S316 inteira em [[LEELA-E04-config-vendas]] §"S316 recebe a leva 3 inteira (D-1008-R13)".
+- **Caso de uso:** a Marina abre a Caixa para entender de onde veio o dinheiro do evento, e encontra uma tabela de contagem cujo total não bate com o título — enquanto o gráfico logo acima já mostra um terço daquelas linhas.
+- **Job story:** quando eu abro a Caixa do meu evento, eu quero entender de onde veio a receita, para saber qual modalidade e qual kit sustentam o resultado.
+- **O que fica com você:** o que essa faixa da tela deve contar — ou se ela deve sumir.
+- **Opções:** **remover a tabela** (**default proposto** — modalidade já está no gráfico logo acima, e status e kit já existem *acionáveis* na tela de Inscritos, como filtro; sai uma tabela que soma errado e a dobra fica com os três números de dinheiro) · **trocar por divisão de receita de verdade**, que é o que você levantou primeiro e o que a spec original pedia — **bloqueada por dado**, não por trabalho de tela: exige o modelo de pagamento no inscrito (FABLE-A) e uma agregação por forma que ninguém escreve hoje · **redesenhar com propósito**, uma partição por vez com seletor e coluna de percentual, para a soma voltar a bater com o cabeçalho.
+- **Onde aterrissa:** `apps/painel/.../financeiro/FinanceiroView.tsx:303-313` e a onda D de `02-rodadas/2026-08-17-leva22/04-fila-em-ondas.md`. Medição completa em `00-medicao-kits-caixa-e-terciario.md` §14.
 
 ### POPOVER-COR-1 · a cor do painel flutuante (o "modal" do perfil)
 
