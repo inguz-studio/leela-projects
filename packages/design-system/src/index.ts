@@ -103,6 +103,11 @@ export { Sidebar, DEFAULT_SIDEBAR_SECTIONS, DEFAULT_SIDEBAR_NAV_ICONS, sidebarNa
 export type { SidebarProps, SidebarSection, SidebarItem, SidebarBadgeVariant, SidebarNavIconEntry, SidebarBrandProps, SidebarFooterProps } from './components/Sidebar';
 export { SidebarRail, railNavIcon } from './components/SidebarRail';
 export type { SidebarRailItem, SidebarRailProps } from './components/SidebarRail';
+// Barra flutuante inferior do mobile (NAV-MOBILE · leva 20). `RESPIRO_BOTTOMNAV`
+// vem junto e não é conselho: a barra flutua SOBRE o conteúdo, então quem rola
+// reserva o espaço embaixo ou o último bloco da página nasce escondido.
+export { BottomNav, bottomNavIcon, RESPIRO_BOTTOMNAV } from './components/BottomNav';
+export type { BottomNavItem, BottomNavProps } from './components/BottomNav';
 export { Breadcrumb } from './components/Breadcrumb';
 export type { BreadcrumbProps, BreadcrumbItem } from './components/Breadcrumb';
 export { PageHeader } from './components/PageHeader';

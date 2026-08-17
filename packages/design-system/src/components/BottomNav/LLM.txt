@@ -1,0 +1,76 @@
+# BottomNav — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: BottomNav
+version: 0.0.1
+generated_at: "2026-08-17"
+source: src/components/BottomNav
+verdict: NASCEU NA LANE NAV-MOBILE (leva 20) — cânone escrito no mesmo commit
+
+## Import canônico
+import { BottomNav, bottomNavIcon, RESPIRO_BOTTOMNAV, type BottomNavItem } from '@leela/design-system'
+
+## Quando usar
+Navegação primária de uma superfície abaixo do breakpoint `lg`, quando os destinos cabem em até cinco slots. É a barra flutuante horizontal inferior decidida pelo dono na leva 20 e a peça que substitui o drawer off-canvas na superfície do produtor.
+
+## Quando NÃO usar
+Acima de `lg` — ali a navegação é `SidebarRail`, e a barra se esconde sozinha (`lg:hidden` é anatomia dela).
+Superfície com mais de cinco destinos: quatro slots não comportam a nav do super-admin (oito destinos), e ali o drawer do `AppShell` fica.
+Navegação de ÁREA (as abas de dentro de uma tela) é `SubNav`, por `AreaSubNav` no painel.
+Ações sobre a página não entram aqui: barra de navegação leva a LUGAR, nunca executa.
+
+## Props válidas
+- items: BottomNavItem[]   (obrigatório)   — quatro é o desenho; a peça aceita 2..5
+- ariaLabel: string   (default: 'Navegação principal')
+- className   — some no `<nav>` externo, nunca na pílula
+
+BottomNavItem:
+- id: string           (obrigatório)
+- label: string        (obrigatório) — fica no fluxo, sempre visível
+- icon: ReactNode      (obrigatório) — use `bottomNavIcon(Icon)`, nunca o Lucide cru
+- href?: string        — vira `<a>` de verdade; sem href vira `<button>`
+- onClick?: (e) => void — junto com `href`, é o link SPA interceptável
+- badge?: string | number
+- badgeLabel?: string  — o que o leitor de tela OUVE no lugar do número
+- active?: boolean     — no máximo um; ele recebe `aria-current="page"`
+
+## O espaço da página é obrigação de quem monta
+A barra FLUTUA sobre o conteúdo. O contêiner que rola leva `RESPIRO_BOTTOMNAV`, senão o último bloco da página nasce escondido atrás dela. O valor é um token só (`--bottomnav-space` = altura + duas margens + entalhe do iOS).
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --bottomnav-height / -radius / -margin / -px / -gap / -max-w
+- --bottomnav-item-radius / -item-gap / -icon-size / -icon-stroke / -label-size
+- --bottomnav-badge-size / -badge-px / -motion / -safe-b / -space
+- --surface-raised, --surface-high, --card-blur, --action-primary, --action-primary-fg
+- --text-tertiary, --text-secondary, --border-focus, --motion-easing-default
+
+## Proibido (do/don't)
+DON'T: montar a barra à mão com `flex` + `fixed bottom-0` numa tela. É a anatomia desta peça reescrita, e a catraca `superficie-crua` do gate-canon conta.
+DON'T: esconder o rótulo e deixar só o ícone. Não há hover no dedo, então não há dica para socorrer o glifo mudo.
+DON'T: montar a barra sem pôr `RESPIRO_BOTTOMNAV` no contêiner que rola.
+DON'T: passar `active` em mais de um item — `aria-current="page"` duplicado mente sobre onde a pessoa está.
+DON'T: usar `badge` sem `badgeLabel` num número que muda: o leitor de tela ouve "Eventos 3".
+DO: o mesmo `href` + `onClick` da nav clássica — o item precisa ser link de verdade (ctrl+clique, clique do meio, copiar endereço).
+
+## Exemplo mínimo (válido, copiável)
+<BottomNav
+  items={[
+    { id: 'visao-geral', label: 'Visão geral', icon: bottomNavIcon(LayoutDashboard), href: '/', active: true },
+    { id: 'eventos', label: 'Eventos', icon: bottomNavIcon(Ticket), href: '/eventos' },
+    { id: 'clubs', label: 'Clubs', icon: bottomNavIcon(Heart), href: '/clubes' },
+    { id: 'crm', label: 'CRM', icon: bottomNavIcon(User), href: '/crm' },
+  ]}
+/>
+
+## Exemplo completo (válido, copiável)
+<AppShell
+  sidebar={<SidebarRail {...props} />}
+  bottomNav={<BottomNav items={itens} />}
+  topBarEnd={<GatilhoDoPerfil />}
+>
+  <div className={cn('relative flex flex-col flex-1', SCROLL_Y_ONLY, RESPIRO_BOTTOMNAV)}>
+    {children}
+  </div>
+</AppShell>
+
+## Instrução para o modelo (colar no system prompt)
+Use BottomNav para a navegação primária mobile de qualquer superfície com até cinco destinos. Nunca reescreva a barra na tela e nunca a monte sem reservar o espaço inferior da página com RESPIRO_BOTTOMNAV. Se a superfície tiver mais destinos do que cabem, a resposta é o drawer do AppShell, não uma barra com item "Mais".

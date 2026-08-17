@@ -16,6 +16,23 @@
  * hambúrguer visível na barra superior. Desktop 1440 fica INTOCADO (o rail e o
  * layout de duas colunas são idênticos ao anterior).
  *
+ * NAV-MOBILE (leva 20, 17/08) — a moldura passa a ter TRÊS anatomias mobile, e
+ * a escolha é do consumidor, não da peça. O dono, na íntegra: *"Já o Menu no
+ * formato mobile, pode ser uma barra flutuante, horizontal a ficar na parte
+ * inferior da tela. e a parte de logout, configurações, na barra superior no
+ * lado direito, com o ícone de perfil."*
+ *
+ *   - com `bottomNav`: a barra flutuante É a navegação abaixo de `lg`, e o
+ *     hambúrguer NÃO é renderizado. Dois gatilhos para a mesma coisa é a
+ *     duplicata que a leva 15 apagou do rail, agora numa largura onde espaço é
+ *     o recurso escasso;
+ *   - sem `bottomNav`: o drawer off-canvas fica, com o hambúrguer, como desde a
+ *     D-1008-R5. É o caso da superfície do super-admin — doze destinos não
+ *     cabem em quatro slots, e barra que abandona destino é pior que drawer.
+ *
+ * Nenhum dos dois some sem substituto: a peça não tem um modo "sem navegação
+ * mobile", e é isso que impede uma rota de ficar inalcançável abaixo de `lg`.
+ *
  * A11y: main landmark para o conteúdo; hambúrguer com nome acessível; drawer
  * com focus-trap/Esc/aria-dialog (via Drawer → Radix Dialog);
  * `prefers-reduced-motion` respeitado pelo Drawer.
@@ -50,6 +67,32 @@ export interface AppShellProps {
    * clássica, que é a anatomia certa para off-canvas). Default: `sidebar`.
    */
   drawerSidebar?: React.ReactNode;
+  /**
+   * Barra de navegação inferior < lg (NAV-MOBILE · leva 20) — o `BottomNav`.
+   *
+   * Quando presente ela É a navegação abaixo de `lg`: o hambúrguer sai da barra
+   * superior e o drawer deixa de ter gatilho nessa superfície. O drawer não é
+   * removido do código porque a superfície do super-admin continua com ele.
+   *
+   * A barra FLUTUA sobre o conteúdo, então o contêiner que rola precisa reservar
+   * o espaço com `RESPIRO_BOTTOMNAV` — o `AppShell` não pode fazer isso por
+   * você: quem rola é um filho de `children`, e o `<main>` daqui é
+   * `overflow-hidden` (padding nele seria recorte, não respiro).
+   */
+  bottomNav?: React.ReactNode;
+  /**
+   * Slot à ESQUERDA da barra superior mobile (< lg), ao lado do hambúrguer.
+   *
+   * Com `bottomNav` o rail some abaixo de `lg` e não há hambúrguer: sem este
+   * slot a marca desapareceria da tela inteira no mobile, que é o único lugar
+   * onde ela não pode desaparecer.
+   */
+  topBarStart?: React.ReactNode;
+  /**
+   * Slot à DIREITA da barra superior mobile (< lg) — a casa do gatilho do
+   * perfil decidida na leva 20.
+   */
+  topBarEnd?: React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,8 +107,15 @@ function AppShell({
   drawerLabel = 'Menu de navegação',
   sidebarFlutuante = false,
   drawerSidebar,
+  bottomNav,
+  topBarStart,
+  topBarEnd,
 }: AppShellProps): JSX.Element {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  // A barra inferior SUBSTITUI o gatilho do drawer abaixo de `lg` — não convive
+  // com ele. Dois caminhos para a mesma navegação na mesma largura é a
+  // duplicata que a leva 15 apagou do rail.
+  const comBottomNav = Boolean(bottomNav);
 
   return (
     <div
@@ -90,12 +140,17 @@ function AppShell({
 
       {/* Drawer mobile (< lg): a MESMA Sidebar off-canvas (ou a variante que
           o consumidor mandar — o rail flutuante não é anatomia de drawer).
-          Fecha ao navegar (clique borbulha) e nas vias do Radix. */}
-      <Drawer open={menuOpen} onOpenChange={setMenuOpen} title={drawerLabel}>
-        <div className="contents" onClick={() => setMenuOpen(false)}>
-          {drawerSidebar ?? sidebar}
-        </div>
-      </Drawer>
+          Fecha ao navegar (clique borbulha) e nas vias do Radix.
+
+          Com `bottomNav` ele não é montado: sem gatilho, o portal só somaria
+          uma árvore inerte e um focus-trap que ninguém alcança. */}
+      {!comBottomNav && (
+        <Drawer open={menuOpen} onOpenChange={setMenuOpen} title={drawerLabel}>
+          <div className="contents" onClick={() => setMenuOpen(false)}>
+            {drawerSidebar ?? sidebar}
+          </div>
+        </Drawer>
+      )}
 
       {/* Main content — min-w-0 permite encolher abaixo do conteúdo (trava o
           scroll horizontal em mobile: a constraint IMPEDE, não só esconde).
@@ -121,36 +176,53 @@ function AppShell({
           porque as telas de autenticação vivem FORA do AppShell e rolam no
           documento de propósito (`min-h-screen`). */}
       <main className="relative flex flex-col flex-1 min-w-0 h-full overflow-hidden">
-        {/* Barra superior mobile com o hambúrguer — só abaixo de lg. */}
+        {/* Barra superior mobile — só abaixo de lg. Hambúrguer e marca à
+            esquerda, perfil à direita (NAV-MOBILE · leva 20). */}
         <div
           className={cn(
-            'lg:hidden flex items-center shrink-0',
+            'lg:hidden flex items-center justify-between gap-[var(--spacing-3)] shrink-0',
             'px-[var(--spacing-4)] py-[var(--spacing-3)]',
             'border-b border-b-[var(--border-subtle)]',
           )}
         >
-          {/* REDESIGN-V2 · item 5. `aria-expanded` fecha uma pendência que três
-              lanes registraram e nenhuma pôde tocar: sem ele, o leitor de tela
-              anuncia "Abrir menu de navegação, botão" com o drawer JÁ aberto —
-              o nome acessível é imperativo e não carrega estado, então o
-              usuário de AT não tem como saber que o menu está aberto sem varrer
-              a página. É a única mudança desta lane no shell.
+          <div className="flex items-center gap-[var(--spacing-3)] min-w-0">
+            {/* REDESIGN-V2 · item 5. `aria-expanded` fecha uma pendência que três
+                lanes registraram e nenhuma pôde tocar: sem ele, o leitor de tela
+                anuncia "Abrir menu de navegação, botão" com o drawer JÁ aberto —
+                o nome acessível é imperativo e não carrega estado, então o
+                usuário de AT não tem como saber que o menu está aberto sem varrer
+                a página.
 
-              Sem `aria-controls` de propósito: o painel do Drawer não expõe id
-              estável (o `useId` interno nomeia só o título), e plumbar um id
-              para fora mexeria no Drawer — superfície que o incidente de tela
-              preta de 10/08 pede para não alargar sem necessidade.
-              `aria-expanded` sozinho é válido e entrega o estado. */}
-          <IconButton
-            aria-label={menuLabel}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(true)}
-          >
-            <Menu aria-hidden />
-          </IconButton>
+                Sem `aria-controls` de propósito: o painel do Drawer não expõe id
+                estável (o `useId` interno nomeia só o título), e plumbar um id
+                para fora mexeria no Drawer — superfície que o incidente de tela
+                preta de 10/08 pede para não alargar sem necessidade.
+                `aria-expanded` sozinho é válido e entrega o estado.
+
+                NAV-MOBILE: com a barra inferior o gatilho SAI. Ele não é
+                escondido por CSS — um botão que abre um drawer que não deve mais
+                existir nessa superfície continua alcançável por teclado e por
+                leitor de tela, e essa é a pior das duas navegações. */}
+            {!comBottomNav && (
+              <IconButton
+                aria-label={menuLabel}
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen(true)}
+              >
+                <Menu aria-hidden />
+              </IconButton>
+            )}
+            {topBarStart}
+          </div>
+          {topBarEnd}
         </div>
 
         {children}
+
+        {/* A barra é `fixed` e vem por ÚLTIMO no DOM de propósito: navegação de
+            rodapé se alcança no fim da ordem de tabulação, depois do conteúdo da
+            página — que é onde a pessoa está trabalhando. */}
+        {bottomNav}
       </main>
     </div>
   );
