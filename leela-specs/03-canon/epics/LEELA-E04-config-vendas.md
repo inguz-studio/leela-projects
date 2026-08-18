@@ -2663,3 +2663,78 @@ nem para dado pessoal**, que continuam sempre dele.
 
 **Onde aterrissa:** spec em `02-rodadas/2026-08-17-leva22/02-spec-modalidades-pai-filho.md`, onda
 C da fila da mesma rodada, custo do renome medido em `00-medicao-kits-caixa-e-terciario.md` §13.
+
+## Delta a S316 é construída, e o cadastro de modalidade existe (MODALIDADE-BUILD · 2026-08-17)
+
+> Onda C da leva 22, lane `MODALIDADE-BUILD`, worktree `C:\dev\leela-wt-modalidade`. **Seis das
+> sete tarefas no ar.** Nenhuma regra nova: a rodada já tinha selado RN-500, RN-501, RN-502 e
+> RN-505, e a faixa 577+ segue livre — esta lane consome zero número.
+
+### O que existe agora, e não existia de manhã
+
+A porta única `editarModalidadesEvento` (`functions/src/eventos/editarModalidadesEvento.ts`) com as
+três operações, e a aba **Modalidades** com a hierarquia pai/filho
+(`apps/painel/src/routes/eventos/lotes/`). O organizador acrescenta, renomeia e remove modalidade
+sem sair da tela onde ele já configurava os lotes — que é a frase do dono, na letra.
+
+| Tarefa | Estado | Onde |
+|---|---|---|
+| `S316-T1` · a porta única (RN-500) | ✅ | `functions/src/eventos/editarModalidadesEvento.ts` |
+| `S316-T2` · renomear migra cinco alvos num commit (RN-501) | ✅ | mesma Function, uma transação |
+| `S316-T3` · remover recusa nomeando quem impede (RN-502) | ✅ | kernel + `ConfirmModal` da tela |
+| `S316-T4` · a tela pai/filho | ✅ | `lotes/LotesView.tsx`, `lotes/ModalidadeModal.tsx` |
+| `S316-T5` · evento degradado (RN-505) | ⚠️ **metade** | ver abaixo |
+| `S316-T6` · docId opaco para lote novo | ✅ | `lotes/_lib/loteForm.ts` |
+| `S316-T7` · o renome da aba e a morte dos textos de lacuna | ✅ | `eventos/_lib/subnav.ts:36` |
+
+### A decisão de migração, e ela é subtrativa
+
+**Nenhum documento foi migrado, e não havia o que migrar.** A hierarquia pai/filho já era verdade
+no modelo desde sempre — `Lote.modalidade` é campo obrigatório e a Rule exige que a modalidade
+conste da lista do pai —, e o que faltava era a tela desenhar o nível de cima. Acrescentar um campo
+ou reescrever documento vivo para "implantar" a hierarquia teria sido inventar trabalho.
+
+O que a lane achou e consertou é o inverso de uma migração: **a tela antiga escondia lote.** Ela
+fazia `lotes.filter(l => l.modalidade === m)` sobre `evento.modalidades`, então um lote cuja
+modalidade saiu da lista sumia — sem erro, sem aviso, com o preço dele ainda no banco e a
+`modalidadeExisteNoEventoPai` (create **e** update) impedindo qualquer conserto. Agora ele aparece
+num bloco marcado, com o caminho de recuperação. **A regra morde na escrita, nunca na leitura** —
+mesma disciplina da RN-559 e da RN-576.
+
+### O que a T5 entregou e o que ela deixou
+
+A metade que valia risco está no ar e provada: **a edição nunca escreve a partir da projeção
+degradada.** O contrato do callable recebe o NOME e a operação, jamais a lista, e o teste manda um
+payload com `modalidades: []` — a projeção que `eventoDegradado` produziria — e prova que nada é
+apagado. O acréscimo usa `arrayUnion`, que não sobrescreve o que outra aba escreveu.
+
+A metade que falta é **a tela do reparo, e ela não mora nesta aba**: a degradação só existe na
+listagem de eventos, e a leitura pontual mantém o fail-fast de propósito (afrouxar `getEvento`
+segue recusado por escrito). Construí-la exige marcar a projeção degradada, dar afordância na
+linha do hub e abrir um caminho de LEITURA que não passe pelo `parseEvento` — três coisas fora do
+território desta lane. Fica registrada como a única tarefa aberta da onda C, em vez de meia tela
+subir junto.
+
+### A régua da L-021, medida
+
+**Editar preço e vaga de um lote existente continua custando um toque**, o mesmo de antes: a linha
+da tabela e o `RowActions` dela não foram tocados, nada virou acordeão e nada foi colapsado. A
+hierarquia cresceu ao redor do job frequente, não por cima dele. Há teste congelando isso.
+
+### A terceira língua da modalidade morreu
+
+`SUGESTOES_MODALIDADE` era const local do `EventoForm`, e criação, aba Modalidades e editor de kit
+descreviam modalidade cada uma do seu jeito — as três línguas que a onda A apontou e adiou para cá.
+A lista virou `SUGESTOES_MODALIDADE_EVENTO` no core. ⛔ **Nenhum catálogo novo nasceu:** a lista é
+a mesma, mudou de casa. E ela é sugestão, nunca vocabulário fechado — a RN-500 trata a modalidade
+do evento como string livre, e os catálogos fechados que o produto tem (`MODALIDADES_CLUBE`, os
+pilares da RN-114, a tabela Strava do ARENA-4) descrevem **esporte**, não **distância**. Fechar a
+lista quebraria evento vivo.
+
+**Limite honesto:** a suíte de emulator (`editarModalidadesEvento.integration.test.ts`) está
+escrita e **não rodou nesta máquina** — `firebase-tools` 15 exige JDK 21 e a máquina tem 17, a
+mesma limitação que a SERV1-BUILD declarou em 11/08. Ela roda no CI. O que roda verde em qualquer
+máquina são os 37 casos de `modalidadesCore.test.ts`, que cobrem o kernel e o núcleo da Function
+contra dublês.
+
+**Gate visual (L-011) pendente:** nenhuma tela desta onda foi vista renderizada.
