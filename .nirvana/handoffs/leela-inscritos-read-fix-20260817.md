@@ -1,7 +1,7 @@
 # INSCRITOS-READ-FIX — a lista de inscritos deixa de morrer por um doc
 
 **Trace:** leela-redesign-v2-20260810 · **Lane:** INSCRITOS-READ-FIX · **Branch:** `inscritos-read-fix`
-**Data:** 17/08/2026 (madrugada de 18/08) · **Merge:** `2eee5b4c` (main)
+**Data:** 17/08/2026 (madrugada de 18/08) · **Merge:** `e404ce38` (main)
 
 ---
 
