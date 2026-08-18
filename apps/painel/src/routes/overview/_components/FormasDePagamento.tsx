@@ -25,8 +25,8 @@
 //
 // A NOTA DE COBERTURA NÃO É ENFEITE. A série cobre as vendas que têm doc de
 // pagamento; `receitaConfirmada` cobre toda venda. No mock da casa a diferença
-// é brutal (R$ 2.500 de rosca contra R$ 49.780 de receita, porque o seed
-// escreve 17 cobranças para 299 inscritos confirmados) e a mesma forma aparece
+// é brutal (R$ 2.500 de rosca contra R$ 50.560 de receita, porque o seed
+// escreve 17 cobranças para 304 inscritos confirmados) e a mesma forma aparece
 // em qualquer base com venda anterior ao doc de pagamento. Sem a nota, o
 // organizador lê dois números do mesmo dinheiro discordando na mesma dobra e
 // conclui, com toda razão, que sumiu grana. A nota é o que transforma a

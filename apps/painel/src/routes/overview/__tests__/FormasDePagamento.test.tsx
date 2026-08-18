@@ -66,15 +66,15 @@ describe('FormasDePagamento — os três estados são três estados', () => {
   });
 
   it('cobertura parcial → a nota aparece, com os dois números na cara', () => {
-    // O caso real do mock da casa: R$ 2.500 de cobranças sobre R$ 49.780 de
+    // O caso real do mock da casa: R$ 2.500 de cobranças sobre R$ 50.560 de
     // receita, porque a base tem venda sem doc de pagamento. Sem esta nota o
     // organizador lê dois números do mesmo dinheiro discordando e conclui,
     // com razão, que sumiu grana.
     render(
-      <FormasDePagamento serie={SERIE} receitaConfirmada={49780} loading={false} />
+      <FormasDePagamento serie={SERIE} receitaConfirmada={50560} loading={false} />
     );
     expect(
-      screen.getByText(/A rosca cobre R\$ 4\.000 dos R\$ 49\.780 confirmados/)
+      screen.getByText(/A rosca cobre R\$ 4\.000 dos R\$ 50\.560 confirmados/)
     ).toBeInTheDocument();
   });
 

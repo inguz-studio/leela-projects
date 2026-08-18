@@ -99,18 +99,18 @@ Firestore a executou.
 | Pix | 5 | R$ 1.460 | 58,4% |
 | **Centro** | **10** | **R$ 2.500** | |
 
-**E a nota de cobertura acende, com força:** a `receitaConfirmada` do evento no seed é **R$ 49.780**.
-A série cobre **5,0%** disso.
+**E a nota de cobertura acende, com força:** a `receitaConfirmada` do evento no seed é **R$ 50.560**.
+A série cobre **4,9%** disso.
 
-Não é defeito da série — é retrato do seed: ele escreve **17 cobranças para 299 inscritos
+Não é defeito da série — é retrato do seed: ele escreve **17 cobranças para 304 inscritos
 confirmados**. A receita nasce de `Σ preço × inscrito confirmado`; a série só enxerga venda que tem
 doc de pagamento.
 
 **Isso validou a nota de cobertura de forma que nenhum teste sintético teria validado.** Sem ela, o
-dono abriria a Visão geral e leria "R$ 2.500" numa rosca ao lado de "R$ 49.780" de receita
+dono abriria a Visão geral e leria "R$ 2.500" numa rosca ao lado de "R$ 50.560" de receita
 confirmada, na mesma dobra, e concluiria — com toda a razão — que sumiu dinheiro. Com ela, lê:
 
-> *A rosca cobre R$ 2.500 dos R$ 49.780 confirmados. O resto veio de inscrições sem cobrança
+> *A rosca cobre R$ 2.500 dos R$ 50.560 confirmados. O resto veio de inscrições sem cobrança
 > registrada, que não têm forma de pagamento para somar.*
 
 A mesma forma aparece em **qualquer base com venda anterior ao doc de pagamento**. O mock só a
@@ -165,7 +165,9 @@ nenhuma linha de tela adicional. Quem quiser a rosca por evento monta o mesmo co
 
 ## 6 · Gates — números reais
 
-Rodados em fatias seriais, no worktree próprio.
+Rodados em fatias seriais, no worktree próprio, **duas vezes**: antes e depois de trazer a `main`
+(a lane INSCRITOS-READ-FIX aterrissou no meio e mexeu no `mock-campeche-seed.ts`). Os números
+abaixo são os da árvore **já mesclada**.
 
 | Gate | Resultado |
 |---|---|
@@ -173,8 +175,8 @@ Rodados em fatias seriais, no worktree próprio.
 | `tsc --noEmit` functions | **0 erros** |
 | `tsc --noEmit` painel | **0 erros** |
 | `eslint --max-warnings 0` (core · api-client · functions · painel) | **0 erros** |
-| Suíte painel COMPLETA | **261 arquivos · 3.026 testes · 3.026 passando** |
-| Functions, arquivos sem emulador (102 de 226) | **2.186 passando · 1 skipped · 3 falhando** |
+| Suíte painel COMPLETA | **262 arquivos · 3.034 testes · 3.034 passando** |
+| Functions, arquivos sem emulador (103 de 227) | **2.193 passando · 1 skipped · 3 falhando** |
 | `gate-canon` | **PASS** — 23 contadores, todos no baseline |
 | `vite build` painel | ver seção 8 |
 
@@ -268,7 +270,7 @@ Instalar o JDK 21 é o pré-requisito de todo o gate visual desta lane.
 
 | # | Tela | Como chegar | O que tem que estar lá |
 |---|---|---|---|
-| 1 | Visão geral · rosca acesa | mock-campeche no ar, após reprocesso | Rosca com 2 fatias, centro **R$ 2.500**, "10 vendas confirmadas", legenda Cartão 41,6% / Pix 58,4% **e a nota de cobertura citando R$ 49.780** |
+| 1 | Visão geral · rosca acesa | mock-campeche no ar, após reprocesso | Rosca com 2 fatias, centro **R$ 2.500**, "10 vendas confirmadas", legenda Cartão 41,6% / Pix 58,4% **e a nota de cobertura citando R$ 50.560** |
 | 2 | Visão geral · "em breve" | mesma tela **antes** do reprocesso | Card "Em breve" — **nunca** rosca zerada |
 | 3 | Visão geral · vazio honesto | organizador sem venda confirmada | "Nenhuma venda confirmada ainda" — **sem** a palavra "breve" |
 
@@ -276,7 +278,7 @@ Instalar o JDK 21 é o pré-requisito de todo o gate visual desta lane.
 (`--chart-cat-1`/`--chart-cat-2`), o número do centro não estourando o anel em 180px, e se a nota de
 cobertura **cabe** sem empurrar a coluna — ela é o texto mais longo que já entrou nesse cartão.
 
-**A pergunta honesta para o dono no #1:** com 5% de cobertura, a nota é suficiente ou a rosca
+**A pergunta honesta para o dono no #1:** com 4,9% de cobertura, a nota é suficiente ou a rosca
 deveria se recusar a desenhar abaixo de algum piso? O código de hoje desenha e explica. É uma
 escolha, e é vetável.
 

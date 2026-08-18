@@ -612,8 +612,8 @@ para desconfiar dela.
 
 **Nota de cobertura, e o mock provou que ela era necessária.** A série cobre as vendas que têm doc
 de pagamento; `receitaConfirmada` cobre toda venda. No `[Mock] - Campeche Run` a rosca soma
-**R$ 2.500 sobre R$ 49.780 de receita — 5% de cobertura** —, porque o seed escreve 17 cobranças para
-299 inscritos confirmados. Sem a nota, o dono leria dois números do mesmo dinheiro discordando na
+**R$ 2.500 sobre R$ 50.560 de receita — 5% de cobertura** —, porque o seed escreve 17 cobranças para
+304 inscritos confirmados. Sem a nota, o dono leria dois números do mesmo dinheiro discordando na
 mesma dobra e concluiria, com razão, que sumiu grana.
 
 **Duas formas, não três** (`pix`, `cartao_credito` — boleto fora do domínio desde 05/07). O que o
