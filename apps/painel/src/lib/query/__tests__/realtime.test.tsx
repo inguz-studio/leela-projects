@@ -133,4 +133,34 @@ describe('useInscritosRealtime (superfície viva S204 — balcão)', () => {
     unmount();
     expect(mocks.insUnsub).toHaveBeenCalledTimes(1);
   });
+
+  it('erro do listener vira estado de ERRO — a tela nunca fica em loading eterno', async () => {
+    const client = new QueryClient();
+    const { result } = renderHook(() => useInscritosRealtime('e1'), {
+      wrapper: makeWrapper(client),
+    });
+
+    act(() => handlersOf(mocks.observarInscritos).error?.(new Error('leitura falhou')));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error?.message).toBe('leitura falhou');
+  });
+
+  it('`refetch` RELIGA o listener — é o "Tentar novamente" de uma superfície viva', async () => {
+    const client = new QueryClient();
+    const { result } = renderHook(() => useInscritosRealtime('e1'), {
+      wrapper: makeWrapper(client),
+    });
+
+    act(() => handlersOf(mocks.observarInscritos).error?.(new Error('leitura falhou')));
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+
+    act(() => result.current.refetch());
+
+    // Assinatura anterior derrubada, assinatura nova no ar, volta a loading.
+    await waitFor(() => expect(mocks.observarInscritos).toHaveBeenCalledTimes(2));
+    expect(mocks.insUnsub).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(true);
+  });
 });

@@ -10,13 +10,14 @@ import type { EventoOutletContext } from '../evento/EventoLayout';
 
 export function InscritosPage(): JSX.Element {
   const { evento } = useOutletContext<EventoOutletContext>();
-  const { data, loading, error } = useTodosInscritos(evento.id);
+  const { data, loading, error, refetch } = useTodosInscritos(evento.id);
 
   return (
     <InscritosView
       inscritos={data ?? []}
       loading={loading}
       error={error}
+      onRetry={refetch}
       eventoId={evento.id}
       modalidades={evento.modalidades}
     />

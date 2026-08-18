@@ -292,4 +292,33 @@ describe('InscritosView — código do ingresso e QR (RN-397)', () => {
     const dialogs = await screen.findAllByRole('dialog');
     expect(dialogs).toHaveLength(1);
   });
+
+  // ── Bloco de erro com saída (INSCRITOS-READ-FIX · 17/08) ──────────────────
+  // A frase seca era a tela inteira quando a leitura falhava: o organizador
+  // ficava com a tecla de recarregar do navegador e 336 linhas fora do ar.
+  describe('falha de leitura', () => {
+    it('diz o que houve E oferece "Tentar novamente"', async () => {
+      const user = userEvent.setup();
+      const onRetry = vi.fn();
+      renderView({
+        inscritos: [],
+        loading: false,
+        error: new Error('boom'),
+        onRetry,
+        modalidades: ['10k'],
+      });
+
+      const alerta = screen.getByRole('alert');
+      expect(within(alerta).getByText('Não foi possível carregar os inscritos.')).toBeInTheDocument();
+      await user.click(within(alerta).getByRole('button', { name: 'Tentar novamente' }));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it('sem `onRetry` o bloco mostra a frase e nenhum botão morto', () => {
+      renderView({ inscritos: [], loading: false, error: new Error('boom'), modalidades: ['10k'] });
+      const alerta = screen.getByRole('alert');
+      expect(within(alerta).getByText('Não foi possível carregar os inscritos.')).toBeInTheDocument();
+      expect(within(alerta).queryByRole('button')).not.toBeInTheDocument();
+    });
+  });
 });

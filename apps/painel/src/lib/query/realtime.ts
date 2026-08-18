@@ -17,7 +17,7 @@
 // montada (cleanup no unmount) — o custo de listener é pago onde ele importa.
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getLeelaDb,
@@ -33,6 +33,15 @@ export interface AsyncState<T> {
   data: T | null;
   loading: boolean;
   error: Error | null;
+}
+
+/**
+ * Estado vivo que a tela pode pedir para RELIGAR. Em superfície realtime
+ * "recarregar" não é refetch — é derrubar o listener e assinar de novo, que é
+ * o que o `refetch` faz aqui (INSCRITOS-READ-FIX).
+ */
+export interface AsyncStateRecarregavel<T> extends AsyncState<T> {
+  refetch: () => void;
 }
 
 /**
@@ -76,15 +85,23 @@ export function useFinanceiroRealtime(
  * (bounded), então sair do balcão para a tabela reidrata já fresco. O balcão
  * busca por nome/dorsal client-side sobre o pool. Um vínculo de chip / check-in
  * (Function) chega pelo listener sem invalidação manual — read-your-writes AO
- * VIVO. Contrato {data,loading,error} idêntico ao `useTodosInscritos` bounded.
+ * VIVO. Contrato {data,loading,error} idêntico ao `useTodosInscritos` bounded,
+ * mais o `refetch` que RELIGA o listener para o "Tentar novamente" do balcão.
  */
-export function useInscritosRealtime(eventoId: string | null): AsyncState<Inscrito[]> {
+export function useInscritosRealtime(
+  eventoId: string | null
+): AsyncStateRecarregavel<Inscrito[]> {
   const queryClient = useQueryClient();
   const [state, setState] = useState<AsyncState<Inscrito[]>>({
     data: null,
     loading: true,
     error: null,
   });
+  // Contador de assinatura: mudar o valor derruba o listener no cleanup do
+  // efeito e assina de novo. É o único jeito honesto de "tentar de novo" numa
+  // superfície viva — não existe refetch de onSnapshot.
+  const [assinatura, setAssinatura] = useState(0);
+  const refetch = useCallback(() => setAssinatura((n) => n + 1), []);
 
   useEffect(() => {
     if (!eventoId) return;
@@ -97,8 +114,8 @@ export function useInscritosRealtime(eventoId: string | null): AsyncState<Inscri
       error: (error) => setState({ data: null, loading: false, error }),
     });
     return unsubscribe;
-  }, [eventoId, queryClient]);
+  }, [eventoId, queryClient, assinatura]);
 
-  if (!eventoId) return { data: null, loading: true, error: null };
-  return state;
+  if (!eventoId) return { data: null, loading: true, error: null, refetch };
+  return { ...state, refetch };
 }

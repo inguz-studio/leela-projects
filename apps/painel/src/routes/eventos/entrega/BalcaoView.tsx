@@ -6,7 +6,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Skeleton } from '@leela/design-system';
+import { Alert, Button, Skeleton } from '@leela/design-system';
 import type { Evento, Inscrito, ItemKit, Kit } from '@leela/core';
 import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-client';
 import { AtendimentoPanel } from './AtendimentoPanel';
@@ -23,6 +23,8 @@ export interface BalcaoViewProps {
   kits: Kit[];
   loading: boolean;
   error: Error | null;
+  /** Religa o listener do pool a partir do bloco de erro (superfície viva). */
+  onRetry?: (() => void) | undefined;
   onVincular: (
     inscritoId: string,
     chip: string,
@@ -40,6 +42,7 @@ export function BalcaoView({
   kits,
   loading,
   error,
+  onRetry,
   onVincular,
   onRegistrar,
   agora,
@@ -56,7 +59,24 @@ export function BalcaoView({
   }
 
   if (error) {
-    return <p className="text-[var(--text-danger)]">Não foi possível carregar o balcão.</p>;
+    // INSCRITOS-READ-FIX: a fila do balcão não pode ficar sem saída. Enquanto
+    // a leitura falhava DENTRO do callback do listener, esta tela nem chegava
+    // aqui — ficava nos dois skeletons acima para sempre.
+    return (
+      <Alert
+        tone="vulcao"
+        live="alert"
+        actions={
+          onRetry ? (
+            <Button variant="secondary" size="sm" onClick={onRetry}>
+              Tentar novamente
+            </Button>
+          ) : null
+        }
+      >
+        Não foi possível carregar o balcão.
+      </Alert>
+    );
   }
 
   return (
