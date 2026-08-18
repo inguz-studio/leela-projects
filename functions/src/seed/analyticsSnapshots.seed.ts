@@ -51,6 +51,7 @@ const SERIE_SEED: readonly (OverviewKPIs & { dia: string })[] = [
     conversaoSparkline: [],
     membrosAtivosTotais: 114,
     desafiosAtivosTotais: 3,
+    formasPagamento: null,
   },
   {
     dia: '2026-07-09',
@@ -64,6 +65,7 @@ const SERIE_SEED: readonly (OverviewKPIs & { dia: string })[] = [
     conversaoSparkline: [],
     membrosAtivosTotais: 116,
     desafiosAtivosTotais: 3,
+    formasPagamento: null,
   },
   {
     dia: '2026-07-10',
@@ -77,6 +79,7 @@ const SERIE_SEED: readonly (OverviewKPIs & { dia: string })[] = [
     conversaoSparkline: [],
     membrosAtivosTotais: 118,
     desafiosAtivosTotais: 3,
+    formasPagamento: null,
   },
   {
     dia: '2026-07-11',
@@ -93,6 +96,7 @@ const SERIE_SEED: readonly (OverviewKPIs & { dia: string })[] = [
     conversaoSparkline: [],
     membrosAtivosTotais: 119,
     desafiosAtivosTotais: 3,
+    formasPagamento: null,
   },
   {
     dia: '2026-07-12',
@@ -109,6 +113,7 @@ const SERIE_SEED: readonly (OverviewKPIs & { dia: string })[] = [
     conversaoSparkline: [],
     membrosAtivosTotais: 120,
     desafiosAtivosTotais: 3,
+    formasPagamento: null,
   },
 ];
 

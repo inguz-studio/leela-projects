@@ -76,6 +76,13 @@ export const CAMPOS_KPI_SNAPSHOT = [
   'conversaoSparkline',
   'membrosAtivosTotais',
   'desafiosAtivosTotais',
+  // S825-T1: a série por forma entra no histórico diário. O snapshot é o
+  // único lugar onde "série financeira" vira série DE VERDADE (uma leitura
+  // por dia civil) — deixá-la de fora seria guardar todo o resto do painel e
+  // jogar fora justamente o campo que o dono pediu. `null` no dia em que o
+  // agregado ainda não sabia fica registrado como null, e não como zero:
+  // histórico que inventa zero é pior que histórico com buraco declarado.
+  'formasPagamento',
 ] as const satisfies readonly (keyof OverviewKPIs)[];
 
 /** Formato exigido do docId/dia do snapshot (YYYY-MM-DD). */
@@ -116,5 +123,10 @@ export function montarSnapshot(
     conversaoSparkline: [...kpis.conversaoSparkline],
     membrosAtivosTotais: kpis.membrosAtivosTotais,
     desafiosAtivosTotais: kpis.desafiosAtivosTotais,
+    // Cópia RASA das fatias (não a referência): o snapshot é imutável por
+    // construção e não pode compartilhar array com o doc vivo do dashboard.
+    formasPagamento: kpis.formasPagamento
+      ? kpis.formasPagamento.map((f) => ({ ...f }))
+      : null,
   };
 }

@@ -36,6 +36,15 @@
 // Gatilho: onWrite de `eventos/{e}/inscritos/{i}` → recomputa. O write do
 // financeiro/current e do evento pai NÃO redispara este gatilho (documentos
 // diferentes) — sem loop.
+//
+// +2026-08-17 (S825-T1 · lane SERIE-FINANCEIRA · leva 25 do dono): este doc
+// passa a carregar a SÉRIE POR FORMA DE PAGAMENTO e as PENDÊNCIAS EM R$. A
+// escolha de casa foi esta e não o agregado do organizador porque a S825-T1
+// diz "agregado do EVENTO", porque o laço sobre `pagamentos` confirmados já
+// estava aqui (a série é de graça) e porque a autoridade sobre número de
+// venda, pelo próprio E11, é a de vendas — o organizador CONSOLIDA, não
+// apura. Ver `packages/core/src/pedidos/serieFormasPagamento.ts` para o
+// contrato e para as três decisões que o governam.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -43,16 +52,24 @@ import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
+  acumularPagamento,
   computeLiquidoProdutor,
   computeTaxa,
   createTermsProvider,
   isModoTaxa,
   KITS_INSCRITO,
   roundMoney,
+  serieZerada,
   STATUS_INSCRITO,
   TermsNotFoundError,
 } from '@leela/core';
-import type { CommercialTerms, KitInscrito, ModoTaxa, StatusInscrito } from '@leela/core';
+import type {
+  CommercialTerms,
+  FatiaFormaPagamento,
+  KitInscrito,
+  ModoTaxa,
+  StatusInscrito,
+} from '@leela/core';
 
 type Db = admin.firestore.Firestore;
 
@@ -69,6 +86,27 @@ export interface ContagemInscritos {
   porModalidade: Record<string, number>;
 }
 
+/**
+ * Dinheiro PARADO no evento (VG-INSIGHTS-3 · candidato "pendências em R$").
+ *
+ * Denominador PRÓPRIO, e é por isso que ele não entrou no alerta de
+ * pendências que já existe: aquele conta INSCRITOS pendentes há mais de 24h,
+ * este soma PAGAMENTOS pendentes. Um pedido de três pessoas é uma cobrança e
+ * três inscritos — casar os dois números numa frase só ("N pendentes, R$ X")
+ * repetiria, em miniatura, o erro do funil que fechava em inscrito
+ * (D-1008-R19). Cada número fica com a sua unidade e com o seu rótulo.
+ *
+ * SEM o corte de 24h, também de propósito: o corte exigiria índice composto
+ * (`eventoId` + `status` + `criadoEm`) e responde outra pergunta. "Quanto
+ * está parado" é estado de caixa; "o que já passou do prazo" é operação.
+ */
+export interface PendenciasEvento {
+  /** Pagamentos em `pendente` do evento (transações, não pessoas). */
+  qtd: number;
+  /** Σ `valorFinal` desses pagamentos, em R$. */
+  valor: number;
+}
+
 /** Shape do doc `eventos/{id}/financeiro/current` (sem o Timestamp). */
 export interface FinanceiroEvento {
   tenantId: string;
@@ -81,6 +119,19 @@ export interface FinanceiroEvento {
   /** Líquido do produtor (R$) — null quando não há termo */
   receitaLiquida: number | null;
   inscritos: ContagemInscritos;
+  /**
+   * Série por forma de pagamento (E11 · S825-T1) — a resposta à leva 25 do
+   * dono. Nasce COMPLETA (uma fatia por forma do enum, ordem canônica) e sai
+   * do MESMO laço que já varria os pagamentos confirmados para os carimbos
+   * TAXAFLEX: nenhuma query nova, nenhum índice novo, nenhum doc a mais lido.
+   *
+   * Doc gravado antes desta série não tem o campo, e quem lê DEVE tratar
+   * ausência como "não computada" (`parseSerieFormasPagamento` devolve null)
+   * — nunca como "nenhuma venda".
+   */
+  formasPagamento: FatiaFormaPagamento[];
+  /** Dinheiro parado — ver {@link PendenciasEvento}. */
+  pendentes: PendenciasEvento;
 }
 
 /**
@@ -267,10 +318,22 @@ export async function recomputarFinanceiroEvento(
     );
     let taxaCarimbada = 0;
     let receitaComCarimbo = 0;
+    // S825-T1: a série por forma sai DESTE laço. Ela conta TODO confirmado do
+    // tenant, com ou sem carimbo TAXAFLEX — o carimbo governa imputação de
+    // taxa, não a existência da venda. Deixar a série presa ao `if` do
+    // carimbo esconderia da rosca justamente a venda legada, que é a mais
+    // provável de ter forma interessante para o organizador.
+    const formasPagamento = serieZerada();
     for (const pagDoc of pagamentosSnap.docs) {
       if (pagDoc.get('tenantId') !== tenantId) continue;
       const tc = pagDoc.get('taxaCongelada') as { valor?: unknown } | undefined;
       const vf = pagDoc.get('valorFinal');
+      acumularPagamento(
+        formasPagamento,
+        pagDoc.get('forma'),
+        vf,
+        pagDoc.get('estornadoTotal')
+      );
       if (
         tc !== undefined &&
         typeof tc.valor === 'number' &&
@@ -302,6 +365,33 @@ export async function recomputarFinanceiroEvento(
       }
     }
 
+    // VG-INSIGHTS-3: dinheiro parado. Segunda query equality-only sobre a
+    // MESMA coleção (`eventoId` + `status`), no mesmo snapshot da tx e servida
+    // pelo mesmo merge de índices single-field — sem índice novo.
+    //
+    // Achado que vale registrar: o painel do dono registrou esta opção como
+    // "o laço já varre os pendentes, falta somar". A varredura de pendentes
+    // que existe é a do `aggregateProfessionalDashboard`, e ela varre
+    // INSCRITOS — e o inscrito, por decisão de arquitetura (`inscrito.ts`
+    // §"[pag] NUNCA se denormaliza"), não carrega centavo nenhum. Somar ali
+    // era impossível sem join. Aqui é barato porque esta Function já mora na
+    // coleção onde o dinheiro está.
+    const pendentesSnap = await tx.get(
+      db
+        .collection('pagamentos')
+        .where('eventoId', '==', eventoId)
+        .where('status', '==', 'pendente')
+    );
+    let pendentesQtd = 0;
+    let pendentesValor = 0;
+    for (const pagDoc of pendentesSnap.docs) {
+      if (pagDoc.get('tenantId') !== tenantId) continue;
+      const vf = pagDoc.get('valorFinal');
+      if (typeof vf !== 'number' || !Number.isFinite(vf) || vf < 0) continue;
+      pendentesQtd += 1;
+      pendentesValor = roundMoney(pendentesValor + vf);
+    }
+
     const financeiro: FinanceiroEvento = {
       tenantId,
       receitaBruta,
@@ -310,6 +400,8 @@ export async function recomputarFinanceiroEvento(
         receitaComCarimbo,
       }),
       inscritos,
+      formasPagamento,
+      pendentes: { qtd: pendentesQtd, valor: pendentesValor },
     };
 
     // set() integral (não merge): o doc É a recomputação — idempotente
@@ -328,6 +420,53 @@ export async function recomputarFinanceiroEvento(
 
     return financeiro;
   });
+}
+
+// ---------------------------------------------------------------------------
+// REPROCESSO (S825-T1): full-recompute de TODOS os `financeiro/current`
+// ---------------------------------------------------------------------------
+
+/**
+ * Reprocessa o financeiro agregado de TODOS os eventos — a operação que anda
+ * JUNTO com o deploy da série por forma de pagamento, no mesmo molde que a
+ * RN-822 fixou para a demografia.
+ *
+ * POR QUE ELA É OBRIGATÓRIA E NÃO CONVENIÊNCIA. O gatilho desta Function é o
+ * write de inscrito. Sem reprocesso, o `financeiro/current` de um evento que
+ * já encerrou as inscrições NUNCA ganha a série — e um evento encerrado é
+ * exatamente aquele cuja rosca o organizador quer olhar. A consolidação por
+ * organizador trata série ausente como "não computada" e mantém o "em breve",
+ * então o sintoma de esquecer este passo não é número errado: é a tela do
+ * dono continuar prometendo o que o deploy já entregou.
+ *
+ * IDEMPOTENTE por construção: `recomputarFinanceiroEvento` é full recompute
+ * transacional. Sequencial de propósito — operação administrativa pontual não
+ * merece rajada de transações concorrentes contra a base.
+ *
+ * Execução (runbook), com credencial do projeto, DEPOIS do deploy:
+ *   const { reprocessarFinanceiroTodosEventos } =
+ *     require('./lib/functions/src/eventos/agregarFinanceiro');
+ *   await reprocessarFinanceiroTodosEventos(admin.firestore());
+ */
+export async function reprocessarFinanceiroTodosEventos(
+  db: Db
+): Promise<{ eventos: number; falhas: string[] }> {
+  // Só ids saem do storage (select vazio = nenhum campo) — zero PII aqui.
+  const eventosSnap = await db.collection('eventos').select().get();
+  const falhas: string[] = [];
+  for (const docSnap of eventosSnap.docs) {
+    try {
+      await recomputarFinanceiroEvento(db, docSnap.id);
+    } catch (err) {
+      falhas.push(docSnap.id);
+      logger.error('financeiro_reprocesso_falha', { eventoId: docSnap.id, err });
+    }
+  }
+  logger.info('financeiro_reprocesso_concluido', {
+    eventos: eventosSnap.size,
+    falhas: falhas.length,
+  });
+  return { eventos: eventosSnap.size, falhas };
 }
 
 // ---------------------------------------------------------------------------

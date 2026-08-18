@@ -33,9 +33,11 @@ import * as logger from 'firebase-functions/logger';
 import {
   derivarAlertas,
   derivarKpis,
+  parseSerieFormasPagamento,
   PENDENTE_ALERTA_HORAS,
   type EventoAlertaInput,
   type EventoKpiInput,
+  type FatiaFormaPagamento,
   type OverviewAlert,
   type OverviewKPIs,
   type StatusEvento,
@@ -129,6 +131,29 @@ export async function resolverPagantes(
   return agg.data().count;
 }
 
+/**
+ * Série por forma de pagamento DO EVENTO (E11 · S825-T1) — leitura pontual de
+ * `eventos/{id}/financeiro/current`, o agregado que já apura a venda.
+ *
+ * POR QUE UM POINT READ E NÃO UMA VARREDURA AQUI. Este dashboard recomputa a
+ * CADA write de evento ou clube do organizador. Varrer `pagamentos` neste
+ * laço custaria uma leitura por venda a cada write — num organizador com dez
+ * eventos vendidos, milhares de leituras para redesenhar uma rosca. O
+ * `financeiro/current` é UM doc por evento e já foi pago pelo gatilho de
+ * inscrito. É o mesmo raciocínio que fez o E02 nascer lendo ∑ canônicos em
+ * vez de recontar a base.
+ *
+ * `null` (doc ausente ou sem o campo) sobe intacto como "não sei" — quem
+ * decide o que fazer com isso é `derivarKpis`, num lugar só.
+ */
+async function lerSerieFormasPagamento(
+  eventoRef: FirebaseFirestore.DocumentReference
+): Promise<FatiaFormaPagamento[] | null> {
+  const snap = await eventoRef.collection('financeiro').doc('current').get();
+  if (!snap.exists) return null;
+  return parseSerieFormasPagamento(snap.get('formasPagamento'));
+}
+
 // ---------------------------------------------------------------------------
 // Recomputação (núcleo testável no Emulator via Admin SDK — padrão triggers v1)
 // ---------------------------------------------------------------------------
@@ -167,8 +192,14 @@ export async function recomputeProfessionalDashboard(
     const qtdInscritos = asNumber(eventoDoc.get('qtdInscritos'));
     const receitaConfirmada = asNumber(eventoDoc.get('receitaConfirmada'));
 
-    const [capacidade, pendentesSnap, pagantes, countAtual, countAnterior] =
-      await Promise.all([
+    const [
+      capacidade,
+      pendentesSnap,
+      pagantes,
+      countAtual,
+      countAnterior,
+      formasPagamento,
+    ] = await Promise.all([
         resolverCapacidade(eventoDoc),
         // Pendências (RN-204): equality em `status` (índice single-field
         // automático); corte de 24h filtrado em memória — volume de pendentes
@@ -188,6 +219,8 @@ export async function recomputeProfessionalDashboard(
           .where('criadoEm', '<', Timestamp.fromDate(inicioJanelaAtual))
           .count()
           .get(),
+        // S825-T1: a série por forma vem PRONTA do agregado do evento.
+        lerSerieFormasPagamento(eventoDoc.ref),
       ]);
 
     for (const pendente of pendentesSnap.docs) {
@@ -211,6 +244,7 @@ export async function recomputeProfessionalDashboard(
       pagantes,
       receitaConfirmada,
       capacidade,
+      formasPagamento,
     });
     alertaInputs.push({
       nome,

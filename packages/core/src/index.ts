@@ -871,6 +871,23 @@ export {
   parsePagamento,
 } from './pedidos/pagamento';
 
+// Série financeira por forma de pagamento (E11 · S825-T1 — leva 25 do dono)
+export type {
+  FatiaFormaPagamento,
+  SerieFormasPagamento,
+} from './pedidos/serieFormasPagamento';
+export {
+  ROTULO_FORMA_PAGAMENTO,
+  serieZerada,
+  acumularPagamento,
+  somarSeries,
+  totalValorDaSerie,
+  totalVendasDaSerie,
+  serieTemVenda,
+  coberturaDaSerie,
+  parseSerieFormasPagamento,
+} from './pedidos/serieFormasPagamento';
+
 // ---------------------------------------------------------------------------
 // Plataforma multi-tenant (ADR-009 · E16-S1600)
 // ---------------------------------------------------------------------------

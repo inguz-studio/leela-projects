@@ -115,6 +115,9 @@ function kpisDoDashboard(current: DashboardCurrent): OverviewKPIs {
     conversaoSparkline: current.conversaoSparkline,
     membrosAtivosTotais: current.membrosAtivosTotais,
     desafiosAtivosTotais: current.desafiosAtivosTotais,
+    // S825-T1: doc de dashboard anterior à série não tem o campo — o
+    // histórico registra `null` ("não sabia naquele dia") em vez de zero.
+    formasPagamento: current.formasPagamento ?? null,
   };
 }
 

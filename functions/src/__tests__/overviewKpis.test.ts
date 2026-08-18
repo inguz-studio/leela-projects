@@ -37,6 +37,14 @@ const MEIA: EventoKpiInput = {
   pagantes: 453,
   receitaConfirmada: 85617,
   capacidade: 500,
+  // S825-T1: as três séries somam EXATAMENTE os canônicos do aceite
+  // (R$ 142.280 e 1.284 vendas). A rosca do organizador fecha com a régua de
+  // receita da MESMA tela — desvio de um centavo reprova aqui, que é o único
+  // lugar onde ele ainda é barato de consertar.
+  formasPagamento: [
+    { forma: 'cartao_credito', vendas: 153, valor: 35617 },
+    { forma: 'pix', vendas: 300, valor: 50000 },
+  ],
 };
 const SERRA: EventoKpiInput = {
   nome: 'Desafio Serra do Mar',
@@ -46,6 +54,10 @@ const SERRA: EventoKpiInput = {
   pagantes: 519,
   receitaConfirmada: 40000,
   capacidade: null, // capacidade desconhecida — fora de vagas/risco
+  formasPagamento: [
+    { forma: 'cartao_credito', vendas: 319, valor: 15000 },
+    { forma: 'pix', vendas: 200, valor: 25000 },
+  ],
 };
 const RETIRO: EventoKpiInput = {
   nome: 'Retiro Bem-Estar',
@@ -55,6 +67,10 @@ const RETIRO: EventoKpiInput = {
   pagantes: 312,
   receitaConfirmada: 16663,
   capacidade: 400, // rascunho não vende vaga — fora de vagas/risco
+  formasPagamento: [
+    { forma: 'cartao_credito', vendas: 212, valor: 6663 },
+    { forma: 'pix', vendas: 100, valor: 10000 },
+  ],
 };
 const EVENTOS = [MEIA, SERRA, RETIRO];
 
@@ -104,6 +120,10 @@ describe('overview/kpis — derivarKpis (S600-T2)', () => {
       conversaoSparkline: [],
       membrosAtivosTotais: 0,
       desafiosAtivosTotais: 0,
+      formasPagamento: [
+        { forma: 'cartao_credito', vendas: 0, valor: 0 },
+        { forma: 'pix', vendas: 0, valor: 0 },
+      ],
     });
   });
 
@@ -132,6 +152,7 @@ describe('overview/kpis — derivarKpis (S600-T2)', () => {
       pagantes: 99,
       receitaConfirmada: 0,
       capacidade: 100, // 99% > 90,6% da Meia
+      formasPagamento: null,
     };
     const kpis = derivarKpis([MEIA, outro], []);
     expect(kpis.eventoEmRisco?.slug).toBe('noturna-10k');
@@ -146,6 +167,7 @@ describe('overview/kpis — derivarKpis (S600-T2)', () => {
       pagantes: 110,
       receitaConfirmada: 0,
       capacidade: 100,
+      formasPagamento: null,
     };
     const kpis = derivarKpis([lotado], []);
     expect(kpis.vagasRestantes).toBe(0);
@@ -194,6 +216,7 @@ describe('overview/kpis — D-1008-R19 · conversão conta cliente PAGANTE', () 
     pagantes: 400,
     receitaConfirmada: 100000,
     capacidade: 1000,
+    formasPagamento: null,
   };
 
   it('conversão = pagantes ÷ visitas — emissão pendente NÃO converte (antes: 40%)', () => {
@@ -303,5 +326,73 @@ describe('overview/kpis — derivações unitárias', () => {
     expect(derivarTaxaConversao(1284, null)).toBeNull();
     expect(derivarTaxaConversao(1284, 0)).toBeNull();
     expect(derivarTaxaConversao(682, 1000)).toBe(68.2);
+  });
+});
+
+// ===========================================================================
+// S825-T1 · a série por forma de pagamento consolidada (E11 · leva 25)
+// ===========================================================================
+describe('derivarKpis — série por forma de pagamento (S825-T1)', () => {
+  it('consolida os eventos na ordem canônica e fecha com a receita do topo', () => {
+    const kpis = derivarKpis(EVENTOS, []);
+
+    // Ordem canônica, sempre — a cor de cada fatia é identidade de dataviz.
+    expect(kpis.formasPagamento?.map((f) => f.forma)).toEqual([
+      'cartao_credito',
+      'pix',
+    ]);
+    expect(kpis.formasPagamento).toEqual([
+      { forma: 'cartao_credito', vendas: 684, valor: 57280 },
+      { forma: 'pix', vendas: 600, valor: 85000 },
+    ]);
+
+    // A falsificação que importa: a rosca e o KPI de receita da MESMA tela
+    // não podem discordar. 57.280 + 85.000 = 142.280 = receitaConfirmada.
+    const somaDaRosca = (kpis.formasPagamento ?? []).reduce(
+      (s, f) => s + f.valor,
+      0
+    );
+    expect(somaDaRosca).toBe(kpis.receitaConfirmada);
+  });
+
+  it('série ausente em evento COM receita cega o consolidado (null, nunca zero)', () => {
+    const cego: EventoKpiInput = { ...SERRA, formasPagamento: null };
+    const kpis = derivarKpis([MEIA, cego, RETIRO], []);
+
+    // Somar só os que sabem devolveria uma rosca "completa" de 117.280 sobre
+    // uma receita de 142.280 — parte disfarçada de todo, sem nada na tela que
+    // permitisse ao organizador desconfiar. Preferimos não desenhar.
+    expect(kpis.formasPagamento).toBeNull();
+    expect(kpis.receitaConfirmada).toBe(142280);
+  });
+
+  it('evento SEM receita e sem série não estraga a cobertura', () => {
+    const vazio: EventoKpiInput = {
+      nome: 'Evento novo',
+      slug: 'evento-novo',
+      status: 'rascunho',
+      qtdInscritos: 0,
+      pagantes: 0,
+      receitaConfirmada: 0,
+      capacidade: null,
+      formasPagamento: null,
+    };
+    const kpis = derivarKpis([MEIA, vazio], []);
+
+    // Ele não tinha o que contribuir — cegar a rosca por causa dele seria
+    // punir a tela por um evento que ninguém comprou.
+    expect(kpis.formasPagamento).toEqual([
+      { forma: 'cartao_credito', vendas: 153, valor: 35617 },
+      { forma: 'pix', vendas: 300, valor: 50000 },
+    ]);
+  });
+
+  it('portfólio vazio devolve a série zerada, não null', () => {
+    // Nenhum evento = "o servidor somou e não achou venda", que é resposta.
+    // Só a ignorância vira null.
+    expect(derivarKpis([], []).formasPagamento).toEqual([
+      { forma: 'cartao_credito', vendas: 0, valor: 0 },
+      { forma: 'pix', vendas: 0, valor: 0 },
+    ]);
   });
 });

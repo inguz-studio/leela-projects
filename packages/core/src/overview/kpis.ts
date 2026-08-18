@@ -27,6 +27,11 @@
 
 import type { StatusEvento } from '../eventos/evento';
 import { eventoPublico } from '../eventos/evento';
+import {
+  serieZerada,
+  somarSeries,
+  type FatiaFormaPagamento,
+} from '../pedidos/serieFormasPagamento';
 
 // ---------------------------------------------------------------------------
 // Constantes de negócio (fonte única)
@@ -70,6 +75,16 @@ export interface EventoKpiInput {
    * (não inventa capacidade).
    */
   capacidade: number | null;
+  /**
+   * Série por forma de pagamento DESTE evento, lida de
+   * `eventos/{id}/financeiro/current` (E11 · S825-T1).
+   *
+   * `null` = o agregado do evento ainda não carrega a série (doc anterior ao
+   * deploy, ou evento que nunca teve write de inscrito depois dele). NÃO é
+   * "nenhuma venda" — a distinção é o que sustenta a degradação honesta da
+   * rosca, e ela viaja daqui até o pixel.
+   */
+  formasPagamento: FatiaFormaPagamento[] | null;
 }
 
 /** Recorte de um clube do profissional relevante para a visão consolidada. */
@@ -113,6 +128,19 @@ export interface OverviewKPIs {
   conversaoSparkline: number[];
   membrosAtivosTotais: number;
   desafiosAtivosTotais: number;
+  /**
+   * Série por forma de pagamento CONSOLIDADA do portfólio (E11 · S825-T1) —
+   * a resposta à leva 25 do dono, no contrato que a Visão geral já lê.
+   *
+   * `null` = pelo menos um evento COM receita não sabe responder, então o
+   * consolidado não sabe. É deliberadamente pessimista: uma rosca que soma
+   * três eventos de cinco parece completa e não tem como se explicar, e o
+   * organizador não tem instrumento para desconfiar dela. Melhor a tela
+   * seguir dizendo "em breve" por mais um ciclo do que desenhar um todo que
+   * é parte. Evento SEM receita e sem série não estraga a cobertura — ele não
+   * tinha o que contribuir.
+   */
+  formasPagamento: FatiaFormaPagamento[] | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -212,10 +240,23 @@ export function derivarKpis(
   let emRisco: { nome: string; slug: string } | null = null;
   let maiorOcupacao = -1;
 
+  // S825-T1: consolidação da série + a régua de cobertura descrita no campo.
+  let formasPagamento: FatiaFormaPagamento[] | null = serieZerada();
+
   for (const evento of eventos) {
     inscricoesTotais += evento.qtdInscritos;
     pagantesTotais += evento.pagantes;
     receitaConfirmada += evento.receitaConfirmada;
+
+    if (evento.formasPagamento !== null) {
+      if (formasPagamento !== null) {
+        formasPagamento = somarSeries(formasPagamento, evento.formasPagamento);
+      }
+    } else if (evento.receitaConfirmada > 0) {
+      // Evento com dinheiro e sem série: o consolidado deixa de saber, e não
+      // volta a saber nesta chamada (uma vez cego, cego).
+      formasPagamento = null;
+    }
 
     if (!eventoPublico(evento.status)) continue;
 
@@ -259,5 +300,6 @@ export function derivarKpis(
     conversaoSparkline: [],
     membrosAtivosTotais,
     desafiosAtivosTotais,
+    formasPagamento,
   };
 }

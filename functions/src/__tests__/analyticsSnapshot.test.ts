@@ -32,6 +32,10 @@ const KPIS: OverviewKPIs = {
   conversaoSparkline: [],
   membrosAtivosTotais: 120,
   desafiosAtivosTotais: 3,
+  formasPagamento: [
+    { forma: 'cartao_credito', vendas: 684, valor: 57280 },
+    { forma: 'pix', vendas: 600, valor: 85000 },
+  ],
 };
 
 const CAPTURADO_EM = new Date('2026-07-04T06:05:00Z').getTime();
