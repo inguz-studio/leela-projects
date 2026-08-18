@@ -194,13 +194,22 @@ interface InscritoMock {
 }
 
 /**
- * Status determinístico. Os módulos (47/31/17) são propositalmente primos e
+ * Status determinístico. Os módulos (31/17) são propositalmente primos e
  * desalinhados do período 24 do par (faixa etária × gênero): assim os não
  * confirmados se espalham por todas as células do cohort em vez de esvaziar
  * algumas e derrubá-las abaixo do k-anonimato.
+ *
+ * `estornado` NÃO sai de módulo (INSCRITOS-READ-FIX · 17/08). O módulo antigo
+ * (`i % 47 === 3`) marcava 8 inscritos como estornados num evento com DOIS
+ * pedidos estornados — seis inscrições com o dinheiro "devolvido" sem pedido,
+ * sem pagamento e sem reembolso por trás. Além de contar uma história que o
+ * banco não sustenta (o que este seed existe para evitar), o shape resultante é
+ * IMPOSSÍVEL em produção: `estornarInscricao` escreve status, `estornadoEm` e o
+ * vínculo ao pedido na MESMA transação. Agora o estorno do inscrito deriva da
+ * ÚNICA fonte que o produz — `DEFS_PEDIDOS`.
  */
 function statusPorIndice(i: number): StatusInscrito {
-  if (i % 47 === 3) return 'estornado';
+  if (INDICES_ESTORNADOS.has(i)) return 'estornado';
   if (i % 31 === 5) return 'cancelado';
   if (i % 17 === 2) return 'pendente';
   return 'confirmado';
@@ -431,8 +440,9 @@ interface DefPedido {
 /**
  * Cobertura dos estados que o dono pediu. Os índices casam com o status do
  * inscrito gerado (statusPorIndice): pendente em i%17==2, cancelado em
- * i%31==5, estornado em i%47==3 — um pedido vencido apontando para um
- * inscrito confirmado contaria duas histórias diferentes sobre a mesma venda.
+ * i%31==5 — um pedido vencido apontando para um inscrito confirmado contaria
+ * duas histórias diferentes sobre a mesma venda. O `estornado` inverte a
+ * direção: quem manda é a lista abaixo, e o inscrito segue (INDICES_ESTORNADOS).
  */
 const DEFS_PEDIDOS: readonly DefPedido[] = [
   { seq: 1, inscritos: [0, 1, 6], forma: 'cartao_credito', parcelas: 12, caso: 'cartao_confirmado' },
@@ -457,6 +467,15 @@ const DEFS_PEDIDOS: readonly DefPedido[] = [
   { seq: 17, inscritos: [50], forma: 'cartao_credito', parcelas: 4, caso: 'estornado' },
 ];
 
+/**
+ * Índices dos inscritos cujo dinheiro voltou — DERIVADOS dos pedidos, nunca
+ * mantidos à mão em duas listas. `statusPorIndice` lê daqui; a TDZ não morde
+ * porque a leitura só acontece dentro de `main()`.
+ */
+const INDICES_ESTORNADOS: ReadonlySet<number> = new Set(
+  DEFS_PEDIDOS.filter((d) => d.caso === 'estornado').flatMap((d) => d.inscritos)
+);
+
 const BANDEIRAS = ['Visa', 'Mastercard', 'Elo'] as const;
 const TAXA_PCT = 8;
 
@@ -472,6 +491,12 @@ async function seedPedidos(db: Db, inscritos: InscritoMock[], ancora: Date): Pro
     const membros = def.inscritos.map((i) => inscritos[i] as InscritoMock);
     const responsavel = membros[0] as InscritoMock;
     const criadoEm = new Date(Math.max(...membros.map((m) => m.criadoEm.getTime())));
+    /**
+     * Instante ÚNICO do estorno deste pedido. Os três docs que a devolução
+     * toca (pagamento, inscrito e reembolso) carimbam o MESMO valor — três
+     * cálculos iguais em três lugares era o convite para eles divergirem.
+     */
+    const estornadoEm = new Date(criadoEm.getTime() + 9 * DIA_MS);
 
     const valorBase = roundMoney(
       membros.reduce((s, m) => s + PRECO_POR_MODALIDADE[m.modalidade], 0)
@@ -550,7 +575,6 @@ async function seedPedidos(db: Db, inscritos: InscritoMock[], ancora: Date): Pro
       pagamento['atualizadoEm'] = ts(pagoEm);
     }
     if (def.caso === 'estornado') {
-      const estornadoEm = new Date(criadoEm.getTime() + 9 * DIA_MS);
       pagamento['estornadoEm'] = ts(estornadoEm);
       pagamento['valorEstornado'] = valorFinal;
     }
@@ -603,19 +627,24 @@ async function seedPedidos(db: Db, inscritos: InscritoMock[], ancora: Date): Pro
     batch.set(db.collection('pedidos').doc(pedidoId), pedido, { merge: true });
 
     // ── Liga o inscrito ao pedido (é o que o slide-in [pag] segue) ────────
+    // No caso estornado o CARIMBO entra AQUI, no mesmo write do vínculo —
+    // exatamente como `estornarInscricao` faz em produção (status +
+    // `estornadoEm` na MESMA transação, RN-341/FABLE-B). Escrever o status
+    // sem o carimbo produzia um doc que a leitura do painel recusa, e que
+    // nenhum caminho de produção sabe criar.
     membros.forEach((m, pos) => {
-      batch.set(
-        inscritosCol.doc(m.id),
-        { pedidoRef: pedidoId, ehResponsavel: pos === 0 },
-        { merge: true }
-      );
+      const vinculo: Record<string, unknown> = {
+        pedidoRef: pedidoId,
+        ehResponsavel: pos === 0,
+      };
+      if (def.caso === 'estornado') vinculo['estornadoEm'] = ts(estornadoEm);
+      batch.set(inscritosCol.doc(m.id), vinculo, { merge: true });
     });
 
     // ── Reembolso concluído (a aba Reembolsos lista por `criadoEm`) ───────
     if (def.caso === 'estornado') {
       reembolsos += 1;
       const solicitadoEm = new Date(criadoEm.getTime() + 7 * DIA_MS);
-      const estornadoEm = new Date(criadoEm.getTime() + 9 * DIA_MS);
       batch.set(
         db.collection('eventos').doc(MOCK_EVENTO_ID).collection('reembolsos').doc(responsavel.id),
         {
