@@ -134,6 +134,17 @@ sem uma linha de código). O próprio produto já registra a distinção:
 `apps/landing/lib/esporte.ts` abre dizendo que *"`modalidades: string[]` guarda as
 DISTÂNCIAS, não o esporte praticado"*. Fechar a lista quebraria evento vivo.
 
+**O seletor de modalidades e o cânone.** O item da leva 22 dizia que, *se a onda C tocasse
+o seletor, ele entraria no cânone*. **Ela não tocou.** O seletor que está fora do DS é o do
+editor de kit (`kits/KitEditor.tsx`, composição `Chip + Select + botão "Adicionar"`), e ele
+é a tarefa **A10 da onda A** — território de outra lane. As três montagens também não são a
+mesma anatomia: a do kit escolhe de um conjunto fechado, a da criação de evento mistura
+chips de sugestão com entrada livre e botão, e a desta lane é campo mais chips sem botão,
+porque o commit é o botão primário do modal. A unificação que a onda C entregou é a de
+**dado** — a lista de sugestões virou fonte única no core —, e a de **componente** continua
+sendo a A10. O `gate-canon` concorda: `padrao-reimplementado-fora-do-ds` e
+`controle-cru-fora-do-ds` não se moveram.
+
 **Criado:** `packages/core/src/eventos/modalidades.ts` (kernel puro),
 `functions/src/eventos/editarModalidadesEvento.ts`,
 `packages/api-client/src/eventos/modalidades.ts`,
