@@ -21,6 +21,7 @@ import { useEventosProdutor, useOverview } from './_data/overview';
 import { derivarAgenda } from './_lib/agenda';
 import { derivarCountdown } from './_lib/countdown';
 import { derivarOcupacao } from './_lib/ocupacao';
+import { derivarInsightsDaVisaoGeral } from './_lib/insights';
 
 function comCapacidade(evento: Evento): {
   nome: string;
@@ -75,6 +76,21 @@ export function OverviewPage(): JSX.Element {
     [eventosState.data, eventosInput]
   );
 
+  // Insights da Leela (leva 23): leitura de conjunto do que a tela JÁ tem —
+  // os alertas e os KPIs do mesmo `getOverview` e a mesma lista de eventos.
+  // Nenhuma query nova, pelo mesmo orçamento de LCP que rege a tela inteira.
+  const insights = useMemo(
+    () =>
+      overview.loading
+        ? null
+        : derivarInsightsDaVisaoGeral(
+            overview.data?.alerts ?? null,
+            eventosState.data ?? null,
+            overview.data
+          ),
+    [overview.loading, overview.data, eventosState.data]
+  );
+
   // Snapshot do dia civil de HOJE por montagem (âncora do calendário).
   const [hojeISO] = useState(() => dataLocalISO(new Date()));
 
@@ -86,6 +102,7 @@ export function OverviewPage(): JSX.Element {
         kpisError={overview.error ? overview.errorKind : null}
         onRetryOverview={overview.refetch}
         alerts={overview.data?.alerts ?? null}
+        insights={insights}
         agenda={agenda}
         eventosLoading={eventosState.loading}
         eventosError={eventosState.error !== null}

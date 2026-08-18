@@ -58,7 +58,7 @@ import {
 import { Activity, CalendarClock, GitBranch, ListOrdered, Users } from 'lucide-react';
 import { SecaoHead } from '../../../components/SecaoHead';
 import { Cascata } from '../../../components/CartaoV3';
-import { InsightsDaLeela } from './_components/InsightsDaLeela';
+import { InsightsDaLeela } from '../../../components/InsightsDaLeela';
 import { formatDecimal1, formatInt } from '../_lib/format';
 import {
   RANKING_MAX_DESAFIOS,
@@ -580,6 +580,11 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               <InsightsDaLeela
                 insights={loading ? null : derivarInsights(situacao, ponte)}
                 loading={loading}
+                /* O alcance da leitura desta tela é o RECORTE do seletor de
+                   club do topo — dizer "seus números" aqui mentiria assim que
+                   um club fosse escolhido. */
+                legenda="Leitura automática dos números deste recorte."
+                vazio="Nada pedindo atenção neste recorte."
               />
             </Cascata>
 
