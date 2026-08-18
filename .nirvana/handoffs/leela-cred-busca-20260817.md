@@ -214,6 +214,17 @@ Testes NOVOS: 13 (busca por CPF) + 23 (derivação do card) + 9 (card) + 7
 background (dono usando a máquina). `dist/` e `dist-mock-campeche/` da árvore
 principal intocados.
 
+## Aterrissagem
+
+- **Merge na `main`:** `7318a967` · `main == origin/main` · árvore limpa antes e depois.
+- Pré-merge de `main` em `cred-busca` primeiro (mesmo fluxo das lanes vizinhas), **sem
+  conflito**: zero sobreposição de arquivo com NAVBAR-FIX e VG-INSIGHTS.
+- Gates re-rodados DEPOIS do pré-merge, na árvore que virou a `main`: tsc 0, gate-canon PASS,
+  27 arquivos e 364 testes verdes nas três fatias tocadas.
+- Merge feito em janela livre (último commit de outra lane havia 190s, árvore limpa) —
+  nenhum `amend`, nenhum `stash`, `commit --only` em toda a lane.
+- ⛔ **Zero deploy.** `dist/` e `dist-mock-campeche/` da árvore principal intocados.
+
 ## Conflito com a leva 22
 
 Nenhum arquivo em comum com a onda B da leva 22. Esta lane toca `AtendimentoPanel.tsx`
