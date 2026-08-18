@@ -282,17 +282,15 @@ export function ConfigGeraisForm({
           <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
             Data e modalidades
           </span>
-          {/* Texto HONESTO (DIAG-PAINEL-LACUNAS): a versão anterior dizia que
-              as modalidades eram editadas "nos lotes", e a tela de Lotes
-              devolvia o organizador para "a edição do evento". Nenhuma das
-              duas edita a lista — ela é escrita uma vez pelo `criarEvento` e
-              `atualizarConfiguracoesEvento` não a envia. O par de frases
-              formava um círculo fechado. Aqui o texto separa o que é verdade:
-              o PREÇO de cada modalidade vive na aba Lotes; a LISTA, não. */}
+          {/* S316-T7: o texto da lacuna morreu no commit que a fecha. A frase
+              anterior — escrita pela DIAG-PAINEL-LACUNAS para a tela parar de
+              mentir enquanto a S316 não subisse — dizia que a lista "não é
+              editável depois de criado o evento". Agora ela é, na aba
+              Modalidades, e mantê-la seria a mentira oposta. */}
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-            Data e modalidades são definidas na criação do evento; o preço de cada
-            modalidade vive na aba Lotes. Esta lista não é editável depois de criado o
-            evento.
+            A data é definida na criação do evento. As modalidades e os lotes de preço de
+            cada uma são editados na aba Modalidades, enquanto o evento não tiver a
+            primeira inscrição.
           </p>
           <div className="flex flex-wrap items-center gap-[var(--spacing-2)]">
             {formatDataEvento(evento.data) ? (

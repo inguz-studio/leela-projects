@@ -11,6 +11,7 @@ import {
   loteDesativavel,
   loteImutavel,
   mensagemErroServidor,
+  novoLoteId,
   parsePrecoReais,
   payloadDesativarPelaJanela,
   proximaOrdem,
@@ -708,3 +709,28 @@ describe('face mínima da venda paga no formulário de lote (RN-559)', () => {
     expect(msg).toContain('RN-559');
   });
 });
+
+// ===========================================================================
+// S316-T6 · o docId do lote larga o nome da modalidade
+// ===========================================================================
+
+describe('novoLoteId · chave opaca para lotes NOVOS (S316-T6)', () => {
+  it('não embute mais o nome da modalidade na chave primária', () => {
+    // Com a modalidade renomeável (RN-501), o nome dentro do docId vira
+    // resíduo no primeiro rename. Lote novo nasce sem ele.
+    const id = novoLoteId('21k', 1);
+    expect(id).not.toContain('21k');
+    expect(id.startsWith('lote-1-')).toBe(true);
+  });
+
+  it('duas chamadas seguidas não colidem', () => {
+    const a = novoLoteId('21k', 1);
+    const b = novoLoteId('21k', 1);
+    expect(a).not.toBe(b);
+  });
+
+  it('a chave não contém / — ela vira segmento de path no Firestore', () => {
+    expect(novoLoteId('Trail 15k', 3)).not.toContain('/');
+  });
+});
+

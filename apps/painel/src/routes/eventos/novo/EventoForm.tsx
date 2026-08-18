@@ -9,7 +9,7 @@
 //
 // LOTES/PREÇOS NÃO entram no cadastro (RN-153): os `percursos` que o servidor
 // exige (min 1, RN-200) são DERIVADOS das modalidades com preço 0 (a definir na
-// aba Lotes). Presentational + controlado; submit via porta injetada.
+// aba Modalidades). Presentational + controlado; submit via porta injetada.
 //
 // TAXA (RN-347 · ATIVADO): o callable `criarEvento` já aceita e persiste
 // `taxaModo` por evento (input > default do tenant > 'incorporada'); o toggle
@@ -34,7 +34,11 @@ import { Button, Chip, Input, Switch, Textarea, useToast } from '@leela/design-s
 import { DateField } from '@/components/fields/DateField';
 import { ImageUploadField } from '@/components/upload';
 import { problemaDoArquivoCapaEvento, CAPA_EVENTO_MAX_BYTES } from '@leela/api-client';
-import { dataHoraLocalParaDate, isDataHoraLocalISO } from '@leela/core';
+import {
+  SUGESTOES_MODALIDADE_EVENTO,
+  dataHoraLocalParaDate,
+  isDataHoraLocalISO,
+} from '@leela/core';
 import {
   CAPA_EVENTO_ASPECTO,
   CAPA_EVENTO_HINT,
@@ -69,9 +73,16 @@ const VALORES_INICIAIS: NovoEventoFormValues = {
   repassarTaxa: false,
 };
 
-// Vocabulário fechado de distâncias (RN-153) — clique adiciona/remove; o
-// organizador também digita modalidades livres (ex.: "Kids 1k", "Trail 15k").
-const SUGESTOES_MODALIDADE = ['5k', '10k', '21k', '42k'] as const;
+// Sugestões de distância (RN-153) — clique adiciona/remove; o organizador
+// também digita modalidades livres (ex.: "Kids 1k", "Trail 15k").
+//
+// ⛔ A lista VIVE NO CORE desde a onda C da leva 22 (S316-T4). Ela era uma
+// const local deste arquivo, e a criação, a aba Modalidades e o editor de kit
+// descreviam modalidade cada uma do seu jeito — as "três línguas" que a onda A
+// apontou e adiou de propósito. Nenhum catálogo novo nasceu: a lista é a mesma,
+// mudou de casa. E ela é SUGESTÃO, nunca vocabulário fechado — a RN-500 trata a
+// modalidade do evento como string livre, e fechar a lista quebraria evento vivo.
+const SUGESTOES_MODALIDADE = SUGESTOES_MODALIDADE_EVENTO;
 
 /**
  * Monta o campo `data` do input do servidor a partir da data (obrigatória) +
@@ -202,7 +213,7 @@ export function EventoForm({
         local: values.local.trim(),
         modalidades: values.modalidades,
         // Percursos DERIVADOS das modalidades (RN-153): sem preço no cadastro —
-        // preços/lotes ficam na aba Lotes. preco 0 = "a definir" (RN-200 ≥ 0).
+        // preços/lotes ficam na aba Modalidades. preco 0 = "a definir" (RN-200 ≥ 0).
         percursos: values.modalidades.map((m) => ({ nome: m, preco: 0 })),
         // RN-347: sempre envia a escolha do organizador (WYSIWYG). O servidor
         // aceita e persiste; input explícito prevalece sobre o default do tenant.
@@ -260,7 +271,8 @@ export function EventoForm({
         </h1>
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
           Preencha o que a página pública do evento exibe. Preços e lotes são configurados
-          depois, na aba Lotes.
+          depois, na aba Modalidades — onde também dá para acrescentar, renomear e remover
+          modalidade enquanto o evento não vender.
         </p>
       </header>
 
