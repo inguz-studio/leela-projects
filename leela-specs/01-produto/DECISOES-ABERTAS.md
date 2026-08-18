@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **8 itens abertos, contados à mão:** 6 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **10 itens abertos, contados à mão:** 8 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -76,6 +76,26 @@ Os filtros em lista já ficam alinhados ao lado da pesquisa, numa fileira só, c
 - **O que fica com você:** qual das duas alturas vira a altura da faceta.
 - **Opções:** **subir a múltipla para 40px** (**default proposto** — o campo de busca ao lado tem 38px, então 40 é quem já está pareado; sobe só o gatilho do `FilterMenu`) · **descer a única para 32px**, barra mais leve mas descolada da busca · manter as duas, se a diferença de altura for leitura de tipo para você.
 - **Onde aterrissa:** `FilterMenu.tsx` (o `size` do gatilho) ou `FilterChips.tsx` (a altura da faceta exclusiva), com `gate-visual-filtros` re-rodado nos dois temas. Puxa junto as duas facetas cruas de Inscritos (`Todos os kits`, `Todas as modalidades`), que são `Combobox` direto e não ganham o nome da faceta. Detalhe em `.nirvana/handoffs/leela-filtros-fix-20260817.md`.
+
+### VG-INSIGHT-1 · a pendência de pagamento mudou de casa na Visão geral
+
+Os Insights da Leela chegaram à Visão geral, como você pediu. O aviso "N inscrições pendentes aguardam pagamento há mais de 24h" saiu do bloco "Alertas" e virou insight, porque publicá-lo nos dois seria o mesmo fato duas vezes na mesma tela. Ele era o único alerta do painel que não levava a lugar nenhum — agora tem caminho, e subiu para logo abaixo dos números.
+
+- **Caso de uso:** a Marina abre a Visão geral e lê a pendência no bloco novo, no alto, com um caminho para os eventos; o bloco "Alertas" lá embaixo continua só com o que é de evento.
+- **Job story:** quando eu abro o painel de manhã, eu quero ver o que está travando dinheiro logo de cara e saber para onde ir, para não caçar a informação em dois blocos.
+- **O que fica com você:** onde a pendência mora.
+- **Opções:** **insight, com caminho** (**default em vigor** — é leitura de conjunto, não de um evento) · **de volta em "Alertas"**, e aí o insight sai, porque os dois juntos são a duplicata · os dois, se a repetição for reforço útil para você.
+- **Onde aterrissa:** `overview/_lib/insights.ts` (a constante `ALERTA_DE_CONJUNTO`) — a reversão é uma linha. Detalhe em `.nirvana/handoffs/leela-vg-insights-20260817.md` §3.
+
+### VG-INSIGHT-2 · o que mais a Visão geral ganha, e o que custa cada um
+
+Você pediu para enriquecer a Visão geral. Entraram três leituras de dado real; seis outras foram levantadas com a fonte nomeada e não construídas, porque cada uma cobra um preço diferente e o preço é seu para pagar.
+
+- **Caso de uso:** o Castelo quer que a primeira tela responda "o que pede minha atenção hoje" sem ele abrir cinco áreas.
+- **Job story:** quando eu abro o painel, eu quero as leituras que valem o meu tempo, para não trocar velocidade de carregamento por informação que eu não uso.
+- **O que fica com você:** quais entram, e em que ordem.
+- **Opções:** **pendências em R$** (barato no servidor — o laço já varre os pendentes, falta somar; trava é deploy) · **corte de 72h** ao lado do de 24h (a régua e a casa do caminho já existem) · **"publicado e parado"** (exige campo `publicadoEm`, que não existe) · **recorrência de CRM** (custa **+1 round-trip** na primeira tela, contra o orçamento de carregamento) · **dinheiro a repassar** (sobe a você por política, não vira tela sem sua palavra) · **conversão real** (espera a fonte de visitas).
+- **Onde aterrissa:** `.nirvana/handoffs/leela-vg-insights-20260817.md` §5, com fonte e custo de cada um.
 
 ## Ações que só você pode executar
 
