@@ -1,6 +1,6 @@
 ---
-tags: [leela, decisoes-dono, leva17, leva18, leva19, leva20, leva22, carga-cognitiva, navegacao, filtros, kits, modalidades, e01, e02, e03, e04, e05]
-aliases: [Leva 17, Leva 18, Leva 19, Leva 20, Leva 22, Decisões do dono 17/08]
+tags: [leela, decisoes-dono, leva17, leva18, leva19, leva20, leva22, leva23, leva24, leva25, carga-cognitiva, navegacao, filtros, kits, modalidades, credenciamento, insights, e01, e02, e03, e04, e05, e11]
+aliases: [Leva 17, Leva 18, Leva 19, Leva 20, Leva 22, Leva 23, Leva 24, Leva 25, Decisões do dono 17/08]
 atualizado: 2026-08-17
 ---
 
@@ -701,3 +701,319 @@ esqueceu de registrar.
 | FOTOS-1 | "50%" das fotos do kit: teto de largura ou outra escada de colunas? | `04-fila-em-ondas.md`, onda A |
 | CRED-1 | O check-in ganha scanner, ou só o corte em duas abas? | `01-spec-menu-terciario.md` §Aplicação 2 |
 | TERCIARIO-1 | Confirmar que "abas fixas" mata o formato âncora — *"me fiz claro?"* | `01-spec-menu-terciario.md` |
+
+---
+
+# Leva 23 · os insights na visão geral, os check-ins do club, o cadastro de modalidade e a busca do credenciamento
+
+Dita às ~19h50, no meio da validação das telas no `:4602`, logo depois de ele
+conseguir abrir o preview. Quatro assuntos numa fala só, e o primeiro é uma
+cobrança de segunda vez.
+
+**Na íntegra:**
+
+> *"consegui ver, vou validar as telas agora. nao foi o que pedi. Já falei para
+> enriqquecermos a visao geral, e os insights da leela devem estar lá. acho
+> importante darmos a visao de check-ins dentro dos clubs, de maneria separada
+> também. AIDNA NAO TEM A PORRA DOC ADASTRO DE UMA MODALIDADE, CARALHO. quando vc
+> vai resolver essa merda???? /harness peguei uma falha na hora de fazer o
+> credenciamento. Ao pesquisar o nome de um participante, nao mostramos para quem
+> esta fazendo o credenciamento, qual o tamanho do kit, incrição, informações de
+> compra do usuário. Nao precisa tudo, mas mostrar modaliadde, lote, o que ta
+> incluso no kit, nome completo, e-mail, de compra, telefone de compra. Devemos
+> poder pesquisar via CPF também"*
+
+## ⛔ Segunda falha de captura, no mesmo dia em que a regra nasceu
+
+**A frase *"Já falei para enriquecermos a visão geral"* não existe em registro
+nenhum.** Procurei antes de escrever esta seção, e a varredura está declarada
+abaixo para quem quiser refazê-la.
+
+| O que foi procurado | Onde | O que voltou |
+|---|---|---|
+| `enriquec*` | `leela-specs/`, `.nirvana/briefs/`, `.nirvana/handoffs/`, `docs/` | 20 retornos, **nenhum** sobre a Visão Geral: são o enriquecimento da projeção `Inscrito` (S203, Fable A-T2), o cadastro de evento de 13/07 e os títulos "Brief enriquecido" do próprio harness |
+| `visão geral` a até 120 caracteres de `insight`, nos dois sentidos | mesmos quatro | 5 retornos, **todos de hoje**: o brief desta lane, o brief da VG-INSIGHTS-BUILD e a linha da S043 no kanban descrevendo a leva 20 |
+| linhas de fala do dono (`^>`) citando `visão geral` | `02-rodadas/` | 7 retornos, **nenhum** pedindo enriquecimento: o repasse por evento (19/07), o destino de login (28/07), a Visão Geral do tenant (06/08), o "não muda" do handoff-v2 (09/08) e a frase da leva 17 sobre o mockup original |
+| `insight` | `handoff/design/Visao Geral v3.dc.html`, o protótipo da VG feito por ele | **zero ocorrências** |
+
+**A última linha é a que dói, e ela corta para os dois lados.** O bloco de
+insights nunca esteve no protótipo da Visão Geral: ele vive só no
+`engajamento-referencia.dc.html`, na linha 439, que é a fonte que a lane
+ENG-INSIGHTS leu e obedeceu. Quem construiu seguiu o único material escrito que
+existia, e o material escrito apontava para o Engajamento. Não houve desobediência
+de spec aqui.
+
+O que houve foi o de sempre: **a fala que corrigia o material morreu no meio de
+outra conversa.** Ele diz "já falei", e eu não tenho onde negar nem onde
+confirmar, porque não escrevi. Se a instrução veio antes do protótipo, ela
+mudaria o endereço do bloco e ninguém teria de refazer nada; se veio depois, ela
+seria a correção do protótipo e valeria mais que ele. As duas leituras são
+plausíveis e nenhuma é verificável, e essa impossibilidade **é** o prejuízo: não
+existe versão desta história em que o registro me socorra.
+
+**É a segunda ocorrência da mesma classe em doze horas.** A leva 17 abriu esta
+mesma rodada com a mesma confissão (*"Já falei anteriormente, e voce ignorou"*) e
+com a regra de conserto escrita como vinculante: fala do dono sobre produto vira
+item registrado na mesma janela, **sempre**. A regra nasceu hoje de tarde. Esta
+leva mostra uma fala anterior a ela morrendo do mesmo jeito, o que não é violação
+da regra nova — é o passivo que ela existe para parar de acumular. A diferença
+entre as duas confissões é só de tamanho do estrago: lá o custo foi um defeito
+rodando meses em produção, aqui foi uma lane inteira construindo o bloco certo no
+lugar errado, num dia em que quatro lanes já disputavam a mesma árvore.
+
+**Uma coisa muda de prática a partir daqui, e é barata.** A leva 17 cobre a fala
+que chega em texto. Esta cobre a que chega em **anexo**: quando ele manda um
+protótipo, o registro passa a dizer o que aquele arquivo cobre e o que ele **não**
+cobre. Se em 09/08 estivesse escrito que o `Visao Geral v3.dc.html` não tinha
+insights, a pergunta "então onde eles moram?" teria nascido naquele dia, com ele
+na conversa, em vez de nascer oito dias depois com ele irritado.
+
+## 23.1 · Os Insights da Leela mudam de casa, e o bloco antigo vira pergunta
+
+> ⚠ **Só registro nesta lane.** Build na lane **VG-INSIGHTS-BUILD**.
+
+A ordem é direta e não tem ambiguidade: **os insights moram na Visão Geral**. A
+lane de build leva o bloco para `routes/overview/`, reusando a peça que a
+ENG-INSIGHTS criou em vez de clonar a montagem — e aqui vale o aviso da RN-568,
+porque `AlertsPanel`, o bloco do Engajamento e este são **três** montagens da mesma
+anatomia de faixa de aviso: na terceira, promover ao design system deixa de ser
+escolha.
+
+O que a ordem **não** responde é o destino do bloco que já está no ar. Ele foi
+construído hoje, com dois insights de dado real, e o seletor de club recorta os
+dois. Apagá-lo porque o endereço mudou seria jogar fora trabalho que funciona;
+mantê-lo seria a segunda montagem da mesma faixa em duas telas que o mesmo
+organizador abre no mesmo dia, que é exatamente o que a RN-573 chama de cópia sem
+papel declarado. **Vira o item VG-INSIGHTS-1 no painel**, com default proposto e
+sem eu decidir por ele.
+
+**O outro pedaço da fala não tem resposta e não vai ganhar uma inventada.**
+"Enriquecer a visão geral" é maior que os insights, e não existe leitura minha que
+diga o quê. A lane de build devolve no handoff uma lista curta de candidatos **com
+fonte nomeada** — nada de bloco novo sem dado real, nada de "em breve" para
+superfície que ele não pediu. A lista volta como veto barato, não como entrega.
+
+## 23.2 · Os check-ins ganham visão própria dentro dos clubs
+
+> ⚠ **Direcional. Sem build agora.** Card ancorado, nenhuma linha de código nesta janela.
+
+*"acho importante darmos a visao de check-ins dentro dos clubs, de maneria
+separada também"* — a palavra que carrega a decisão é **separada**. Não é
+acrescentar um número na tela do club, é uma visão com casa própria.
+
+**A história já existe e ganha o "vai" dele:** a **S115** ([[LEELA-E05-clubs]]) foi
+escrita como a destrava dos três blocos do estudo de engajamento que estão em "em
+breve" por falta de um número só — quantos registros houve, por ação e por
+período. Hoje o registro do atleta é legível apenas pelo próprio atleta e pela
+administração, então **isto não é trabalho de tela: é agregado de servidor
+primeiro** (S115-T1), e só depois o total do período, a divisão por pilar, o
+ranking de ações, o mapa de horários e o volume ao longo do tempo.
+
+O card sai do backlog frio e passa a ter procedência de dono. **Não consome RN**,
+pela mesma disciplina da leva 10 e do ARENA-1: o desenho da tela ainda não existe,
+e escrever regra antes dele cravaria o que a spec futura precisa perguntar.
+
+## 23.3 · O cadastro de modalidade: a fila era minha, e ela muda agora
+
+> ⚠ **Só registro nesta lane.** Build na lane **MODALIDADE-BUILD**, disparada nesta janela.
+
+*"AIDNA NAO TEM A PORRA DOC ADASTRO DE UMA MODALIDADE, CARALHO. quando vc vai
+resolver essa merda????"*
+
+**A spec está pronta e o atraso é meu.** No fim da tarde de hoje, na leva 22, ele
+desenhou a solução inteira: Lotes vira Modalidades, modalidade é pai e lote é
+filho, a S316 foi re-ancorada nesse desenho, nasceu a **RN-575** e o material todo
+está em `02-rodadas/2026-08-17-leva22/`. Nada disso espera resposta dele. **O que
+segurou foi a fila em ondas que eu montei**, com a arrumação dos kits na onda A e
+Modalidades na onda C, atrás dela.
+
+Priorizar assim foi decisão minha, tomada sem ele, sobre o item que ele já tinha
+cobrado antes — a própria leva 22 registra as palavras *"já perdi as contars em
+dizer que nao consigo encontrar aonde adicionar modalidades"*, com a trilha de
+cinco semanas escrita ali (05/08 → 10/08 → 11/08 → 12/08 → 17/08). Ordenar a fila
+é meu trabalho; **ordenar contra uma cobrança repetida do dono não é**, e a
+diferença entre as duas coisas é o que esta leva me ensina.
+
+**A repriorização, registrada como decisão e não como reação:** a onda C dispara
+**agora**, em lane própria e em paralelo com a onda A, em vez de esperá-la. As duas
+tocam `eventos/_lib/subnav.ts`, então correm em **worktree por lane** — o aviso já
+estava escrito no kanban da leva 22 e continua valendo. Se houver card em backlog,
+ele sobe para "Em execução" nesta mesma aterrissagem.
+
+## 23.4 · A busca do credenciamento não mostra o que decide a entrega
+
+> ⚠ **Só registro nesta lane.** Build na lane **CRED-BUSCA-BUILD**. **Nasce a RN-577.**
+
+Esta é a única das quatro que ele achou **usando o produto**, e não olhando para
+ele. É falha de uso real, e ela vale mais que as outras três porque descreve o
+trabalho de quem está de pé atrás de um balcão com fila na frente.
+
+O que ele pediu está enumerado na fala e eu não vou parafrasear: **modalidade,
+lote, o que está incluso no kit, tamanho do kit, nome completo, e-mail da compra,
+telefone da compra**. E a busca passa a aceitar **CPF** além do nome.
+
+**A frase que dimensiona o defeito é dele:** *"nao mostramos para quem esta
+fazendo o credenciamento"*. O resultado da busca hoje serve para **achar** a
+pessoa; ele precisa que sirva para **entregar** o kit. São dois trabalhos
+diferentes na mesma caixa de texto, e o segundo é o que o balcão faz. Quem opera
+está decidindo qual sacola pegar da pilha, e nenhum dos dados que sustentam essa
+decisão está na tela.
+
+**Três bordas ficam nomeadas para a lane de build, e nenhuma delas é decisão dela
+sozinha:**
+
+- **Campo sem fonte nasce ausente e nomeado, nunca em branco mudo.** Metade da
+  lista depende do que a projeção `Inscrito` carrega, e ela é fina por
+  construção — a S203 e a Fable A-T2 escreveram isso com todas as letras. Se um
+  campo não chega, o resultado **diz** que não chega. Mostrar tamanho de kit
+  errado no balcão é pior que não mostrar nenhum, porque o operador entrega a
+  sacola errada com confiança.
+- **A composição do kit deriva do catálogo, não de texto livre.** A **RN-576**
+  nasceu hoje mesmo cravando isso, e "o que tá incluso" é exatamente o consumidor
+  que ela previa.
+- **A leitura é do balcão e para no balcão.** CPF, telefone e e-mail entram na
+  tela de quem opera **aquele** evento, na mesma régua de minimização que a RN-565
+  e a RN-566 já aplicam ao CRM. Busca por CPF não vira busca global de pessoa, e
+  o que aparece no resultado não vira exportação. Isto não é veto ao que ele
+  pediu — é o contorno dentro do qual o que ele pediu se constrói.
+
+---
+
+# Leva 24 · a pílula da barra mobile estoura a barra
+
+Dita minutos depois, na mesma validação. **Não é vetável, é conserto**, e o
+defeito nasceu hoje.
+
+**Na íntegra:**
+
+> *"a responsividade do mobile esta quebrando o select de menu (selecionado) da
+> aba principal, fazendo o componente de menu como botao de aba selecionada
+> quebrar e ulrtapassar os limites do componente da menu bar, que está horizontal
+> no canto inferior."*
+
+> ⚠ **Só registro nesta lane.** Build na lane **NAVBAR-FIX**.
+
+O `BottomNav` nasceu hoje, no design system, pela lane NAV-MOBILE (merge
+`9ad1f3d5`), respondendo à leva 20. O indicador do item selecionado é **um
+elemento que viaja**, medido em runtime por `offsetLeft`/`offsetWidth`, mesma
+mecânica do pill vertical do rail que a D-1008-R14 pediu. É a pílula desse
+indicador que ele está vendo passar por fora da barra.
+
+**Ele descreve o sintoma e o sintoma é confiável; a causa é da lane de build
+medir, não desta.** O que fica registrado aqui é o que o registro pode afirmar
+sem chutar: o defeito é de **responsividade** pelas palavras dele, aparece no
+**selecionado** e não nos outros três, e o elemento que estoura é o que **mede a
+si mesmo em runtime** — a única peça da barra cujo tamanho não vem do CSS. A lane
+mede antes de mexer, no viewport em que ele viu.
+
+**Duas coisas ficam ditas para a lane não fazer:** a barra **não** perde o
+indicador deslizante para calar o defeito (é decisão de desenho ratificada, D-1008-R14),
+e o conserto **não** entra sem gate visual em 375 — o gate da S046 já estava
+pendente do maestro com sete telas, e este defeito é a prova de que prova estática
+não bastava ali. Ver a barra renderizada volta a ser obrigação, não zelo.
+
+**Um fato de processo, sem drama:** a peça nasceu no DS e o defeito atravessou 21
+testes e um gate de código. Não é falha de disciplina de teste — é o que o
+registro do projeto já diz desde 10/08, que gate de código não prova tela.
+
+---
+
+# Leva 25 · por que a forma de pagamento não vira agregado
+
+Ele leu o "em breve" honesto do bloco de formas de pagamento e fez a pergunta que
+o texto convida. **A pergunta tem resposta, e ela está dada abaixo.**
+
+**Na íntegra:**
+
+> *"Em breve — Nenhum agregado por forma de pagamento chega ao cliente hoje — a
+> inscrição não carrega a forma no retorno do resumo. Assim que a série financeira
+> existir, o donut aparece aqui. por que nao temos esse agregado de pagamento se
+> salvamos todas as formas de pagamento ?"*
+
+## 25.1 · A resposta: o dado cru existe, o resumo não
+
+**Ele está certo na premissa.** A forma de pagamento é gravada em cada pedido,
+uma a uma, e nada disso se perde. A pergunta dele é por que o dado que existe não
+vira número na tela, e a resposta é que **falta o degrau do meio**.
+
+Os três fatos que sustentam isso, medidos e não supostos:
+
+- **O rollup do servidor conta, e não soma.** O
+  `aggregateProfessionalDashboard.ts` — a Function que escreve o painel que essa
+  tela lê — é feito de `count()` sobre coleções (linhas 127, 183, 189). Ele
+  produz quantidades, não distribuições, e a palavra "forma" não aparece nele.
+  Nenhum caminho de código hoje agrupa pedidos por forma de pagamento.
+- **O resumo da inscrição não carrega a forma.** É a segunda metade do texto que
+  ele leu, e ela é literal: o retorno que a tela recebe não tem o campo. A tela
+  não tem de onde tirar.
+- **E a tela não pode ir buscar.** O padrão da casa é firme e está escrito no
+  [[LEELA-E11-analytics]]: **tela não varre documento financeiro**. Ler pedido a
+  pedido no cliente para desenhar uma rosca seria a resposta rápida e é
+  justamente a que o projeto proíbe, por custo e por fronteira de dado.
+
+**O "em breve" é honesto, então.** Ele não esconde trabalho não feito atrás de
+uma promessa: descreve a dependência real. E a dependência tem nome e card desde
+11/08 — a **S825** ([[LEELA-E11-analytics]]), cujo T1 faz o resumo por forma
+nascer como agregado do evento e cujo T2 tira a rosca do "em breve" **na análise
+e no engajamento**, os dois lugares onde ela está desenhada e muda.
+
+## 25.2 · A decisão: a série financeira sobe para o topo da fila
+
+**Decisão minha, registrada como minha.** A lane do agregado por forma de
+pagamento entra como **a próxima da fila** e dispara quando as cinco lanes desta
+janela aterrissarem. Não disparo agora porque cinco lanes já disputam a árvore, e
+a sexta compraria conflito em vez de velocidade.
+
+**Ela acende em produção só no próximo pacote de deploy.** Isto é `functions/`, e
+não sobe pelo caminho das lanes de tela: exige deploy de Function, com o gate
+visual do bloco depois — a rosca é uma superfície nova que ninguém nunca viu
+renderizada com número de verdade. O card sobe ao topo da fila do E11.
+
+**Não consome RN.** A regra que governa isto já existe e é a do épico ("tela não
+varre documento financeiro"); a S825 já está especificada em duas tarefas. O que
+mudou foi a posição na fila, e posição de fila não é regra de negócio.
+
+**Uma coisa fica dita porque ela vai voltar:** o mesmo agregado é a dependência do
+**CAIXA-1**, que está no painel dele desde hoje à tarde esperando resposta. A
+opção "trocar por divisão de receita de verdade" está marcada lá como **bloqueada
+por dado** — e este é o dado. Quando a série financeira existir, aquela opção sai
+de bloqueada, e vale ele saber disso antes de responder o CAIXA-1.
+
+---
+
+## Regras de negócio destas três levas
+
+**Uma só, a RN-577.** A faixa foi conferida por grep de `RN-577` a `RN-582` sobre
+o corpus inteiro fora do índice, imediatamente antes do commit: **zero
+definições** — os cinco retornos são prosa das lanes CARGA-COGNITIVA-SPEC e
+SPEC-LEVA22 descrevendo as próprias varreduras, o molde de sempre. A conferência
+foi feita duas vezes, no início da lane e antes do commit, pela mesma razão que a
+leva 22 registrou: **três lanes escreveram em 17/08 antes desta**, e o índice
+anunciava a 577 como livre desde o fim da tarde.
+
+| RN | O quê | Épico |
+|---|---|---|
+| **RN-577** | O resultado da busca do credenciamento carrega o que decide a entrega, e a busca aceita CPF | [[LEELA-E03-operacao-evento]] |
+
+**Os outros cinco itens não consomem número, e isso é deliberado.** Os insights
+mudando de casa é **endereço de bloco existente**, não regra nova — e a régua que
+governa a duplicação entre duas telas já é a RN-573, escrita hoje de manhã. A
+visão de check-ins é **direcional**, com o desenho por fazer, no molde da leva 10 e
+do ARENA-1. O cadastro de modalidade já tem a **RN-575** e a S316 re-ancorada
+desde a leva 22; o que mudou foi a fila, e fila não é regra. A pílula da barra é
+**defeito**, e defeito se conserta contra a regra que já existe em vez de ganhar
+uma. E o agregado por forma de pagamento tem card, épico e padrão escritos desde
+11/08. Fica registrado aqui porque item do dono que não aparece nesta seção parece
+rodada que esqueceu de registrar.
+
+## O que fica com o dono, nestas três levas
+
+| Item | Pergunta | Onde |
+|---|---|---|
+| VG-INSIGHTS-1 | Os insights vão para a Visão Geral. O bloco do Engajamento fica lá também (recortado por club) ou a Visão Geral passa a ser a única casa? | painel + `.nirvana/handoffs/leela-vg-insights-20260817.md` |
+
+**Só um.** Os outros cinco itens destas levas são ordem dele (insights na VG,
+check-ins separados, modalidade agora, busca do credenciamento), defeito (a
+pílula) ou pergunta que já foi respondida nesta rodada (a série financeira). Item
+decidido não é pendência, e pendência que eu inventasse para parecer diligente
+seria ruído no painel dele.
