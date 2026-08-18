@@ -201,6 +201,10 @@ Nenhuma foi vista renderizada — esta lane rodou sem navegador, por instrução
 10. **375px** em todas as anteriores: o cabeçalho do bloco tem nome, badge, preço vigente e
     três controles na mesma fileira, e é onde ele quebra.
 
+## Hash do merge
+
+`481c1b57` — `merge: MODALIDADE-BUILD -- o cadastro de modalidade existe, e a aba vira Modalidades`, `--no-ff` na `main`, empurrado. Branch `modalidade-build` em `d0b1b0e4`.
+
 ## Estado da árvore
 
 Commits na branch `modalidade-build`, `--no-ff` na `main`. ⛔ **Nada no ar:** `dist/` e
