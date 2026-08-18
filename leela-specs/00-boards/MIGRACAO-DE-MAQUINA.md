@@ -505,10 +505,11 @@ Ponto de partida da lane: `82aea920`, com `main` e `origin/main` já idênticos.
 | `4c7e6ef3` | O registro da leva 26 na rodada de 18/08 |
 | `dc732c50` | Os 55 handoffs ausentes e o `KICKOFF-BUILD.md` |
 | `41150f16` | Os dois probes de captura e as duas medições dos filtros |
-| `<!-- HASH-FINAL -->` | Este documento |
+| `09830f78` | Este documento |
 
 **`main` == `origin/main`**, comprovado com `git fetch origin` seguido de
-`git rev-list --left-right --count main...origin/main`, que devolveu `0  0`.
+`git rev-list --left-right --count main...origin/main`, que devolveu `0  0` — medido antes
+da lane abrir e de novo depois do push de `09830f78`.
 
 O repositório remoto é `https://github.com/inguz-studio/leela-projects.git`. É dele que sai
 o clone do passo 1, e é ele que carrega o contexto de produto inteiro para o computador novo.
