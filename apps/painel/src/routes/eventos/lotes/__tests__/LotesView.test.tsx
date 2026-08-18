@@ -49,6 +49,10 @@ function renderView(over: Partial<Parameters<typeof LotesView>[0]> = {}) {
       onRemoverLote={vi.fn()}
       onAjustarCapacidade={vi.fn()}
       onDesativarLote={vi.fn()}
+      onAdicionarModalidade={vi.fn()}
+      onRenomearModalidade={vi.fn()}
+      onRemoverModalidade={vi.fn()}
+      podeEditarModalidades
       agora={AGORA}
       {...over}
     />,
@@ -58,7 +62,7 @@ function renderView(over: Partial<Parameters<typeof LotesView>[0]> = {}) {
 describe('LotesView', () => {
   it('mostra o preço vigente e o lote ativo derivados do kernel', () => {
     renderView();
-    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
     // Preço vigente = preço do lote ativo (L2 = R$ 75,00) — RN-301. Aparece no
     // resumo da modalidade E na linha do L2 (consistência derivada do kernel).
     expect(within(bloco).getByText(/Preço vigente/i)).toBeInTheDocument();
@@ -81,18 +85,18 @@ describe('LotesView', () => {
 
   it('modalidade sem lote mostra EmptyState e ainda permite Novo lote', () => {
     renderView({ lotes: [] });
-    expect(screen.getByText(/Sem lote configurado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sem preço configurado/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Novo lote/i })).toBeInTheDocument();
   });
 
   it('estado de carregamento mostra skeleton', () => {
     renderView({ loading: true });
-    expect(screen.getByRole('status', { name: /Carregando lotes/i })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /Carregando modalidades/i })).toBeInTheDocument();
   });
 
   it('bloco de modalidade desenha a superfície pelo Card canônico (família D-1008-R11)', () => {
     renderView();
-    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
     // A receita completa do Card (sob o vidro, o bg cru é filme invisível —
     // ver superficie-cartoes.test.tsx dos kits para a prova na cascata real).
     expect(bloco.className).toContain('bg-card');
@@ -110,7 +114,7 @@ describe('LotesView', () => {
   // -------------------------------------------------------------------------
   it('mostra Vendidos · Disponíveis · Total em três colunas (D-1008-R12)', () => {
     renderView();
-    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
     expect(within(bloco).getByRole('columnheader', { name: 'Vendidos' })).toBeInTheDocument();
     expect(within(bloco).getByRole('columnheader', { name: 'Disponíveis' })).toBeInTheDocument();
     expect(within(bloco).getByRole('columnheader', { name: 'Total' })).toBeInTheDocument();
@@ -136,7 +140,7 @@ describe('LotesView', () => {
   it('oferece Desativar no lote vigente, mesmo com data e hora dentro da janela', async () => {
     const onDesativarLote = vi.fn();
     renderView({ onDesativarLote });
-    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
     const linhas = within(bloco).getAllByRole('row');
     // L2 é o lote ATIVO no instante de referência (fev–abr, agora = 01/03).
     const desativarL2 = within(linhas[2] as HTMLElement).getByRole('button', {
@@ -149,7 +153,7 @@ describe('LotesView', () => {
 
   it('não oferece Desativar em lote que já não vende (esgotado ou agendado)', () => {
     renderView();
-    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
     const linhas = within(bloco).getAllByRole('row');
     // L1 esgotado (150/150) e L3 agendado (janela em abril) não têm venda a
     // parar — e o rótulo do ícone DIZ isso (a razão do bloqueio é o nome
@@ -164,5 +168,95 @@ describe('LotesView', () => {
         name: 'Desativar lote Lote 3 (já não está vendendo)',
       }),
     ).toBeDisabled();
+  });
+});
+
+// ===========================================================================
+// S316-T4 · Modalidade é o pai, lote é o filho (leva 22 do dono, 17/08)
+// ===========================================================================
+
+describe('LotesView · a modalidade ganha dono (S316-T4)', () => {
+  it('⛔ "Adicionar modalidade" existe no topo — a queixa que o dono repetiu três vezes', async () => {
+    const onAdicionarModalidade = vi.fn();
+    renderView({ onAdicionarModalidade });
+    const botao = screen.getByRole('button', { name: /^Adicionar modalidade$/i });
+    await userEvent.click(botao);
+    expect(onAdicionarModalidade).toHaveBeenCalledTimes(1);
+  });
+
+  it('cada bloco de modalidade oferece renomear e remover', async () => {
+    const onRenomearModalidade = vi.fn();
+    const onRemoverModalidade = vi.fn();
+    renderView({ onRenomearModalidade, onRemoverModalidade });
+    await userEvent.click(screen.getByRole('button', { name: 'Renomear a modalidade 5k' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover a modalidade 5k' }));
+    expect(onRenomearModalidade).toHaveBeenCalledWith('5k');
+    expect(onRemoverModalidade).toHaveBeenCalledWith('5k');
+  });
+
+  it('modalidade sem lote é o CONVITE, não a linha vazia', async () => {
+    const onNovoLote = vi.fn();
+    renderView({ lotes: [], onNovoLote });
+    // O bloco existe (o pai passa a ser desenhado), diz que não há preço, e
+    // traz o botão que resolve.
+    expect(screen.getByRole('region', { name: /^Modalidade 5k$/i })).toBeInTheDocument();
+    expect(screen.getByText(/Sem preço configurado/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Configurar o primeiro lote/i }));
+    expect(onNovoLote).toHaveBeenCalledWith('5k');
+  });
+
+  it('evento sem modalidade nenhuma convida a criar a primeira, em vez de mandar embora', async () => {
+    const onAdicionarModalidade = vi.fn();
+    renderView({ evento: mkEvento({ modalidades: [] }), lotes: [], onAdicionarModalidade });
+    await userEvent.click(
+      screen.getByRole('button', { name: /Adicionar a primeira modalidade/i }),
+    );
+    expect(onAdicionarModalidade).toHaveBeenCalled();
+    // ⛔ O texto que declarava a lacuna morreu no mesmo commit que a fecha.
+    expect(screen.queryByText(/o painel ainda não edita essa lista/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/não é editável depois de criado/i)).not.toBeInTheDocument();
+  });
+
+  it('⛔ COMPAT: lote cuja modalidade saiu da lista VOLTA a aparecer, marcado', () => {
+    // A tela antiga filtrava os lotes por `evento.modalidades` e este lote
+    // sumia sem erro e sem aviso, com o preço dele ainda no banco e a Rule
+    // `modalidadeExisteNoEventoPai` impedindo qualquer conserto.
+    renderView({
+      evento: mkEvento({ modalidades: ['5k'] }),
+      lotes: [...LOTES_5K, mkLote({ modalidade: '21k', ordem: 1 })],
+    });
+    const orfa = screen.getByRole('region', { name: /^Modalidade 21k$/i });
+    expect(within(orfa).getByText(/Fora da lista do evento/i)).toBeInTheDocument();
+    expect(within(orfa).getByText(/nenhuma edição destes lotes é gravada/i)).toBeInTheDocument();
+    // O lote órfão está VISÍVEL, com o preço dele.
+    expect(within(orfa).getByText('Lote 1')).toBeInTheDocument();
+    // Renomear/remover não são oferecidos num nome que não está na lista.
+    expect(
+      within(orfa).queryByRole('button', { name: 'Renomear a modalidade 21k' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('evento COM venda: a lista congela, e a tela DIZ por quê (RN-500 · RN-487)', () => {
+    renderView({ podeEditarModalidades: false });
+    expect(screen.queryByRole('button', { name: /^Adicionar modalidade$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Renomear a modalidade 5k' })).not.toBeInTheDocument();
+    expect(screen.getByText(/inclusive PIX pendente/i)).toBeInTheDocument();
+    // E o que continua podendo ser feito segue à mão.
+    expect(screen.getByRole('button', { name: /Novo lote/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Editar lote / }).length).toBe(3);
+  });
+
+  it('⛔ L-021: editar um lote continua custando UM toque, como antes', () => {
+    // A régua da leva 22: agrupar por modalidade não pode custar um toque a
+    // mais no caminho frequente. O botão de editar segue direto na linha do
+    // lote — nada foi colapsado, nada virou acordeão.
+    renderView();
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
+    const linhas = within(bloco).getAllByRole('row');
+    const editarL2 = within(linhas[2] as HTMLElement).getByRole('button', {
+      name: 'Editar lote Lote 2',
+    });
+    expect(editarL2).toBeVisible();
+    expect(editarL2).toBeEnabled();
   });
 });

@@ -25,9 +25,11 @@ const mocks = vi.hoisted(() => ({
   useLotes: vi.fn(),
   useLoteMutations: vi.fn(),
   useAjustarCapacidadeLote: vi.fn(),
+  useEditarModalidadesEvento: vi.fn(),
   salvar: vi.fn(),
   remover: vi.fn(),
   ajustarMutateAsync: vi.fn(),
+  modalidadesMutateAsync: vi.fn(),
 }));
 
 vi.mock('../../_data/lotes', () => ({
@@ -36,6 +38,7 @@ vi.mock('../../_data/lotes', () => ({
 }));
 vi.mock('../../../../lib/query/mutations', () => ({
   useAjustarCapacidadeLote: mocks.useAjustarCapacidadeLote,
+  useEditarModalidadesEvento: mocks.useEditarModalidadesEvento,
 }));
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -66,7 +69,7 @@ function mkLote(over: Partial<Lote> & { modalidade: string; ordem: number }): Lo
 
 const EVENTO = mkEvento({ modalidades: ['5k'] });
 
-function renderPage(lotes: Lote[]): void {
+function renderPage(lotes: Lote[], evento = EVENTO): void {
   mocks.useLotes.mockReturnValue({ data: lotes, loading: false, error: null });
   mocks.useLoteMutations.mockReturnValue({
     tenantId: 'castelo',
@@ -74,11 +77,14 @@ function renderPage(lotes: Lote[]): void {
     remover: mocks.remover,
   });
   mocks.useAjustarCapacidadeLote.mockReturnValue({ mutateAsync: mocks.ajustarMutateAsync });
+  mocks.useEditarModalidadesEvento.mockReturnValue({
+    mutateAsync: mocks.modalidadesMutateAsync,
+  });
   render(
     <ToastProvider>
       <MemoryRouter initialEntries={['/eventos/x/lotes']}>
         <Routes>
-          <Route element={<Outlet context={{ evento: EVENTO }} />}>
+          <Route element={<Outlet context={{ evento }} />}>
             <Route path="/eventos/:slug/lotes" element={<LotesPage />} />
           </Route>
         </Routes>
@@ -158,5 +164,118 @@ describe('LotesPage · desativar lote (frente E)', () => {
     // Nada foi gravado só por abrir a confirmação.
     expect(mocks.salvar).not.toHaveBeenCalled();
     expect(mocks.ajustarMutateAsync).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// S316-T4 · as três operações de modalidade, pela porta única
+// ===========================================================================
+
+/** Evento SEM venda — a lista de modalidades só é editável aqui (RN-500). */
+const EVENTO_SEM_VENDA = mkEvento({ modalidades: ['5k', '21k'], qtdInscritos: 0 });
+
+describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.salvar.mockResolvedValue(undefined);
+    mocks.ajustarMutateAsync.mockResolvedValue({});
+    mocks.modalidadesMutateAsync.mockResolvedValue({
+      eventoId: 'meia-floripa-2026',
+      operacao: 'acrescentar',
+      alterado: true,
+      modalidades: ['5k', '21k', '10k'],
+    });
+  });
+
+  it('acrescenta pela porta única, mandando o NOME e o motivo — nunca a lista', async () => {
+    const usuario = userEvent.setup({ delay: null });
+    renderPage([], EVENTO_SEM_VENDA);
+
+    await usuario.click(screen.getByRole('button', { name: /^Adicionar modalidade$/i }));
+    const dialogo = await screen.findByRole('dialog');
+    await usuario.type(within(dialogo).getByLabelText(/Nome da modalidade/i), '10k');
+    await usuario.type(within(dialogo).getByLabelText(/^Motivo$/i), 'faltou a de 10');
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Adicionar modalidade' }));
+
+    await waitFor(() => expect(mocks.modalidadesMutateAsync).toHaveBeenCalledTimes(1));
+    const [input] = mocks.modalidadesMutateAsync.mock.calls[0] as [Record<string, unknown>];
+    expect(input).toMatchObject({
+      operacao: 'acrescentar',
+      modalidade: '10k',
+      motivo: 'faltou a de 10',
+    });
+    // ⛔ RN-505: a lista NÃO viaja no payload. A projeção degradada devolve
+    // `modalidades: []`, e mandá-la apagaria as boas passando em todas as Rules.
+    expect(input).not.toHaveProperty('modalidades');
+    expect(input).not.toHaveProperty('percursos');
+  });
+
+  it('renomear manda o nome atual e o novo, e conta o que migrou junto', async () => {
+    mocks.modalidadesMutateAsync.mockResolvedValue({
+      eventoId: 'meia-floripa-2026', operacao: 'renomear', alterado: true,
+      modalidades: ['5k', 'Meia maratona'],
+      migracao: { lotes: 2, kits: 1, campanhas: 0 },
+    });
+    const usuario = userEvent.setup({ delay: null });
+    renderPage([], EVENTO_SEM_VENDA);
+
+    await usuario.click(screen.getByRole('button', { name: 'Renomear a modalidade 21k' }));
+    const dialogo = await screen.findByRole('dialog');
+    const campo = within(dialogo).getByLabelText(/Novo nome/i);
+    await usuario.clear(campo);
+    await usuario.type(campo, 'Meia maratona');
+    await usuario.type(within(dialogo).getByLabelText(/^Motivo$/i), 'nome comercial');
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Renomear modalidade' }));
+
+    await waitFor(() => expect(mocks.modalidadesMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mocks.modalidadesMutateAsync.mock.calls[0]?.[0]).toMatchObject({
+      operacao: 'renomear',
+      modalidade: '21k',
+      novoNome: 'Meia maratona',
+    });
+  });
+
+  it('⛔ a recusa NOMEADA da remoção fica no diálogo, com os nomes de quem impede', async () => {
+    // O defeito de endereço que a review da SEAL-LOTES corrigiu (`2a97a592`)
+    // não pode renascer: recusa não vira "falha ao salvar" nem toast que some.
+    const recusa = Object.assign(
+      new Error(
+        'Ainda não dá para remover "21k": 2 lotes (Lote 1, Lote 2) e 1 kit (Kit Prata) ' +
+          'apontam para ela. Apague ou mude cada um e remova depois.',
+      ),
+      { code: 'functions/failed-precondition' },
+    );
+    mocks.modalidadesMutateAsync.mockRejectedValue(recusa);
+    const usuario = userEvent.setup({ delay: null });
+    renderPage([], EVENTO_SEM_VENDA);
+
+    await usuario.click(screen.getByRole('button', { name: 'Remover a modalidade 21k' }));
+    const dialogo = await screen.findByRole('dialog');
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Remover modalidade' }));
+
+    await waitFor(() => expect(dialogo).toHaveTextContent(/Lote 1/));
+    expect(dialogo).toHaveTextContent(/Lote 2/);
+    expect(dialogo).toHaveTextContent(/Kit Prata/);
+    // O diálogo continua ABERTO: a pessoa precisa ler os nomes.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('a confirmação de remoção nomeia a consequência ANTES do gesto (RN-500)', async () => {
+    const usuario = userEvent.setup({ delay: null });
+    renderPage([], EVENTO_SEM_VENDA);
+    await usuario.click(screen.getByRole('button', { name: 'Remover a modalidade 5k' }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(dialogo).toHaveTextContent(/sai da lista do evento/i);
+    // Evento publicado: a consequência pública é dita, não presumida.
+    expect(dialogo).toHaveTextContent(/página pública/i);
+    // Nada gravado só por abrir.
+    expect(mocks.modalidadesMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('evento COM venda não oferece nenhuma das três operações', () => {
+    renderPage([]); // EVENTO padrão tem 453 inscritos
+    expect(screen.queryByRole('button', { name: /^Adicionar modalidade$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Renomear a modalidade/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Remover a modalidade/ })).not.toBeInTheDocument();
   });
 });

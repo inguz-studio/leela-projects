@@ -255,9 +255,36 @@ export function loteImutavel(lote: Pick<Lote, 'vendidos'>): boolean {
   return lote.vendidos > 0;
 }
 
-/** loteId determinístico/legível na criação (mesmo padrão do seed). @pure */
-export function novoLoteId(modalidade: string, ordem: number): string {
-  return `${modalidade}-lote-${ordem}`;
+/**
+ * loteId de um lote NOVO — chave OPACA (S316-T6 · E04).
+ *
+ * A chave era `${modalidade}-lote-${ordem}`, e o nome da modalidade morava
+ * DENTRO da chave primária. Isso vira resíduo assim que a modalidade pode ser
+ * renomeada (RN-501): a renomeação migra o CAMPO `modalidade` dos lotes e
+ * deixa o docId com o nome velho — cosmético, porque nenhuma tela mostra docId
+ * de lote, mas é dívida.
+ *
+ * ⛔ A dívida NÃO é paga renomeando documento existente. Apagar e recriar o
+ * lote moveria uma chave primária que `pedidos/{id}.itens[].loteId` referencia
+ * e por onde a virada reconta (`functions/src/eventos/virarLote.ts`). Hoje
+ * seria inofensivo, porque a operação só existe antes da primeira venda — e é
+ * exatamente por isso que construí-la assim é pior: ensinaria ao código um
+ * gesto que fica errado no dia em que alguém relaxar a fronteira.
+ *
+ * Então a chave opaca vale só para quem NASCER daqui em diante. Os lotes
+ * antigos seguem com o nome dentro do id, legíveis e intocados.
+ *
+ * A `modalidade` continua no parâmetro por compatibilidade de assinatura e
+ * porque ela é o que dá contexto ao prefixo legível; ela não entra mais no id.
+ * @pure
+ */
+export function novoLoteId(_modalidade: string, ordem: number): string {
+  const c = globalThis.crypto;
+  const sufixo =
+    c && typeof c.randomUUID === 'function'
+      ? c.randomUUID()
+      : `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  return `lote-${ordem}-${sufixo}`;
 }
 
 /** Próxima `ordem` sugerida para uma modalidade (max + 1, mínimo 1). @pure */

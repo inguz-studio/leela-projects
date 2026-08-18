@@ -94,3 +94,26 @@ describe('RN-399 — a aba diz credenciamento, o identificador não muda', () =>
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// S316-T7 · Lotes vira Modalidades (leva 22 · RN-399)
+// ---------------------------------------------------------------------------
+
+describe('S316-T7 — a aba diz Modalidades, o identificador e a rota não mudam', () => {
+  it('a SubNav mostra "Modalidades", nunca "Lotes"', () => {
+    const tabs = eventoSubNavTabs(SLUG, 'overview');
+    const aba = tabs.find((t) => t.id === 'lotes');
+    expect(aba?.label).toBe('Modalidades');
+    expect(tabs.map((t) => t.label)).not.toContain('Lotes');
+  });
+
+  it('o id e o href continuam os mesmos — endereço colado antes segue valendo', () => {
+    // Mesma régua da RN-399 aplicada em Credenciamento e em Kits (RN-572):
+    // muda o que a pessoa LÊ, nunca o identificador. Sem redirect legado
+    // porque nada mudou de endereço.
+    const tabs = eventoSubNavTabs(SLUG, 'lotes');
+    const aba = tabs.find((t) => t.id === 'lotes');
+    expect(aba?.href).toBe('/eventos/' + SLUG + '/lotes');
+    expect(abaAtiva('/eventos/' + SLUG + '/lotes', SLUG)).toBe('lotes');
+  });
+});

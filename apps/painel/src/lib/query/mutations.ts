@@ -47,8 +47,11 @@ import {
   transicaoAprovisionamento,
   transicionarParceria,
   transitionTenant,
+  editarModalidadesEvento,
   type AjustarCapacidadeLoteInput,
   type AjustarCapacidadeLoteResult,
+  type EditarModalidadesEventoInput,
+  type EditarModalidadesEventoResult,
   type AtualizarConfiguracoesEventoInput,
   type AtualizarExigenciasRegulamentoInput,
   type ConvidarMembroEquipeInput,
@@ -268,6 +271,39 @@ export function useAjustarCapacidadeLote(
     mutationFn: (input) => ajustarCapacidadeLote(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
+    },
+  });
+}
+
+/**
+ * Acrescenta, renomeia ou remove uma modalidade do evento (S316-T1/T2/T3 ·
+ * RN-500/501/502) pela porta única `editarModalidadesEvento`.
+ *
+ * A invalidação é LARGA de propósito, e é a renomeação que a dimensiona: um
+ * rename migra `evento.modalidades`, `evento.percursos`, `Lote.modalidade`,
+ * `Kit.modalidades[]` e `campanha.segmento.referencia` no mesmo commit, então
+ * invalidar só os lotes deixaria o editor de kit e o segmento da campanha
+ * mostrando o nome antigo até a próxima navegação. A família `['eventos']`
+ * cobre lista e detalhe de uma vez (ver o cabeçalho de `keys.ts`).
+ *
+ * A recusa do servidor (`failed-precondition`) sobe INTACTA: ela nomeia cada
+ * lote, kit e campanha que impedem a remoção, e engolir isso num toast
+ * genérico recriaria o defeito de endereço da SEAL-LOTES.
+ */
+export function useEditarModalidadesEvento(
+  eventoId: string,
+): UseMutationResult<
+  EditarModalidadesEventoResult,
+  Error,
+  EditarModalidadesEventoInput
+> {
+  const queryClient = useQueryClient();
+  return useMutation<EditarModalidadesEventoResult, Error, EditarModalidadesEventoInput>({
+    mutationFn: (input) => editarModalidadesEvento(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['eventos'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
+      void queryClient.invalidateQueries({ queryKey: ['kits'] });
     },
   });
 }

@@ -33,7 +33,15 @@ const ABAS: readonly AbaDef[] = [
   { id: 'overview', label: 'Visão geral', segmento: '' },
   { id: 'inscritos', label: 'Inscritos', segmento: 'inscritos' },
   { id: 'kits', label: 'Kits', segmento: 'kits' },
-  { id: 'lotes', label: 'Lotes', segmento: 'lotes' },
+  // S316-T7 (leva 22, 17/08): o RÓTULO vira "Modalidades" — o `id` e o
+  // `segmento` NÃO mudam, pela régua da RN-399 (muda o que a pessoa lê, não o
+  // identificador), a mesma que a RN-572 aplicou em Kits. Endereço colado
+  // continua valendo, os testes da sub-nav afirmam ids e seguem intactos.
+  // ⛔ Este renome só existe porque a S316-T4 subiu junto: chamar a aba de
+  // "Modalidades" sem entregar a edição recriaria o círculo fechado que a
+  // DIAG-PAINEL-LACUNAS pagou para desfazer, com o agravante de o nome
+  // prometer o que a tela não faria.
+  { id: 'lotes', label: 'Modalidades', segmento: 'lotes' },
   { id: 'pagina-vendas', label: 'Página de vendas', segmento: 'pagina-vendas' },
   // E06 (Comunicação) segue E04 (Página de vendas) — ordem canônica, sem reordenar.
   { id: 'comunicacao', label: 'Comunicação', segmento: 'comunicacao' },

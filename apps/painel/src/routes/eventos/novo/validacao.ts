@@ -7,7 +7,7 @@
 // review Onda1 #01).
 //
 // REVISÃO RN-153 (Vitor 2026-07-13): o cadastro deixou de coletar PREÇO de
-// percurso — preços/lotes ficam na aba Lotes (não no cadastro inicial). Os
+// percurso — preços/lotes ficam na aba Modalidades (não no cadastro inicial). Os
 // `percursos` exigidos pelo servidor (min 1, RN-200) passam a ser DERIVADOS da
 // lista estruturada de modalidades no submit (preço 0 = a definir nos lotes).
 // Por isso a validação de percursos saiu daqui; sobra o núcleo de identidade:

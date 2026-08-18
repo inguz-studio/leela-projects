@@ -309,6 +309,27 @@ export {
   validarFaceMinimaVendaPaga,
 } from './eventos/faceMinimaVenda';
 
+// RN-500/501/502 — a lista de modalidades tem dono (E04 · S316, leva 22).
+// Kernel PURO das três operações: mesma recusa na Function, na tela e no teste.
+export type { OperacaoModalidade, ReferenciasDaModalidade } from './eventos/modalidades';
+export {
+  MODALIDADE_NOME_MAX,
+  MODALIDADES_MAX,
+  MSG_MODALIDADES_CONGELADAS,
+  OPERACOES_MODALIDADE,
+  SUGESTOES_MODALIDADE_EVENTO,
+  isOperacaoModalidade,
+  mensagemRecusaRemocao,
+  modalidadesDaTela,
+  modalidadesEditaveis,
+  normalizarNomeModalidade,
+  semReferencias,
+  validarAcrescentarModalidade,
+  validarNomeModalidade,
+  validarRemoverModalidade,
+  validarRenomearModalidade,
+} from './eventos/modalidades';
+
 // Data do evento — dia civil no fuso do produto (fix review Onda1 #01/#02).
 // Fonte ÚNICA da validação hoje-ou-futuro (form + Function) e da conversão
 // date-only → instante; telas formatam pinadas em FUSO_EVENTO.
