@@ -43,7 +43,7 @@ import {
   editarModalidadesEventoCore,
   TIPO_AUDITORIA_MODALIDADES,
 } from '../eventos/editarModalidadesEvento';
-import { AUDITORIA_ACESSOS_COL } from '../finance/getBankDetailsForPayout';
+import { AUDITORIA_ACESSOS_COL } from '../shared/auditoriaAcessos';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');

@@ -90,7 +90,7 @@ import {
 } from '@leela/core';
 import { assertTenantOwner } from '../finance/atores';
 import { assertTenantAtivo, type EventoCaller } from './criarEvento';
-import { AUDITORIA_ACESSOS_COL } from '../finance/getBankDetailsForPayout';
+import { AUDITORIA_ACESSOS_COL } from '../shared/auditoriaAcessos';
 
 type Db = admin.firestore.Firestore;
 

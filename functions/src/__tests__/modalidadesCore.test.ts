@@ -42,7 +42,7 @@ import {
   validarEditarModalidadesInput,
   TIPO_AUDITORIA_MODALIDADES,
 } from '../eventos/editarModalidadesEvento';
-import { AUDITORIA_ACESSOS_COL } from '../finance/getBankDetailsForPayout';
+import { AUDITORIA_ACESSOS_COL } from '../shared/auditoriaAcessos';
 
 type Raw = Record<string, unknown>;
 
