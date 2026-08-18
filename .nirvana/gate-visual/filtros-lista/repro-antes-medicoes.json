@@ -1,0 +1,980 @@
+[
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 113
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      416,
+      445,
+      472
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 416,
+          "w": 220,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 472,
+          "w": 220,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 105
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      416,
+      441,
+      472
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 416,
+          "w": 258,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Modelo: Todos",
+        "box": {
+          "x": 460,
+          "y": 472,
+          "w": 141,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 161
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      416,
+      469,
+      472,
+      520
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 416,
+          "w": 367,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Canal: Todos",
+        "box": {
+          "x": 460,
+          "y": 472,
+          "w": 132,
+          "h": 32
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 520,
+          "w": 367,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 348,
+      "w": 1288,
+      "h": 49
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      348
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 128,
+          "y": 348,
+          "w": 138,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 642,
+      "w": 720,
+      "h": 143
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      642,
+      671,
+      698
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 642,
+          "w": 220,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 698,
+          "w": 220,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 135
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      620,
+      645,
+      676
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 620,
+          "w": 258,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Modelo: Todos",
+        "box": {
+          "x": 356,
+          "y": 676,
+          "w": 141,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 191
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      620,
+      673,
+      676,
+      724
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 620,
+          "w": 367,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Canal: Todos",
+        "box": {
+          "x": 356,
+          "y": 676,
+          "w": 132,
+          "h": 32
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 724,
+          "w": 367,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 452,
+      "w": 720,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      452
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 452,
+          "w": 138,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 777,
+      "w": 327,
+      "h": 193
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      777,
+      827,
+      883
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 827,
+          "w": 220,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 883,
+          "w": 220,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 737,
+      "w": 327,
+      "h": 185
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      737,
+      787,
+      843
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 787,
+          "w": 258,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Modelo: Todos",
+        "box": {
+          "x": 24,
+          "y": 843,
+          "w": 141,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 755,
+      "w": 327,
+      "h": 241
+    },
+    "buscaW": 320,
+    "fileiras": 4,
+    "ys": [
+      755,
+      805,
+      861,
+      909
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 805,
+          "w": 327,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Canal: Todos",
+        "box": {
+          "x": 24,
+          "y": 861,
+          "w": 132,
+          "h": 32
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 909,
+          "w": 327,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "brasa",
+    "temaAplicado": "brasa",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 576,
+      "w": 327,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      576
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 576,
+          "w": 138,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 113
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      416,
+      445,
+      472
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 416,
+          "w": 217,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 472,
+          "w": 217,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 105
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      416,
+      441,
+      472
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 416,
+          "w": 259,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Modelo: Todos",
+        "box": {
+          "x": 460,
+          "y": 472,
+          "w": 142,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 416,
+      "w": 1288,
+      "h": 161
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      416,
+      469,
+      472,
+      520
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 416,
+          "w": 367,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Canal: Todos",
+        "box": {
+          "x": 460,
+          "y": 472,
+          "w": 133,
+          "h": 32
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 460,
+          "y": 520,
+          "w": 367,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "desktop",
+    "barra": {
+      "x": 128,
+      "y": 348,
+      "w": 1288,
+      "h": 49
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      348
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 128,
+          "y": 348,
+          "w": 137,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 642,
+      "w": 720,
+      "h": 143
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      642,
+      671,
+      698
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 642,
+          "w": 217,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 698,
+          "w": 217,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 135
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      620,
+      645,
+      676
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 620,
+          "w": 259,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Modelo: Todos",
+        "box": {
+          "x": 356,
+          "y": 676,
+          "w": 142,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 620,
+      "w": 720,
+      "h": 191
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      620,
+      673,
+      676,
+      724
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 620,
+          "w": 367,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Canal: Todos",
+        "box": {
+          "x": 356,
+          "y": 676,
+          "w": 133,
+          "h": 32
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 356,
+          "y": 724,
+          "w": 367,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "768",
+    "barra": {
+      "x": 24,
+      "y": 452,
+      "w": 720,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      452
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 452,
+          "w": 137,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "membros",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 777,
+      "w": 327,
+      "h": 193
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      777,
+      827,
+      883
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 827,
+          "w": 217,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 883,
+          "w": 217,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "desafios",
+    "controle": true,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 737,
+      "w": 327,
+      "h": 185
+    },
+    "buscaW": 320,
+    "fileiras": 3,
+    "ys": [
+      737,
+      787,
+      843
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 787,
+          "w": 259,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Modelo: Todos",
+        "box": {
+          "x": 24,
+          "y": 843,
+          "w": 142,
+          "h": 32
+        }
+      }
+    ]
+  },
+  {
+    "tela": "comunicados",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 755,
+      "w": 327,
+      "h": 241
+    },
+    "buscaW": 320,
+    "fileiras": 4,
+    "ys": [
+      755,
+      805,
+      861,
+      909
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 805,
+          "w": 327,
+          "h": 40
+        }
+      },
+      {
+        "texto": "Canal: Todos",
+        "box": {
+          "x": 24,
+          "y": 861,
+          "w": 133,
+          "h": 32
+        }
+      },
+      {
+        "texto": "Todos",
+        "box": {
+          "x": 24,
+          "y": 909,
+          "w": 327,
+          "h": 40
+        }
+      }
+    ]
+  },
+  {
+    "tela": "eventos-hub",
+    "controle": false,
+    "tema": "dark-wine",
+    "temaAplicado": "dark-wine",
+    "tamanho": "375",
+    "barra": {
+      "x": 24,
+      "y": 554,
+      "w": 327,
+      "h": 61
+    },
+    "buscaW": null,
+    "fileiras": 1,
+    "ys": [
+      554
+    ],
+    "facetasEmFileiraDeChip": [],
+    "facetasEmLista": [
+      {
+        "texto": "Status: Todos",
+        "box": {
+          "x": 24,
+          "y": 554,
+          "w": 137,
+          "h": 32
+        }
+      }
+    ]
+  }
+]

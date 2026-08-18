@@ -1,0 +1,12 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const logs = [];
+page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`${m.type()}: ${m.text().slice(0,150)}`); });
+await page.goto('http://127.0.0.1:4602/?preview=castelo', { waitUntil: 'domcontentloaded', timeout: 45000 });
+await page.waitForTimeout(20000);
+await page.screenshot({ path: process.argv[2] + '/vg-final.png', fullPage: true });
+console.log('CONSOLE ERRORS/WARNINGS:', logs.slice(0, 10).join(' | ') || 'nenhum');
+const texto = await page.evaluate(() => document.body.innerText.slice(0, 600));
+console.log('TEXTO DA PAGINA:', texto.replace(/\n+/g, ' · ').slice(0, 500));
+await browser.close();
