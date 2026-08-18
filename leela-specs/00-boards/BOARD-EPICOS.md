@@ -1,7 +1,7 @@
 ---
 tags: [leela, kanban, epicos, visao-alto-nivel]
 aliases: [Board de épicos, Visão de épicos, Onde o produto está]
-atualizado: 2026-08-12
+atualizado: 2026-08-17
 ---
 
 # 🗺️ Visão de épicos — onde o produto está
@@ -76,9 +76,12 @@ decisões da leva 3, 4 e 5 (D-1008-R4 a R19) estão em
 | [[LEELA-E01-design-system]] | **S007** | a moldura do cabeçalho para de ser comprimida e o título de página passa a escalar em tablet/mobile | ✅ paga 12/08 (lane `RESPONSIVO-FIX`) — construído, **sem deploy**; sobreposição da Visão Geral morta em 320/375/768 (vazamento 61/61/39 → 0) e H1 40px→32px abaixo de `md` pelo par de tokens `--header-title-size{,-compact}`, que paga o degrau declarado no §4 do handoff-v2 desde 09/08 · ⚠️ 1 decisão no dono: o degrau vale `< md`, então iPad em retrato mantém 40px |
 | [[LEELA-E05-clubs]] | **S113** | a área de clubs para de abandonar quem entra | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
 | [[LEELA-E05-clubs]] | **S114** | o estudo de engajamento ganha o painel desenhado | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
-| [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 |
+| [[LEELA-E05-clubs]] | **S115** | o organizador passa a poder contar os check-ins da comunidade | 📋 **ganha procedência de dono em 17/08** (leva 23: *"a visao de check-ins dentro dos clubs, de maneria separada também"*) — sai do backlog frio; direcional, sem build e sem RN, e o primeiro degrau é o agregado de servidor (T1), não a tela |
 | [[LEELA-E10-marcas]] | **S813** | Marcas vira Parcerias e reúne marcas, assessorias e afiliações | ✅ NO AR 11/08 ~07h (deploy noturno; gate visual do maestro fechado) |
-| [[LEELA-E11-analytics]] | **S825** | a forma de pagamento vira número na análise e no engajamento | 📋 |
+| [[LEELA-E11-analytics]] | **S825** | a forma de pagamento vira número na análise e no engajamento | 📋 **próxima da fila desde 17/08** (leva 25) — dispara quando as 5 lanes daquela noite aterrissarem, acende só no próximo pacote de deploy (é `functions/`), com gate visual da rosca; escopo intacto, mudou a posição |
+| [[LEELA-E01-design-system]] | **S051** | os Insights da Leela mudam do Engajamento para a Visão Geral | 🔄 build em voo (lane VG-INSIGHTS-BUILD, 17/08) · ⛔ 1 vetável no dono (VG-INSIGHTS-1: o bloco do Engajamento fica?) · RN-568 morde — terceira montagem da mesma faixa de aviso, sobe ao DS |
+| [[LEELA-E03-operacao-evento]] | **S052** | a busca do credenciamento passa a carregar o que decide a entrega | 🔄 build em voo (lane CRED-BUSCA-BUILD, 17/08) · **RN-577** · falha achada em uso real; busca aceita CPF, e campo sem fonte nasce ausente e nomeado |
+| [[LEELA-E01-design-system]] | **S053** | a pílula do item selecionado para de estourar a barra mobile | 🔄 build em voo (lane NAVBAR-FIX, 17/08) · defeito da NAV-MOBILE do mesmo dia (`9ad1f3d5`); conserto não entra sem gate visual em 375 |
 | [[LEELA-E19-crm]] | **S1904** | o membro do club e o comprador viram a mesma pessoa | 📋 |
 
 **+2026-08-11: a branch `redesign-engajamento-v2` entrou na main.** Commit de merge `b51cdcd9`,

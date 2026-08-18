@@ -4,6 +4,12 @@
 // ações por passo. Retirar o kit já registra presença (RN-205). Passo de chip
 // suprimido quando usaChip=false (RN-207). Conflito de chip abre ConfirmModal
 // de sobrescrita (§2.15 · RN-206). Escrita SEMPRE via Function (injetada).
+//
+// CRED-BUSCA (17/08): a busca casa CPF além de nome e códigos, a linha de
+// resultado mostra a modalidade (homônimo desempatado antes do clique) e o
+// cabeçalho de três campos virou `CardConferenciaConnected` — o dono achou EM
+// USO que quem credencia não via lote, kit incluso, tamanho nem contato de
+// compra da pessoa parada na frente dele.
 // =============================================================================
 
 import * as React from 'react';
@@ -16,20 +22,23 @@ import {
   Stepper,
   useToast,
 } from '@leela/design-system';
-import type { Evento, Inscrito, ItemKit } from '@leela/core';
+import type { Evento, Inscrito, ItemKit, Kit } from '@leela/core';
 import { chipVinculado, presencaRegistrada } from '@leela/core';
 import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-client';
 import { filtrarInscritos } from '../_lib/inscritosFiltro';
 import { kitInscritoBadge } from '../_lib/kitLabels';
 import { itensDoKit, passoAtual, passosStepper } from '../_lib/balcao';
 import { rotuloSufixo } from '../_lib/gradeTamanhos';
+import { CardConferenciaConnected } from './CardConferenciaConnected';
 
 export interface AtendimentoPanelProps {
   evento: Evento;
-  /** Pool de inscritos para a busca por nome. */
+  /** Pool de inscritos para a busca por nome, código ou CPF. */
   inscritos: Inscrito[];
   /** Catálogo de itens do evento — compõe o checklist do kit (S205 · RN-215). */
   itensKit: ItemKit[];
+  /** Kits do evento — o card de conferência lê "o que está incluso" daqui. */
+  kits: Kit[];
   onVincular: (
     inscritoId: string,
     chip: string,
@@ -44,6 +53,7 @@ export function AtendimentoPanel({
   evento,
   inscritos,
   itensKit,
+  kits,
   onVincular,
   onRegistrar,
   onAtendido,
@@ -168,17 +178,10 @@ export function AtendimentoPanel({
         onSelecionar={selecionar}
       />
 
-      <header className="flex items-center justify-between gap-[var(--spacing-3)]">
-        <div className="flex flex-col gap-[var(--spacing-1)]">
-          <span className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            {atual.atletaNome}
-          </span>
-          <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            {atual.modalidade || '—'}
-          </span>
-        </div>
-        <Badge variant={kit.variant}>{kit.label}</Badge>
-      </header>
+      {/* O card de conferência ocupa o lugar do cabeçalho antigo (nome +
+          modalidade + selo): ele já carrega os três e mais o que faltava para
+          o operador conferir quem está na frente dele. */}
+      <CardConferenciaConnected eventoId={evento.id} inscrito={atual} kits={kits} />
 
       {/* QA m3: conclusão REAL por passo — a escrita do kit acontece no
           fechamento (RN-205), então o ✓ segue os carimbos do inscrito, nunca
@@ -265,7 +268,11 @@ function BuscaAtleta({
     <div className="relative flex flex-col gap-[var(--spacing-2)]">
       <SearchInput
         aria-label="Buscar atleta"
-        placeholder="Nome do atleta ou dorsal"
+        // O placeholder anterior prometia "dorsal", que a busca nunca casou, e
+        // calava as três chaves que ela casa de verdade. Quem opera o balcão
+        // precisa SABER que pode digitar o CPF — capacidade que ninguém
+        // descobre por tentativa com a fila andando.
+        placeholder="Nome, CPF ou código"
         value={busca}
         onChange={(e) => onBusca(e.target.value)}
         shortcutLabel={null}
@@ -278,9 +285,19 @@ function BuscaAtleta({
               <button
                 type="button"
                 onClick={() => onSelecionar(i)}
-                className="w-full rounded-[var(--radius-sm)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-left text-[length:var(--font-size-sm)] text-[var(--text-primary)] hover:bg-[var(--action-ghost-hover)]"
+                className="flex w-full flex-col gap-[var(--spacing-1)] rounded-[var(--radius-sm)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-left hover:bg-[var(--action-ghost-hover)]"
               >
-                {i.atletaNome}
+                <span className="text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
+                  {i.atletaNome}
+                </span>
+                {/* A modalidade desempata homônimo ANTES do clique. Fila de
+                    balcão tem Marina Silva no 5k e Marina Silva no 21k, e o
+                    operador só descobria a troca depois de abrir a ficha. */}
+                {i.modalidade && (
+                  <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+                    {i.modalidade}
+                  </span>
+                )}
               </button>
             </li>
           ))}

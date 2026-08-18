@@ -349,14 +349,19 @@ export function InscritosView({
         label="inscritos"
         search={
           /*
-            RN-475: o rótulo nomeia os TRÊS campos que a caixa casa, porque
+            RN-475: o rótulo nomeia os QUATRO campos que a caixa casa, porque
             quem recebe um `PED-` no telefone precisa saber que ele serve aqui —
             a busca já casa o código da compra (espelho no inscrito), e busca
             que ninguém sabe que existe não é busca.
+
+            CRED-BUSCA (17/08): o CPF entrou no filtro compartilhado
+            (`filtrarInscritos`) para o balcão, e esta tela herdou a capacidade
+            no mesmo ato. O rótulo entra junto — herdar a busca e não anunciar é
+            a mesma omissão que a RN-475 corrigiu.
           */
           <SearchInput
-            aria-label="Buscar atleta pelo nome, código do ingresso ou código da compra"
-            placeholder="Buscar por nome ou código"
+            aria-label="Buscar atleta pelo nome, CPF, código do ingresso ou código da compra"
+            placeholder="Buscar por nome, CPF ou código"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="w-[var(--sidebar-width)] max-w-full"

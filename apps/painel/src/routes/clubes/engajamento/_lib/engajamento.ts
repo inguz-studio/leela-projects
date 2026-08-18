@@ -23,6 +23,7 @@
 // =============================================================================
 
 import { PILARES, type Clube, type Desafio, type Membro, type Pilar } from '@leela/core';
+import type { InsightDaLeela } from '../../../../components/insights';
 
 // ---------------------------------------------------------------------------
 // Rótulos (vocabulário do produto, não string solta na tela)
@@ -330,34 +331,12 @@ export function resumirModalidades(
 // ---------------------------------------------------------------------------
 
 /**
- * Tom do insight. `atencao` é o que está pesando contra a comunidade agora;
- * `oportunidade` é o que está sobre a mesa e ninguém pegou. São os dois tons
- * do template do dono (l.1484), e não existe um terceiro: um insight que não
- * pede ação nem abre porta é uma frase decorativa.
+ * O tipo do insight mora em `components/insights.ts` desde a leva 23: a Visão
+ * geral monta a MESMA anatomia, e tipo escrito duas vezes é como o número de
+ * uma tela começa a divergir do da outra (RN-568). O que continua sendo desta
+ * tela é a CONTA — a peça é comum, a derivação nunca.
  */
-export type TomDoInsight = 'atencao' | 'oportunidade';
-
-/**
- * Uma leitura automática dos números DESTE recorte.
- *
- * O `caminho` não é enfeite, é o que torna o bloco legal sob a RN-573. Um
- * insight é, por construção, um número que já está desenhado mais abaixo na
- * mesma tela — e a regra-mãe diz que aparição fora da casa do dado é "resumo
- * COM CAMINHO, nunca cópia". Então todo insight carrega a âncora da casa do
- * fato, e o papel distinto fica DECLARADO: o gráfico responde "como isto se
- * distribui", o insight responde "o que nisso pede ação agora".
- */
-export interface InsightDaLeela {
-  id: string;
-  tom: TomDoInsight;
-  tag: string;
-  titulo: string;
-  detalhe: string;
-  /** `id` do bloco que é a casa do fato — o destino do caminho. */
-  ancora: string;
-  /** Rótulo do link que leva à casa. */
-  caminho: string;
-}
+export type { InsightDaLeela, TomDoInsight } from '../../../../components/insights';
 
 /**
  * Os insights que o dado de HOJE sustenta, derivação por derivação.
@@ -393,7 +372,7 @@ export function derivarInsights(
       // atividade da pessoa, afirma que nada foi registrado desde a entrada.
       detalhe:
         'Parado é quem entrou há 30 dias ou mais e não teve nenhum registro de atividade desde então. A distribuição inteira está na situação dos membros.',
-      ancora: 'situacao-dos-membros',
+      destino: { tipo: 'ancora', id: 'situacao-dos-membros' },
       caminho: 'Ver situação dos membros',
     });
   }
@@ -408,7 +387,7 @@ export function derivarInsights(
       titulo: `${formatInteiro(semEvento)} de ${formatInteiro(totalDesafios)} desafios não apontam para um evento`,
       detalhe:
         'Vincular um desafio a um evento seu transforma a atividade da comunidade em preparação para ele. É intenção declarada no desafio, não inscrição confirmada.',
-      ancora: 'ponte-com-eventos',
+      destino: { tipo: 'ancora', id: 'ponte-com-eventos' },
       caminho: 'Ver a ponte com eventos',
     });
   }

@@ -1107,3 +1107,56 @@ ajustar elevação ou superfície do tema — nunca devolver a borda.
 
 **Onde aterrissa:** onda A da `02-rodadas/2026-08-17-leva22/04-fila-em-ondas.md` (A1 e A2), e
 o cânone `03-canon/canone-de-componentes.md` ganha a linha do padrão terciário na onda B.
+
+## Delta os Insights mudam de casa e a pílula da barra mobile estoura (REGISTRO-LEVA23 · levas 23 e 24 · 2026-08-17, noite)
+
+> Rodada `02-rodadas/2026-08-17-decisoes-dono/` §23.1 e §Leva 24. **Nenhuma RN nova aqui.**
+> ⛔ Nada construído por esta lane: builds nas lanes VG-INSIGHTS-BUILD e NAVBAR-FIX.
+
+### A casa dos Insights da Leela é a Visão Geral
+
+Ordem direta do dono, na íntegra: *"Já falei para enriqquecermos a visao geral, e os insights da
+leela devem estar lá."* O bloco vai para `apps/painel/src/routes/overview/`, **reusando a peça**
+que a lane ENG-INSIGHTS criou horas antes em vez de clonar a montagem.
+
+⚠️ **A RN-568 morde aqui, e não é discricionário.** `AlertsPanel`, o bloco do Engajamento e este
+são a **terceira** montagem da mesma anatomia de faixa de aviso, e a regra diz que na terceira a
+composição sobe ao design system em vez de virar receita de tela. A peça generaliza; ela não é
+copiada para uma rota nova.
+
+**O que fica em aberto é o destino do bloco antigo**, não a mudança de casa. Manter os dois põe a
+mesma faixa em duas telas que o mesmo organizador abre no mesmo dia, que é o caso que a **RN-573**
+chama de cópia sem papel declarado; apagar joga fora trabalho que funciona, com dois insights de
+dado real e recorte por club. Vira o item **VG-INSIGHTS-1** no painel do dono, com default
+proposto.
+
+⛔ **Esta seção nasce de uma falha de captura, e a confissão está escrita na rodada.** A instrução
+de enriquecer a Visão Geral não existia em registro nenhum, e o protótipo que o dono mandou em
+09/08 (`Visao Geral v3.dc.html`) tem **zero ocorrências** de "insight" — o bloco só vive no
+`engajamento-referencia.dc.html`, que foi o que a ENG-INSIGHTS leu e obedeceu. **Não houve
+desobediência de spec**; o que morreu foi a fala que corrigia o material. A prática nova, barata e
+vinculante: **protótipo que chega vira registro do que ele cobre e do que ele não cobre**, no ato.
+
+### A pílula do item selecionado estoura os limites da barra inferior
+
+Defeito, não vetável, e nasceu no mesmo dia. Na íntegra: *"a responsividade do mobile esta
+quebrando o select de menu (selecionado) da aba principal, fazendo o componente de menu como
+botao de aba selecionada quebrar e ulrtapassar os limites do componente da menu bar, que está
+horizontal no canto inferior."*
+
+O `BottomNav` foi mergeado horas antes (`9ad1f3d5`, lane NAV-MOBILE, respondendo à leva 20), e o
+indicador do selecionado é **um elemento que viaja**, medido em runtime por
+`offsetLeft`/`offsetWidth` — mesma mecânica do pill vertical do rail que a D-1008-R14 pediu, e a
+**única peça da barra cujo tamanho não vem do CSS**.
+
+**O registro afirma o sintoma e não chuta a causa:** é responsividade pelas palavras dele, aparece
+no **selecionado** e não nos outros três. A lane mede no viewport em que ele viu, antes de mexer.
+
+⛔ **Duas proibições para quem consertar.** A barra **não** perde o indicador deslizante para calar
+o defeito — é decisão de desenho ratificada. E o conserto **não** entra sem gate visual em 375: o
+gate da S046 já estava pendente do maestro com sete telas, e este defeito é a prova de que prova
+estática não bastava ali.
+
+**Um fato de processo, sem drama:** a peça atravessou 21 testes e o gate de código com o defeito
+dentro. Não é falha de disciplina de teste — é o que este projeto já sabe desde o incidente de
+10/08, que gate de código não prova tela.

@@ -1,6 +1,7 @@
 // =============================================================================
 // Filtragem pura da lista de inscritos (S203-T2 · §2.5/§2.7).
-// Busca por nome (case/acento-insensível) + filtros por status/kit/modalidade.
+// Busca por nome (case/acento-insensível), código do ingresso, código da compra
+// ou CPF (máscara normalizada) + filtros por status/kit/modalidade.
 // Sem React/DOM — 100% testável. A tela pagina o resultado (18/página).
 // =============================================================================
 
@@ -9,6 +10,7 @@ import {
   STATUS_INSCRITO,
   normalizarCodigoIngresso,
   normalizarCodigoPedido,
+  normalizarCpf,
 } from '@leela/core';
 
 export interface FiltroInscritos {
@@ -79,12 +81,56 @@ export function codigoPedidoCasaBusca(
 }
 
 /**
+ * O texto digitado é PLAUSIVELMENTE um CPF?
+ *
+ * Só dígitos e a pontuação da máscara (`.`, `-`, espaço) — o mesmo recorte que
+ * `cpfValido` usa no core para recusar lixo. Sem esta guarda, `normalizarCpf`
+ * ("Ana 123") devolveria "123" e um NOME com número viraria busca de CPF.
+ * @pure
+ */
+function pareceCpfDigitado(busca: string): boolean {
+  const texto = busca.trim();
+  return texto.length > 0 && texto.replace(/[\d.\-\s]/g, '').length === 0;
+}
+
+/**
+ * O texto digitado casa o CPF do titular?
+ *
+ * O dono pediu a busca por CPF no balcão porque nem todo mundo chega com o
+ * código na mão — mas todo mundo sabe o próprio CPF. A caixa é a MESMA de nome
+ * e códigos (RN-397/RN-475): no balcão ninguém escolhe aba antes de procurar.
+ *
+ * **A máscara não decide nada.** Os dois lados passam por `normalizarCpf` (só
+ * dígitos), então `529.982.247-25` acha `52998224725` e vice-versa. Isso não é
+ * cortesia de UI: o campo é o único do produto que existe nas DUAS formas no
+ * banco — a escrita nova canoniza para 11 dígitos
+ * (`createInscricaoCharge.ts:1720`), e o tipo ainda promete "com ou sem
+ * máscara" (`dadosPessoais.ts:174`) porque doc antigo carrega a pontuação.
+ * Comparar cru acharia metade das pessoas, e a metade que falha é invisível —
+ * o operador só veria "não encontrado".
+ *
+ * Casa por PREFIXO, como os dois códigos: o operador digita enquanto a pessoa
+ * dita. E como eles, **não adivinha** — não completa, não corrige dígito, não
+ * valida DV. Validar o DV aqui recusaria a busca parcial, que é o caso normal.
+ *
+ * ⚠️ PII: este é o único lugar onde o CPF é COMPARADO. Ele não entra em rota,
+ * query string nem tela — a busca vive em estado local do painel e o card de
+ * conferência não exibe CPF. @pure
+ */
+export function cpfCasaBusca(cpf: string | undefined, busca: string): boolean {
+  if (typeof cpf !== 'string' || cpf.length === 0) return false;
+  if (!pareceCpfDigitado(busca)) return false;
+  const alvo = normalizarCpf(busca);
+  return alvo.length > 0 && normalizarCpf(cpf).startsWith(alvo);
+}
+
+/**
  * Aplica busca + filtros. Ordem preservada (já vem ordenado por nome).
  *
  * A busca casa NOME, **ou** CÓDIGO do ingresso (RN-397), **ou** CÓDIGO da
- * compra (RN-475) — uma caixa só, como a tela já tinha, porque no balcão
- * ninguém escolhe aba antes de procurar. O contador "mostrando X de Y" segue
- * derivado deste mesmo resultado.
+ * compra (RN-475), **ou** CPF do titular — uma caixa só, como a tela já tinha,
+ * porque no balcão ninguém escolhe aba antes de procurar. O contador
+ * "mostrando X de Y" segue derivado deste mesmo resultado.
  * @pure
  */
 export function filtrarInscritos(
@@ -97,7 +143,8 @@ export function filtrarInscritos(
       alvo &&
       !normalizarBusca(i.atletaNome).includes(alvo) &&
       !codigoCasaBusca(i.codigoIngresso, filtro.busca ?? '') &&
-      !codigoPedidoCasaBusca(i.codigoPedido, filtro.busca ?? '')
+      !codigoPedidoCasaBusca(i.codigoPedido, filtro.busca ?? '') &&
+      !cpfCasaBusca(i.dadosPessoais?.cpf, filtro.busca ?? '')
     )
       return false;
     if (filtro.status && i.status !== filtro.status) return false;

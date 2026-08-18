@@ -3,6 +3,7 @@ import {
   codigoCasaBusca,
   codigoPedidoCasaBusca,
   contadorInscritos,
+  cpfCasaBusca,
   contarPendentesAntigos,
   contarPorStatus,
   filtrarInscritos,
@@ -10,7 +11,7 @@ import {
   normalizarBusca,
   paginar,
 } from '../inscritosFiltro';
-import { mkInscrito, ts } from '../../_test/fixtures';
+import { mkDadosPessoais, mkInscrito, ts } from '../../_test/fixtures';
 
 const base = [
   mkInscrito({ id: '1', atletaNome: 'Marina Silva', kit: 'kit_ouro', modalidade: '21k', status: 'confirmado' }),
@@ -244,5 +245,98 @@ describe('codigoPedidoCasaBusca', () => {
     expect(codigoPedidoCasaBusca('A2B3C', '   ')).toBe(false);
     // Só o prefixo digitado não pode casar a compra de todo mundo.
     expect(codigoPedidoCasaBusca('A2B3C', 'PED-')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Busca por CPF no balcão — a máscara não pode decidir quem é achado.
+// O banco tem as DUAS formas: a escrita nova canoniza para 11 dígitos, e doc
+// antigo carrega a pontuação. Comparar cru acharia metade das pessoas, e a
+// metade que falha é invisível (o operador só veria "não encontrado").
+// ---------------------------------------------------------------------------
+
+const comCpf = [
+  // Guardado em DÍGITOS (escrita nova do checkout).
+  mkInscrito({
+    id: '1',
+    atletaNome: 'Marina Silva',
+    dadosPessoais: mkDadosPessoais({ cpf: '52998224725' }),
+  }),
+  // Guardado COM MÁSCARA (doc legado — o tipo ainda promete as duas formas).
+  mkInscrito({
+    id: '2',
+    atletaNome: 'João Pereira',
+    dadosPessoais: mkDadosPessoais({ cpf: '111.444.777-35' }),
+  }),
+  // Sem o bloco `[reg]` (inscrição legada pré-CKMOD).
+  mkInscrito({ id: '3', atletaNome: 'Ana Souza' }),
+];
+
+describe('busca por CPF (balcão)', () => {
+  it('digitado COM máscara acha o doc guardado em dígitos', () => {
+    expect(filtrarInscritos(comCpf, { busca: '529.982.247-25' }).map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('digitado SEM máscara acha o doc guardado com máscara', () => {
+    expect(filtrarInscritos(comCpf, { busca: '11144477735' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('as duas formas acham a MESMA pessoa — a máscara não parte o resultado', () => {
+    const comMascara = filtrarInscritos(comCpf, { busca: '111.444.777-35' }).map((i) => i.id);
+    const semMascara = filtrarInscritos(comCpf, { busca: '11144477735' }).map((i) => i.id);
+    expect(comMascara).toEqual(semMascara);
+    expect(comMascara).toEqual(['2']);
+  });
+
+  it('acha por prefixo — o operador digita enquanto a pessoa dita', () => {
+    expect(filtrarInscritos(comCpf, { busca: '529982' }).map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('ignora espaço colado no meio dos dígitos', () => {
+    expect(filtrarInscritos(comCpf, { busca: ' 529 982 247 25 ' }).map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('CPF de outra pessoa não casa', () => {
+    expect(filtrarInscritos(comCpf, { busca: '39053344705' })).toEqual([]);
+  });
+
+  it('inscrito sem bloco [reg] nunca é achado por CPF, e segue achável por nome', () => {
+    expect(filtrarInscritos(comCpf, { busca: '52998224725' }).map((i) => i.id)).toEqual(['1']);
+    expect(filtrarInscritos(comCpf, { busca: 'ana' }).map((i) => i.id)).toEqual(['3']);
+  });
+
+  it('nome continua funcionando na MESMA caixa', () => {
+    expect(filtrarInscritos(comCpf, { busca: 'marina' }).map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('busca por CPF respeita os demais filtros (composição intacta)', () => {
+    expect(filtrarInscritos(comCpf, { busca: '52998224725', status: 'pendente' })).toEqual([]);
+  });
+});
+
+describe('cpfCasaBusca', () => {
+  it('sem CPF, sem match; busca vazia não casa tudo', () => {
+    expect(cpfCasaBusca(undefined, '529')).toBe(false);
+    expect(cpfCasaBusca('52998224725', '')).toBe(false);
+    expect(cpfCasaBusca('52998224725', '   ')).toBe(false);
+  });
+
+  it('nome com número NÃO é lido como CPF', () => {
+    // Sem a guarda, `normalizarCpf('Ana 529')` devolveria '529' e o nome viraria
+    // busca de CPF — achando gente que não tem nada a ver com o que foi digitado.
+    expect(cpfCasaBusca('52998224725', 'Ana 529')).toBe(false);
+    expect(cpfCasaBusca('52998224725', 'joao')).toBe(false);
+  });
+
+  it('só pontuação, sem dígito nenhum, não casa', () => {
+    expect(cpfCasaBusca('52998224725', '...-')).toBe(false);
+  });
+
+  it('não valida DV — a busca parcial é o caso normal do balcão', () => {
+    // '529982247-99' tem DV errado e ainda assim NÃO casa, porque o prefixo
+    // diverge; o que o teste fixa é que a recusa vem do PREFIXO, não de um
+    // validador que recusaria também os 6 primeiros dígitos.
+    expect(cpfCasaBusca('52998224725', '5299822479')).toBe(false);
+    expect(cpfCasaBusca('52998224725', '529982247')).toBe(true);
   });
 });

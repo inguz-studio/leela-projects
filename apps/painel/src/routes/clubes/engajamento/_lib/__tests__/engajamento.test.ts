@@ -397,11 +397,13 @@ describe('derivarInsights', () => {
     const insights = derivarInsights(situacao, ponte);
     expect(insights).toHaveLength(2);
     for (const i of insights) {
-      expect(i.ancora).toBeTruthy();
+      expect(i.destino).toBeTruthy();
       expect(i.caminho).toBeTruthy();
     }
-    expect(insights[0]?.ancora).toBe('situacao-dos-membros');
-    expect(insights[1]?.ancora).toBe('ponte-com-eventos');
+    // A casa dos dois fatos é um bloco MAIS ABAIXO nesta mesma tela — por isso
+    // âncora, e não rota (a união do tipo carrega as duas formas desde a leva 23).
+    expect(insights[0]?.destino).toEqual({ tipo: 'ancora', id: 'situacao-dos-membros' });
+    expect(insights[1]?.destino).toEqual({ tipo: 'ancora', id: 'ponte-com-eventos' });
   });
 
   it('desafios sem evento viram oportunidade, com o total da própria banda', () => {

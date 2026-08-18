@@ -39,7 +39,7 @@ function renderView(
  * RN-475). Ele mora numa constante aqui porque é aceite, não detalhe: busca
  * que ninguém sabe que existe não é busca.
  */
-const LABEL_BUSCA = 'Buscar atleta pelo nome, código do ingresso ou código da compra';
+const LABEL_BUSCA = 'Buscar atleta pelo nome, CPF, código do ingresso ou código da compra';
 
 function muitosInscritos(n: number, status: StatusInscrito = 'confirmado') {
   return Array.from({ length: n }, (_, i) =>
