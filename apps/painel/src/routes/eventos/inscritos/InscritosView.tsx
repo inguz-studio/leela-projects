@@ -22,6 +22,7 @@
 
 import * as React from 'react';
 import {
+  Alert,
   Avatar,
   Badge,
   Button,
@@ -68,6 +69,11 @@ export interface InscritosViewProps {
   inscritos: Inscrito[];
   loading: boolean;
   error: Error | null;
+  /**
+   * Recarrega a lista a partir do bloco de erro. Ausente = bloco sem botão
+   * (mesmo contrato opcional do `onRetry` do engajamento).
+   */
+  onRetry?: (() => void) | undefined;
   /** Evento dono das inscrições (docId = slug) — chave do join `[pag]` do slide-in. */
   eventoId: string;
   /** Percursos do evento — origem do filtro de modalidade. */
@@ -97,6 +103,7 @@ export function InscritosView({
   inscritos,
   loading,
   error,
+  onRetry,
   eventoId,
   modalidades,
   agora = new Date(),
@@ -322,7 +329,22 @@ export function InscritosView({
       ))}
     </div>
   ) : error ? (
-    <p className="text-[var(--text-danger)]">Não foi possível carregar os inscritos.</p>
+    // INSCRITOS-READ-FIX: a frase seca deixava o organizador com a tecla de
+    // recarregar do navegador. `Alert` é o aviso em bloco do cânone (tom
+    // vulcão + canal assertivo: a lista sumiu, muda o que a pessoa faz agora).
+    <Alert
+      tone="vulcao"
+      live="alert"
+      actions={
+        onRetry ? (
+          <Button variant="secondary" size="sm" onClick={onRetry}>
+            Tentar novamente
+          </Button>
+        ) : null
+      }
+    >
+      Não foi possível carregar os inscritos.
+    </Alert>
   ) : (
     <div className="flex flex-col gap-[var(--spacing-4)]">
       {/* Banner de inadimplência (dor #1) */}

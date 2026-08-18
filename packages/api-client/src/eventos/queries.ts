@@ -147,8 +147,14 @@ const TIMESTAMP_ZERO: Timestamp = {
   toMillis: () => 0,
 };
 
-/** Passa o Timestamp adiante quando legível; senão devolve o sentinela. */
-function timestampSeguro(v: unknown): Timestamp {
+/**
+ * Passa o Timestamp adiante quando legível; senão devolve o sentinela.
+ *
+ * Exportado (INSCRITOS-READ-FIX · 17/08) para o resgate F1 da lista de
+ * INSCRITOS reusar o MESMO sentinela — helper interno do pacote, fora do
+ * barrel público. Duas versões do "sem dado" divergiriam na primeira ordenação.
+ */
+export function timestampSeguro(v: unknown): Timestamp {
   return v !== null &&
     typeof v === 'object' &&
     typeof (v as Partial<Timestamp>).toDate === 'function'

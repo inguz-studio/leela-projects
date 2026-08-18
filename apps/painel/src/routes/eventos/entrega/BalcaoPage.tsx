@@ -32,7 +32,7 @@ export function BalcaoPage(): JSX.Element {
   // Superfície VIVA (UX-DADOS): pool de inscritos AO VIVO (onSnapshot) — o
   // check-in/vínculo de chip de OUTRO operador aparece sem recarregar. O
   // listener escreve na chave partilhada com a tabela densa (reidrata na volta).
-  const { data, loading, error } = useInscritosRealtime(evento.id);
+  const { data, loading, error, refetch } = useInscritosRealtime(evento.id);
   // Catálogo de itens do kit (checklist de conferência). Não bloqueia o balcão:
   // a busca/atendimento dependem só dos inscritos; sem itens o checklist some.
   const { data: itens } = useItensKit(evento.id);
@@ -53,6 +53,7 @@ export function BalcaoPage(): JSX.Element {
       kits={kits ?? []}
       loading={loading}
       error={error}
+      onRetry={refetch}
       onVincular={vincular}
       onRegistrar={registrar}
       agora={agora}
