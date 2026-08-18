@@ -554,8 +554,8 @@ a T1 é honestidade e a T2 já está paga — a conta certa esperando a fonte, c
 
 | Tarefa | Estado | Prova |
 |---|---|---|
-| S825-T1 · o resumo por forma de pagamento nasce como agregado do evento | 📋 | destrava o bloco 7 do estudo de engajamento |
-| S825-T2 · a rosca de formas de pagamento sai do "em breve" na análise e no engajamento | 📋 | o desenho já existe; falta o número |
+| S825-T1 · o resumo por forma de pagamento nasce como agregado do evento | ✅ **CONSTRUÍDA** (lane SERIE-FINANCEIRA · `13b74269` · 17-18/08) — ⛔ **não deployada** | `eventos/{id}/financeiro/current.formasPagamento`; 8 casos de integração escritos (rodam no CI) |
+| S825-T2 · a rosca de formas de pagamento sai do "em breve" na análise e no engajamento | ✅ **CONSTRUÍDA** (`1a42f4d4`) — ⛔ **gate visual ABERTO** | `FormasDePagamento.tsx`; suíte do painel 3.026/3.026 |
 
 **Por que a história é daqui e não do engajamento:** o número é de vendas, e a autoridade sobre
 número de vendas é esta. O engajamento apenas consome.
@@ -588,3 +588,40 @@ duas tarefas; o que mudou foi a posição na fila, e posição de fila não é r
 divisão de receita de verdade" do **CAIXA-1**, que está no painel do dono desde a tarde do mesmo
 dia marcada como **bloqueada por dado**. Quando esta história subir, aquela opção sai de
 bloqueada — e vale ele saber disso antes de responder o CAIXA-1.
+
+### ⚡ Delta a S825 foi CONSTRUÍDA (lane SERIE-FINANCEIRA · 2026-08-17 noite → 18/08)
+
+**O degrau do meio já estava pago, e ninguém tinha reparado.** `agregarFinanceiro.ts` já varria
+TODOS os pagamentos confirmados de cada evento, doc a doc, dentro de uma transação, para somar os
+carimbos TAXAFLEX. A série por forma sai desse mesmo laço: **nenhuma query nova, nenhum índice
+novo, nenhum doc a mais lido**. A resposta ao dono muda de "falta construir o rollup" para algo mais
+desconfortável: o laço estava lá, passando por cima do campo `forma` de cada doc, e ninguém tinha
+pedido para olhar.
+
+**A casa é o EVENTO, como esta história declarava** — o brief da lane pedia o agregado do
+organizador e o épico venceu. Com razão: o organizador CONSOLIDA (point read de
+`financeiro/current` por evento), não apura. Varrer `pagamentos` no dashboard custaria uma leitura
+por venda a cada write de evento.
+
+**A decisão que atravessa todas as camadas:** `null` (o agregado não sabe responder) e série zerada
+(o servidor somou e não achou venda) são estados DIFERENTES, do Firestore ao pixel. Uma rosca
+zerada sobre um `null` afirmaria "ninguém pagou" quando a verdade é "ninguém somou". A consolidação
+por organizador é deliberadamente pessimista: um evento COM receita e sem série cega o consolidado
+inteiro, porque uma rosca que parece completa sendo parte não dá ao organizador instrumento nenhum
+para desconfiar dela.
+
+**Nota de cobertura, e o mock provou que ela era necessária.** A série cobre as vendas que têm doc
+de pagamento; `receitaConfirmada` cobre toda venda. No `[Mock] - Campeche Run` a rosca soma
+**R$ 2.500 sobre R$ 49.780 de receita — 5% de cobertura** —, porque o seed escreve 17 cobranças para
+299 inscritos confirmados. Sem a nota, o dono leria dois números do mesmo dinheiro discordando na
+mesma dobra e concluiria, com razão, que sumiu grana.
+
+**Duas formas, não três** (`pix`, `cartao_credito` — boleto fora do domínio desde 05/07). O que o
+seed tem em três é o ESTADO do PIX.
+
+⛔ **Nada foi deployado e o gate visual segue ABERTO** — a rosca nunca foi vista renderizada. O
+emulador não subiu na máquina da lane (`firebase-tools` exige JDK 21; a máquina tem 17), então os 8
+casos de integração estão escritos e rodam no CI, sem nenhum pass falso declarado. ⛔ **O reprocesso
+`reprocessarFinanceiroTodosEventos` anda JUNTO com o deploy** (molde da RN-822): sem ele, evento com
+inscrições encerradas nunca ganha a série, e — pela regra pessimista — um só desses mantém a Visão
+geral inteira no "em breve". Detalhe em `.nirvana/handoffs/leela-serie-financeira-20260817.md`.

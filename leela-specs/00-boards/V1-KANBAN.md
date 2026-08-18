@@ -152,10 +152,13 @@ tags:
         - [ ] S1904-T1 a ligação entre membro e ficha de cliente, pela mesma chave que o CRM já usa
         - [ ] S1904-T2 o número de membros que compraram, por club e no total
         - [ ] S1904-T3 a tela do club diz quantos da comunidade compraram
-- [ ] **[E11] A forma de pagamento vira número na análise e no engajamento** — o dado existe em cada pedido e nenhum resumo chega à tela, então a rosca desenhada ficou em "em breve" nos dois lugares 📋 tela não varre documento financeiro; o resumo nasce como agregado [[LEELA-E11-analytics]]
-    - [ ] **S825 · A distribuição por forma de pagamento chega à análise**
-        - [ ] S825-T1 o resumo por forma de pagamento nasce como agregado do evento
-        - [ ] S825-T2 a rosca de formas de pagamento sai do "em breve" na análise e no engajamento
+- [x] **[E11] A forma de pagamento vira número na análise e no engajamento** — ✅ **CONSTRUÍDA 17-18/08** (lane SERIE-FINANCEIRA) · ⛔ **não deployada, gate visual ABERTO** [[LEELA-E11-analytics]]
+    - [x] **S825 · A distribuição por forma de pagamento chega à análise**
+        - [x] S825-T1 o resumo por forma de pagamento nasce como agregado do evento — `13b74269`; sai do laço que `agregarFinanceiro` já fazia sobre os pagamentos confirmados: **zero query nova, zero índice novo**
+        - [x] S825-T2 a rosca de formas de pagamento sai do "em breve" na análise e no engajamento — `1a42f4d4`; reusa o `DonutChart` do DS. Três estados distintos: sem série → "em breve" · série zerada → vazio honesto · com venda → rosca
+        - [ ] ⛔ **gate visual das 3 telas** — a rosca nunca foi vista renderizada; exige navegador **e JDK 21** (a máquina da lane tem 17, o emulador não sobe)
+        - [ ] ⛔ **deploy + reprocesso JUNTOS** (`reprocessarFinanceiroTodosEventos`, molde RN-822) — sem o reprocesso, um evento encerrado com receita mantém a Visão geral inteira no "em breve"
+        - [x] alvo secundário pago: **pendências em R$** (`financeiro/current.pendentes`) — conta COBRANÇAS, não pessoas, e sem o corte de 24h; nenhuma tela mudou, a escolha segue em `VG-INSIGHTS-3`
 - [ ] **[E20] O retrato da comunidade do WhatsApp dentro do painel** — volume por dia, mapa de horários, palavras mais faladas, quem entra e quem sai, comparação entre comunidades e a lista de quem mais falou 📋 spec completa e verificada duas vezes; nove histórias prontas para código, começando pelas duas primeiras · ⛔ o risco jurídico foi assumido por você [[LEELA-E20-radar-comunidade]]
     - [ ] **S2001 · O número sobrevive antes de existir produto** — as duas primeiras, prontas para código
     - [ ] **S2002 · A ponte de dados sobe agregado contra o emulador**

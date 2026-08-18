@@ -86,8 +86,11 @@ export function FormasDePagamento({
     return (
       <CartaoV3 aria={TITULO} elev={2} padding="lg" className={className}>
         <EyebrowV3>{TITULO}</EyebrowV3>
+        {/* Mesma escada de skeleton dos blocos de gráfico da Análise
+            (`h-52` para o plot, faixa curta para a legenda) — nada de medida
+            crua só porque a rosca é redonda. */}
         <div role="status" aria-label="Carregando formas de pagamento">
-          <Skeleton variant="rect" className="mx-auto h-[180px] w-[180px] rounded-full" />
+          <Skeleton variant="rect" className="h-52" />
           <Skeleton variant="rect" className="mt-[var(--spacing-4)] h-16" />
         </div>
       </CartaoV3>
