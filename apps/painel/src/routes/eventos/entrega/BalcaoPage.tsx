@@ -15,7 +15,7 @@ import * as React from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { BalcaoView } from './BalcaoView';
 import { useInscritosRealtime } from '../../../lib/query/realtime';
-import { useItensKit } from '../_data/kits';
+import { useItensKit, useKits } from '../_data/kits';
 import { useBalcaoMutations } from '../_data/balcao';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 
@@ -36,6 +36,13 @@ export function BalcaoPage(): JSX.Element {
   // Catálogo de itens do kit (checklist de conferência). Não bloqueia o balcão:
   // a busca/atendimento dependem só dos inscritos; sem itens o checklist some.
   const { data: itens } = useItensKit(evento.id);
+  // Kits do evento — "o que está incluso" (RN-230) para o card de conferência.
+  // Fonte deliberadamente diferente do `itensKit` acima: `eventos/{id}/kits` é
+  // legível por papel de EVENTO (Rules `:1039`) e o catálogo `itensKit` não é
+  // (`:2798` exige `isTenantMember`). Com o catálogo vazio ou negado o
+  // checklist some, e sem isto o tamanho do kit sumia junto — que é, muito
+  // provavelmente, a tela que o dono encontrou. Também não bloqueia o balcão.
+  const { data: kits } = useKits(evento.id);
   const { vincular, registrar } = useBalcaoMutations(evento.id);
 
   return (
@@ -43,6 +50,7 @@ export function BalcaoPage(): JSX.Element {
       evento={evento}
       inscritos={data ?? []}
       itensKit={itens ?? []}
+      kits={kits ?? []}
       loading={loading}
       error={error}
       onVincular={vincular}
