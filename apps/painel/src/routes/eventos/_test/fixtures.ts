@@ -110,7 +110,7 @@ export function mkPagamento(over: Partial<Pagamento> = {}): Pagamento {
     tenantId: 'castelo',
     eventoId: 'meia-floripa-2026',
     pedidoRef: 'ped-1',
-    status: 'pago',
+    status: 'confirmado',
     forma: 'pix',
     valorBase: 120,
     loteNome: 'Lote 2 — Regular',

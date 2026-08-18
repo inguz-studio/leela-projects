@@ -1,15 +1,28 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@leela/design-system';
 import { AtendimentoPanel } from '../AtendimentoPanel';
-import { mkEvento, mkInscrito } from '../../_test/fixtures';
-import type { Evento, Inscrito, ItemKit } from '@leela/core';
+import { mkEvento, mkInscrito, mkKit, mkPagamento, mkPedido } from '../../_test/fixtures';
+import type { Evento, Inscrito, ItemKit, Kit } from '@leela/core';
+
+// O card de conferência (CRED-BUSCA) busca o join `[pag]` via TanStack Query —
+// mesmo molde do slide-in dos Inscritos. Stub padrão = "sem pedido", que é o
+// caminho degradado; os testes do card injetam o pedido real quando precisam.
+const joinPedido = vi.fn().mockResolvedValue({ pedido: null, pagamento: null });
+
+vi.mock('@leela/api-client', () => ({
+  INSCRITOS_PAGE_SIZE: 18,
+  getLeelaDb: () => ({}),
+  getPedidoEPagamentoDoInscrito: (...args: unknown[]) => joinPedido(...args),
+}));
 
 function setup(opts: {
   evento?: Partial<Evento>;
   inscrito?: Partial<Inscrito>;
   itensKit?: ItemKit[];
+  kits?: Kit[];
   vincular?: ReturnType<typeof vi.fn>;
   registrar?: ReturnType<typeof vi.fn>;
 }) {
@@ -17,16 +30,22 @@ function setup(opts: {
   const vincular =
     opts.vincular ?? vi.fn().mockResolvedValue({ ok: true, chip: 'ABC123' });
   const registrar = opts.registrar ?? vi.fn().mockResolvedValue({ ok: true, jaRegistrado: false });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   render(
-    <ToastProvider>
-      <AtendimentoPanel
-        evento={mkEvento(opts.evento)}
-        inscritos={[inscrito]}
-        itensKit={opts.itensKit ?? []}
-        onVincular={vincular}
-        onRegistrar={registrar}
-      />
-    </ToastProvider>,
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <AtendimentoPanel
+          evento={mkEvento(opts.evento)}
+          inscritos={[inscrito]}
+          itensKit={opts.itensKit ?? []}
+          kits={opts.kits ?? []}
+          onVincular={vincular}
+          onRegistrar={registrar}
+        />
+      </ToastProvider>
+    </QueryClientProvider>,
   );
   return { vincular, registrar };
 }
@@ -52,7 +71,9 @@ function mkItem(over: Partial<ItemKit> = {}): ItemKit {
 
 async function selecionar(nome: string) {
   await userEvent.type(screen.getByLabelText('Buscar atleta'), nome);
-  await userEvent.click(screen.getByRole('button', { name: nome }));
+  // A linha de resultado agora carrega nome + modalidade, então o nome
+  // acessível do botão é os dois — casa por conteúdo, não por igualdade.
+  await userEvent.click(screen.getByRole('button', { name: new RegExp(nome) }));
 }
 
 describe('AtendimentoPanel', () => {
@@ -174,5 +195,100 @@ describe('AtendimentoPanel — entrega por corte x tamanho (RN-231 · TAMANHOS-G
     });
     await selecionar('Marina Silva');
     expect(screen.getByText('· tamanho a conferir')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CRED-BUSCA (17/08) — a busca conta quem é a pessoa.
+// ---------------------------------------------------------------------------
+
+describe('busca e card de conferência (CRED-BUSCA)', () => {
+  const comCpf = {
+    kit: 'kit_ouro' as const,
+    kitId: 'kit-ouro-2026',
+    modalidade: '21k',
+    tamanhos: { camiseta: 'feminina__M' },
+    dadosPessoais: {
+      cpf: '52998224725',
+      telefone: '',
+      nascimento: '1990-05-14',
+      genero: 'nao_informado' as const,
+      cidade: '',
+      uf: '',
+    },
+  };
+
+  const kitsDoEvento = [
+    mkKit({ id: 'kit-ouro-2026', itens: ['Camiseta técnica', 'Medalha', 'Sacola'] }),
+  ];
+
+  it('a caixa diz que aceita CPF — busca que ninguém sabe que existe não é busca', () => {
+    setup({ inscrito: comCpf, kits: kitsDoEvento });
+    expect(screen.getByLabelText('Buscar atleta')).toHaveAttribute(
+      'placeholder',
+      'Nome, CPF ou código',
+    );
+  });
+
+  it('acha o participante digitando o CPF COM máscara', async () => {
+    setup({ inscrito: comCpf, kits: kitsDoEvento });
+    await userEvent.type(screen.getByLabelText('Buscar atleta'), '529.982.247-25');
+    expect(screen.getByRole('button', { name: /Marina Silva/ })).toBeInTheDocument();
+  });
+
+  it('acha o mesmo participante digitando o CPF sem máscara', async () => {
+    setup({ inscrito: comCpf, kits: kitsDoEvento });
+    await userEvent.type(screen.getByLabelText('Buscar atleta'), '52998224725');
+    expect(screen.getByRole('button', { name: /Marina Silva/ })).toBeInTheDocument();
+  });
+
+  it('a linha de resultado mostra a modalidade — homônimo desempatado antes do clique', async () => {
+    setup({ inscrito: comCpf, kits: kitsDoEvento });
+    await userEvent.type(screen.getByLabelText('Buscar atleta'), 'Marina');
+    expect(screen.getByRole('button', { name: /Marina Silva.*21k/ })).toBeInTheDocument();
+  });
+
+  it('escolhido o participante, o card traz lote e contato de compra', async () => {
+    joinPedido.mockResolvedValueOnce({ pedido: mkPedido(), pagamento: mkPagamento() });
+    setup({ inscrito: comCpf, kits: kitsDoEvento });
+    await selecionar('Marina Silva');
+
+    await waitFor(() => {
+      expect(screen.getByText('Lote 2 — Regular')).toBeInTheDocument();
+    });
+    expect(screen.getByText('marina@exemplo.com')).toBeInTheDocument();
+    expect(screen.getByText('(48) 99999-0001')).toBeInTheDocument();
+    expect(screen.getByText('Camiseta técnica · Medalha · Sacola')).toBeInTheDocument();
+    expect(screen.getByText('Feminina M')).toBeInTheDocument();
+  });
+
+  it('compra negada pelas Rules não derruba o check-in', async () => {
+    joinPedido.mockRejectedValueOnce(new Error('permission-denied'));
+    setup({ evento: { usaChip: false }, inscrito: comCpf, kits: kitsDoEvento });
+    await selecionar('Marina Silva');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Sem permissão para ler a compra').length).toBeGreaterThan(0);
+    });
+    // O nome, o kit e o botão de fechar o atendimento seguem de pé.
+    expect(screen.getByRole('heading', { name: 'Marina Silva' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Entregar kit e registrar presença' }),
+    ).toBeInTheDocument();
+  });
+
+  it('o CPF nunca chega à tela, nem depois de ser usado para achar a pessoa', async () => {
+    joinPedido.mockResolvedValueOnce({ pedido: mkPedido(), pagamento: mkPagamento() });
+    setup({ inscrito: comCpf, kits: kitsDoEvento });
+    await userEvent.type(screen.getByLabelText('Buscar atleta'), '52998224725');
+    await userEvent.click(screen.getByRole('button', { name: /Marina Silva/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText('marina@exemplo.com')).toBeInTheDocument();
+    });
+    // A caixa de busca é limpa na escolha (`selecionar`), então o CPF digitado
+    // também sai da tela — nada de CPF pendurado no balcão entre atendimentos.
+    expect(screen.queryByText(/52998224725|529\.982\.247-25/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar atleta')).toHaveValue('');
   });
 });

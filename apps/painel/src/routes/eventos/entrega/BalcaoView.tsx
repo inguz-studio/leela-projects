@@ -7,7 +7,7 @@
 
 import * as React from 'react';
 import { Skeleton } from '@leela/design-system';
-import type { Evento, Inscrito, ItemKit } from '@leela/core';
+import type { Evento, Inscrito, ItemKit, Kit } from '@leela/core';
 import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-client';
 import { AtendimentoPanel } from './AtendimentoPanel';
 import { PainelOperacional } from './PainelOperacional';
@@ -19,6 +19,8 @@ export interface BalcaoViewProps {
   inscritos: Inscrito[];
   /** Catálogo de itens do evento — compõe o checklist do kit (S205 · RN-215). */
   itensKit: ItemKit[];
+  /** Kits do evento — o card de conferência lê "o que está incluso" daqui. */
+  kits: Kit[];
   loading: boolean;
   error: Error | null;
   onVincular: (
@@ -35,6 +37,7 @@ export function BalcaoView({
   evento,
   inscritos,
   itensKit,
+  kits,
   loading,
   error,
   onVincular,
@@ -65,6 +68,7 @@ export function BalcaoView({
           evento={evento}
           inscritos={inscritos}
           itensKit={itensKit}
+          kits={kits}
           onVincular={onVincular}
           onRegistrar={onRegistrar}
           onAtendido={(nome) => setUltimos((prev) => [nome, ...prev])}

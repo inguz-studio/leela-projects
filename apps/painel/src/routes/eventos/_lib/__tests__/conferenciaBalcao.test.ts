@@ -108,7 +108,8 @@ describe('conferenciaDoInscrito', () => {
     expect(c.incluso).toBe('Camiseta técnica · Medalha · Sacola');
     expect(c.tamanho).toBe('Feminina M');
     expect(c.emailCompra).toBe('marina@exemplo.com');
-    expect(c.telefoneCompra).toBe('48999990001');
+    // Formatado: o banco guarda dígitos e ninguém lê "48999990001" num balcão.
+    expect(c.telefoneCompra).toBe('(48) 99999-0001');
   });
 
   it('sem a compra, os quatro campos do inscrito/kit continuam de pé', () => {
@@ -180,7 +181,8 @@ describe('conferenciaDoInscrito', () => {
     const c = conferenciaDoInscrito({ inscrito, kits, pedido: mkPedido(), pagamento: null });
     expect(c.lote).toBe('');
     expect(c.emailCompra).toBe('marina@exemplo.com');
-    expect(c.telefoneCompra).toBe('48999990001');
+    // Formatado: o banco guarda dígitos e ninguém lê "48999990001" num balcão.
+    expect(c.telefoneCompra).toBe('(48) 99999-0001');
   });
 
   it('CPF nunca sai no card — ele é chave de busca, não campo exibido', () => {

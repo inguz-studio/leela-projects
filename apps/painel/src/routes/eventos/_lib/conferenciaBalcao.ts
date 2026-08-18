@@ -33,6 +33,7 @@
 import type { Inscrito, Kit, Pagamento, Pedido } from '@leela/core';
 import { kitInscritoLabel } from './kitLabels';
 import { rotuloSufixo } from './gradeTamanhos';
+import { formatarTelefone } from './pii';
 
 /** Separador dos itens do kit e dos tamanhos — o mesmo do resto do painel. */
 const SEPARADOR = ' · ';
@@ -132,7 +133,17 @@ export interface ConferenciaBalcao {
   tamanho: string;
   /** E-mail do responsável pela compra. */
   emailCompra: string;
-  /** Telefone do responsável pela compra. */
+  /**
+   * Telefone do responsável pela compra, JÁ formatado para leitura em voz alta
+   * — o banco guarda só dígitos (`normalizarTelefone` no checkout) e ler
+   * "48999990001" de um balcão barulhento é como não ter o número.
+   *
+   * Em claro, e não mascarado como no slide-in dos Inscritos: lá a lista é
+   * densa e o organizador está conferindo cadastro; aqui o dono pediu o contato
+   * de compra explicitamente, e o card só existe DEPOIS de o operador escolher
+   * uma pessoa — não é despejo de lista. O CPF, que seria o dado pior de
+   * expor, fica fora do card inteiro.
+   */
   telefoneCompra: string;
   /** Inscrição sem kit — muda a frase de ausência de `incluso`/`tamanho`. */
   semKit: boolean;
@@ -177,7 +188,7 @@ export function conferenciaDoInscrito({
     incluso: semKit ? '' : (kit?.itens ?? []).join(SEPARADOR),
     tamanho: semKit ? '' : tamanhosEscolhidos(inscrito.tamanhos),
     emailCompra: pedido?.responsavel.email ?? '',
-    telefoneCompra: pedido?.responsavel.telefone ?? '',
+    telefoneCompra: formatarTelefone(pedido?.responsavel.telefone ?? ''),
     semKit,
   };
 }
