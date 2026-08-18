@@ -288,8 +288,17 @@ escolha, e é vetável.
 |---|---|
 | `13b74269` | a série nasce no agregado do evento (core + functions + snapshot) |
 | `1a42f4d4` | a rosca sai do em-breve (painel + api-client + testes) |
+| `61428083` | épico, boards e o painel do dono |
+| `8340edec` | `main` mesclada + números do seed refeitos |
 
 Todos com sufixo `[serie-financeira-20260817]`.
+
+🏁 **Merge na `main`: `8340edec`**, fast-forward sobre `603f578b` (a INSCRITOS-READ-FIX), com a
+árvore principal limpa como pré-condição conferida no ato. `main == origin/main`. ⛔ **Zero deploy:
+produção segue no pino `a1df3b88`.**
+
+O worktree `C:\dev\leela-wt-seriefin` e a branch `serie-financeira` ficaram de pé — quem for fazer o
+gate visual precisa deles menos do que precisa de um JDK 21, mas remover agora não economiza nada.
 
 ## 10 · Fila nomeada — o que esta lane NÃO fez
 

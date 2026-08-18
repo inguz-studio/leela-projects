@@ -554,7 +554,7 @@ a T1 é honestidade e a T2 já está paga — a conta certa esperando a fonte, c
 
 | Tarefa | Estado | Prova |
 |---|---|---|
-| S825-T1 · o resumo por forma de pagamento nasce como agregado do evento | ✅ **CONSTRUÍDA** (lane SERIE-FINANCEIRA · `13b74269` · 17-18/08) — ⛔ **não deployada** | `eventos/{id}/financeiro/current.formasPagamento`; 8 casos de integração escritos (rodam no CI) |
+| S825-T1 · o resumo por forma de pagamento nasce como agregado do evento | ✅ **CONSTRUÍDA** (lane SERIE-FINANCEIRA · merge `8340edec` · 17-18/08) — ⛔ **não deployada** | `eventos/{id}/financeiro/current.formasPagamento`; 8 casos de integração escritos (rodam no CI) |
 | S825-T2 · a rosca de formas de pagamento sai do "em breve" na análise e no engajamento | ✅ **CONSTRUÍDA** (`1a42f4d4`) — ⛔ **gate visual ABERTO** | `FormasDePagamento.tsx`; suíte do painel 3.026/3.026 |
 
 **Por que a história é daqui e não do engajamento:** o número é de vendas, e a autoridade sobre
