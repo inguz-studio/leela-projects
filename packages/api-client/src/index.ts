@@ -334,6 +334,16 @@ export type {
   AjustarCapacidadeLoteResult,
 } from './eventos/lotes';
 
+// S316-T1/T2/T3 (E04 · RN-500/501/502/505) — a porta única da lista de
+// modalidades. Escrita EXCLUSIVA de Cloud Function: o cliente manda o NOME e a
+// operação, nunca a lista (a projeção degradada devolveria vazio).
+export { editarModalidadesEvento } from './eventos/modalidades';
+export type {
+  EditarModalidadesEventoInput,
+  EditarModalidadesEventoResult,
+  MigracaoModalidade,
+} from './eventos/modalidades';
+
 // S300-T3 (E04) — página de vendas do evento: conteúdo (seções + SEO) por
 // escrita direta do organizador; publicação por Cloud Function (seam).
 export {
