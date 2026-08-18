@@ -29,7 +29,10 @@
 import { Button, Skeleton, cn } from '@leela/design-system';
 import { CreditCard, TrendingUp } from 'lucide-react';
 import { Cascata } from '../../components/CartaoV3';
+import { InsightsDaLeela } from '../../components/InsightsDaLeela';
+import type { InsightDaLeela } from '../../components/insights';
 import type { OverviewAlert, OverviewKPIs, Role } from '@leela/core';
+import { alertasDeEvento } from './_lib/insights';
 import { KpiRow } from './_components/KpiRow';
 import { Countdown } from './_components/Countdown';
 import { ComunidadeResumo } from './_components/ComunidadeResumo';
@@ -50,7 +53,15 @@ export interface OverviewContentProps {
   kpisError: OverviewErrorKind | null;
   /** Recarrega getOverview (KPIs + alertas partilham a fonte). */
   onRetryOverview?: (() => void) | undefined;
+  /**
+   * Lista COMPLETA do `getOverview`. A partição RN-573 (alerta de evento ×
+   * insight de conjunto) acontece aqui dentro, de propósito: se ela morasse na
+   * página, bastaria alguém montar este componente de outro lugar para o mesmo
+   * fato voltar a aparecer duas vezes. Aqui ela não tem como escapar.
+   */
   alerts: OverviewAlert[] | null;
+  /** Leituras de conjunto do portfólio (`_lib/insights`). */
+  insights: InsightDaLeela[] | null;
   /** Eventos com dia civil resolvido (Agenda) — null = sem dado ainda. */
   agenda: ItemDaAgenda[] | null;
   eventosLoading: boolean;
@@ -81,6 +92,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
     kpisError,
     onRetryOverview,
     alerts,
+    insights,
     agenda,
     eventosLoading,
     eventosError,
@@ -168,9 +180,26 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
         ) : null}
       </Cascata>
 
+      {/* Largura cheia · Insights da Leela.
+          A POSIÇÃO É A DO TEMPLATE DO DONO: logo abaixo da régua de números,
+          acima do resto (mockup: KPIs na l.401, Insights na l.439). É a dobra
+          onde o bloco tem serventia — leitura do conjunto antes dos blocos que
+          decompõem cada parte dele. */}
+      <Cascata i={3} className="lg:col-span-2">
+        <InsightsDaLeela
+          insights={insights}
+          loading={kpisLoading}
+          /* O alcance aqui é o PORTFÓLIO INTEIRO: esta tela não tem seletor, e
+             prometer recorte seria mentira ao contrário da do Engajamento. */
+          legenda="Leitura automática dos seus eventos e clubs."
+          vazio="Nada pedindo atenção agora."
+          onNavigate={onNavigate}
+        />
+      </Cascata>
+
       {/* Par · Presença por semana / Formas de pagamento — sem fonte, "em
           breve" no formato do protótipo (nunca gráfico zerado). */}
-      <Cascata i={3}>
+      <Cascata i={4}>
         <EmBreveV3
           titulo="Presença por semana"
           icon={<TrendingUp aria-hidden />}
@@ -178,7 +207,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           className="h-full"
         />
       </Cascata>
-      <Cascata i={4}>
+      <Cascata i={5}>
         <EmBreveV3
           titulo="Formas de pagamento"
           icon={<CreditCard aria-hidden />}
@@ -188,7 +217,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
       </Cascata>
 
       {/* Largura cheia · Ocupação */}
-      <Cascata i={5} className="lg:col-span-2">
+      <Cascata i={6} className="lg:col-span-2">
         <OcupacaoEventos
           ocupacao={ocupacao}
           loading={eventosLoading}
@@ -198,10 +227,12 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
         />
       </Cascata>
 
-      {/* Largura cheia · Alertas */}
-      <Cascata i={6} className="lg:col-span-2">
+      {/* Largura cheia · Alertas — os DE EVENTO. A leitura de conjunto
+          (`pendentes-24h`) subiu para os Insights, e a partição vive em
+          `_lib/insights` para os dois lados lerem o mesmo nome (RN-573). */}
+      <Cascata i={7} className="lg:col-span-2">
         <AlertsPanel
-          alerts={alerts}
+          alerts={alertasDeEvento(alerts)}
           loading={kpisLoading}
           error={kpisError !== null}
           onRetry={kpisError === 'unknown' ? onRetryOverview : undefined}
@@ -214,7 +245,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           carrega, e o bloco seria a redundância que a RN-573 desta mesma rodada
           proíbe. Último da grade de propósito: é atalho de área, não trabalho do
           dia — não disputa a dobra com o que a pessoa veio ver. */}
-      <Cascata i={7} className="lg:hidden">
+      <Cascata i={8} className="lg:hidden">
         <ParceriasNoMobile onNavigate={onNavigate} />
       </Cascata>
     </div>
