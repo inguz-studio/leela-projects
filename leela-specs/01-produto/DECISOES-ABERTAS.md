@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **10 itens abertos, contados à mão:** 8 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **11 itens abertos, contados à mão:** 9 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -29,7 +29,7 @@ Você perguntou o intuito dela em 17/08, e a medição diz que ela não faz nenh
 - **Caso de uso:** a Marina abre a Caixa para entender de onde veio o dinheiro do evento, e encontra uma tabela de contagem cujo total não bate com o título — enquanto o gráfico logo acima já mostra um terço daquelas linhas.
 - **Job story:** quando eu abro a Caixa do meu evento, eu quero entender de onde veio a receita, para saber qual modalidade e qual kit sustentam o resultado.
 - **O que fica com você:** o que essa faixa da tela deve contar — ou se ela deve sumir.
-- **Opções:** **remover a tabela** (**default proposto** — modalidade já está no gráfico logo acima, e status e kit já existem *acionáveis* na tela de Inscritos, como filtro; sai uma tabela que soma errado e a dobra fica com os três números de dinheiro) · **trocar por divisão de receita de verdade**, que é o que você levantou primeiro e o que a spec original pedia — **bloqueada por dado**, não por trabalho de tela: exige o modelo de pagamento no inscrito (FABLE-A) e uma agregação por forma que ninguém escreve hoje · **redesenhar com propósito**, uma partição por vez com seletor e coluna de percentual, para a soma voltar a bater com o cabeçalho.
+- **Opções:** **remover a tabela** (**default proposto** — modalidade já está no gráfico logo acima, e status e kit já existem *acionáveis* na tela de Inscritos, como filtro; sai uma tabela que soma errado e a dobra fica com os três números de dinheiro) · **trocar por divisão de receita de verdade**, que é o que você levantou primeiro e o que a spec original pedia — **bloqueada por dado**, não por trabalho de tela: exige o modelo de pagamento no inscrito (FABLE-A) e uma agregação por forma que ninguém escreve hoje — ⚡ **e essa agregação virou a próxima da fila em 17/08** (leva 25, S825), então esta opção sai de bloqueada no próximo pacote de deploy · **redesenhar com propósito**, uma partição por vez com seletor e coluna de percentual, para a soma voltar a bater com o cabeçalho.
 - **Onde aterrissa:** `apps/painel/.../financeiro/FinanceiroView.tsx:303-313` e a onda D de `02-rodadas/2026-08-17-leva22/04-fila-em-ondas.md`. Medição completa em `00-medicao-kits-caixa-e-terciario.md` §14.
 
 ### POPOVER-COR-1 · a cor do painel flutuante (o "modal" do perfil)
@@ -77,7 +77,17 @@ Os filtros em lista já ficam alinhados ao lado da pesquisa, numa fileira só, c
 - **Opções:** **subir a múltipla para 40px** (**default proposto** — o campo de busca ao lado tem 38px, então 40 é quem já está pareado; sobe só o gatilho do `FilterMenu`) · **descer a única para 32px**, barra mais leve mas descolada da busca · manter as duas, se a diferença de altura for leitura de tipo para você.
 - **Onde aterrissa:** `FilterMenu.tsx` (o `size` do gatilho) ou `FilterChips.tsx` (a altura da faceta exclusiva), com `gate-visual-filtros` re-rodado nos dois temas. Puxa junto as duas facetas cruas de Inscritos (`Todos os kits`, `Todas as modalidades`), que são `Combobox` direto e não ganham o nome da faceta. Detalhe em `.nirvana/handoffs/leela-filtros-fix-20260817.md`.
 
-### VG-INSIGHT-1 · a pendência de pagamento mudou de casa na Visão geral
+### VG-INSIGHTS-1 · os Insights da Leela mudam para a Visão Geral: o bloco do Engajamento fica?
+
+Você mandou os insights para a Visão Geral em 17/08 e eles estão lá. Sobrou o destino do bloco do Engajamento, que tem dois insights de dado real e recorte por club funcionando. A medição da lane corrige uma suposição do registro original: os dois insights do Engajamento saem das listas de membros e desafios do club, e a **Visão Geral não carrega nenhuma das duas** — ela recebe só os contadores somados. Ou seja, hoje as duas telas dizem coisas diferentes, e nenhuma frase se repete.
+
+- **Caso de uso:** o Castelo abre a Visão geral e lê o que o negócio inteiro pede; abre Engajamento e lê o que a comunidade daquele club pede. Se um dia as duas convergirem, ele vê a mesma frase duas vezes sem nada dizendo por quê.
+- **Job story:** quando eu circulo entre as telas do painel, eu quero que cada aviso tenha uma casa só, para não gastar atenção conferindo se são dois problemas ou o mesmo repetido.
+- **O que fica com você:** se o Engajamento mantém bloco de insights próprio.
+- **Opções:** **os dois ficam, com a divisão escrita como regra** (**default em vigor** — o do Engajamento só sobre comunidade e club, o da Visão Geral sobre o negócio inteiro; é o que o dado já impõe hoje) · **a Visão Geral vira a única casa**, e aí os dois insights do Engajamento morrem, porque a Visão Geral não tem como recalculá-los sem leitura nova · **os dois ficam iguais**, se ver o mesmo aviso nos dois lugares for reforço útil para você.
+- **Onde aterrissa:** `apps/painel/src/routes/overview/` e `EngajamentoView.tsx`. A peça já é **uma só** para as duas telas desde 17/08, em `src/components/` — não no design system, e a razão está escrita no `CartaoV3.tsx:9-12` (a moldura de seção é composição de tela) com o precedente do `SecaoHead`. Detalhe em `.nirvana/handoffs/leela-vg-insights-20260817.md` §1 e no §23.1 de `02-rodadas/2026-08-17-decisoes-dono/01-decisoes-dono.md`.
+
+### VG-INSIGHTS-2 · a pendência de pagamento mudou de casa na Visão geral
 
 Os Insights da Leela chegaram à Visão geral, como você pediu. O aviso "N inscrições pendentes aguardam pagamento há mais de 24h" saiu do bloco "Alertas" e virou insight, porque publicá-lo nos dois seria o mesmo fato duas vezes na mesma tela. Ele era o único alerta do painel que não levava a lugar nenhum — agora tem caminho, e subiu para logo abaixo dos números.
 
@@ -87,7 +97,7 @@ Os Insights da Leela chegaram à Visão geral, como você pediu. O aviso "N insc
 - **Opções:** **insight, com caminho** (**default em vigor** — é leitura de conjunto, não de um evento) · **de volta em "Alertas"**, e aí o insight sai, porque os dois juntos são a duplicata · os dois, se a repetição for reforço útil para você.
 - **Onde aterrissa:** `overview/_lib/insights.ts` (a constante `ALERTA_DE_CONJUNTO`) — a reversão é uma linha. Detalhe em `.nirvana/handoffs/leela-vg-insights-20260817.md` §3.
 
-### VG-INSIGHT-2 · o que mais a Visão geral ganha, e o que custa cada um
+### VG-INSIGHTS-3 · o que mais a Visão geral ganha, e o que custa cada um
 
 Você pediu para enriquecer a Visão geral. Entraram três leituras de dado real; seis outras foram levantadas com a fonte nomeada e não construídas, porque cada uma cobra um preço diferente e o preço é seu para pagar.
 

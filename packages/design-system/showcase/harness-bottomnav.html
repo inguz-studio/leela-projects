@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="brasa">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Harness — BottomNav (NAVBAR-FIX, medição)</title>
+  </head>
+  <body>
+    <!--
+      Harness de MEDIÇÃO para a lane navbar-fix-20260817, não é showroom para
+      humano navegar. Existe para dar ao Playwright um documento real (CSS do
+      preset Tailwind do DS + tema brasa aplicados de verdade) onde medir a
+      pílula do BottomNav sem depender do app inteiro (roteamento/auth do
+      painel), que exigiria um servidor pesado só para uma medida de layout.
+      `?active=<id>` escolhe o item selecionado; a largura vem do viewport do
+      Playwright, não daqui. Ver
+      packages/design-system/src/components/BottomNav/__tests__/pilula-dentro-da-barra.spec.ts.
+    -->
+    <div id="root"></div>
+    <script type="module" src="./src/harness-bottomnav.tsx"></script>
+  </body>
+</html>

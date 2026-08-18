@@ -2718,3 +2718,52 @@ caro por revogação silenciosa, e a RN-470 é o precedente que fixou a régua.
 **Não confundir com a RN-497:** ela derrubou uma extensão que existia apenas em comentário de
 código, trata do **lote**, e este épico é explícito em `:2193` e `:2213` de que a RN-200
 permanecia inalterada. **A RN-575 é a primeira alteração real do enunciado.**
+
+## Delta a busca do credenciamento passa a servir a entrega (REGISTRO-LEVA23 · 2026-08-17)
+
+> Rodada `02-rodadas/2026-08-17-decisoes-dono/` §23.4. Leva 23 do dono, à noite, no mesmo dia
+> das levas 17 a 22. Uma regra nova — a **RN-577**. ⛔ Nada construído por esta lane; build na
+> lane CRED-BUSCA-BUILD.
+
+### RN-577 (nova, dona · 2026-08-17) · o resultado da busca do credenciamento carrega o que decide a entrega
+
+**Ao encontrar um participante no credenciamento, quem opera o balcão vê, no próprio resultado:
+nome completo, modalidade, lote, tamanho do kit, a composição do kit, e-mail da compra e telefone
+da compra. A busca aceita nome e CPF.** Campo cuja fonte não chega à tela nasce **ausente e
+nomeado**, nunca em branco mudo.
+
+Na íntegra: *"peguei uma falha na hora de fazer o credenciamento. Ao pesquisar o nome de um
+participante, nao mostramos para quem esta fazendo o credenciamento, qual o tamanho do kit,
+incrição, informações de compra do usuário. Nao precisa tudo, mas mostrar modaliadde, lote, o que
+ta incluso no kit, nome completo, e-mail, de compra, telefone de compra. Devemos poder pesquisar
+via CPF também"*
+
+**O que a regra corrige é o propósito do resultado, não a quantidade de campos.** A busca de hoje
+serve para **achar** a pessoa; o balcão precisa que ela sirva para **entregar** o kit. São dois
+trabalhos na mesma caixa de texto, e o segundo é o que acontece com fila na frente: quem opera
+está decidindo qual sacola pegar da pilha, e nenhum dos dados que sustentam essa decisão está na
+tela. A falha veio de uso real, não de leitura de mockup.
+
+**A dependência que dimensiona:** metade da lista depende do que a projeção `Inscrito` carrega, e
+ela é **fina por construção** — a S203 e a `LEELA-FABLE-A-T2` documentam isso com todas as letras,
+e a projeção nasceu com `atletaNome`/`kit`/`chipNumero`/`status`/`modalidade` mais carimbos. O que
+não chegar pela projeção chega por join ao pedido, ou **não chega e o resultado diz que não
+chega**. Mostrar tamanho de kit errado no balcão é pior que não mostrar nenhum: o operador entrega
+a sacola errada com confiança.
+
+**A composição do kit deriva do catálogo, não de texto livre** — é a **RN-576**, escrita no mesmo
+dia, e "o que tá incluso" é exatamente o consumidor que ela previa.
+
+**A fronteira de dado pessoal, que é parte da regra e não ressalva sobre ela.** CPF, telefone e
+e-mail aparecem para quem opera **aquele** evento, na mesma régua de minimização que a RN-565 e a
+RN-566 já aplicam ao CRM. Busca por CPF **não** vira busca global de pessoa, e o que o resultado
+mostra **não** vira exportação. O dono pediu os campos; o contorno é como eles se constroem sem
+abrir uma segunda porta para a base inteira.
+
+**Falsificação:** buscar um participante por CPF e receber alguém de outro evento — recusa.
+Encontrar um participante cujo pedido não carrega telefone e ver o campo em branco sem rótulo de
+ausência — reprova. Ver "o que está incluso" preenchido por texto livre em vez do catálogo —
+reprova pela RN-576.
+
+**Onde aterrissa:** a tela do credenciamento (rota `/credenciamento`, RN-399) e o contrato de
+leitura que a alimenta. Card de build no [[V1-KANBAN]], ancorado neste épico.

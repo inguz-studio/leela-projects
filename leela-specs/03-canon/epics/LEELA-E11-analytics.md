@@ -559,3 +559,32 @@ a T1 é honestidade e a T2 já está paga — a conta certa esperando a fonte, c
 
 **Por que a história é daqui e não do engajamento:** o número é de vendas, e a autoridade sobre
 número de vendas é esta. O engajamento apenas consome.
+
+### ⚡ Delta a S825 vira a próxima da fila (REGISTRO-LEVA23 · leva 25 do dono · 2026-08-17, noite)
+
+O dono leu o "em breve" honesto do bloco de formas de pagamento na Visão Geral
+(`apps/painel/src/routes/overview/OverviewContent.tsx:185`) e perguntou, na íntegra: *"por que
+nao temos esse agregado de pagamento se salvamos todas as formas de pagamento ?"*
+
+**Ele está certo na premissa, e a resposta é que falta o degrau do meio.** A forma é gravada em
+cada pedido e nada se perde; o que não existe é o resumo. Três fatos medidos sustentam isso: o
+rollup que escreve a tela (`functions/src/overview/aggregateProfessionalDashboard.ts`) é feito de
+`count()` sobre coleções (`:127`, `:183`, `:189`) e **produz quantidades, não distribuições** — a
+palavra "forma" não aparece nele; o retorno do resumo da inscrição não carrega o campo; e a tela
+não pode ir buscar sozinha, porque **tela não varre documento financeiro** é o padrão desta casa.
+Ou seja: o "em breve" não esconde trabalho não feito atrás de promessa, ele descreve a dependência
+real, e a dependência é exatamente a S825.
+
+**Decisão do maestro, registrada como dele e não como do dono:** a lane entra como **próxima da
+fila** e dispara quando as cinco lanes da noite de 17/08 aterrissarem — cinco já disputam a
+árvore, e a sexta compraria conflito em vez de velocidade. **Ela acende em produção só no próximo
+pacote de deploy**, porque é `functions/` e não sobe pelo caminho das lanes de tela; a rosca é
+superfície que ninguém nunca viu renderizada com número de verdade, então entra com gate visual.
+
+**Não consome RN.** A regra que governa já é a deste épico e a história já está especificada em
+duas tarefas; o que mudou foi a posição na fila, e posição de fila não é regra de negócio.
+
+⚡ **Efeito colateral que vale registrar:** o mesmo agregado é a dependência da opção "trocar por
+divisão de receita de verdade" do **CAIXA-1**, que está no painel do dono desde a tarde do mesmo
+dia marcada como **bloqueada por dado**. Quando esta história subir, aquela opção sai de
+bloqueada — e vale ele saber disso antes de responder o CAIXA-1.

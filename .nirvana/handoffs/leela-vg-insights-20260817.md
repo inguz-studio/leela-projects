@@ -183,7 +183,19 @@ alertas, a reversão é uma linha (`alerts` cru em vez de `alertasDeEvento(alert
    mataria essa fidelidade sem o dono ter pedido.
 2. **Não removeu o bloco do Engajamento.** O recorte de club é papel distinto do
    escopo-organizador da Visão geral. A remoção é vetável do dono, registrada
-   pela lane REGISTRO-LEVA23.
+   pela lane REGISTRO-LEVA23 (`VG-INSIGHTS-1` no painel).
+
+   **Correção de fato nesse vetável, medida por esta lane.** O registro original
+   propunha como default "a Visão Geral vira a única casa", com a justificativa
+   de que o bloco do Engajamento *"já é derivado de dado que a Visão Geral
+   também alcança"*. **Isso é falso.** Os dois insights de lá saem de
+   `resumirSituacao` (lista de `membros` do club) e `resumirPonteComEventos`
+   (lista de `desafios` com `eventoVinculadoId`); a Visão geral **não carrega
+   nenhuma das duas** — ela recebe apenas os contadores `qtdMembrosAtivos` e
+   `qtdDesafiosAtivos` somados por Function. Adotar aquele default hoje
+   **mataria** os dois insights em vez de mudá-los de casa. O item foi corrigido
+   no painel, com o default trocado para o que o dado já impõe (os dois ficam,
+   com a divisão escrita). Nenhuma frase se repete entre as telas hoje.
 
 ### Achado de redundância que esta lane NÃO consertou (fica para o gate `leela-redundancia`)
 
