@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-O que ainda é seu para decidir, e só isso. **8 itens abertos, contados à mão:** 6 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
+O que ainda é seu para decidir, e só isso. **9 itens abertos, contados à mão:** 7 em "Decisões que dependem de você" e 2 em "Ações que só você pode executar".
 Nada aqui bloqueia código — tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 Histórico de fechamento não mora aqui: cada item que fecha vai para a rodada correspondente em `02-rodadas/`.
 
@@ -29,7 +29,7 @@ Você perguntou o intuito dela em 17/08, e a medição diz que ela não faz nenh
 - **Caso de uso:** a Marina abre a Caixa para entender de onde veio o dinheiro do evento, e encontra uma tabela de contagem cujo total não bate com o título — enquanto o gráfico logo acima já mostra um terço daquelas linhas.
 - **Job story:** quando eu abro a Caixa do meu evento, eu quero entender de onde veio a receita, para saber qual modalidade e qual kit sustentam o resultado.
 - **O que fica com você:** o que essa faixa da tela deve contar — ou se ela deve sumir.
-- **Opções:** **remover a tabela** (**default proposto** — modalidade já está no gráfico logo acima, e status e kit já existem *acionáveis* na tela de Inscritos, como filtro; sai uma tabela que soma errado e a dobra fica com os três números de dinheiro) · **trocar por divisão de receita de verdade**, que é o que você levantou primeiro e o que a spec original pedia — **bloqueada por dado**, não por trabalho de tela: exige o modelo de pagamento no inscrito (FABLE-A) e uma agregação por forma que ninguém escreve hoje · **redesenhar com propósito**, uma partição por vez com seletor e coluna de percentual, para a soma voltar a bater com o cabeçalho.
+- **Opções:** **remover a tabela** (**default proposto** — modalidade já está no gráfico logo acima, e status e kit já existem *acionáveis* na tela de Inscritos, como filtro; sai uma tabela que soma errado e a dobra fica com os três números de dinheiro) · **trocar por divisão de receita de verdade**, que é o que você levantou primeiro e o que a spec original pedia — **bloqueada por dado**, não por trabalho de tela: exige o modelo de pagamento no inscrito (FABLE-A) e uma agregação por forma que ninguém escreve hoje — ⚡ **e essa agregação virou a próxima da fila em 17/08** (leva 25, S825), então esta opção sai de bloqueada no próximo pacote de deploy · **redesenhar com propósito**, uma partição por vez com seletor e coluna de percentual, para a soma voltar a bater com o cabeçalho.
 - **Onde aterrissa:** `apps/painel/.../financeiro/FinanceiroView.tsx:303-313` e a onda D de `02-rodadas/2026-08-17-leva22/04-fila-em-ondas.md`. Medição completa em `00-medicao-kits-caixa-e-terciario.md` §14.
 
 ### POPOVER-COR-1 · a cor do painel flutuante (o "modal" do perfil)
@@ -76,6 +76,16 @@ Os filtros em lista já ficam alinhados ao lado da pesquisa, numa fileira só, c
 - **O que fica com você:** qual das duas alturas vira a altura da faceta.
 - **Opções:** **subir a múltipla para 40px** (**default proposto** — o campo de busca ao lado tem 38px, então 40 é quem já está pareado; sobe só o gatilho do `FilterMenu`) · **descer a única para 32px**, barra mais leve mas descolada da busca · manter as duas, se a diferença de altura for leitura de tipo para você.
 - **Onde aterrissa:** `FilterMenu.tsx` (o `size` do gatilho) ou `FilterChips.tsx` (a altura da faceta exclusiva), com `gate-visual-filtros` re-rodado nos dois temas. Puxa junto as duas facetas cruas de Inscritos (`Todos os kits`, `Todas as modalidades`), que são `Combobox` direto e não ganham o nome da faceta. Detalhe em `.nirvana/handoffs/leela-filtros-fix-20260817.md`.
+
+### VG-INSIGHTS-1 · os Insights da Leela mudam para a Visão Geral: o bloco do Engajamento fica?
+
+Você mandou os insights para a Visão Geral em 17/08 e a lane já está construindo lá. Sobrou o destino do bloco que subiu hoje no Engajamento, com dois insights de dado real e recorte por club funcionando. Manter os dois põe a mesma faixa em duas telas que você abre no mesmo dia, que é o caso que a RN-573 chama de cópia sem papel declarado.
+
+- **Caso de uso:** o Castelo abre a Visão geral, lê "12 membros parados há 30 dias", clica em Engajamento para agir e encontra a mesma frase de novo, no mesmo formato, sem nada dizendo por que ela apareceu duas vezes.
+- **Job story:** quando eu circulo entre as telas do painel, eu quero que cada aviso tenha uma casa só, para não gastar atenção conferindo se são dois problemas ou o mesmo repetido.
+- **O que fica com você:** se o Engajamento mantém bloco de insights próprio depois que a Visão Geral tiver o dele.
+- **Opções:** **a Visão Geral vira a única casa** (**default proposto** — o bloco do Engajamento sai, e o que ele mostra hoje já é derivado de dado que a Visão Geral também alcança) · **os dois ficam, com conteúdos diferentes por construção** — o do Engajamento só sobre comunidade e club, o da Visão Geral sobre o negócio inteiro, com a divisão escrita como regra para não voltar a convergir · **os dois ficam iguais**, se ver o mesmo aviso nos dois lugares for reforço útil para você.
+- **Onde aterrissa:** `apps/painel/src/routes/overview/` e `EngajamentoView.tsx`, com a peça do design system servindo os dois (RN-568: esta é a terceira montagem da mesma anatomia, e ela sobe para o DS de qualquer jeito). Detalhe em `.nirvana/handoffs/leela-vg-insights-20260817.md` e no §23.1 de `02-rodadas/2026-08-17-decisoes-dono/01-decisoes-dono.md`.
 
 ## Ações que só você pode executar
 

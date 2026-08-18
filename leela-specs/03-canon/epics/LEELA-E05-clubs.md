@@ -1600,3 +1600,28 @@ custa membro, e ela é silenciosa. A rota `/clubs/[slug]` e as seis abas depende
 identificador.
 
 **Onde entra na fila:** card do backlog, ancorado nos três épicos por superfície.
+
+## Delta a S115 ganha procedência de dono (REGISTRO-LEVA23 · leva 23 · 2026-08-17, noite)
+
+> ⚠️ **Direcional. Nenhuma linha de código nesta janela, e nenhuma RN nova.**
+
+Na íntegra: *"acho importante darmos a visao de check-ins dentro dos clubs, de maneria separada
+também."*
+
+**A palavra que carrega a decisão é "separada".** Não é acrescentar um número na tela do club: é
+uma visão com casa própria. A **S115** já existia como a destrava dos três blocos do estudo de
+engajamento que estão em "em breve" por falta de um número só — quantos registros houve, por ação
+e por período —, e a fala do dono é o "vai" dela. O card sai do backlog frio e passa a ter
+procedência.
+
+**O que a fala não muda é a ordem interna, e ela é contraintuitiva:** isto não é trabalho de tela.
+Hoje o registro do atleta é legível apenas pelo próprio atleta e pela administração, então o
+primeiro degrau é o **agregado de servidor** (S115-T1). Só depois vêm o total do período, a
+divisão por pilar, o ranking de ações, o mapa de horários e o volume ao longo do tempo.
+
+**Não consome número** pela mesma disciplina da leva 10 e do ARENA-1: o desenho da visão separada
+ainda não existe, e escrever regra antes dele cravaria justamente o que a spec futura precisa
+perguntar. Fica registrado aqui porque decisão do dono que não aparece no épico parece rodada que
+esqueceu de registrar.
+
+**Onde aterrissa:** card no [[V1-KANBAN]], sob a S115 que já estava escrita.
