@@ -333,3 +333,159 @@ describe('Rules — financeiro/current é escrita exclusiva de Function', () => 
     );
   }, 30_000);
 });
+
+// ===========================================================================
+// S825-T1 · a série por forma de pagamento e o dinheiro parado (E11 · leva 25)
+//
+// Integração REAL: os docs de `pagamentos` entram no Emulator e a série sai do
+// mesmo laço que já apurava os carimbos TAXAFLEX. É aqui que se prova que a
+// rosca do dono soma o que os pagamentos dizem — e não o que a tela supõe.
+// ===========================================================================
+
+describe('recomputarFinanceiroEvento — série por forma de pagamento (S825-T1)', () => {
+  const TS = (): FirebaseFirestore.FieldValue => FieldValue.serverTimestamp();
+
+  /** Escreve um pagamento cru do evento canônico (Function é a única escritora). */
+  async function pagamento(
+    id: string,
+    forma: 'pix' | 'cartao_credito',
+    status: string,
+    valorFinal: number,
+    extra: Record<string, unknown> = {}
+  ): Promise<void> {
+    await adminDb.collection('pagamentos').doc(id).set({
+      id,
+      tenantId: CASTELO_ID,
+      eventoId: MEIA_FLORIPA_ID,
+      pedidoRef: `ped-${id}`,
+      status,
+      forma,
+      valorBase: valorFinal,
+      desconto: 0,
+      valorFinal,
+      criadoEm: TS(),
+      atualizadoEm: TS(),
+      ...extra,
+    });
+  }
+
+  it('soma contagem E valor por forma, só dos CONFIRMADOS', async () => {
+    await pagamento('pag-pix-1', 'pix', 'confirmado', 200);
+    await pagamento('pag-pix-2', 'pix', 'confirmado', 300);
+    await pagamento('pag-card-1', 'cartao_credito', 'confirmado', 500);
+    // Os três abaixo NÃO entram: pendente ainda não é dinheiro, cancelado
+    // nunca foi, e estorno integral flipa o status e sai do Σ inteiro.
+    await pagamento('pag-pix-pend', 'pix', 'pendente', 900);
+    await pagamento('pag-pix-canc', 'pix', 'cancelado', 900);
+    await pagamento('pag-card-est', 'cartao_credito', 'estornado', 900);
+
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+
+    expect(fin?.formasPagamento).toEqual([
+      { forma: 'cartao_credito', vendas: 1, valor: 500 },
+      { forma: 'pix', vendas: 2, valor: 500 },
+    ]);
+  }, 30_000);
+
+  it('estorno PARCIAL desconta do valor mas mantém a venda na contagem', async () => {
+    // O pagamento segue confirmado; o que voltou ao comprador saiu do face.
+    // Somar face cheio aqui faria a rosca somar mais que a receita da mesma
+    // tela — é o desvio que esta asserção existe para pegar.
+    await pagamento('pag-parcial', 'pix', 'confirmado', 1000, {
+      estornadoTotal: 400,
+    });
+
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+    const pix = fin?.formasPagamento.find((f) => f.forma === 'pix');
+
+    expect(pix).toEqual({ forma: 'pix', vendas: 1, valor: 600 });
+  }, 30_000);
+
+  it('nasce COMPLETA e na ordem canônica mesmo sem venda nenhuma', async () => {
+    // Evento sem pagamento não devolve lista curta nem lista vazia: devolve a
+    // resposta "zero em cada forma". É o que separa vazio honesto de "em
+    // breve" lá na tela.
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+
+    expect(fin?.formasPagamento).toEqual([
+      { forma: 'cartao_credito', vendas: 0, valor: 0 },
+      { forma: 'pix', vendas: 0, valor: 0 },
+    ]);
+  }, 30_000);
+
+  it('pagamento de OUTRO tenant no mesmo evento fica fora (ADR-009)', async () => {
+    await pagamento('pag-ok', 'pix', 'confirmado', 100);
+    await adminDb.collection('pagamentos').doc('pag-invasor').set({
+      id: 'pag-invasor',
+      tenantId: PASSO_ID, // divergente do evento — isolamento multi-tenant
+      eventoId: MEIA_FLORIPA_ID,
+      pedidoRef: 'ped-invasor',
+      status: 'confirmado',
+      forma: 'pix',
+      valorBase: 7777,
+      desconto: 0,
+      valorFinal: 7777,
+      criadoEm: TS(),
+      atualizadoEm: TS(),
+    });
+
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+    const pix = fin?.formasPagamento.find((f) => f.forma === 'pix');
+
+    expect(pix).toEqual({ forma: 'pix', vendas: 1, valor: 100 });
+  }, 30_000);
+
+  it('doc com forma fora do enum não derruba o agregado — é ignorado', async () => {
+    await pagamento('pag-bom', 'pix', 'confirmado', 100);
+    await adminDb.collection('pagamentos').doc('pag-lixo').set({
+      id: 'pag-lixo',
+      tenantId: CASTELO_ID,
+      eventoId: MEIA_FLORIPA_ID,
+      pedidoRef: 'ped-lixo',
+      status: 'confirmado',
+      forma: 'boleto', // fora do domínio (decisão 2026-07-05)
+      valorBase: 50,
+      desconto: 0,
+      valorFinal: 50,
+      criadoEm: TS(),
+      atualizadoEm: TS(),
+    });
+
+    // Um doc corrompido não pode travar o rollup do evento inteiro: o
+    // agregado roda em lote e lançar aqui cegaria a tela por causa de um doc.
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+    expect(fin?.formasPagamento.find((f) => f.forma === 'pix')?.valor).toBe(100);
+  }, 30_000);
+
+  it('IDEMPOTENTE: reprocessar produz a MESMA série (nada acumula)', async () => {
+    await pagamento('pag-idem', 'cartao_credito', 'confirmado', 250);
+
+    const primeira = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+    const segunda = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+
+    expect(segunda?.formasPagamento).toEqual(primeira?.formasPagamento);
+    expect(
+      segunda?.formasPagamento.find((f) => f.forma === 'cartao_credito')
+    ).toEqual({ forma: 'cartao_credito', vendas: 1, valor: 250 });
+  }, 30_000);
+
+  it('pendências em R$ contam PAGAMENTOS pendentes, não inscritos (VG-INSIGHTS-3)', async () => {
+    // Denominador próprio, de propósito: o alerta de pendências conta gente,
+    // este número conta cobrança. O seed canônico tem 45 inscritos pendentes
+    // e aqui existem 2 cobranças — os dois números são certos e diferentes.
+    await pagamento('pag-pend-1', 'pix', 'pendente', 180);
+    await pagamento('pag-pend-2', 'cartao_credito', 'pendente', 320);
+    await pagamento('pag-conf', 'pix', 'confirmado', 400);
+
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+
+    expect(fin?.pendentes).toEqual({ qtd: 2, valor: 500 });
+    // O dinheiro parado NUNCA entra na série de confirmados.
+    expect(fin?.formasPagamento.find((f) => f.forma === 'pix')?.valor).toBe(400);
+  }, 30_000);
+
+  it('sem cobrança pendente, o dinheiro parado é zero — nunca ausente', async () => {
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+    expect(fin?.pendentes).toEqual({ qtd: 0, valor: 0 });
+  }, 30_000);
+});

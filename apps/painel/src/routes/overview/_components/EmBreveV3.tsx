@@ -23,7 +23,7 @@ export function EmBreveV3({
   titulo: string;
   causa: string;
   icon: ReactNode;
-  className?: string;
+  className?: string | undefined;
 }): JSX.Element {
   return (
     <CartaoV3 aria={titulo} elev={2} padding="lg" className={className}>

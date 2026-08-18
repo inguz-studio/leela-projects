@@ -54,11 +54,35 @@ describe('OverviewContent (HIFI-REC · grade do protótipo v3)', () => {
     }
   });
 
-  it('seções sem fonte são "em breve" NOMEADOS — nunca gráfico zerado', () => {
+  it('seção sem fonte é "em breve" NOMEADO — nunca gráfico zerado', () => {
     render(<OverviewContent {...props()} />);
-    expect(screen.getAllByText('Em breve')).toHaveLength(2);
+    // Eram DOIS até 17/08. "Formas de pagamento" saiu da lista porque a série
+    // financeira passou a existir (S825) — com a fixture canônica, que TEM
+    // série, sobra só a Presença por semana, que segue sem fonte de verdade.
+    expect(screen.getAllByText('Em breve')).toHaveLength(1);
     expect(screen.getByText(/não há série semanal legível/)).toBeInTheDocument();
-    expect(screen.getByText(/forma de pagamento chega ao cliente/)).toBeInTheDocument();
+  });
+
+  it('S825-T2: com série, "Formas de pagamento" desenha a rosca e fecha com o KPI', () => {
+    render(<OverviewContent {...props()} />);
+    const bloco = screen.getByRole('region', { name: 'Formas de pagamento' });
+
+    // A fixture canônica soma R$ 142.280 — a MESMA receita confirmada do topo.
+    expect(within(bloco).getByText('R$ 142.280')).toBeInTheDocument();
+    expect(within(bloco).getByText('Cartão de crédito')).toBeInTheDocument();
+    expect(within(bloco).getByText('Pix')).toBeInTheDocument();
+    expect(within(bloco).getByText('1.284 vendas confirmadas')).toBeInTheDocument();
+    expect(within(bloco).queryByText('Em breve')).not.toBeInTheDocument();
+  });
+
+  it('S825-T2: sem série (agregado velho), o "em breve" volta — nunca rosca zerada', () => {
+    render(<OverviewContent {...props({ kpis: mkKpis({ formasPagamento: null }) })} />);
+    const bloco = screen.getByRole('region', { name: 'Formas de pagamento' });
+
+    // Este é o estado natural entre o merge e o deploy das Functions. Uma
+    // rosca zerada aqui afirmaria "ninguém pagou" sobre R$ 142.280 de receita.
+    expect(within(bloco).getByText('Em breve')).toBeInTheDocument();
+    expect(screen.getAllByText('Em breve')).toHaveLength(2);
   });
 
   it('"Eventos ativos" e "Últimas inscrições" saíram (o protótipo não os tem)', () => {

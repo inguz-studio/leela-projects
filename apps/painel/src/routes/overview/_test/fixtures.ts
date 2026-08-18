@@ -27,6 +27,14 @@ export function mkKpis(over: Partial<OverviewKPIs> = {}): OverviewKPIs {
     conversaoSparkline: [],
     membrosAtivosTotais: 0,
     desafiosAtivosTotais: 0,
+    // S825-T1: a fixture canônica vem COM série — R$ 57.280 + R$ 85.000 =
+    // R$ 142.280, a mesma receita do aceite. Testar a rosca sobre uma
+    // fixture que não fecha com o KPI ao lado ensaiaria a discrepância em vez
+    // de pegá-la.
+    formasPagamento: [
+      { forma: 'cartao_credito', vendas: 684, valor: 57280 },
+      { forma: 'pix', vendas: 600, valor: 85000 },
+    ],
     ...over,
   };
 }

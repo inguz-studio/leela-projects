@@ -42,6 +42,11 @@ export function overviewDoFinanceiro(financeiro: FinanceiroEvento): OverviewResu
     conversaoSparkline: [],
     membrosAtivosTotais: 0,
     desafiosAtivosTotais: 0,
+    // S825-T1: a série do PRÓPRIO evento sobe intacta — este agregado é a
+    // casa dela, então aqui não há consolidação a fazer nem cobertura a
+    // recalcular. Doc anterior à série chega sem o campo e vira `null`, que é
+    // o que faz a rosca da Análise degradar igual à da Visão geral.
+    formasPagamento: financeiro.formasPagamento ?? null,
     alerts: [],
     atualizadoEm: 0,
   };

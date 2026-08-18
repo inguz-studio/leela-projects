@@ -22,6 +22,7 @@ const OVERVIEW: OverviewResult = {
   conversaoSparkline: [10, 20, 15, 30],
   membrosAtivosTotais: 0,
   desafiosAtivosTotais: 0,
+  formasPagamento: null,
   alerts: [],
   atualizadoEm: 0,
 };

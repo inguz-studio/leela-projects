@@ -29,7 +29,9 @@ import {
   isStatusEvento,
   isStatusInscrito,
   parseEvento,
+  parseSerieFormasPagamento,
   type Evento,
+  type FatiaFormaPagamento,
   type KitInscrito,
   type StatusInscrito,
   type Timestamp,
@@ -247,6 +249,18 @@ export interface FinanceiroEvento {
   ticketSparkline?: number[];
   /** Receita (R$) por modalidade p/ o donut (chaves = percursos do evento). */
   receitaPorModalidade?: Record<string, number>;
+  /**
+   * Série por forma de pagamento do evento (E11 · S825-T1). `null` = o
+   * agregado ainda não a carrega (doc anterior ao deploy), e é ESSE null que
+   * mantém o "em breve" honesto na tela — nunca uma rosca zerada. Série
+   * presente com tudo zerado significa "somado, sem venda".
+   *
+   * OPCIONAL aqui e OBRIGATÓRIA no servidor, de propósito: a Function sempre
+   * escreve o campo, mas o cliente lê docs gravados antes dela existir
+   * (leitura Postel, igual aos analytics opcionais acima). Ausente e `null`
+   * significam a MESMA coisa para quem consome — sempre com `?? null`.
+   */
+  formasPagamento?: FatiaFormaPagamento[] | null;
 }
 
 function toNum(v: unknown): number {
@@ -304,6 +318,10 @@ function parseFinanceiroDoc(data: DocumentData): FinanceiroEvento {
     taxaValor: toNumOrNull(data['taxaValor']),
     receitaLiquida: toNumOrNull(data['receitaLiquida']),
     inscritos: parseContagem(data['inscritos']),
+    // S825-T1: parsing ÚNICO, no core — a fronteira Firestore→domínio da
+    // série é a mesma para o servidor e para o cliente, senão "não computada"
+    // vira "sem venda" numa das duas pontas e ninguém percebe.
+    formasPagamento: parseSerieFormasPagamento(data['formasPagamento']),
     ...(data['taxaConversaoPct'] !== undefined
       ? { taxaConversaoPct: toNumOrNull(data['taxaConversaoPct']) }
       : {}),

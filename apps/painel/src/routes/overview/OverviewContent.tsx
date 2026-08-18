@@ -16,9 +16,14 @@
 // /eventos, a um clique do rail e da Agenda. Registrado no handoff.
 //
 // Seções sem fonte de dado real (regra do contrato: card "em breve"
-// estilizado, nunca mock): Presença por semana (não existe série semanal de
-// check-ins legível) e Formas de pagamento (nenhum agregado por forma de
-// pagamento chega ao cliente). Impedimentos nomeados no handoff.
+// estilizado, nunca mock): Presença por semana — não existe série semanal de
+// check-ins legível pelo organizador.
+//
+// +2026-08-17 (S825-T2 · SERIE-FINANCEIRA): "Formas de pagamento" SAIU dessa
+// lista. O agregado por forma passou a existir (E11 · S825-T1) e o bloco
+// virou `FormasDePagamento`, que ainda cai no "em breve" enquanto o agregado
+// não trouxer a série — a degradação é o estado natural entre este merge e o
+// deploy das Functions, não um caso de exceção.
 //
 // Movimento (README §5): as seções revelam em cascata na entrada — fade +
 // subida de 12px, passo de 60ms por seção (`animate-revela-secao` + tokens
@@ -27,7 +32,7 @@
 // =============================================================================
 
 import { Button, Skeleton, cn } from '@leela/design-system';
-import { CreditCard, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { Cascata } from '../../components/CartaoV3';
 import { InsightsDaLeela } from '../../components/InsightsDaLeela';
 import type { InsightDaLeela } from '../../components/insights';
@@ -41,6 +46,7 @@ import { AlertsPanel } from './_components/AlertsPanel';
 import { StaffScopeNote } from './_components/StaffScopeNote';
 import { OcupacaoEventos } from './_components/OcupacaoEventos';
 import { EmBreveV3 } from './_components/EmBreveV3';
+import { FormasDePagamento } from './_components/FormasDePagamento';
 import { ParceriasNoMobile } from './_components/ParceriasNoMobile';
 import type { OcupacaoDosEventos } from './_lib/ocupacao';
 import type { ItemDaAgenda } from './_lib/agenda';
@@ -208,10 +214,13 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
         />
       </Cascata>
       <Cascata i={5}>
-        <EmBreveV3
-          titulo="Formas de pagamento"
-          icon={<CreditCard aria-hidden />}
-          causa="Nenhum agregado por forma de pagamento chega ao cliente hoje — a inscrição não carrega a forma no retorno do resumo. Assim que a série financeira existir, o donut aparece aqui."
+        {/* S825-T2: a série existe — o bloco decide entre rosca, vazio
+            honesto e o "em breve" original lá dentro, onde a distinção entre
+            "não computada" e "sem venda" não tem como se perder. */}
+        <FormasDePagamento
+          serie={kpis?.formasPagamento ?? null}
+          receitaConfirmada={kpis?.receitaConfirmada ?? null}
+          loading={kpisLoading}
           className="h-full"
         />
       </Cascata>
