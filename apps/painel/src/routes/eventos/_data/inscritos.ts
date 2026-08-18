@@ -22,18 +22,35 @@ import {
   pedidoEPagamentoDoInscritoQuery,
   todosInscritosQuery,
 } from '../../../lib/query/queries';
-import type { AsyncState } from './eventos';
+import type { AsyncState, AsyncStateRecarregavel } from './eventos';
 
-/** Carrega TODOS os inscritos do evento (acúmulo por cursor no gateway, §2.5). */
-export function useTodosInscritos(eventoId: string | null): AsyncState<Inscrito[]> {
+/**
+ * Carrega TODOS os inscritos do evento (acúmulo por cursor no gateway, §2.5).
+ *
+ * Devolve `refetch` porque o bloco de erro da tela passou a oferecer "Tentar
+ * novamente" (INSCRITOS-READ-FIX): a falha de leitura mais provável aqui é
+ * transitória (rede/permissão em renovação), e mandar o organizador recarregar
+ * a página inteira para 336 linhas é a saída que a tela devia dar sozinha.
+ */
+export function useTodosInscritos(
+  eventoId: string | null
+): AsyncStateRecarregavel<Inscrito[]> {
   const query = useQuery({
     ...todosInscritosQuery(eventoId ?? ''),
     enabled: !!eventoId,
   });
+  const refetch = (): void => {
+    void query.refetch();
+  };
 
   // Sem evento ainda → segue em loading (não finge vazio), como o hook antigo.
-  if (!eventoId) return { data: null, loading: true, error: null };
-  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
+  if (!eventoId) return { data: null, loading: true, error: null, refetch };
+  return {
+    data: query.data ?? null,
+    loading: query.isPending,
+    error: query.error ?? null,
+    refetch,
+  };
 }
 
 /**

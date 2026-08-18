@@ -31,6 +31,16 @@ export interface AsyncState<T> {
   error: Error | null;
 }
 
+/**
+ * Estado assíncrono que a TELA pode pedir para recarregar — mesmo contrato do
+ * `EstadoAsyncRecarregavel` dos clubes (`clubes/engajamento/_data`), que já
+ * paga o "Tentar novamente" do bloco de erro. Bloco de erro sem saída deixa a
+ * pessoa com a tecla de recarregar do navegador.
+ */
+export interface AsyncStateRecarregavel<T> extends AsyncState<T> {
+  refetch: () => void;
+}
+
 /** Lista de eventos do organizador logado (hub). Chave partilhada c/ Visão Geral. */
 export function useEventos(): AsyncState<Evento[]> {
   const session = useTenantSession();
