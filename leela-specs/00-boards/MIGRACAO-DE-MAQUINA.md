@@ -518,5 +518,42 @@ o clone do passo 1, e é ele que carrega o contexto de produto inteiro para o co
 
 ## Estado do deploy (preenchido pela DEPLOY-J4)
 
-_Reservado. A lane `DEPLOY-J4` escreve aqui o resultado medido da subida: o que foi para
-produção, com qual hash, e o que continua parado._
+**Produção saiu de `409a5748` (16/08) para `82aea920` (18/08).** As levas 20-25 inteiras estão no ar:
+UI-ACOES, filtros em lista, barra mobile, eng-insights, modal-lote, modalidades, cred-busca,
+vg-insights, inscritos-read-fix e a série financeira.
+
+### O pino novo
+
+| Superfície | Estado | Prova |
+|---|---|---|
+| **Functions** | 🔄 no ar · 13:03:53Z | 105 → **106** GEN_1, **106/106 `ACTIVE`**; 1 criada (`editarModalidadesEvento`), **0 removidas**; convergência **106 Skipped, 0 update/create/delete** |
+| **Painel** (`leela-hub`) | 🔄 no ar · 13:09:18Z | `index-CRoaNsxO.js` → **`index-BCYyq8yg.js`** + `index-CBlsWQ0a.css`; 3 assets **byte a byte** idênticos ao build local |
+| **Landing** (`leela-landing`) | 🔄 no ar · 13:19:00Z | 3 chunks de rota trocados e **byte a byte** idênticos; subiu por delta de **dependência**, não de fonte |
+| **Rules** | ⬜ **não subiu — não mudou** | `git diff 409a5748..82aea920 -- firestore.rules` = **0 arquivos**; ruleset segue `9e4b4b03`, e o sha do source servido (`d59b63ac…`) bate byte a byte com o `firestore.rules` do pino novo |
+| **Índices** | ⬜ **não subiu — não mudou** | diff = 0 arquivos; **19/19 `READY`**, zero `CREATING`, antes e depois |
+| **Storage rules** | ⬜ não tocado | fora do escopo desta lane |
+
+### O reprocesso (RN-822) rodou junto
+
+`reprocessarFinanceiroTodosEventos` **já existia** no pino — não precisou ser construída. Rodou às
+**13:08:45Z**, depois das functions: **1 evento tocado, 0 falhas, 1.624 ms**, idempotência provada
+por 2ª passada. Em `teste-taxa-repassada` a série nasceu **correta**, não apenas presente: dos 2
+pagamentos crus (1 `confirmado/pix`, 1 `falhou/pix`), só o confirmado entrou no Σ.
+
+### O que continua parado
+
+1. ⛔ **Gate visual das 3 telas da rosca** (S825) — exige **JDK 21** para o emulador do mock, e a
+   máquina tem 17. É a pendência #1 desta frente, e a migração de máquina é o caminho natural dela.
+2. ⛔ **Gate visual L-011 do admin e das ondas 2/3/5** — segue aberto desde 12/08.
+3. **S316-T5** (evento degradado pela listagem) — única da onda de Modalidades que não subiu porque
+   não foi construída.
+4. **`:4601` serve build local, não produção** — quem validar painel por ali vê outro bundle. A
+   régua de produção é `https://leela-hub.web.app`.
+
+### Como refazer esta subida na máquina nova
+
+Vale como receita testada, e não como teoria: worktree no pino → `pnpm install --frozen-lockfile` →
+copiar `functions/.env` (gitignored, **não vem no clone**) → build de `core`/`api-client`/
+`design-system` → `npx vite build --mode leela-hub` no painel → `firebase deploy` por superfície com
+`--config firebase.prod.json` (landing usa `firebase.landing.json`). O detalhe medido de cada passo
+está em `.nirvana/handoffs/leela-deploy-j4-20260818.md`.
