@@ -27,7 +27,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   collection,
   deleteDoc,
@@ -633,5 +633,53 @@ describe('rules de escrita em inscritos (S203-T1)', () => {
     await assertSucceeds(
       deleteDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'))
     );
+  });
+
+  // ── A ESCRITA É MAIS LARGA QUE A LEITURA (INSCRITOS-READ-FIX · 17/08) ────
+  //
+  // O princípio da casa é "a regra morde na escrita, nunca na leitura". Aqui a
+  // regra morde MENOS que o parse: `allow create` exige tenantId coerente,
+  // kit/status no enum e chip nulo — e NÃO exige `atletaNome` nem `atletaId`,
+  // que `parseInscrito` recusa vazios. Este bloco prende o fato com o arquivo
+  // real de Rules, contra o Emulator, porque é ele que define o RISCO DE
+  // PRODUÇÃO: um organizador, pela porta sancionada, grava um doc que a
+  // própria lista dele não sabe mais ler.
+  //
+  // A conclusão NÃO é apertar a Rule agora (mudar shape exigido em produção é
+  // outra decisão, e mais arriscada que o defeito). É que a LISTAGEM tem de
+  // sobreviver ao doc — o resgate F1 de `listarInscritos`.
+  describe('doc que a Rule aceita e o parse recusa (risco de produção)', () => {
+    it('a Rule ACEITA create de cliente sem atletaNome', async () => {
+      const db = dbAs(MARINA_UID, marinaClaims);
+      await assertSucceeds(
+        setDoc(
+          refInscrito(db, MEIA_FLORIPA_ID, 'insc-sem-nome'),
+          inscritoValido({ id: 'insc-sem-nome', atletaNome: '' })
+        )
+      );
+    });
+
+    it('e a listagem SOBREVIVE a ele — placeholder degradado, lista viva (F1)', async () => {
+      const db = dbAs(MARINA_UID, marinaClaims);
+      await setDoc(
+        refInscrito(db, MEIA_FLORIPA_ID, 'insc-sem-nome'),
+        inscritoValido({ id: 'insc-sem-nome', atletaNome: '' })
+      );
+
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { itens } = await listarInscritos(db, MEIA_FLORIPA_ID);
+      errSpy.mockRestore();
+
+      // ANTES do resgate: esta chamada LANÇAVA e o organizador via
+      // "Não foi possível carregar os inscritos" — com o doc bom junto.
+      const ids = itens.map((i) => i.id);
+      expect(ids).toContain('insc-castelo-1');
+      expect(ids).toContain('insc-sem-nome');
+      const degradado = itens.find((i) => i.id === 'insc-sem-nome');
+      expect(degradado?.atletaNome).toBe('(inscrito com dados inválidos)');
+      expect(degradado?.tenantId).toBe(CASTELO_ID);
+      // O doc SÃO do mesmo evento continua íntegro ao lado do degradado.
+      expect(itens.find((i) => i.id === 'insc-castelo-1')?.atletaNome).toBe('Marina Silva');
+    });
   });
 });
