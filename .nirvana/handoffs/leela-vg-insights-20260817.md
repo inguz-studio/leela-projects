@@ -331,3 +331,37 @@ Commits desta lane, todos com `[vg-insights-20260817]`:
 
 - `a7ffcf9d` — refactor: o bloco vira peça única das duas telas (RN-568)
 - `0f9c5155` — feat: os Insights na Visão geral e a reconciliação com os alertas (RN-573)
+- `620838a3` — docs: handoff, S049 no kanban e os vetáveis no painel do dono
+- `d0d982ed` — merge de sync `origin/main` → `vg-insights`
+
+**Ordem usada** (a mesma da ENG-INSIGHTS-CLOSE, mais segura que mergear direto
+na main com lanes vizinhas ativas):
+
+1. `git merge origin/main` **dentro da branch**, para resolver conflito na
+   origem e não no merge commit da main. Um conflito real, em
+   `DECISOES-ABERTAS.md`: a lane REGISTRO-LEVA23 tinha acabado de registrar o
+   `VG-INSIGHTS-1` e a contagem do cabeçalho divergia. Resolvido **fundindo** os
+   três itens numa família só (`VG-INSIGHTS-1/2/3`, os meus renumerados para não
+   ficar `VG-INSIGHT-` ao lado de `VG-INSIGHTS-`), com a contagem recontada à
+   mão: **11 abertos, 9 + 2**. O merge trouxe também mudanças de `BottomNav` do
+   design system.
+2. Gates re-rodados **pós-sync**, com os pacotes reconstruídos: `tsc` limpo,
+   `eslint src --max-warnings 0` exit 0, fatias `overview` + `engajamento` +
+   `shell` + `components` **486 passed** em 39 arquivos, `gate-canon` PASS na
+   mesma baseline.
+3. Push de `vg-insights` para origin (rede de segurança): `620838a3..d0d982ed`.
+4. Pré-condição conferida em `C:\dev\LEELA`: `git status --porcelain
+   --untracked-files=no` **vazio**, 0 ahead / 0 behind. Sem amend, sem stash.
+5. `git merge --no-ff vg-insights` → smoke na árvore principal (`tsc` limpo,
+   `routes/overview` **196 passed**) → push.
+
+### Hash do merge
+
+```
+9c7f8188 merge: VG-INSIGHTS -- os Insights da Leela na Visao geral e a reconciliacao com os alertas [vg-insights-20260817]
+```
+
+Push limpo, sem rejeição: `63ce7248..9c7f8188 main -> main`. `origin/main` igual
+ao `HEAD` local (0 ahead / 0 behind) depois do push. **`dist/` e
+`dist-mock-campeche/` da árvore principal: intocados** (conferido por
+`git status` sobre os dois caminhos, saída vazia).
