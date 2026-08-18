@@ -1,0 +1,4 @@
+# Artefatos do playwright.harness.config.ts (lane navbar-fix-20260817) —
+# saída de execução, nunca fonte.
+test-results/
+playwright-report/

@@ -133,11 +133,34 @@ const BottomNav = React.forwardRef<HTMLElement, BottomNavProps>(
   ({ items, ariaLabel = 'Navegação principal', className }, ref) => {
     const ativoId = items.find((i) => i.active)?.id ?? null;
     const itemRefs = React.useRef<Map<string, HTMLElement>>(new Map());
+    const containerRef = React.useRef<HTMLDivElement>(null);
     const [indicador, setIndicador] = React.useState<{ x: number; w: number } | null>(null);
 
+    // NAVBAR-FIX (17/08): cada item é `flex-1 min-w-0`, então a largura em px
+    // que `offsetWidth` lê é uma FUNÇÃO do tamanho do contêiner (recalculada a
+    // cada reflow do navegador), não uma medida fixa por item. O efeito abaixo
+    // media na entrada/troca de ativo, mas SEM o ResizeObserver ele nunca
+    // media de novo quando só a LARGURA disponível muda — exatamente o que
+    // redimensionar a janela é. Medido: em 375 com "CRM" ativo, o indicador
+    // nasce em x=234 w=82 (right=316); encolher para 320 SEM remontar deixa o
+    // botão real em x=234 w=68 (right=302, dentro da barra), mas o indicador
+    // fica PRESO em w=82 — 49 px pra fora da moldura da barra. É a pílula
+    // "quebrando e ultrapassando os limites" que o dono viu ao redimensionar
+    // no mock. Prova pinada em
+    // __tests__/pilula-dentro-da-barra.spec.ts (mede de verdade, via
+    // Playwright — jsdom não tem motor de layout, cf. custo-na-dobra.test.ts).
     React.useLayoutEffect(() => {
-      const el = ativoId ? itemRefs.current.get(ativoId) : null;
-      setIndicador(el ? { x: el.offsetLeft, w: el.offsetWidth } : null);
+      const medir = (): void => {
+        const el = ativoId ? itemRefs.current.get(ativoId) : null;
+        setIndicador(el ? { x: el.offsetLeft, w: el.offsetWidth } : null);
+      };
+      medir();
+
+      const container = containerRef.current;
+      if (!container || typeof ResizeObserver === 'undefined') return undefined;
+      const ro = new ResizeObserver(medir);
+      ro.observe(container);
+      return () => ro.disconnect();
     }, [ativoId, items]);
 
     const registrarItem = (id: string) => (el: HTMLElement | null): void => {
@@ -161,6 +184,7 @@ const BottomNav = React.forwardRef<HTMLElement, BottomNavProps>(
         )}
       >
         <div
+          ref={containerRef}
           className={cn(
             'pointer-events-auto relative mx-auto flex items-stretch',
             'h-[var(--bottomnav-height)] max-w-[var(--bottomnav-max-w)]',
