@@ -77,7 +77,13 @@ export function KitImagem({
         {/* Affordance de ampliar — decorativa, só reforça o cursor-zoom */}
         <span
           aria-hidden
-          className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-ds-sm bg-surface-base/70 text-text-primary opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+          // `bg-surface-base/70` não chegava ao CSS (alpha sobre cor
+          // `var(--token)` é descartado pelo Tailwind — ver a nota no
+          // `HeroSection`), e aqui não dá para empilhar outra camada de
+          // `opacity-*`: o próprio utilitário de opacidade já é o que revela a
+          // affordance no hover. A saída é uma superfície OPACA do sistema —
+          // `--surface-overlay` é exatamente o degrau de chip sobre mídia.
+          className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-ds-sm bg-surface-overlay text-text-primary opacity-0 shadow-elev-1 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
         >
           <ZoomIn size={16} strokeWidth={2} />
         </span>
