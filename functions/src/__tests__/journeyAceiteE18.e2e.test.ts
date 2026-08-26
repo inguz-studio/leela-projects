@@ -166,7 +166,7 @@ describe.skipIf(!hasEmulator)('J1 · Aceite E18 ponta a ponta (LEELA-R4-E2E)', (
     tenantId: CASTELO_ID,
     parceriaId: chave,
     token,
-    senha: 'senha-forte-8',
+    senha: 'senha-forte-8!',
     nome: 'Rodrigo Silva',
   });
 

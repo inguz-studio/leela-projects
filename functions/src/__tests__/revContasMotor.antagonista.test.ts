@@ -76,7 +76,7 @@ const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
 process.env[ENV_CODIGO_ACESSO_PEPPER] = 'pepper-review-rn476';
 process.env['FIREBASE_AUTH_EMULATOR_HOST'] ??= `127.0.0.1:${AUTH_PORT}`;
 
-const SENHA = 'senha-da-review-123';
+const SENHA = 'senha-da-review-123!';
 
 let testEnv: RulesTestEnvironment;
 let db: admin.firestore.Firestore;
@@ -453,7 +453,7 @@ describe('REV · a conta órfã do duplo desfazer, medida', () => {
     const r2 = await concluirAcessoComProvaCore(db, auth, {
       email,
       prova: c2.prova,
-      senha: 'outra-senha-456',
+      senha: 'outra-senha-456!',
     });
     expect(r2.ok).toBe(true);
     expect(r2.contaCriada).toBe(false);
