@@ -45,8 +45,22 @@ export function PublicHeader(): React.JSX.Element {
     // segundo layout público só para uma rota.
     <header
       data-shell-publico
-      className={`sticky top-0 z-40 border-b border-border-subtle bg-surface-base/90 backdrop-blur ${CONTAINER_GUTTER}`}
+      className={`sticky top-0 z-40 isolate border-b border-border-subtle ${CONTAINER_GUTTER}`}
     >
+      {/* Fundo translúcido do header em CAMADA, e não em `bg-surface-base/90`:
+          o modificador de alpha sobre cor `var(--token)` é descartado pelo
+          Tailwind (ver a nota longa no `HeroSection`). Escrito daquele jeito, o
+          header grudento não tinha fundo NENHUM — o conteúdo da página passava
+          por baixo dos rótulos ao rolar. `opacity-*` não depende de o Tailwind
+          decompor a cor, então sobrevive ao preset.
+
+          O `backdrop-blur` saiu junto, e por dois motivos somados: sob um véu de
+          95% ele é imperceptível (não estava comprando nada), e num `fullPage`
+          do Playwright o `backdrop-filter` amostra a página INTEIRA — o gate
+          visual passava a fotografar um fantasma do rodapé sob o header, que é
+          artefato de captura e não defeito de página. Uma barra grudenta sólida
+          com a divisória de `--border-subtle` é a leitura mais limpa das duas. */}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-surface-base opacity-95" />
       <div className={`${CONTAINER_LARGURA} flex h-16 items-center justify-between`}>
         <Link
           href="/"

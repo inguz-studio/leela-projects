@@ -47,11 +47,26 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
       <div aria-hidden className="absolute inset-0 -z-10">
         {/* Via CoverImage: se a capa REAL do organizador falhar em runtime, cai
             no gradiente de tokens (nunca `<img>` quebrado atrás do overlay). */}
-        <CoverImage src={capa} alt="" className="h-full w-full scale-110 object-cover blur-2xl opacity-50" />
-        {/* Escurecimento base — garante contraste AA do texto sobre a imagem */}
-        <div className="absolute inset-0 bg-surface-base/80" />
-        {/* Reforço lateral no lado do texto (esquerda) */}
-        <div className="absolute inset-0 bg-gradient-to-r from-surface-base/80 via-surface-base/40 to-transparent" />
+        <CoverImage src={capa} alt="" className="h-full w-full scale-110 object-cover blur-2xl opacity-60" />
+        {/* ⚠️ Escurecimento base — garante o contraste AA do texto sobre a imagem.
+            Ele estava escrito `bg-surface-base/80` e NÃO EXISTIA no CSS servido:
+            o Tailwind descarta o modificador de alpha quando a cor do preset é
+            um `var(--token)` cru (medido no CSS emitido do build da main — só
+            `.bg-surface-base` e `.to-surface-base` chegavam lá; `.bg-surface-base\/80`,
+            `.from-surface-base\/80` e `.via-surface-base\/40` não existiam). O
+            comentário prometia o véu, o build entregava a foto nua, e o texto
+            caía direto sobre ela. A forma que SOBREVIVE ao preset é cor de token
+            + utilitário de OPACIDADE do elemento — `opacity-*` não depende de o
+            Tailwind saber decompor a cor. Enquanto o DS não ganhar
+            `--surface-scrim-*` (proposta no 02-direcao-visual §4), é assim que
+            se faz véu nesta base. */}
+        <div className="absolute inset-0 bg-surface-base opacity-70" />
+        {/* Reforço lateral no lado do texto (esquerda) — mesmo motivo acima. */}
+        <div className="absolute inset-0 bg-gradient-to-r from-surface-base to-transparent opacity-90" />
+        {/* Atmosfera da marca: as radiais de brasa/vinho que o tema `brasa` já
+            define (`--glass-page-glow`) e a landing nunca consumiu. Profundidade
+            sem WebGL, sem imagem nova e sem cor nova. */}
+        <div className="absolute inset-0 opacity-60 [background:var(--glass-page-glow)]" />
         {/* Fade inferior: funde no surface-base da próxima dobra, sem linha */}
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-surface-base" />
       </div>
@@ -66,7 +81,13 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
           <div className="mb-3">
             <SeloModalidade esporte={evento.modalidadeEsporte} />
           </div>
-          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-text-primary sm:text-5xl">
+          {/* Escala editorial (rodada awwwards-20260826): o nome do evento é o
+              único elemento que precisa ganhar a primeira dobra, e em 1440px ele
+              estava no mesmo degrau de um h2 de dobra interna. Sobe um degrau em
+              desktop — a escala é a do Tailwind já em uso na casa, a família e o
+              peso continuam sendo os tokens `--font-family-display` /
+              `--peso-display` do tema brasa. */}
+          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl">
             {evento.nome}
           </h1>
 
@@ -124,13 +145,17 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
 
         {/* Media 16/10 — capa NÍTIDA (mesma imagem do fundo borrado) */}
         <div className="order-1 lg:order-2">
-          <div className="relative aspect-[16/10] overflow-hidden rounded-ds-lg shadow-elev-2">
+          <div className="group relative aspect-[16/10] overflow-hidden rounded-ds-xl shadow-elev-3">
             <HeroCover src={capa} nome={evento.nome} />
-            <div className="absolute left-4 top-4 flex flex-col items-center rounded-ds-md bg-surface-overlay px-4 py-2 text-center leading-none shadow-elev-1">
-              <span className="font-display text-2xl font-extrabold text-text-primary">
+            {/* Um número dominante por bloco (01-research, padrão 5): o dia sobe
+                de degrau e a hora vira o apoio, com o mesmo primitivo visual que
+                o destaque da home usa. Antes os dois tinham o mesmo peso e o
+                selo não lia como data. */}
+            <div className="absolute left-4 top-4 flex flex-col items-center rounded-ds-md bg-surface-overlay px-4 py-2.5 text-center leading-none shadow-elev-2">
+              <span className="font-display text-3xl font-extrabold text-text-primary">
                 {evento.dataLabel.split(' ')[0]}
               </span>
-              <span className="text-xs font-semibold uppercase text-text-secondary">
+              <span className="mt-1 text-xs font-semibold uppercase tracking-widest text-text-brand">
                 {evento.horaLabel}
               </span>
             </div>

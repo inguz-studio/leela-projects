@@ -245,7 +245,27 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
       {/* CTA persistente colado ao rodapé (Shotgun: CTA amarrado ao lote). Sem
           hairline no topo: uma sombra suave para cima levanta a barra do
           conteúdo (elevação, não linha). */}
-      <div className="fixed inset-x-0 bottom-0 z-40 bg-surface-raised/95 shadow-[0_-6px_24px_-8px_rgba(0,0,0,0.6)] backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 isolate">
+        {/* ⚠️ O fundo da barra estava em `bg-surface-raised/95` e NÃO EXISTIA no
+            CSS servido — alpha sobre cor `var(--token)` é descartado pelo
+            Tailwind (nota completa no `HeroSection`). Na prática, o elemento de
+            maior valor comercial da página flutuava TRANSPARENTE sobre o
+            conteúdo: nome do evento e preço liam-se por cima da dobra que
+            estivesse passando por baixo. Camada de cor de token +
+            `opacity-*` sobrevive ao preset. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-surface-raised opacity-95 backdrop-blur"
+        />
+        {/* A sombra crua `0_-6px_24px_-8px_rgba(0,0,0,0.6)` saiu: era cor fora
+            de token (passava no lint por um furo do regex em arbitrary values
+            separados por `_`). O papel dela — "levantar a barra do conteúdo,
+            elevação e não linha" — é o mesmo que a casa já resolve nas dobras
+            com um véu que sobe e some. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-full -z-10 h-16 bg-gradient-to-t from-surface-base to-transparent"
+        />
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-text-primary">{evento.nome}</p>
