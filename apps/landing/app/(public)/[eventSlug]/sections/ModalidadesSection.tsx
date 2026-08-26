@@ -33,7 +33,13 @@ export function ModalidadesSection({ evento }: { evento: EventoPublico }): React
           const disponivel = m.precoVigente !== null;
           return (
             <li key={m.nome} className="flex">
-              <Card className="flex flex-1 flex-col justify-between border-border-subtle p-6">
+              {/* Preço em escala de destaque e borda que reage (rodada
+                  awwwards-20260826): o card comparava distâncias, mas o número
+                  que decide a compra estava dois degraus abaixo do nome da
+                  modalidade. Preço escondido é abandono imediato — é o
+                  antipadrão nº 5 do 01-research, e o único jeito de a
+                  comparação lado a lado funcionar é o valor ter peso de valor. */}
+              <Card className="flex flex-1 flex-col justify-between border-border-subtle p-6 transition-colors duration-normal ease-ds-default hover:border-border-brand">
               <div>
                 <p className="font-display text-3xl font-extrabold uppercase tracking-tight text-text-primary">
                   {m.nome}
@@ -41,14 +47,14 @@ export function ModalidadesSection({ evento }: { evento: EventoPublico }): React
                 <p className="mt-1 text-sm text-text-tertiary">{evento.modalidadeEsporte}</p>
               </div>
               <div className="mt-6">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+                <p className="text-xs font-semibold uppercase tracking-widest text-text-tertiary">
                   {disponivel ? 'Preço vigente' : 'Status'}
                 </p>
                 <p
                   className={
                     disponivel
-                      ? 'text-xl font-bold text-text-primary'
-                      : 'text-base font-semibold text-text-tertiary'
+                      ? 'mt-1 font-display text-2xl font-extrabold text-text-primary'
+                      : 'mt-1 text-base font-semibold text-text-tertiary'
                   }
                 >
                   {formatarPreco(m.precoVigente)}
