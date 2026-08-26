@@ -43,7 +43,12 @@ export function isUrlCapaValida(url: unknown): url is string {
   // alguns e "consertaria" outros — aqui a política é estrita).
   if (/\s/.test(url)) return false;
   try {
-    const parsed = new URL(url);
+    // O tipo global de URL do React Native não declara `protocol`/`hostname`
+    // (a implementação do RN é parcial e esses getters lançam em runtime) —
+    // sem a asserção, o type-check do mobile falha ao compilar este arquivo.
+    // O acesso fica dentro do try de propósito: em RN cai no catch e devolve
+    // false; em web/Node (DOM/undici) os campos existem e o tipo é fiel.
+    const parsed = new URL(url) as URL & { protocol: string; hostname: string };
     return (
       (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
       parsed.hostname.length > 0
