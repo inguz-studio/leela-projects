@@ -60,6 +60,7 @@ import { ehPreview, ORGANIZADOR_MOCK } from './mockImagem';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getDb } from './firebaseAdmin';
 import { agoraDoServidor, deriveEstadoVenda, statusEhPublico } from './estadoVenda';
+import { ordenarVitrine } from './ordemVitrine';
 import type {
   EventoPublico,
   EventoResumo,
@@ -639,9 +640,10 @@ export async function listarEventosPublicados(): Promise<EventoResumo[]> {
       const resumo = await montarResumoEvento(db, doc, agora);
       if (resumo !== null) resumos.push(resumo);
     }
-    // Mais próximos primeiro seria ideal; ordenamos por nome estável por ora.
-    resumos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    return resumos;
+    // A ordem da vitrine (vendável primeiro, depois proximidade, empate por
+    // nome) mora em `lib/ordemVitrine` — módulo puro, com o porquê escrito e
+    // com teste próprio. Paga o "por ora" que estava escrito aqui desde o R7.
+    return ordenarVitrine(resumos);
   } catch (err) {
     console.error('[leitor] listarEventosPublicados falhou', err);
     return [];
