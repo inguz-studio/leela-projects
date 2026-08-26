@@ -64,11 +64,15 @@ export interface ResultadoVarreduraIngressos {
  * @param keyring ring de assinatura (injetável — `null` = pendência fica de pé).
  * @param emailProvider provider do e-mail (injetável; `null` = fail-closed
  *   RN-137, o ingresso é emitido e o e-mail continua pendente de chave).
+ * @param random RNG injetável, repassado a `emitirIngressosDoPedido` — os
+ *   testes forçam colisão por aqui. SEM DEFAULT (REV-A4): ausente, a
+ *   entropia do sistema decide.
  */
 export async function varrerIngressosOrfaosCore(
   db: Db,
   keyring: QrKeyring | null,
-  emailProvider: EmailProvider | null
+  emailProvider: EmailProvider | null,
+  random?: () => number
 ): Promise<ResultadoVarreduraIngressos> {
   const pendentesSnap = await db
     .collection(INGRESSOS_PENDENTES_COL)
@@ -96,7 +100,7 @@ export async function varrerIngressosOrfaosCore(
         continue;
       }
 
-      const r = await emitirIngressosDoPedido(db, pedidoId, keyring);
+      const r = await emitirIngressosDoPedido(db, pedidoId, keyring, random);
       resultado.emitidos += r.emitidos;
 
       if (!r.processado) {
