@@ -51,3 +51,52 @@
     }
   }
 }
+
+/* ── Revelação por rolagem (rodada awwwards-20260826) ─────────────────────
+   O ÚNICO primitivo de movimento da landing. Um só, de propósito: o
+   levantamento (01-research, padrão 7) mostra que os sites premiados do nicho
+   ganham por três ou quatro primitivos reaplicados, não por uma cena.
+
+   Por que `animation-timeline: view()` e não uma biblioteca: o brief veta
+   GSAP/Three.js/WebGL — esta é uma landing SSR de conversão. A timeline de
+   rolagem nativa entrega o mesmo efeito com ZERO JavaScript, roda no
+   compositor e é BIDIRECIONAL por construção (o júri do Awwwards penaliza
+   animação de mão única: aqui, rolar para cima desfaz, porque a animação é a
+   posição, não um gatilho). Nada de scroll hijacking: a rolagem segue 100%
+   nativa.
+
+   Degradação em três camadas, nesta ordem:
+     1. `@supports` — sem suporte à timeline (Safari/Firefox hoje), NADA é
+        declarado. O conteúdo nasce visível; ninguém recebe uma página com
+        `opacity: 0` presa por falta de recurso. É a diferença entre progressive
+        enhancement e apostar o conteúdo num recurso novo.
+     2. `prefers-reduced-motion: no-preference` — quem pediu menos movimento não
+        entra na regra (e o reset global acima ainda zera o resto).
+     3. `both` só dentro do range: elemento já visível no carregamento chega
+        com a animação no fim, então a primeira dobra nunca pisca.
+
+   ⚠️ Efeito colateral conhecido no GATE VISUAL: uma animação de timeline é
+   recalculada no momento da captura, então `fullPage` fotografaria as dobras de
+   baixo em `opacity: 0`. O probe (`probe-gate-visual.mjs`) captura a página
+   inteira com `prefers-reduced-motion: reduce` por essa razão — e dispara um
+   par extra de fotos COM movimento para provar que a revelação existe. */
+@keyframes leela-revela {
+  from {
+    opacity: 0;
+    transform: translateY(var(--spacing-6));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revela-ao-rolar {
+      animation: leela-revela linear both;
+      animation-timeline: view();
+      animation-range: entry 5% cover 22%;
+    }
+  }
+}

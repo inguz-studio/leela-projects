@@ -32,7 +32,16 @@ export function Dobra({
 }): React.JSX.Element {
   return (
     <section id={id} className={cn(CONTAINER_GUTTER, 'py-16 sm:py-20 lg:py-24', className)}>
-      <div className={cn(CONTAINER_LARGURA, center && 'text-center')}>{children}</div>
+      {/* 3. RITMO de entrada (rodada awwwards-20260826). A `Dobra` já era o
+          lugar onde o ritmo VERTICAL da página mora; a revelação por rolagem
+          entra pela mesma porta, e por isso vale para toda dobra de todo evento
+          sem ninguém precisar lembrar de aplicá-la. O primitivo é CSS nativo
+          (`animation-timeline: view()`), bidirecional, sem JavaScript e com
+          degradação declarada — a explicação inteira está em `app/globals.css`,
+          junto da regra. */}
+      <div className={cn('revela-ao-rolar', CONTAINER_LARGURA, center && 'text-center')}>
+        {children}
+      </div>
     </section>
   );
 }

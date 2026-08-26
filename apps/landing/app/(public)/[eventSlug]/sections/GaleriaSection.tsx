@@ -45,7 +45,13 @@ export function GaleriaSection(): React.JSX.Element {
       <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {IMAGENS_EXEMPLO.map((img) => (
           <li key={img.src}>
-            <figure className="overflow-hidden rounded-ds-lg border border-border-subtle bg-surface-raised shadow-elev-1">
+            {/* Rótulo SOBRE a imagem (rodada awwwards-20260826): a faixa de
+                legenda abaixo da foto acrescentava 40px de superfície cinza a
+                cada figura e quebrava o ritmo da dobra. Sobre a foto, o rótulo
+                custa zero altura e a galeria vira uma tira de imagem contínua —
+                que é o que ela é. O contraste do texto vem de um véu de token
+                (`--surface-base` em gradiente + `opacity-*`), não de uma caixa. */}
+            <figure className="group relative overflow-hidden rounded-ds-lg bg-surface-raised shadow-elev-1">
               <div className="relative aspect-[4/3] w-full overflow-hidden">
                 {/* Abaixo da dobra → lazy; dimensão intrínseca 4:3 (zero CLS). */}
                 <img
@@ -57,10 +63,14 @@ export function GaleriaSection(): React.JSX.Element {
                   height={900}
                   loading="lazy"
                   decoding="async"
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover transition-transform duration-slow ease-ds-default motion-safe:group-hover:scale-105"
+                />
+                <div
+                  aria-hidden
+                  className="absolute inset-0 bg-gradient-to-t from-surface-base via-transparent to-transparent opacity-90"
                 />
               </div>
-              <figcaption className="px-4 py-3 text-sm font-semibold text-text-secondary">
+              <figcaption className="absolute bottom-0 left-0 px-4 py-3 text-sm font-semibold uppercase tracking-widest text-text-primary">
                 {img.rotulo}
               </figcaption>
             </figure>
