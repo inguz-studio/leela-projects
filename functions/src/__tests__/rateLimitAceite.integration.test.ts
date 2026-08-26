@@ -139,7 +139,7 @@ describe.skipIf(!hasEmulator)('rate-limit do aceite público (LEELA-R2)', () => 
     tenantId: CASTELO_ID,
     parceriaId: CNPJ_KEY,
     token,
-    senha: 'senha-forte-8',
+    senha: 'senha-forte-8!',
     ...extra,
   });
 
