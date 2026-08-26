@@ -585,6 +585,10 @@ export async function lerIngressosVivosDoPedido(
  *
  * Espelha `dispararContaSemFriccaoPosConfirmacao` — mesma guarda de
  * elegibilidade, mesma postura best-effort, mesmo formato de log sem PII.
+ *
+ * @param random RNG injetável, repassado a `emitirIngressosDoPedido` — os
+ *   testes forçam colisão por aqui. SEM DEFAULT, pela mesma razão de lá
+ *   (REV-A4): ausente, a entropia do sistema decide.
  */
 export async function dispararEmissaoIngressosPosConfirmacao(
   db: Db,
@@ -593,7 +597,8 @@ export async function dispararEmissaoIngressosPosConfirmacao(
     ignorado: boolean;
     duplicado: boolean;
     pedidoId: string;
-  }
+  },
+  random?: () => number
 ): Promise<ResultadoEmissaoIngressos | null> {
   if (
     resultado.statusGateway !== 'confirmed' ||
@@ -606,7 +611,8 @@ export async function dispararEmissaoIngressosPosConfirmacao(
     const r = await emitirIngressosDoPedido(
       db,
       resultado.pedidoId,
-      obterQrKeyring()
+      obterQrKeyring(),
+      random
     );
     logger.info('ingressos_emitidos', {
       pedidoId: resultado.pedidoId,

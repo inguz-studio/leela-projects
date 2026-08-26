@@ -219,27 +219,32 @@ async function lerPendencia(): Promise<admin.firestore.DocumentData | null> {
 }
 
 /** Roda o disparo pós-confirmação exatamente como os 3 confirmadores rodam. */
-async function dispararComoWebhook(): Promise<void> {
-  await dispararEmissaoIngressosPosConfirmacao(adminDb, {
-    statusGateway: 'confirmed',
-    ignorado: false,
-    duplicado: false,
-    pedidoId: PEDIDO_ID,
-  });
+async function dispararComoWebhook(random?: () => number): Promise<void> {
+  await dispararEmissaoIngressosPosConfirmacao(
+    adminDb,
+    {
+      statusGateway: 'confirmed',
+      ignorado: false,
+      duplicado: false,
+      pedidoId: PEDIDO_ID,
+    },
+    random
+  );
 }
 
 /**
  * O mesmo disparo com o sorteio de código TRAVADO: todo inscrito sorteia o
  * MESMO código, então o segundo em diante esgota as tentativas e sai sem
  * ingresso. É o `sem_codigo_livre` do vetor 3, pela porta real.
+ *
+ * O trava é o `random` injetável (REV-A4) — espionar `Math.random` deixou de
+ * alcançar o sorteio quando o `d36afb64` trocou a fonte para a entropia do
+ * sistema (`aleatorio.ts`).
  */
+const SORTEIO_TRAVADO = (): number => 0.5;
+
 async function dispararComSorteioTravado(): Promise<void> {
-  const spy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
-  try {
-    await dispararComoWebhook();
-  } finally {
-    spy.mockRestore();
-  }
+  await dispararComoWebhook(SORTEIO_TRAVADO);
 }
 
 beforeEach(async () => {
@@ -375,10 +380,19 @@ describe.skipIf(!hasEmulator)('ingresso órfão: extrato + varredura (item 54 ·
     const espiao = providerEspiao();
     // Sorteio travado durante TODAS as varreduras: a falha não se cura, que é
     // o cenário do alerta (espaço de códigos do evento esgotado, bug, etc.).
-    const spy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    let ultima = await varrerIngressosOrfaosCore(adminDb, RING, espiao.provider);
+    let ultima = await varrerIngressosOrfaosCore(
+      adminDb,
+      RING,
+      espiao.provider,
+      SORTEIO_TRAVADO
+    );
     for (let i = 1; i < TENTATIVAS_VARREDURA_INGRESSO; i++) {
-      ultima = await varrerIngressosOrfaosCore(adminDb, RING, espiao.provider);
+      ultima = await varrerIngressosOrfaosCore(
+        adminDb,
+        RING,
+        espiao.provider,
+        SORTEIO_TRAVADO
+      );
     }
     // A última passagem é a que esgota: alerta contável + e-mail do que existe
     // (o comprador não fica sem NADA por causa de um inscrito que não saiu).
@@ -394,7 +408,12 @@ describe.skipIf(!hasEmulator)('ingresso órfão: extrato + varredura (item 54 ·
 
     // Depois de esgotar: contado como conferência humana, NUNCA re-tentado —
     // insistir a cada 15 minutos para sempre afogaria o alerta que importa.
-    const depois = await varrerIngressosOrfaosCore(adminDb, RING, espiao.provider);
+    const depois = await varrerIngressosOrfaosCore(
+      adminDb,
+      RING,
+      espiao.provider,
+      SORTEIO_TRAVADO
+    );
     expect(depois.conferenciaManual).toBe(1);
     expect(depois.emitidos).toBe(0);
     expect(depois.esgotados).toBe(0);
@@ -402,7 +421,6 @@ describe.skipIf(!hasEmulator)('ingresso órfão: extrato + varredura (item 54 ·
     expect((await lerPendencia())?.['tentativasVarredura']).toBe(
       TENTATIVAS_VARREDURA_INGRESSO
     );
-    spy.mockRestore();
   });
 
   it('a pendência é server-only: tenant_owner não lê nem escreve', async () => {
