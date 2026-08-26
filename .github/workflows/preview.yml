@@ -94,10 +94,13 @@ jobs:
         with:
           version: 11.9.0
 
-      - name: Setup Node.js 20
+      # Node da toolchain — mesma fonte do ci.yml e da máquina de dev.
+      # (O pnpm 11.9.0 exige Node >= 22.13; era o 20 pinado aqui que matava
+      # qualquer execução deste workflow antes do install.)
+      - name: Setup Node.js (toolchain)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - name: Cache Turborepo
