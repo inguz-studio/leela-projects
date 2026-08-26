@@ -1,18 +1,38 @@
 # .github/workflows/ci.yml
-# Pipeline CI — LEELA (LEELA-S000-3-T1)
+# Pipeline CI — LEELA (LEELA-S000-3-T1 · reescrito na correção do CI, 26/08/2026)
 #
 # Roda em todo push/PR para main ou master.
-# Jobs: lint → type-check → build → test (com Firestore Emulator).
+# Jobs: lint → type-check → build → test (sem emulador) → functions (emuladores).
 # E2E Playwright: somente nightly (schedule) ou workflow_dispatch —
 #   navegadores Chromium são pesados (~300 MB) e não devem rodar em todo PR.
 #
+# NODE É DIVIDIDO DE PROPÓSITO — o mesmo par que vale na máquina de dev
+# (ver leela-specs/00-boards/MIGRACAO-DE-MAQUINA.md, "A travessia"):
+#   - Toolchain (pnpm, turbo, vite, builds): Node 24 — lido de `.node-version`.
+#     O pnpm 11.9.0 importa `node:sqlite` e EXIGE Node >= 22.13; foi por pinar
+#     20 aqui que o CI morreu no `Setup pnpm` em todas as 898 execuções até
+#     26/08/2026, antes de qualquer teste.
+#   - Suíte das functions: Node 20 — o runtime de produção é nodejs20, e há
+#     teste que passa sob 20 e falha sob 24 (adminVisaoOnda5Liberacao). O step
+#     troca o Node do PATH DEPOIS de todo uso de pnpm/turbo e chama o vitest
+#     direto pelo bin local, sem pnpm no meio.
+#
+# EMULADORES (a receita canônica é a de leela-specs/04-engenharia/como-verificar.md):
+#   - painel / landing / design-system: SEM emulador — sob emulators:exec as
+#     variáveis FIRESTORE_EMULATOR_HOST etc. vazam para dentro das suítes
+#     jsdom e mudam seu comportamento (medido: landing 849/849 verde isolada,
+#     2 arquivos vermelhos sob o exec).
+#   - functions (demo-leela): firestore + auth + storage. Só firestore — o que
+#     este arquivo subia até 26/08 — derruba os arquivos que falam com Auth
+#     (helpers/stability.ts) e a suíte de Rules de Storage inteira.
+#   - 4 suítes de LANE declaram emulador próprio (porta + project id) e NÃO
+#     rodam contra o demo-leela — cada uma tem um step com seu firebase.*.json.
+#
 # RUNNER (ubuntu-latest — GitHub-hosted):
 #   - Java 21 (Temurin) instalado explicitamente via actions/setup-java —
-#     firebase-tools 14+ exige Java 21 para o Firestore Emulator; não
-#     dependemos da versão pré-instalada do runner
-#   - firebase-tools PINADO no step "Install Firebase CLI" (mesma major
-#     usada em dev local) — evita breaking change silencioso do CLI
-#   - pnpm 11.9.0 + Node 20 configurados pelos steps de setup
+#     firebase-tools 14+ exige Java 21 para o Firestore Emulator
+#   - firebase-tools PINADO no step "Install Firebase CLI" — 15.28.1 é a
+#     versão que verificou esta receita na máquina de dev em 26/08/2026
 #
 # SECRETS OPCIONAIS:
 #   TURBO_TOKEN / TURBO_TEAM — habilita Turbo Remote Cache (Vercel)
@@ -65,10 +85,11 @@ jobs:
         with:
           version: 11.9.0
 
-      - name: Setup Node.js 20
+      # Node da toolchain — a MESMA fonte da máquina de dev (.node-version).
+      - name: Setup Node.js (toolchain)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       # Cache do Turborepo (.turbo/) — evita rebuild de artefatos inalterados
@@ -91,18 +112,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Firestore Emulator exige Java 21 (firebase-tools 14+).
-      - name: Setup Java 21 (Firestore Emulator)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      # firebase-tools provê `firebase emulators:exec` usado no step "Test".
-      # Versão pinada — alinhada ao CLI usado em dev local (15.x).
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools@15.22.4
-
       - name: Lint
         run: pnpm turbo run lint
 
@@ -112,16 +121,54 @@ jobs:
       - name: Build
         run: pnpm turbo run build
 
-      # `firebase emulators:exec --only firestore` inicia o emulador Firestore
-      # na porta 8080, executa o comando e retorna o exit code do comando.
-      # --project demo-leela usa modo demo (sem credenciais reais).
-      # Java 21 configurado pelo step "Setup Java 21" acima.
-      - name: Test (Firestore emulator)
-        run: |
-          firebase emulators:exec \
-            --only firestore \
-            --project demo-leela \
-            "pnpm turbo run test"
+      # Suítes que rodam SEM emulador — painel, landing e design-system são
+      # jsdom puro (como-verificar.md). core, api-client e mobile não têm
+      # script `test` e o turbo os pula (lacuna conhecida e documentada lá).
+      - name: Test (sem emulador)
+        run: pnpm turbo run test --filter=!@leela/functions
+
+      # ----- daqui para baixo é a suíte das functions, sob Node 20 -----------
+
+      # Firestore Emulator exige Java 21 (firebase-tools 14+).
+      - name: Setup Java 21 (Firestore Emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # firebase-tools provê `firebase emulators:exec` usado nos steps de teste.
+      # Versão pinada — a que verificou esta receita em dev local (26/08/2026).
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@15.28.1
+
+      # Troca o Node do PATH para o runtime de produção das functions.
+      # ⚠️ Nenhum `pnpm ...` pode rodar depois deste step — o pnpm 11 não
+      # sobe em Node 20. O vitest é chamado pelo bin local do pacote.
+      - name: Setup Node.js 20 (runtime das functions)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # A suíte demo-leela: firestore + auth + storage (receita canônica).
+      # As 4 suítes de lane são excluídas AQUI porque rodam nos steps
+      # seguintes, cada uma contra o emulador que o próprio arquivo declara —
+      # contra o demo-leela elas morrem em ECONNREFUSED, não por defeito.
+      - name: Test functions (demo-leela · firestore+auth+storage · Node 20)
+        run: firebase emulators:exec --only firestore,auth,storage --project demo-leela "cd functions && ./node_modules/.bin/vitest run --exclude '**/codigoPedidoReserva.integration.test.ts' --exclude '**/codigoPedidoReserva.attack.test.ts' --exclude '**/backfillCodigoPedido.integration.test.ts' --exclude '**/revContasMotor.antagonista.test.ts'"
+
+      # ----- suítes de lane: emulador próprio, porta própria, project próprio -
+
+      - name: Test functions (lane cod5a · RN-474 reserva de código)
+        run: firebase emulators:exec --config firebase.cod5a.json --project demo-leela-cod5a "cd functions && ./node_modules/.bin/vitest run src/__tests__/codigoPedidoReserva.integration.test.ts"
+
+      - name: Test functions (lane revcod5a · ataque à reserva de código)
+        run: firebase emulators:exec --config firebase.revcod5a.json --project demo-leela-revcod5a "cd functions && ./node_modules/.bin/vitest run src/__tests__/codigoPedidoReserva.attack.test.ts"
+
+      - name: Test functions (lane build5b · backfill de código de pedido)
+        run: firebase emulators:exec --config firebase.build5b.json --project demo-leela-build5b "cd functions && ./node_modules/.bin/vitest run src/__tests__/backfillCodigoPedido.integration.test.ts"
+
+      - name: Test functions (lane revcontas · motor de contas, antagonista)
+        run: firebase emulators:exec --config firebase.revcontas.json --project demo-leela-revcontas "cd functions && ./node_modules/.bin/vitest run src/__tests__/revContasMotor.antagonista.test.ts"
 
   # ---------------------------------------------------------------------------
   # Job E2E: roda somente nightly (schedule) ou via workflow_dispatch manual
@@ -141,10 +188,10 @@ jobs:
         with:
           version: 11.9.0
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js (toolchain)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - name: Cache Turborepo
