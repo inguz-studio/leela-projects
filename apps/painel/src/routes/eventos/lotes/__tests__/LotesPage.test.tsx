@@ -272,9 +272,14 @@ describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
     expect(mocks.modalidadesMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('evento COM venda não oferece nenhuma das três operações', () => {
+  it('evento COM venda não oferece nenhuma das três operações (S316-T4 · RN-500/501/502)', () => {
     renderPage([]); // EVENTO padrão tem 453 inscritos
-    expect(screen.queryByRole('button', { name: /^Adicionar modalidade$/i })).not.toBeInTheDocument();
+    // V2708-06: botão de cadastro sempre visível, mas desabilitado (RN-500).
+    // Visibilidade preserva a descoberta; disabled impede a ação.
+    const botaoAdicionar = screen.getByRole('button', { name: /^Adicionar modalidade$/i });
+    expect(botaoAdicionar).toBeDisabled();
+    // Renomear e Remover são operações de modalidade individual — permanecem
+    // ausentes: EVENTO padrão tem modalidades: ['5k'] e podeEditarModalidades=false.
     expect(screen.queryByRole('button', { name: /^Renomear a modalidade/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Remover a modalidade/ })).not.toBeInTheDocument();
   });
