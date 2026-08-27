@@ -71,26 +71,28 @@ describe('KitCard/ItemCard — superfície canônica do Card do DS', () => {
     );
   }
 
-  it('card do kit carrega a receita completa: bg-card + borda + elevação + blur', () => {
+  it('card do kit carrega a receita completa: bg-card + elevação + blur (sem borda — V2708-07)', () => {
     renderView();
     const card = screen.getByRole('heading', { name: 'Kit Ouro' }).closest('[role="article"]');
     expect(card).not.toBeNull();
     const cls = (card as HTMLElement).className;
     expect(cls).toContain('bg-card');
-    expect(cls).toContain('border-border');
+    // V2708-07: sem borda decorativa no bento card — separação por superfície/elevação.
+    expect(cls).not.toContain('border-border');
     expect(cls).toContain('shadow-elev-1');
     expect(cls).toContain('[backdrop-filter:var(--card-blur)]');
     // Regressão do defeito: o bg CRU sem pareamento não volta.
     expect(cls).not.toContain('bg-[var(--surface-raised)]');
   });
 
-  it('card de item do catálogo: mesma receita canônica', () => {
+  it('card de item do catálogo: mesma receita canônica (sem borda — V2708-07)', () => {
     renderView();
     const card = screen.getByRole('heading', { name: 'Camiseta' }).closest('[role="article"]');
     expect(card).not.toBeNull();
     const cls = (card as HTMLElement).className;
     expect(cls).toContain('bg-card');
-    expect(cls).toContain('border-border');
+    // V2708-07: sem borda decorativa no bento card.
+    expect(cls).not.toContain('border-border');
     expect(cls).toContain('shadow-elev-1');
     expect(cls).not.toContain('bg-[var(--surface-raised)]');
   });
