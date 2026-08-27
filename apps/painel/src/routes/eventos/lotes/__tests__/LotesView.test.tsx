@@ -94,13 +94,13 @@ describe('LotesView', () => {
     expect(screen.getByRole('status', { name: /Carregando modalidades/i })).toBeInTheDocument();
   });
 
-  it('bloco de modalidade desenha a superfície pelo Card canônico (família D-1008-R11)', () => {
+  it('bloco de modalidade desenha a superfície pelo Card canônico sem borda (família D-1008-R11, V2708-07)', () => {
     renderView();
     const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
-    // A receita completa do Card (sob o vidro, o bg cru é filme invisível —
-    // ver superficie-cartoes.test.tsx dos kits para a prova na cascata real).
+    // Contrato novo do Card (§2.16): separação por superfície + elevação, sem
+    // borda decorativa. ver superficie-cartoes.test.tsx dos kits para a prova.
     expect(bloco.className).toContain('bg-card');
-    expect(bloco.className).toContain('border-border');
+    expect(bloco.className).not.toContain('border-border');
     expect(bloco.className).toContain('shadow-elev-1');
     expect(bloco.className).not.toContain('bg-[var(--surface-raised)]');
   });
