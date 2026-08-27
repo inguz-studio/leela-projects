@@ -108,18 +108,14 @@ export function ModalidadeModal({
     }
   }
 
+  // V2708-09: description removida dos dois modos (regra sem textos de apoio).
   const titulo = modo === 'acrescentar' ? 'Adicionar modalidade' : `Renomear ${modalidadeAtual}`;
-  const descricao =
-    modo === 'acrescentar'
-      ? 'A modalidade é a distância ou o percurso do evento (5k, 21k, Kids 1k). Os lotes de preço vivem dentro dela.'
-      : 'O nome novo migra junto os lotes, os kits e as campanhas desta modalidade, num gesto só.';
 
   return (
     <Modal
       open={open}
       onOpenChange={onOpenChange}
       title={titulo}
-      description={descricao}
       footer={
         <div className="flex justify-end gap-[var(--spacing-3)]">
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
@@ -143,7 +139,6 @@ export function ModalidadeModal({
           }}
           maxLength={MODALIDADE_NOME_MAX}
           placeholder="Ex.: 21k, Meia maratona, Kids 1k"
-          aria-describedby="modalidade-nome-hint"
           {...(erroCampo ? { errorMessage: erroCampo } : {})}
         />
 
@@ -175,14 +170,7 @@ export function ModalidadeModal({
           </div>
         ) : null}
 
-        <span
-          id="modalidade-nome-hint"
-          className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]"
-        >
-          {modo === 'acrescentar'
-            ? 'A lista só é editável enquanto o evento não tem nenhuma inscrição, inclusive PIX pendente.'
-            : 'Renomear para um nome que já existe é juntar duas modalidades — isso é recusado.'}
-        </span>
+        {/* V2708-09: hints de texto de apoio removidos. */}
 
         {modo === 'renomear' ? (
           // `Alert` no fluxo, não superfície artesanal: o estado que a pessoa
@@ -226,9 +214,7 @@ export function ModalidadeModal({
               : 'Ex.: o nome comercial da prova mudou.'
           }
         />
-        <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-          Fica no registro do evento (mínimo {MOTIVO_MODALIDADE_MIN} caracteres).
-        </span>
+        {/* V2708-09: hint de "mínimo N caracteres" removido. */}
       </div>
     </Modal>
   );

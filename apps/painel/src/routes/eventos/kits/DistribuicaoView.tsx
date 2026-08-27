@@ -541,10 +541,8 @@ export function DistribuicaoView({
 
       {/* RETIRADA — o detalhe da presença, e o único lugar com percentual. */}
       <section aria-label="Retirada por kit">
-        <SectionHeader
-          title="Retirada por kit"
-          description="Retirados sobre confirmados. Presença registrada no balcão = kit retirado."
-        />
+        {/* V2708-09: description removida. */}
+        <SectionHeader title="Retirada por kit" />
         <Stack gap="lg">
           {porKit.map((k) => (
             <LinhaProgresso
@@ -577,13 +575,8 @@ export function DistribuicaoView({
 
       {/* ESTOQUE — demanda × capacidade, a visão de "não errar o kit". */}
       <section aria-label="Estoque por kit e modalidade">
-        <SectionHeader
-          title="Estoque por kit e modalidade"
-          description={
-            'Confirmados por célula (a demanda). Célula com "—" = kit não oferecido nessa ' +
-            'modalidade. Saldo = capacidade − retirados.'
-          }
-        />
+        {/* V2708-09: description removida. */}
+        <SectionHeader title="Estoque por kit e modalidade" />
         {/* responsive="scroll" (revisão r1 A2): esta é a ÚNICA consumidora que é
             matriz de comparação em grade (kit×modalidade). Virar card no mobile
             (default) apagaria a leitura "qual modalidade está curta entre os
@@ -604,14 +597,8 @@ export function DistribuicaoView({
           encomendar, sem planilha. Lista de leitura → card-mode default no
           mobile (não é matriz de comparação — design-principles §(c)). */}
       <section aria-label="Estoque por tamanho">
-        <SectionHeader
-          title="Estoque por tamanho"
-          description={
-            'Um SKU por (item tamanhado × corte × tamanho). Vendido, físico e "a encomendar" ' +
-            'são agregados pelo servidor a cada venda confirmada; o estado avança em estimativa ' +
-            '→ encomendado → em estoque. "Entregues" acompanha a retirada no credenciamento.'
-          }
-        />
+        {/* V2708-09: description removida. */}
+        <SectionHeader title="Estoque por tamanho" />
         <Stack gap="md">
           {/* ENCERRAR ENCOMENDAS (RN-232): a contagem vendida de AGORA vira a foto
               da produção (todos os SKUs do item em estimativa → encomendado, numa

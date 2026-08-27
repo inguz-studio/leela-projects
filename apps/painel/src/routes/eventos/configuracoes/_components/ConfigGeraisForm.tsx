@@ -282,16 +282,7 @@ export function ConfigGeraisForm({
           <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
             Data e modalidades
           </span>
-          {/* S316-T7: o texto da lacuna morreu no commit que a fecha. A frase
-              anterior — escrita pela DIAG-PAINEL-LACUNAS para a tela parar de
-              mentir enquanto a S316 não subisse — dizia que a lista "não é
-              editável depois de criado o evento". Agora ela é, na aba
-              Modalidades, e mantê-la seria a mentira oposta. */}
-          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-            A data é definida na criação do evento. As modalidades e os lotes de preço de
-            cada uma são editados na aba Modalidades, enquanto o evento não tiver a
-            primeira inscrição.
-          </p>
+          {/* V2708-09: texto de apoio removido (regra sem textos descritivos fixos). */}
           <div className="flex flex-wrap items-center gap-[var(--spacing-2)]">
             {formatDataEvento(evento.data) ? (
               <Badge variant="neutro">{formatDataEvento(evento.data)}</Badge>

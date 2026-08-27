@@ -136,32 +136,24 @@ export function LotesView({
 
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
+      {/* V2708-06: botão sempre visível — desabilitado (não oculto) quando o evento
+          já tem inscrição. A ação existe e o organizador a encontra; o servidor
+          continua recusando a operação quando a fronteira temporal (RN-500) não
+          permite. V2708-09: description removida (regra sem textos de apoio). */}
       <SectionHeader
         title="Modalidades"
-        description={
-          'Cada modalidade tem sua própria sequência de lotes (Lote 1 → 2 → 3), com janela, ' +
-          'vaga e preço próprios. A virada é automática: por data ou por esgotamento da vaga ' +
-          '(o que ocorrer primeiro).'
-        }
         action={
-          podeEditarModalidades ? (
-            <Button variant="primary" size="sm" onClick={onAdicionarModalidade}>
-              <Plus className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
-              Adicionar modalidade
-            </Button>
-          ) : undefined
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onAdicionarModalidade}
+            disabled={!podeEditarModalidades}
+          >
+            <Plus className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
+            Adicionar modalidade
+          </Button>
         }
       />
-
-      {!podeEditarModalidades ? (
-        // Honesto e específico: o organizador precisa saber POR QUE o botão não
-        // está lá, e o que continua podendo fazer.
-        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Este evento já tem inscrição registrada, e a lista de modalidades fica congelada a
-          partir da primeira (inclusive PIX pendente). Preço, vaga e janela de cada lote
-          continuam editáveis abaixo.
-        </p>
-      ) : null}
 
       {blocos.length === 0 ? (
         <EmptyState

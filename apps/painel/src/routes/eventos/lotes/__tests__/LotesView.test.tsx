@@ -236,11 +236,15 @@ describe('LotesView · a modalidade ganha dono (S316-T4)', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('evento COM venda: a lista congela, e a tela DIZ por quê (RN-500 · RN-487)', () => {
+  // V2708-06: botão sempre visível, desabilitado (não ausente) quando congela.
+  // V2708-09: texto de apoio "inclusive PIX pendente" removido — sem assertiva.
+  it('evento COM venda: lista congela, botão Adicionar fica desabilitado (RN-500 · RN-487)', () => {
     renderView({ podeEditarModalidades: false });
-    expect(screen.queryByRole('button', { name: /^Adicionar modalidade$/i })).not.toBeInTheDocument();
+    // V2708-06: a ação é descobrível mesmo sem poder usá-la.
+    const botaoAdicionar = screen.getByRole('button', { name: /^Adicionar modalidade$/i });
+    expect(botaoAdicionar).toBeDisabled();
+    // Renomear e remover seguem ocultos (ações destrutivas por modalidade).
     expect(screen.queryByRole('button', { name: 'Renomear a modalidade 5k' })).not.toBeInTheDocument();
-    expect(screen.getByText(/inclusive PIX pendente/i)).toBeInTheDocument();
     // E o que continua podendo ser feito segue à mão.
     expect(screen.getByRole('button', { name: /Novo lote/i })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Editar lote / }).length).toBe(3);
