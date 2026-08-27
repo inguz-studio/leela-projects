@@ -8,11 +8,11 @@ import { InscritosView } from '../InscritosView';
 import { mkInscrito } from '../../_test/fixtures';
 
 // O slide-in (S203-T3) busca o join `[pag]` via TanStack Query. Mock só do que
-// o grafo desta tela usa do api-client: INSCRITOS_PAGE_SIZE (18, §2.5) + o
+// o grafo desta tela usa do api-client: INSCRITOS_PAGE_SIZE (200, §2.5) + o
 // gateway de leitura do join, stubado para "sem pedido" (os demais imports do
 // gateway de queries são lazy e não são chamados aqui).
 vi.mock('@leela/api-client', () => ({
-  INSCRITOS_PAGE_SIZE: 18,
+  INSCRITOS_PAGE_SIZE: 200,
   getLeelaDb: () => ({}),
   getPedidoEPagamentoDoInscrito: vi.fn().mockResolvedValue({ pedido: null, pagamento: null }),
 }));
@@ -53,10 +53,10 @@ function muitosInscritos(n: number, status: StatusInscrito = 'confirmado') {
 }
 
 describe('InscritosView', () => {
-  it('mostra ~18 linhas por página e contador com o total', () => {
+  it('mostra ~200 linhas por página e contador com o total', () => {
     renderView({ inscritos: muitosInscritos(453), loading: false, error: null, modalidades: ['10k'] });
-    // header + 18 linhas de dados
-    expect(screen.getAllByRole('row')).toHaveLength(19);
+    // header + 200 linhas de dados
+    expect(screen.getAllByRole('row')).toHaveLength(201);
     expect(screen.getByText('Mostrando 453 de 453 inscritos')).toBeInTheDocument();
   });
 

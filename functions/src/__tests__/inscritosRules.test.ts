@@ -5,7 +5,7 @@
  * `eventos/{eventoId}/inscritos` + paginação por cursor do api-client.
  *
  * Cobre (aceite E03-L1):
- *   - 453 inscritos (seed real) paginados por cursor em páginas de 18 (§2.5)
+ *   - 453 inscritos (seed real) paginados por cursor em páginas de 200 (§2.5)
  *   - Cross-tenant DENY: create E update E delete (e leitura/query)
  *   - RBAC por papel: owner/staff escrevem; promoter/athlete não
  *   - Shape: kit ∈ {kit_ouro,kit_prata,kit_basico,sem_kit} (RN-202),
@@ -128,7 +128,7 @@ async function seedTenantsBase(): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Paginação por cursor — 453 reais, páginas de 18 (aceite L1)
+// Paginação por cursor — 453 reais, páginas de 200 (aceite L1)
 // Seed pesado UMA vez para o bloco (testes read-only).
 // ─────────────────────────────────────────────────────────────────────────
 describe('paginação de inscritos por cursor (S203-T1)', () => {
@@ -155,7 +155,7 @@ describe('paginação de inscritos por cursor (S203-T1)', () => {
     });
   }, 120_000);
 
-  it('varre as 26 páginas: 25×18 + 3, total 453, cursor estável sem duplicata', async () => {
+  it('varre as 3 páginas: 2×200 + 53, total 453, cursor estável sem duplicata', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
 
     const tamanhos: number[] = [];
@@ -178,13 +178,13 @@ describe('paginação de inscritos por cursor (S203-T1)', () => {
       paginas++;
     } while (cursor !== null && paginas < 40);
 
-    expect(paginas).toBe(26);
+    expect(paginas).toBe(3);
     expect(idsVistos.size).toBe(TOTAL_INSCRITOS_MEIA_FLORIPA);
-    expect(tamanhos.slice(0, 25).every((t) => t === INSCRITOS_PAGE_SIZE)).toBe(true);
-    expect(tamanhos[25]).toBe(453 - 25 * INSCRITOS_PAGE_SIZE); // 3
+    expect(tamanhos.slice(0, 2).every((t) => t === INSCRITOS_PAGE_SIZE)).toBe(true);
+    expect(tamanhos[2]).toBe(453 - 2 * INSCRITOS_PAGE_SIZE); // 53
   });
 
-  it('primeira página tem 18 itens ordenados por atletaNome', async () => {
+  it('primeira página tem 200 itens ordenados por atletaNome', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     const { itens, proxCursor } = await listarInscritos(db, MEIA_FLORIPA_ID);
 

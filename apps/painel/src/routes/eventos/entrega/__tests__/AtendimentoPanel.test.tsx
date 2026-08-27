@@ -13,7 +13,7 @@ import type { Evento, Inscrito, ItemKit, Kit } from '@leela/core';
 const joinPedido = vi.fn().mockResolvedValue({ pedido: null, pagamento: null });
 
 vi.mock('@leela/api-client', () => ({
-  INSCRITOS_PAGE_SIZE: 18,
+  INSCRITOS_PAGE_SIZE: 200,
   getLeelaDb: () => ({}),
   getPedidoEPagamentoDoInscrito: (...args: unknown[]) => joinPedido(...args),
 }));
