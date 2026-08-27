@@ -94,7 +94,7 @@ function LinhaEvento({
   );
 
   return (
-    <li className="relative grid grid-cols-[3.25rem_1fr] gap-3 sm:grid-cols-[4rem_1fr] sm:gap-4">
+    <li className="relative grid grid-cols-[calc(var(--spacing-12)+var(--spacing-1))_1fr] gap-3 sm:grid-cols-[var(--spacing-16)_1fr] sm:gap-4">
       {/* Marcador de data + nó da timeline */}
       <div className="flex flex-col items-center">
         <div className="flex w-full flex-col items-center rounded-ds-md bg-surface-raised py-1.5 text-center leading-none">
