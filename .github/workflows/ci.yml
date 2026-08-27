@@ -50,8 +50,11 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    # Nightly às 03:00 UTC — dispara o job E2E Playwright
-    - cron: '0 3 * * *'
+    # Nightly às 03:17 UTC — dispara o job E2E Playwright.
+    # 03:17 e não 03:00: o agendador do GitHub atrasa ou DESCARTA crons no
+    # topo da hora em horários de pico (o de 27/08 foi pulado); minuto
+    # impopular quase nunca é descartado.
+    - cron: '17 3 * * *'
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
