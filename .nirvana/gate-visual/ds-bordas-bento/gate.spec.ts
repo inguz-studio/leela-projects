@@ -6,6 +6,7 @@
  *   1. Login (AuthCard + Card do DS — sem borda decorativa)
  *   2. Recuperar senha (AuthCard)
  *   3. Cadastrar (AuthCard — inclui formulário com Card)
+ *   4. Kits do evento (seções agora em Card do DS — V2708-02)
  */
 import { test, expect } from '@playwright/test';
 import path from 'path';
@@ -31,5 +32,15 @@ test('02 — recuperar senha: Card sem borda (V2708-07)', async ({ page }) => {
 test('03 — cadastrar: AuthCard (Card do DS) sem borda (V2708-07)', async ({ page }) => {
   await page.goto('/conta/cadastrar', { waitUntil: 'networkidle' });
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '03-cadastrar-sem-borda.png') });
+  await expect(page.locator('body')).toBeVisible();
+});
+
+test('04 — kits: seções em Card do DS (V2708-02)', async ({ page }) => {
+  // Navega com auto-login pelo preview (castelo = marina@demo-leela.dev)
+  // Usa 'load' em vez de 'networkidle': Firestore websocket impede networkidle
+  await page.goto('/eventos/meia-floripa-2026/kits?preview=castelo', { waitUntil: 'load' });
+  // Aguarda autenticação Firebase + carregamento de dados
+  await page.waitForTimeout(5000);
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, '04-kits-em-card.png'), fullPage: true });
   await expect(page.locator('body')).toBeVisible();
 });
