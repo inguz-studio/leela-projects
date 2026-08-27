@@ -12,12 +12,16 @@
 // =============================================================================
 
 import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
-import { EmptyState, Skeleton, type SubNavTab } from '@leela/design-system';
+import { EmptyState, Skeleton } from '@leela/design-system';
 import type { Evento, PapelEvento } from '@leela/core';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 import { usePapelEvento } from '../_data/papelEvento';
-import { AreaSubNav } from '../../../components/nav/AreaSubNav';
-import { podeEditarConfiguracoes, podeGerirEquipe } from './_lib/gateEvento';
+import {
+  AreaTerciarioNav,
+  TerciarioLayout,
+  type TerciarioItem,
+} from '../../../components/nav/TerciarioNav';
+import { podeEditarConfiguracoes, podeGerirEquipe, podeEditarPaginaVendas } from './_lib/gateEvento';
 
 export interface ConfiguracoesOutletContext {
   evento: Evento;
@@ -56,6 +60,16 @@ export function ConfiguracoesLayout(): JSX.Element {
       segmento: 'politica',
       visivel: podeEditarConfiguracoes(papel),
     },
+    // V2708-11 · "configurações pode unificar a página de vendas no menu
+    // terciário, em eventos". Ela entra DEPOIS de Política de vendas porque as
+    // duas falam da mesma coisa (o que se vende e como), e antes de Exigências,
+    // que é o bloco de regulamento. `visivel` sai da célula PRÓPRIA da matriz.
+    {
+      id: 'pagina-vendas',
+      label: 'Página de vendas',
+      segmento: 'pagina-vendas',
+      visivel: podeEditarPaginaVendas(papel),
+    },
     {
       id: 'saude',
       label: 'Exigências e regulamento',
@@ -82,18 +96,30 @@ export function ConfiguracoesLayout(): JSX.Element {
 
   // `href` fica (ctrl+clique, clique do meio, copiar endereço); o clique simples
   // é interceptado e navega por SPA — LEELA-NAVFIX-T2.
-  const tabs: SubNavTab[] = visiveis.map((a) => ({
+  const itens: TerciarioItem[] = visiveis.map((a) => ({
     id: a.id,
     label: a.label,
     href: a.segmento ? `${base}/${a.segmento}` : base,
     active: a.id === ativa,
   }));
 
+  // V2708-03 · o terciário que o dono aprovou em Clubs vira o padrão aqui: a
+  // coluna sticky de `lg` para cima, faixa horizontal abaixo. Em modo ROTA — as
+  // cinco seções continuam sendo rotas com dado próprio, guard próprio e
+  // endereço colável, que é o que a régua da RN-574 manda preservar.
+  //
+  // Menu de UM item continua não sendo menu (comportamento herdado): o papel que
+  // só alcança uma seção vê a seção, não uma coluna com uma linha.
   return (
-    <div className="flex flex-col gap-[var(--spacing-5)]">
-      {tabs.length > 1 ? <AreaSubNav tabs={tabs} aria-label="Seções de configurações" /> : null}
+    <TerciarioLayout
+      nav={
+        itens.length > 1 ? (
+          <AreaTerciarioNav itens={itens} aria-label="Seções de configurações" />
+        ) : null
+      }
+    >
       <Outlet context={context} />
-    </div>
+    </TerciarioLayout>
   );
 }
 

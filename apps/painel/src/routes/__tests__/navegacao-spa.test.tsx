@@ -139,7 +139,9 @@ const SUPERFICIES: SuperficieNav[] = [
   {
     nome: 'abas do evento',
     landmark: 'Seções do evento',
-    ancoras: 10,
+    // 9 desde o V2708-11: "Página de vendas" saiu da barra do evento e virou
+    // seção do terciário de Configurações.
+    ancoras: 9,
     atual: 'Visão geral',
     montar: () =>
       void render(
@@ -260,7 +262,10 @@ const SUPERFICIES: SuperficieNav[] = [
   {
     nome: 'sub-abas de Configurações',
     landmark: 'Seções de configurações',
-    ancoras: 4,
+    // 5 desde o V2708-11: "Página de vendas" entrou aqui. A superfície virou o
+    // TERCIÁRIO (coluna no desktop, faixa no mobile) e continua sendo âncora de
+    // verdade em todos os itens — que é o que este gate guarda.
+    ancoras: 5,
     atual: 'Geral',
     montar: () =>
       montarSobContexto(`/eventos/${SLUG}/configuracoes`, <ConfiguracoesLayout />),

@@ -70,6 +70,22 @@ function RedirectEstoqueParaDistribuicao(): JSX.Element {
 
 RedirectEstoqueParaDistribuicao.displayName = 'RedirectEstoqueParaDistribuicao';
 
+/**
+ * Salto de `pagina-vendas` para dentro de Configurações (V2708-11 · RN-234).
+ *
+ * O dono: *"configurações pode unificar a página de vendas no menu terciário, em
+ * eventos"*. A tela é a MESMA — mudou o endereço e o menu que a alcança. Terceira
+ * instância do mesmo molde (balcão, estoque de kits, e agora esta): endereço no
+ * favorito, no histórico ou colado num chat de operação chega na tela, não num
+ * 404.
+ */
+function RedirectPaginaVendas(): JSX.Element {
+  const { slug } = useParams();
+  return <RedirectLegado para={`/eventos/${slug ?? ''}/configuracoes/pagina-vendas`} />;
+}
+
+RedirectPaginaVendas.displayName = 'RedirectPaginaVendas';
+
 export function EventosRoutes(): JSX.Element {
   return (
     <ToastProvider>
@@ -145,15 +161,16 @@ export function EventosRoutes(): JSX.Element {
           <Route path="kits/editar/:kitId" element={<KitEditorPage />} />
           {/* Config de lotes por modalidade (E04 · S300 · ADR-012) */}
           <Route path="lotes" element={<LotesPage />} />
-          {/* Editor de conteúdo da página de vendas (E04 · S300-T3) */}
-          <Route
-            path="pagina-vendas"
-            element={
-              <RequirePapel area="pagina_vendas">
-                <PaginaVendasPage />
-              </RequirePapel>
-            }
-          />
+          {/* V2708-11 · RN-234 · a página de vendas MUDOU DE CASA (foi para o
+              terciário de Configurações) e o endereço antigo NUNCA quebra. Um
+              salto só, preservando querystring e fragmento, pelo mesmo
+              `RedirectLegado` que serve o balcão e o estoque de kits.
+
+              Fica FORA do `RequirePapel` pela mesma razão escrita no salto do
+              credenciamento: quem não tem a área recebe o 403 no endereço NOVO,
+              e não um 403 num endereço morto — que faria a pessoa concluir que
+              a URL é que estava errada. */}
+          <Route path="pagina-vendas" element={<RedirectPaginaVendas />} />
           {/* Aba Comunicação — campanhas (S401-T2) + histórico FABLE-G (E06 · L3) */}
           <Route
             path="comunicacao"
@@ -210,6 +227,21 @@ export function EventosRoutes(): JSX.Element {
           >
             <Route index element={<ConfigGeraisPage />} />
             <Route path="politica" element={<PoliticaVendasPage />} />
+            {/* V2708-11 · a página de vendas mora aqui agora. O guard PRÓPRIO
+                (`area="pagina_vendas"`) fica, aninhado sob o do pai: as duas
+                colunas da matriz são idênticas hoje nos quatro papéis, então o
+                aninhamento não afrouxou nem apertou nada — e no dia em que
+                divergirem, a célula certa é a que decide. Herdar só o guard do
+                pai seria trocar a autorização por um efeito colateral do
+                endereço. */}
+            <Route
+              path="pagina-vendas"
+              element={
+                <RequirePapel area="pagina_vendas">
+                  <PaginaVendasPage />
+                </RequirePapel>
+              }
+            />
             <Route path="saude" element={<SaudeRegulamentoPage />} />
             <Route path="equipe" element={<EquipePage />} />
           </Route>

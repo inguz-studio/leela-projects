@@ -53,7 +53,12 @@ describe('eventoSubNavTabs', () => {
     // Ordem canônica preservada: financeiro segue antes de configuracoes.
     const ids = tabs.map((t) => t.id);
     expect(ids.indexOf('financeiro')).toBeLessThan(ids.indexOf('configuracoes'));
-    expect(ids.slice(0, 5)).toEqual(['overview', 'inscritos', 'kits', 'lotes', 'pagina-vendas']);
+    // V2708-11: `pagina-vendas` saiu daqui e virou seção do terciário de
+    // Configurações. O que este caso afirma continua sendo o mesmo — a cabeça da
+    // ordem canônica não foi reordenada —, só que a lista encurtou por remoção,
+    // não por troca de posição.
+    expect(ids.slice(0, 4)).toEqual(['overview', 'inscritos', 'kits', 'lotes']);
+    expect(ids).not.toContain('pagina-vendas');
   });
 });
 
@@ -80,12 +85,14 @@ describe('RN-399 — a aba diz credenciamento, o identificador não muda', () =>
 
   it('a ordem canônica das abas não mudou com a virada', () => {
     const ids = eventoSubNavTabs(SLUG, 'overview').map((t) => t.id);
+    // V2708-11 tirou `pagina-vendas` desta lista (foi para o terciário de
+    // Configurações); as NOVE restantes seguem na ordem canônica de sempre, que
+    // é o que este caso guarda.
     expect(ids).toEqual([
       'overview',
       'inscritos',
       'kits',
       'lotes',
-      'pagina-vendas',
       'comunicacao',
       'afiliados',
       'entrega',

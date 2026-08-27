@@ -10,12 +10,18 @@
 
 import type { SubNavTab } from '@leela/design-system';
 
+// V2708-11 · `pagina-vendas` SAIU deste union: a página de vendas passou a ser
+// seção do terciário de Configurações, e o menu secundário do evento perde o
+// único item que era configuração morando fora de Configurações. Ele cai de dez
+// para nove abas. O endereço antigo continua vivo por redirect
+// (`RedirectPaginaVendas` em `EventosRoutes.tsx`), e `abaAtiva` passa a resolver
+// `/pagina-vendas` como `overview` só no instante do salto — o destino final é
+// `/configuracoes/pagina-vendas`, que casa a aba `configuracoes`.
 export type EventoAbaId =
   | 'overview'
   | 'inscritos'
   | 'kits'
   | 'lotes'
-  | 'pagina-vendas'
   | 'comunicacao'
   | 'afiliados'
   | 'entrega'
@@ -42,7 +48,6 @@ const ABAS: readonly AbaDef[] = [
   // DIAG-PAINEL-LACUNAS pagou para desfazer, com o agravante de o nome
   // prometer o que a tela não faria.
   { id: 'lotes', label: 'Modalidades', segmento: 'lotes' },
-  { id: 'pagina-vendas', label: 'Página de vendas', segmento: 'pagina-vendas' },
   // E06 (Comunicação) segue E04 (Página de vendas) — ordem canônica, sem reordenar.
   { id: 'comunicacao', label: 'Comunicação', segmento: 'comunicacao' },
   // R9-E (E08 antecipado · S-R9-11-T4): afiliados/influenciadores do evento —
