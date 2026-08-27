@@ -61,8 +61,8 @@ export function KitsCadastroView({
         <KpiCard label="Marcas ativadas" value={formatInt(resumo.marcasAtivadas)} />
       </section>
 
-      {/* Seção A — Kits */}
-      <section aria-label="Kits do evento" className="flex flex-col gap-[var(--spacing-4)]">
+      {/* Seção A — Kits (bento card canônico — V2708-02) */}
+      <Card as="section" aria-label="Kits do evento" className="flex flex-col gap-[var(--spacing-4)] p-[var(--spacing-5)]">
         <div className="flex items-center justify-between gap-[var(--spacing-3)]">
           <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
             Kits
@@ -87,10 +87,10 @@ export function KitsCadastroView({
             ))}
           </div>
         )}
-      </section>
+      </Card>
 
-      {/* Seção B — Catálogo de itens */}
-      <section aria-label="Catálogo de itens" className="flex flex-col gap-[var(--spacing-4)]">
+      {/* Seção B — Catálogo de itens (bento card canônico — V2708-02) */}
+      <Card as="section" aria-label="Catálogo de itens" className="flex flex-col gap-[var(--spacing-4)] p-[var(--spacing-5)]">
         <div className="flex items-center justify-between gap-[var(--spacing-3)]">
           <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
             Catálogo de itens
@@ -113,7 +113,7 @@ export function KitsCadastroView({
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   );
 }
