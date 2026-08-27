@@ -72,9 +72,17 @@ export function CountdownHero({
         <div className="flex items-end gap-[var(--spacing-5)]">
           <span
             className={cn(
+              'inline-block',
               'font-display italic font-[var(--font-weight-extrabold)]',
               'text-[length:var(--countdown-number-size)] leading-none',
               'tracking-[var(--countdown-number-spacing)] tabular-nums',
+              // py-[var(--spacing-1)]: garante que a área pintada pelo
+              // bg-clip-text cobre o ink overflow do display italic extrabold
+              // (ascendentes e descedentes que excedem a em-square ficam dentro
+              // do box declarado, evitando o corte pelo overflow-hidden da
+              // section). inline-block é necessário para o padding vertical
+              // expand o box pintado.
+              'py-[var(--spacing-1)]',
               'bg-[image:var(--countdown-number-gradient)] bg-clip-text text-transparent',
             )}
           >
