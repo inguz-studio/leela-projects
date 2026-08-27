@@ -118,6 +118,9 @@ jobs:
       - name: Lint
         run: pnpm turbo run lint
 
+      - name: Gate do cânone
+        run: node scripts/gate-canon.mjs
+
       - name: Type-check
         run: pnpm turbo run type-check
 
