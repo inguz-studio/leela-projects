@@ -57,8 +57,16 @@ import {
 } from '@leela/core';
 import { timestampSeguro } from './queries';
 
-/** Page size canônico da tabela densa de inscritos (§2.5 — ~18 linhas) */
-export const INSCRITOS_PAGE_SIZE = 18;
+/**
+ * Page size do fetch paginado de inscritos (§2.5).
+ *
+ * Régua de dimensionamento: a latência de round-trip (network + Firestore)
+ * domina o custo total — não o payload. 453 inscritos com 18/página geram
+ * 26 round-trips sequenciais; com 200/página, apenas 3 (perf/dados-quentes-20260826).
+ * O teto de 1000 do INSCRITOS_BALCAO_CAP deixa folga para crescimento sem
+ * risco de leitura ilimitada.
+ */
+export const INSCRITOS_PAGE_SIZE = 200;
 
 /**
  * Teto do listener realtime do balcão (S204). O mock canônico tem 453 inscritos
@@ -197,7 +205,7 @@ export interface ListarInscritosOptions {
  * o que mantém o cursor estável mesmo com nomes repetidos).
  *
  * `proxCursor` volta `null` quando a página vem menor que `pageSize`
- * (fim da lista). 453 inscritos → 26 páginas (25×18 + 3).
+ * (fim da lista). 453 inscritos → 3 páginas (2×200 + 53).
  */
 export async function listarInscritos(
   db: Firestore,

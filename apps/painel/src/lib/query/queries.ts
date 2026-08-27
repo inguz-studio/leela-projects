@@ -137,11 +137,11 @@ export function eventoDetalheQuery(slug: string) {
   });
 }
 
-/** Teto de segurança do acúmulo por cursor (453 → 26 páginas; 200 é folga). */
-const MAX_PAGINAS_INSCRITOS = 200;
+/** Teto de segurança do acúmulo por cursor (453 → 3 páginas de 200; 20 é folga). */
+const MAX_PAGINAS_INSCRITOS = 20;
 
 /**
- * Percorre TODOS os inscritos do evento pelos cursores (§2.5, 18/página) e
+ * Percorre TODOS os inscritos do evento pelos cursores (§2.5, 200/página) e
  * acumula em memória. Reusa `listarInscritos` — a paginação provada do
  * api-client, não uma reimplementação. A tela filtra/pagina client-side.
  */
