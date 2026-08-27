@@ -41,12 +41,13 @@ describe('Card', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Meia Floripa' })).toBeInTheDocument();
   });
 
-  it('frame adota aliases shadcn→brasa (bg-card + border-border + shadow token)', () => {
+  it('frame adota aliases shadcn→brasa (bg-card + shadow token; sem borda — V2708-07)', () => {
     render(<Composed />);
     const card = screen.getByTestId('card');
     expect(card.className).toContain('bg-card');
     expect(card.className).toContain('text-card-foreground');
-    expect(card.className).toContain('border-border');
+    // V2708-07: bento card sem borda decorativa; separação por superfície/elevação.
+    expect(card.className).not.toContain('border-border');
     expect(card.className).toContain('shadow-elev-1');
   });
 
