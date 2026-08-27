@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5173 --strictPort",
-    "build": "node ../../scripts/verificar-frescor-do-workspace.mjs && vite build",
+    "build": "node ../../scripts/verificar-frescor-do-workspace.mjs && vite build --mode leela-hub",
     "verify:frescor": "node ../../scripts/verificar-frescor-do-workspace.mjs",
     "preview": "vite preview",
     "lint": "eslint src --max-warnings 0",
