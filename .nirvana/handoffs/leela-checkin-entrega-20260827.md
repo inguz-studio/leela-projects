@@ -122,8 +122,25 @@ Na Visão geral, `ultimosAtendidos` é derivado sorting `checkinEm` desc (mais r
 
 ## Gate Visual
 
-Screenshots em `.nirvana/gate-visual/checkin-entrega/`:
-- `entrar-1440.jpg` — app no porto 4614, 1440px
-- `entrar-390.jpg` — app no porto 4614, 390px (responsivo OK)
+Build com `--mode mock-emulador` (VITE_PREVIEW_AUTOLOGIN=true, Auth emulator :9298, Firestore :8280).
+Autologin: `marina@demo-leela.dev` via `?preview=castelo`.
+Preview servido em :4614 — dados reais do emulador.
 
-O preview do build conecta a Firebase produção (sem `FIREBASE_AUTH_EMULATOR_HOST` no env de build). Para screenshots autenticadas com dados do emulador, usar `vite dev`.
+Screenshots em `.nirvana/gate-visual/checkin-entrega/`:
+
+| Arquivo | Viewport | Conteúdo |
+|---------|----------|----------|
+| `entrar-1440.jpg` | 1440px | app no porto 4614 (build sem emulador — tela de entrada) |
+| `entrar-390.jpg` | 390px | idem, responsivo |
+| `credenciamento-1440.jpg` | 1440px | Marina Almeida · 3 etapas (✓✓✓) · "← Cancelar atendimento" visível (V2708-13) |
+| `credenciamento-390.jpg` | 390px | Ana Almeida · etapa 2 · "← Cancelar atendimento" visível · tamanho M (V2708-13) |
+| `entrega-tamanho-1440.jpg` | 1440px | João Almeida · kit PRATA · "Camiseta técnica Be Hero • P" no checklist (V2708-14) |
+| `entrega-tamanho-390.jpg` | 390px | João Almeida · tamanho P no card do inscrito (V2708-14) |
+| `overview-1440.jpg` | 1440px | Visão geral · CountdownHero + KPIs (V2708-17) |
+| `overview-credenciamento-ao-vivo-1440.jpg` | 1440px | Visão geral · seção "Credenciamento ao vivo" completa: Retirada de kits, Alertas, Últimos atendimentos, Ações rápidas (V2708-17) |
+| `overview-390.jpg` | 390px | Visão geral · CountdownHero + KPIs mobile (V2708-17) |
+| `overview-credenciamento-390.jpg` | 390px | Visão geral · "Credenciamento ao vivo" mobile com Retirada de kits (V2708-17) |
+
+### Limitação declarada — V2708-14 fallback de tamanhos
+
+O fallback de `<Badge>` por tamanho (para `itens.length === 0 && tamanhos não vazio`) não é acionável com os dados do seed atual: os kits `kit_prata` e `kit_basico` têm itens configurados no seed (`Camiseta técnica Be Hero`, `Gel de carboidrato 30g`, etc.), portanto `itens.length > 0` sempre. O cenário que ativa o fallback (kit cadastrado sem itens, mas atleta com tamanho escolhido) é um edge-case de dados inconsistentes em produção. A cobertura do fallback está garantida por unit test (`AtendimentoPanel.test.tsx` — `getAllByText('Feminina M').length > 0`). A screenshot `entrega-tamanho-1440.jpg` mostra o tamanho visível na entrega pela via normal (sufixo no item da camiseta).
