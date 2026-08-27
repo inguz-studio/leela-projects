@@ -410,6 +410,8 @@
   --modal-width-md: 560px;
   --modal-width-lg: 640px;
   --modal-overlay-bg: rgba(0,0,0,0.82);
+  /* V2708-16(a): Dialog overlay com alpha real (surface-base #FDFAF7 × 80%) */
+  --dialog-overlay-bg: rgba(253,250,247,0.80);
   --modal-overlay-blur: 4px;
   --toast-width: 360px;
   --toast-border-left: 3px;
