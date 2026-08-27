@@ -15,6 +15,7 @@ import { Badge, Button, CheckboxField, Chip, Input, Radio, RadioGroup, Select, T
 import type { Clube, ModeloEntradaClube, VisibilidadeClube } from '@leela/core';
 import type { AtualizarClubeInput } from '@leela/api-client';
 import { ImageUploadField } from '@/components/upload';
+import { TerciarioLayout, TerciarioNav } from '@/components/nav/TerciarioNav';
 import { linkClubePublico } from '@/lib/linkPublico';
 import {
   CATEGORIA_OPCOES,
@@ -155,30 +156,30 @@ export function ConfiguracoesView({
     });
   }
 
-  return (
-    <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-[1fr_3fr]">
-      <nav aria-label="Seções das configurações" className="lg:sticky lg:top-[var(--spacing-6)] lg:self-start">
-        <ul className="flex flex-col gap-[var(--spacing-1)]">
-          {SECOES_CONFIG.map((s) => (
-            <li key={s.id}>
-              <button
-                type="button"
-                aria-current={ativa === s.id ? 'true' : undefined}
-                onClick={() => irPara(s.id)}
-                className={
-                  ativa === s.id
-                    ? 'w-full rounded-[var(--radius-sm)] bg-[var(--action-ghost-hover)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-left font-[var(--font-weight-semibold)] text-[var(--text-primary)]'
-                    : 'w-full rounded-[var(--radius-sm)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }
-              >
-                {s.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+  // V2708-03 · o molde que estava ESCRITO AQUI virou peça (`TerciarioNav`).
+  //
+  // Este é o menu que o dono elogiou em 27/08 — e era, pela medição da S049, o
+  // único menu do painel fora do cânone: `<ul>` de `<button>` à mão dentro da
+  // rota, escapando da catraca `menu-secundario-cru` por não parecer um SubNav.
+  // O elogio dele não mudou nada do COMPORTAMENTO daqui (âncora + scroll spy
+  // seguem intactos, linha por linha); mudou a PROCEDÊNCIA: a aparência agora
+  // vem do mesmo lugar que a de Configurações do evento, então padronizar no
+  // desktop deixou de significar "copiar estas classes numa 3ª tela".
+  //
+  // De brinde, o formato ganhou responsividade que não tinha: abaixo de `lg` a
+  // coluna virava uma pilha de 5 botões comendo ~200px antes do primeiro campo.
+  const itensDoMenu = SECOES_CONFIG.map((s) => ({
+    id: s.id,
+    label: s.label,
+    active: ativa === s.id,
+    onClick: () => irPara(s.id),
+  }));
 
-      <div className="flex flex-col gap-[var(--spacing-6)]">
+  return (
+    <TerciarioLayout
+      nav={<TerciarioNav itens={itensDoMenu} aria-label="Seções das configurações" />}
+    >
+      <>
         <Secao
           id="identidade"
           titulo="Identidade"
@@ -402,8 +403,8 @@ export function ConfiguracoesView({
             </Button>
           </div>
         </section>
-      </div>
-    </div>
+      </>
+    </TerciarioLayout>
   );
 }
 

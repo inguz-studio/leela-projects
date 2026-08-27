@@ -35,6 +35,22 @@ export function podeGerirEquipe(papel: PapelEvento | null): boolean {
 }
 
 /**
+ * O papel pode ver/editar a Página de vendas? (área `pagina_vendas`). @pure
+ *
+ * V2708-11: a página de vendas passou a morar no terciário de Configurações, e
+ * a célula da matriz que a governa NÃO é a de `configuracoes` — é a dela. As
+ * duas colunas são idênticas hoje nos quatro papéis (organizador T/T,
+ * administrador T/T, operador F/F, financeiro F/F), então o aninhamento não
+ * mudou quem entra; ainda assim a aba e a rota consultam a célula PRÓPRIA, para
+ * que o dia em que a matriz divergir não seja o dia em que a autorização vazou
+ * em silêncio. O aceite `E04-L4: financeiro edita página → NEGA` está afirmado
+ * em teste, não confiado a este comentário.
+ */
+export function podeEditarPaginaVendas(papel: PapelEvento | null): boolean {
+  return papel !== null && podeAcessar(papel, 'pagina_vendas');
+}
+
+/**
  * O papel pode FLIPAR o modo cupom-only do evento? (RN-303 · S1804). É
  * OWNER-only: abrir/fechar o evento a vendas sem cupom é controle de venda do
  * dono — a Rule `vendaSomentePorCupomProtegida` nega staff (mesma postura de

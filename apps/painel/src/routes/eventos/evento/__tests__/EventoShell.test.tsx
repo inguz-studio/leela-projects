@@ -247,9 +247,10 @@ describe('EventoShell — navegação SPA (LEELA-NAVFIX-T2)', () => {
     montar();
     const subnav = screen.getByRole('navigation', { name: 'Seções do evento' });
     const abas = within(subnav).getAllByRole('link');
-    // As 10 abas do evento (subnav.ts) — se alguém acrescentar uma sem fiação,
-    // o laço abaixo acusa.
-    expect(abas).toHaveLength(10);
+    // As 9 abas do evento (subnav.ts) — se alguém acrescentar uma sem fiação,
+    // o laço abaixo acusa. Eram 10 até o V2708-11 tirar "Página de vendas"
+    // daqui e levá-la para o terciário de Configurações.
+    expect(abas).toHaveLength(9);
     for (const aba of abas) {
       const evento = clicarNoDom(aba);
       expect(evento.defaultPrevented, `aba "${aba.textContent ?? ''}" recarrega o documento`).toBe(
