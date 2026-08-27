@@ -192,14 +192,17 @@ export function Dialog({
       aria-labelledby={titleId}
       aria-describedby={description !== undefined ? descriptionId : undefined}
     >
-      {/* Overlay — escurece + fecha ao clicar (via 1..4). Token com alpha.
+      {/* Overlay — escurece + fecha ao clicar (via 1..4). V2708-16(a): alpha
+          sobre var() hex é DESCARTADO pelo Tailwind em silêncio (bg-surface-base/80
+          não chegava ao CSS — reportado no PR #2). Substituído por token dedicado
+          com rgba explícita por tema (--dialog-overlay-bg) — mesmo padrão do Modal.
           Motion: fade nos dois breakpoints, gated por motion-safe. */}
       <div
         aria-hidden
         data-state={estado}
         style={estiloMotion(estado)}
         className={cn(
-          'absolute inset-0 bg-surface-base/80 backdrop-blur-sm',
+          'absolute inset-0 bg-[var(--dialog-overlay-bg)] backdrop-blur-sm',
           'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0',
           'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
           overlayClassName,
