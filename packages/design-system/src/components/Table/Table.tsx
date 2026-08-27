@@ -159,7 +159,9 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      'border-b border-b-[var(--border-subtle)]',
+      // §2.16 — sem linha divisória entre linhas (V2708-07). Separação por zebra
+      // sutil: linha par recebe --table-header-bg (mesma tinta leve do thead).
+      'even:bg-[var(--table-header-bg)]',
       'transition-colors duration-[var(--motion-duration-fast)]',
       className,
     )}
@@ -213,7 +215,7 @@ const TableCell = React.forwardRef<
       // UUID) quebra no valor em vez de estourar e ser cortado pelo overflow do
       // card. Em responsive="scroll" nada disso aplica (grade densa preservada).
       cardMode &&
-        'max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-[var(--spacing-4)] max-lg:min-w-0 max-lg:border-b max-lg:border-b-[var(--border-subtle)]',
+        'max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-[var(--spacing-4)] max-lg:min-w-0',
       className,
     )}
     {...props}
@@ -359,7 +361,7 @@ function Table<TRow>({
               // card perde o fio subtle. Em lg+ (e em responsive="scroll") nada
               // disso aplica — tabela densa intocada.
               cardMode &&
-                'max-lg:block max-lg:h-auto max-lg:mb-[var(--spacing-3)] max-lg:rounded-[var(--radius-lg)] max-lg:bg-[var(--surface-raised)] max-lg:shadow-elev-1 max-lg:overflow-hidden max-lg:border-b-0 max-lg:[&>*:last-child]:border-b-0',
+                'max-lg:block max-lg:h-auto max-lg:mb-[var(--spacing-3)] max-lg:rounded-[var(--radius-lg)] max-lg:bg-[var(--surface-raised)] max-lg:shadow-elev-1 max-lg:overflow-hidden',
             )}
             {...(clickable
               ? {
