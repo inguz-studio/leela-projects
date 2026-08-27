@@ -91,3 +91,23 @@ describe('F11 furo #3 — funções de cor modernas e cores nomeadas', () => {
     expect(findViolation('whitespace-nowrap select-none')).toBeNull();
   });
 });
+
+describe('V2708-16(b) — furo em arbitrary values com underscore (Tailwind converte _ em espaço)', () => {
+  it('flagra rgba(...) precedido de _ no arbitrary value (shadow-[0_-6px_rgba(...)])', () => {
+    expect(findViolation('shadow-[0_-6px_24px_-8px_rgba(0,0,0,0.5)]')).toBe(
+      '[0_-6px_24px_-8px_rgba(0,0,0,0.5)]',
+    );
+  });
+
+  it('flagra px cru dentro de arbitrary value com _ (h-[64px_auto])', () => {
+    expect(findViolation('grid-[64px_auto]')).toBe('[64px_auto]');
+  });
+
+  it('flagra hsla() precedido de _ no arbitrary value', () => {
+    expect(findViolation('bg-[0_0_0_hsla(0,0%,0%,0.5)]')).toBe('[0_0_0_hsla(0,0%,0%,0.5)]');
+  });
+
+  it('NÃO flagra arbitrary value só com var() e _ (shadow-[var(--x)_var(--y)])', () => {
+    expect(findViolation('shadow-[var(--elevation-1)_var(--elevation-2)]')).toBeNull();
+  });
+});
