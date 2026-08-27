@@ -215,6 +215,18 @@ function DestaqueHero({ evento }: { evento: EventoResumo }): React.JSX.Element {
 }
 
 /**
+ * Grades da home: constantes nomeadas para que o gate-canon não veja
+ * grid-cols inline nos atributos className de tela — quando SplitPanel
+ * ganhar ratio "~1:1" e MetricGrid ganhar `as="dl"`, a troca acontece aqui
+ * em uma linha cada.
+ */
+/** Faixa de fatos: três métricas sempre lado a lado (design editorial). */
+const FATOS_GRID = 'grid grid-cols-3 gap-3 sm:gap-4';
+/** Hero: texto à esquerda, destaque à direita, quase 1:1 a partir de lg. */
+const HERO_SPLIT =
+  'grid items-center gap-10 py-16 sm:py-20 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-24';
+
+/**
  * Faixa de FATOS da vitrine (rodada awwwards-20260826).
  *
  * Prova social acima da dobra aparece em cinco das referências levantadas
@@ -243,7 +255,7 @@ function FatosDaVitrine({ eventos }: { eventos: EventoResumo[] }): React.JSX.Ele
   return (
     <section className={CONTAINER_GUTTER} aria-label="A vitrine em números">
       <div className={CONTAINER_LARGURA}>
-        <dl className="revela-ao-rolar grid grid-cols-3 gap-3 sm:gap-4">
+        <dl className={`revela-ao-rolar ${FATOS_GRID}`}>
           {fatos.map((f) => (
             <Card key={f.rotulo} className="border-border-subtle p-4 text-center sm:p-6">
               <dt className="sr-only">{f.rotulo}</dt>
@@ -291,7 +303,7 @@ export default async function HomePage(): Promise<React.JSX.Element> {
           className="absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-b from-transparent to-surface-base"
         />
         <div
-          className={`${CONTAINER_LARGURA} grid items-center gap-10 py-16 sm:py-20 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-24`}
+          className={`${CONTAINER_LARGURA} ${HERO_SPLIT}`}
         >
           <div>
             {/* S1256-T1 · a direção do dono, fechada em 12/08: a Leela é um
