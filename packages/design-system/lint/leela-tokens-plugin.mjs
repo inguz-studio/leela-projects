@@ -68,11 +68,22 @@ export function findViolation(value) {
 
   // Arbitrary values: desconta apenas os var(--…) e inspeciona o resto —
   // um segmento com var() ainda ofende se sobrar px/rem/em/pt ou cor nomeada.
+  //
+  // FURO V2708-16(b): Tailwind converte `_` em espaço nos arbitrary values antes
+  // de gerar o CSS — `shadow-[0_-6px_24px_-8px_rgba(0,0,0,0.5)]` é equivalente a
+  // `shadow-[0 -6px 24px -8px rgba(0,0,0,0.5)]`. Os regex RAW_UNIT e COLOR_FN
+  // usam \b (word boundary) que não transpõe `_` (também é \w). Solução:
+  // normalizar `_` → espaço em `bare` antes das verificações e também testar
+  // COLOR_FN dentro do segmento (a verificação global falhava por \b pós-`_`).
   for (const segment of value.matchAll(ARBITRARY_SEGMENT)) {
     const inner = segment[1] ?? '';
-    const bare = stripVarCalls(inner);
+    // Normaliza underscore → espaço para que \b funcione corretamente.
+    const bare = stripVarCalls(inner).replace(/_/g, ' ');
     if (RAW_UNIT.test(bare)) return `[${inner}]`;
     if (NAMED_COLOR.test(bare)) return `[${inner}]`;
+    // COLOR_FN global (linhas acima) falha quando `_rgba(` não tem \b entre
+    // `_` e `r`; verificamos aqui sobre o `bare` normalizado.
+    if (COLOR_FN.test(bare)) return `[${inner}]`;
   }
   return null;
 }
