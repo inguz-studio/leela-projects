@@ -130,6 +130,25 @@ export function tabsComNavSpa(
 }
 
 /**
+ * Mesma fiação para os itens do `TerciarioNav` (V2708-03).
+ *
+ * Idêntica à das abas em contrato e em razão — mora aqui, e não no componente,
+ * pelo motivo que este arquivo inteiro existe: a decisão de quando o clique é do
+ * navegador e quando é nosso é UMA, e superfície que a reescreve é superfície
+ * que diverge. O terciário em modo ÂNCORA (item sem `href`) passa intocado, pelo
+ * mesmo caminho das abas sem `href`.
+ */
+export function terciarioComNavSpa<T extends { href?: string; onClick?: (event: React.MouseEvent) => void }>(
+  itens: readonly T[],
+  navegar: NavegarSpa,
+  atual?: string,
+): T[] {
+  return itens.map((item) =>
+    item.href ? { ...item, onClick: comNavSpa(item.onClick, navegar, item.href, atual) } : item,
+  );
+}
+
+/**
  * Mesma fiação para a trilha do `Breadcrumb`. O último item é a página atual
  * (não vira link) e um item sem `href` é texto — o DS ignora o `onClick` nos
  * dois casos, então mapear a lista inteira é seguro.
