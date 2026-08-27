@@ -18,13 +18,12 @@
 // =============================================================================
 
 import { useQuery } from '@tanstack/react-query';
-import { getLeelaDb, listarInscritos, type OverviewResult } from '@leela/api-client';
+import { type OverviewResult } from '@leela/api-client';
 import type { Evento } from '@leela/core';
 import {
   eventosDoOrganizadorQuery,
   overviewQuery,
 } from '../../../lib/query/queries';
-import { valorDaInscricao, type InscricaoRecenteInput } from '../_lib/recentRegistrations';
 import type { OverviewSession } from './session';
 
 export interface AsyncState<T> {
@@ -113,71 +112,3 @@ export function useEventosProdutor(session: OverviewSession): Refetchable<AsyncS
   };
 }
 
-/**
- * Inscrições recentes cross-evento (S601-T2). Onda 1: funde a primeira página
- * de cada evento ativo (não encerrado) e deixa a ordenação por data desc para
- * a derivação pura. Uma query collection-group única (índice já declarado por
- * E02-L1: inscritos tenantId+criadoEm DESC) substitui isto quando existir o
- * helper de api-client + a Rule de CG — ver SUMMARY §handoff.
- *
- * Query dependente (Kleppmann, read-your-writes): só dispara quando os eventos
- * (fonte-mãe) já resolveram sem erro; a chave carrega os ids dos ativos, então
- * mudar o conjunto de eventos reidrata sem refetch cego dos inalterados.
- */
-export function useInscricoesRecentes(
-  eventos: Evento[] | null,
-  eventosError: Error | null = null,
-  porEvento = 10
-): Refetchable<AsyncState<InscricaoRecenteInput[]>> {
-  const ativos = (eventos ?? []).filter((e) => e.status !== 'encerrado');
-  // Chave estável dos eventos ativos (evita refetch por refs novas).
-  const chave = ativos.map((e) => e.id).join(',');
-  // Só busca com a fonte-mãe resolvida, sem erro e com algum evento ativo.
-  const enabled = !eventosError && eventos !== null && ativos.length > 0;
-
-  const query = useQuery({
-    queryKey: ['inscricoes-recentes-cross', chave, porEvento] as const,
-    queryFn: async (): Promise<InscricaoRecenteInput[]> => {
-      const db = getLeelaDb();
-      const porEventoInscricoes = await Promise.all(
-        ativos.map((evento) =>
-          listarInscritos(db, evento.id, { pageSize: porEvento }).then((res) =>
-            res.itens.map(
-              (i): InscricaoRecenteInput => ({
-                id: `${evento.id}:${i.id}`,
-                atletaNome: i.atletaNome,
-                modalidade: i.modalidade,
-                status: i.status,
-                criadoEm: i.criadoEm,
-                eventoNome: evento.nome,
-                // Coluna Valor (T6): preço do percurso casado com a modalidade
-                // (RN-200 — o preço vive no percurso); sem match → null ("—").
-                valor: valorDaInscricao(evento.percursos, i.modalidade),
-              })
-            )
-          )
-        )
-      );
-      return porEventoInscricoes.flat();
-    },
-    enabled,
-  });
-  const refetch = () => {
-    void query.refetch();
-  };
-
-  // Erro da fonte-mãe (eventos) NÃO deixa este bloco em skeleton eterno (#39):
-  // propaga como erro real em vez de travar em loading.
-  if (eventosError) return { data: null, loading: false, error: eventosError, refetch };
-  // eventos ainda carregando (ou recarregando via retry) → reflete loading.
-  if (eventos === null) return { data: null, loading: true, error: null, refetch };
-  // Sem eventos ativos → vazio honesto (lista vazia, não erro).
-  if (ativos.length === 0) return { data: [], loading: false, error: null, refetch };
-
-  return {
-    data: query.data ?? null,
-    loading: query.isPending,
-    error: query.error ?? null,
-    refetch,
-  };
-}

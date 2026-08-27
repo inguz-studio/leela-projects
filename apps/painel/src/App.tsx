@@ -1,26 +1,53 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Skeleton } from '@leela/design-system';
 import { HealthRoute } from './routes/health';
 import { OverviewRoutes } from './routes/overview/OverviewRoutes';
-import { EventosRoutes } from './routes/eventos/EventosRoutes';
-import { ClubesRoutes } from './routes/clubes/ClubesRoutes';
-import { CrmRoutes } from './routes/crm/CrmRoutes';
-import { ParceriasRoutes } from './routes/parcerias/ParceriasRoutes';
 import { rotasLegadas } from './routes/_system/RotasLegadas';
-import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
 import { SuperficieDoPainel } from './shell/SuperficieDoPainel';
 import { RequireSessao } from './routes/_system/RequireSessao';
 import { ContaTravadaGate } from './routes/onboarding/ContaTravadaGate';
-import { ContaRoutes } from './routes/conta/perfil/ContaRoutes';
 import { AuthLayout } from './routes/conta/auth/AuthLayout';
 import { EntrarPage } from './routes/conta/auth/EntrarPage';
 import { CadastrarPage } from './routes/conta/auth/CadastrarPage';
 import { RecuperarSenhaPage } from './routes/conta/auth/RecuperarSenhaPage';
 import { RedefinirSenhaPage } from './routes/conta/auth/RedefinirSenhaPage';
 import { createQueryClient } from './lib/query/client';
+
+// Code-split por área: cada rota pesada entra em chunk próprio.
+// OverviewRoutes fica no bundle principal — é a primeira tela pós-login.
+const EventosRoutes = lazy(() =>
+  import('./routes/eventos/EventosRoutes').then((m) => ({ default: m.EventosRoutes }))
+);
+const ClubesRoutes = lazy(() =>
+  import('./routes/clubes/ClubesRoutes').then((m) => ({ default: m.ClubesRoutes }))
+);
+const CrmRoutes = lazy(() =>
+  import('./routes/crm/CrmRoutes').then((m) => ({ default: m.CrmRoutes }))
+);
+const ParceriasRoutes = lazy(() =>
+  import('./routes/parcerias/ParceriasRoutes').then((m) => ({ default: m.ParceriasRoutes }))
+);
+const PlataformaRoutes = lazy(() =>
+  import('./routes/plataforma/PlataformaRoutes').then((m) => ({ default: m.PlataformaRoutes }))
+);
+const ContaRoutes = lazy(() =>
+  import('./routes/conta/perfil/ContaRoutes').then((m) => ({ default: m.ContaRoutes }))
+);
+
+/** Fallback de rota: esqueleto neutro enquanto o chunk da área carrega. */
+function RotaSkeleton(): JSX.Element {
+  return (
+    <div role="status" aria-label="Carregando" className="flex flex-col gap-[var(--spacing-4)] p-[var(--spacing-6)]">
+      <Skeleton variant="rect" className="h-[var(--header-height)]" />
+      <Skeleton variant="rect" className="h-[var(--subnav-height)]" />
+      <Skeleton variant="rect" className="h-60" />
+    </div>
+  );
+}
 
 export function App() {
   // 1 QueryClient por instância do app. useState garante estabilidade entre
@@ -72,25 +99,25 @@ export function App() {
                       <Route path="/*" element={<OverviewRoutes />} />
                       <Route path="/health" element={<HealthRoute />} />
                       {/* E03 · Operação do evento (hub, criação, layout + Overview) */}
-                      <Route path="/eventos/*" element={<EventosRoutes />} />
+                      <Route path="/eventos/*" element={<Suspense fallback={<RotaSkeleton />}><EventosRoutes /></Suspense>} />
                       {/* E05 · Clubs (hub, shell + overview + membros) */}
-                      <Route path="/clubes/*" element={<ClubesRoutes />} />
+                      <Route path="/clubes/*" element={<Suspense fallback={<RotaSkeleton />}><ClubesRoutes /></Suspense>} />
                       {/* RN-233 · área CRM: Visão geral | Clientes | Comunicação */}
-                      <Route path="/crm/*" element={<CrmRoutes />} />
+                      <Route path="/crm/*" element={<Suspense fallback={<RotaSkeleton />}><CrmRoutes /></Suspense>} />
                       {/* D-1008-R17 · área Parcerias — sucede o módulo Marcas
                           (E10 · S811 seed · RN-171) no rail e absorve
                           assessorias parceiras + afiliações (migradas de
                           clubs). `/marcas` legado redireciona (tabela RN-234
                           abaixo). */}
-                      <Route path="/parcerias/*" element={<ParceriasRoutes />} />
+                      <Route path="/parcerias/*" element={<Suspense fallback={<RotaSkeleton />}><ParceriasRoutes /></Suspense>} />
                       {/* RN-234 · o módulo `financeiro` deixou de existir; as URLs
                           antigas continuam abrindo, agora redirecionando para os
                           endereços novos. Link salvo e favorito seguem vivos. */}
                       {rotasLegadas()}
                       {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
-                      <Route path="/plataforma/*" element={<PlataformaRoutes />} />
+                      <Route path="/plataforma/*" element={<Suspense fallback={<RotaSkeleton />}><PlataformaRoutes /></Suspense>} />
                       {/* S020-T4 · Configurações da conta do usuário logado (com shell) */}
-                      <Route path="/conta/*" element={<ContaRoutes />} />
+                      <Route path="/conta/*" element={<Suspense fallback={<RotaSkeleton />}><ContaRoutes /></Suspense>} />
                     </Routes>
                   </ContaTravadaGate>
                 </RootShell>
