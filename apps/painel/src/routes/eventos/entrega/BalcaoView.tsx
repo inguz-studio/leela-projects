@@ -1,16 +1,14 @@
 // =============================================================================
-// BalcaoView — layout 60/40 do balcão de entrega (S204-T1). Topo: banner de
-// contexto (entrega ativa ↔ fora da janela). Esquerda: atendimento (busca +
-// 3 passos + checklist do kit). Direita: painel operacional ao vivo. Rodapé:
-// barra de atalhos de teclado. Os estados dedicados vivem na galeria (S204-T3).
+// BalcaoView — layout focado do balcão de entrega (S204-T1). Topo: banner de
+// contexto (entrega ativa ↔ fora da janela). Centro: atendimento (busca +
+// 3 passos + checklist do kit). Rodapé: barra de atalhos de teclado.
+// V2708-17: painel operacional migrado para a Visão geral do evento.
 // =============================================================================
 
-import * as React from 'react';
 import { Alert, Button, Skeleton } from '@leela/design-system';
 import type { Evento, Inscrito, ItemKit, Kit } from '@leela/core';
 import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-client';
 import { AtendimentoPanel } from './AtendimentoPanel';
-import { PainelOperacional } from './PainelOperacional';
 import { BalcaoBanner } from './BalcaoBanner';
 import { AtalhosBalcao } from './AtalhosBalcao';
 
@@ -47,12 +45,9 @@ export function BalcaoView({
   onRegistrar,
   agora,
 }: BalcaoViewProps): JSX.Element {
-  const [ultimos, setUltimos] = React.useState<string[]>([]);
-
   if (loading) {
     return (
-      <div role="status" aria-label="Carregando balcão" className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-[3fr_2fr]">
-        <Skeleton variant="rect" className="h-80" />
+      <div role="status" aria-label="Carregando balcão">
         <Skeleton variant="rect" className="h-80" />
       </div>
     );
@@ -83,23 +78,16 @@ export function BalcaoView({
     <div className="flex flex-col gap-[var(--spacing-5)]">
       <BalcaoBanner evento={evento} agora={agora} />
 
-      <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-[3fr_2fr]">
-        <AtendimentoPanel
-          evento={evento}
-          inscritos={inscritos}
-          itensKit={itensKit}
-          kits={kits}
-          onVincular={onVincular}
-          onRegistrar={onRegistrar}
-          onAtendido={(nome) => setUltimos((prev) => [nome, ...prev])}
-        />
-        <PainelOperacional
-          inscritos={inscritos}
-          ultimosAtendidos={ultimos}
-          usaChip={evento.usaChip}
-          faixaChips={evento.faixaChips ?? null}
-        />
-      </div>
+      {/* V2708-17: painel operacional migrado para a Visão geral — o balcão
+          fica focado na operação de atendimento. */}
+      <AtendimentoPanel
+        evento={evento}
+        inscritos={inscritos}
+        itensKit={itensKit}
+        kits={kits}
+        onVincular={onVincular}
+        onRegistrar={onRegistrar}
+      />
 
       <AtalhosBalcao />
     </div>

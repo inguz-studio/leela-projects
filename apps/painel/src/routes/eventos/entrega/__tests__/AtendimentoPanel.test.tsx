@@ -259,7 +259,9 @@ describe('busca e card de conferência (CRED-BUSCA)', () => {
     expect(screen.getByText('marina@exemplo.com')).toBeInTheDocument();
     expect(screen.getByText('(48) 99999-0001')).toBeInTheDocument();
     expect(screen.getByText('Camiseta técnica · Medalha · Sacola')).toBeInTheDocument();
-    expect(screen.getByText('Feminina M')).toBeInTheDocument();
+    // V2708-14: o tamanho "Feminina M" aparece no card de conferência E no
+    // resumo de tamanhos do ChecklistKit (quando itensKit vazio mas tamanho existe).
+    expect(screen.getAllByText('Feminina M').length).toBeGreaterThan(0);
   });
 
   it('compra negada pelas Rules não derruba o check-in', async () => {

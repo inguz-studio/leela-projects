@@ -64,6 +64,9 @@ export function AtendimentoPanel({
   const [chipInput, setChipInput] = React.useState('');
   const [conflito, setConflito] = React.useState<{ atletaNome: string } | null>(null);
   const [busy, setBusy] = React.useState(false);
+  // V2708-13: permite ao operador voltar ao passo de chip depois do chip
+  // já estar vinculado (e.g., corrigir antes de fechar o atendimento).
+  const [overrideChipStep, setOverrideChipStep] = React.useState(false);
 
   // Atalhos do balcão (barra ⌘K/Esc): ⌘K/Ctrl+K foca a busca; Esc limpa o
   // atendimento em curso (nunca com o modal de conflito aberto — ele tem o
@@ -95,12 +98,14 @@ export function AtendimentoPanel({
     setAtual(inscrito);
     setBusca('');
     setChipInput(inscrito.chipNumero ?? '');
+    setOverrideChipStep(false);
   }
 
   function reset(): void {
     setAtual(null);
     setChipInput('');
     setConflito(null);
+    setOverrideChipStep(false);
   }
 
   async function aplicarVinculo(sobrescrever: boolean): Promise<void> {
@@ -166,7 +171,15 @@ export function AtendimentoPanel({
   );
   const concluido = presencaRegistrada(atual);
   const kit = kitInscritoBadge(atual.kit);
-  const passoId = passos[current]?.id;
+  // V2708-13: passo efetivo considera o override — permite ao operador voltar
+  // ao chip sem perder o número digitado (preserva chipInput).
+  const chipIdx = passos.findIndex((p) => p.id === 'chip');
+  const effectiveCurrent = overrideChipStep && chipIdx >= 0
+    ? chipIdx
+    : (concluido ? passos.length : current);
+  const passoId = overrideChipStep && chipIdx >= 0
+    ? 'chip'
+    : passos[current]?.id;
   const itens = itensDoKit(itensKit, atual.kit);
 
   return (
@@ -178,6 +191,14 @@ export function AtendimentoPanel({
         onSelecionar={selecionar}
       />
 
+      {/* V2708-13: "Cancelar atendimento" é o voltar principal — limpa o
+          inscrito atual e volta para a busca sem perder o pool em memória. */}
+      <div className="flex items-center justify-between gap-[var(--spacing-3)]">
+        <Button variant="ghost" size="sm" onClick={reset}>
+          ← Cancelar atendimento
+        </Button>
+      </div>
+
       {/* O card de conferência ocupa o lugar do cabeçalho antigo (nome +
           modalidade + selo): ele já carrega os três e mais o que faltava para
           o operador conferir quem está na frente dele. */}
@@ -185,10 +206,11 @@ export function AtendimentoPanel({
 
       {/* QA m3: conclusão REAL por passo — a escrita do kit acontece no
           fechamento (RN-205), então o ✓ segue os carimbos do inscrito, nunca
-          a posição do passo atual. Operador não lê "kit entregue" p/ pendente. */}
+          a posição do passo atual. Operador não lê "kit entregue" p/ pendente.
+          V2708-13: effectiveCurrent espelha o override de chip. */}
       <Stepper
         steps={passos}
-        current={concluido ? passos.length : current}
+        current={effectiveCurrent}
         completed={passos.map((p) =>
           p.id === 'kit'
             ? Boolean(atual.kitEntregueEm)
@@ -199,7 +221,11 @@ export function AtendimentoPanel({
         aria-label="Passos do atendimento"
       />
 
-      {!concluido && itens.length > 0 && (
+      {/* V2708-14: mostra checklist quando há itens OU quando o inscrito já
+          tem tamanho registrado — o operador vê o tamanho certo mesmo quando
+          o catálogo itensKit não está disponível para o papel de evento. */}
+      {!concluido && atual.kit !== 'sem_kit' &&
+        (itens.length > 0 || Object.keys(atual.tamanhos).length > 0) && (
         <ChecklistKit itens={itens} kitLabel={kit.label} tamanhos={atual.tamanhos} />
       )}
 
@@ -224,17 +250,40 @@ export function AtendimentoPanel({
           <Button
             variant="primary"
             disabled={busy || chipInput.trim().length === 0}
-            onClick={() => void aplicarVinculo(false)}
+            onClick={() => { setOverrideChipStep(false); void aplicarVinculo(false); }}
           >
-            Vincular chip
+            {overrideChipStep ? 'Atualizar chip' : 'Vincular chip'}
           </Button>
+          {/* V2708-13: quando override ativo, "Cancelar" restaura o passo normal */}
+          {overrideChipStep && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setChipInput(atual.chipNumero ?? ''); setOverrideChipStep(false); }}
+            >
+              ← Manter chip atual
+            </Button>
+          )}
         </div>
       ) : (
-        <Button variant="primary" disabled={busy} onClick={() => void fechar()}>
-          {atual.kit === 'sem_kit'
-            ? 'Registrar presença'
-            : 'Entregar kit e registrar presença'}
-        </Button>
+        <div className="flex flex-col gap-[var(--spacing-3)]">
+          <Button variant="primary" disabled={busy} onClick={() => void fechar()}>
+            {atual.kit === 'sem_kit'
+              ? 'Registrar presença'
+              : 'Entregar kit e registrar presença'}
+          </Button>
+          {/* V2708-13: operador pode voltar ao passo de chip para corrigir antes
+              do fechamento — chipInput é preservado (estado local intacto). */}
+          {evento.usaChip && chipVinculado(atual) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setOverrideChipStep(true)}
+            >
+              ← Alterar chip
+            </Button>
+          )}
+        </div>
       )}
 
       <ConfirmModal
@@ -322,6 +371,30 @@ function ChecklistKit({
   /** Escolhas do inscrito (`tamanhos[itemId]` = sufixo de SKU — RN-223/231). */
   tamanhos: Record<string, string>;
 }): JSX.Element {
+  // V2708-14: quando o operador não tem papel de tenant (itensKit=[]), mas o
+  // inscrito já tem tamanho registrado no checkout, exibe o resumo de tamanhos
+  // em lugar do checklist completo — o mínimo necessário para a entrega física.
+  const tamanhoEntradas = Object.entries(tamanhos);
+  if (itens.length === 0 && tamanhoEntradas.length > 0) {
+    return (
+      <section
+        aria-label={`Tamanhos para entrega · ${kitLabel}`}
+        className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-4)]"
+      >
+        <h4 className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
+          Tamanho para entrega · {kitLabel}
+        </h4>
+        <div className="flex flex-wrap gap-[var(--spacing-2)]">
+          {tamanhoEntradas.map(([itemId, sufixo]) => (
+            <Badge key={itemId} variant="neutro">
+              {rotuloSufixo(sufixo)}
+            </Badge>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       aria-label={`Itens do ${kitLabel}`}

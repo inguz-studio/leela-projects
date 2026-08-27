@@ -4,8 +4,11 @@
 //   1. hero de contagem regressiva · 2. 4 KPIs · 3. bar + donut por modalidade ·
 //   4. atividade recente (feed tipado). Alertas operacionais entram só quando há
 //   (sinal honesto, não presente no mockup mas útil ao produtor). Presentational.
+// V2708-17: `credenciamentoSlot` opcional agrega o painel operacional (migrado
+// do balcão) abaixo do fold — não bloqueia LCP crítico.
 // =============================================================================
 
+import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button } from '@leela/design-system';
 import type { BarChartDatum, DonutChartDatum } from '@leela/design-system';
@@ -39,6 +42,13 @@ export interface OverviewDashboardProps {
   atividade: AtividadeItem[];
   atividadeLoading: boolean;
   alertas: AlertaOperacional[];
+  /**
+   * V2708-17: slot do painel operacional do balcão (Retirada de kits, Alertas
+   * do balcão, Últimos atendimentos, Ações rápidas). Opcional — ausente quando
+   * o evento ainda não tem credenciamento configurado. Renderizado abaixo do
+   * fold para não bloquear o LCP crítico.
+   */
+  credenciamentoSlot?: React.ReactNode | undefined;
 }
 
 function Alertas({ alertas }: { alertas: AlertaOperacional[] }): JSX.Element | null {
@@ -139,6 +149,17 @@ export function OverviewDashboard(props: OverviewDashboardProps): JSX.Element {
       <AtividadeFeed itens={props.atividade} loading={props.atividadeLoading} />
 
       <Alertas alertas={props.alertas} />
+
+      {/* V2708-17: painel operacional migrado do balcão — renderizado abaixo do
+          fold (após CountdownHero + KPIs), preservando o orçamento LCP. */}
+      {props.credenciamentoSlot !== undefined && props.credenciamentoSlot !== null && (
+        <section aria-label="Credenciamento ao vivo" className="flex flex-col gap-[var(--spacing-4)]">
+          <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            Credenciamento ao vivo
+          </h2>
+          {props.credenciamentoSlot}
+        </section>
+      )}
     </div>
   );
 }
