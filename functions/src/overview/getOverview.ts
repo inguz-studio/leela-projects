@@ -19,7 +19,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { AuthClaims, OverviewAlert, OverviewKPIs } from '@leela/core';
 import {
@@ -87,7 +87,15 @@ export async function getOverviewCore(
 // Callable
 // ---------------------------------------------------------------------------
 
-export const getOverview = https.onCall(async (_data: unknown, context) => {
+/**
+ * minInstances: 1 — mantém UMA instância quente para eliminar o cold start
+ * de 5-10s no primeiro acesso ao Overview (perf/dados-quentes-20260826).
+ *
+ * CUSTO: instância ociosa consome ~$0.10/mês no Blaze. Só entra em vigor no
+ * próximo deploy (ato do dono, com gate próprio). Se o projeto mudar para
+ * plano Spark, remover esta opção — Spark não suporta minInstances > 0.
+ */
+export const getOverview = runWith({ minInstances: 1 }).https.onCall(async (_data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }
