@@ -39,6 +39,7 @@ import {
   cn,
 } from '@leela/design-system';
 import { shellBottomNavItems, shellRailItems } from './sidebar';
+import { useAbaAtivaVisivel } from './abaAtivaVisivel';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
 import { usePaineisDaConta } from './paineis';
@@ -57,6 +58,7 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   const eventosAtivos = useEventosAtivosBadge();
   const paineis = usePaineisDaConta();
   const { sair } = useSair();
+  const molduraRef = useAbaAtivaVisivel<HTMLDivElement>(location.pathname);
   const [menuPerfilMobile, setMenuPerfilMobile] = React.useState(false);
 
   // DELTA-UX-T4 (D-1008-R6): o perfil do rodapé do rail virou TRIGGER do
@@ -239,7 +241,16 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
           A ordem no `cn` é a de sempre: `SCROLL_Y_ONLY` fica DEPOIS do que pode
           conflitar com ele (regra do cabeçalho de utils/scroll). O respiro é
           padding, não overflow, então não disputa. */}
-      <div className={cn('relative flex flex-col flex-1', itensDaBarra && RESPIRO_BOTTOMNAV, SCROLL_Y_ONLY)}>
+      {/* V2708-05: a `ref` deixa a moldura manter a aba ATIVA dentro da área
+          visível das barras que rolam na horizontal. Medido a 1024 com a aba
+          Configurações ativa: 66px dela ficavam fora com o menu fechado e
+          230px com o menu aberto — a aba em que a pessoa está, e o sublinhado
+          laranja, sumiam da barra. Causa e a hipótese que NÃO se confirmou
+          estão em `abaAtivaVisivel.ts`. */}
+      <div
+        ref={molduraRef}
+        className={cn('relative flex flex-col flex-1', itensDaBarra && RESPIRO_BOTTOMNAV, SCROLL_Y_ONLY)}
+      >
         {children}
       </div>
     </AppShell>
