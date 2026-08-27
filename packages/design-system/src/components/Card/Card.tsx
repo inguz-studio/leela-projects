@@ -69,7 +69,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <Element
         ref={ref}
         className={cn(
-          'rounded-lg border border-border bg-card text-card-foreground shadow-elev-1',
+          'rounded-lg bg-card text-card-foreground shadow-elev-1',
           '[backdrop-filter:var(--card-blur)]',
           className,
         )}
