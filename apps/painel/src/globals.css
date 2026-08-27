@@ -10,6 +10,58 @@
 /* ── DS theme tokens (all themes for runtime switching) ─────────────────── */
 /* Imported via ThemeProvider in main.tsx via @leela/design-system/themes/index.css */
 
+/* ── V2708-04 · a barra inferior mobile encolhe ──────────────────────────────
+   O dono, na íntegra (27/08): *"revise o tamanho do menu bar de footer, pois
+   está muito grande"*. Isso DECIDE a NAV-MOBILE-5 na direção compacta — a
+   pergunta que estava aberta era se a barra continuaria cobrando 82px de dobra
+   enquanto os Movimentos 1 e 3 não vinham; a resposta dele é que não.
+
+   A conta, antes e depois (o custo de dobra é `--bottomnav-space`, que o
+   `RESPIRO_BOTTOMNAV` aplica no contêiner que rola):
+
+     antes   58 + 12·2 = 82px   ·  116px com o entalhe de 34px do iPhone
+     depois  48 +  8·2 = 64px   ·   98px com o mesmo entalhe
+     ganho   −18px (−22%) em qualquer aparelho
+
+   O que NÃO encolheu, de propósito: o alvo de toque. O item é `flex-1` na
+   altura cheia da pílula, então ele passa a medir 48px — acima dos 44px de
+   régua. A tinta interna cai de 36px (ícone 22 + gap 3 + rótulo 11) para 33px
+   (ícone 20 + gap 2 + rótulo 11), e o indicador do ativo fica com 40px em volta
+   dela: a mesma folga de ~3px por lado que a barra tinha antes, preservada.
+   Encolher a barra sem encolher o dedo era o ponto inteiro.
+
+   ⚠️ DÍVIDA NOMEADA, não escondida: o lugar CERTO destes seis valores é
+   `packages/design-system/themes/{index,brasa,wine,dark-wine}.css`, junto dos
+   outros `--bottomnav-*`. Eles estão aqui porque a rodada de 27/08 despachou
+   `packages/design-system` para a lane vizinha (DS-BORDAS-E-BENTO) e duas lanes
+   editando os mesmos arquivos de tema é conflito programado. O override é de
+   `:root`, então `--bottomnav-space` — que é `calc()` sobre `--bottomnav-height`
+   — recalcula sozinho e a barra e o respiro da página nunca divergem.
+
+   Consequência que a lane vizinha precisa saber: `BottomNav/__tests__/custo-na-
+   dobra.test.ts` continua VERDE cravando 58/12/82/116, porque lê o tema do DS,
+   que não mudou. Quem mover estes valores para lá atualiza aquele teste no mesmo
+   commit e apaga este bloco. O número que o produto realmente entrega está
+   afirmado do lado de cá, em `shell/__tests__/custo-da-barra-mobile.test.ts`.
+
+   `:root:root` e não `:root` — não é tique de estilo, é aritmética de cascata. O
+   tema do DS declara os tokens em TRÊS seletores: `:root:not([data-theme])`
+   (0,2,0), `[data-theme="brasa"]` e os irmãos wine/dark-wine (0,1,0). Um `:root`
+   simples é (0,1,0): venceria os temas nomeados por ordem de origem (globals.css
+   é importado depois em `main.tsx:3-4`), mas PERDERIA para o
+   `:root:not([data-theme])` — que é exatamente o caso de quem abre o painel
+   antes do ThemeProvider carimbar o atributo. A barra encolheria em três temas e
+   ficaria grande no quarto. Repetir o `:root` sobe para (0,2,0) e empata com
+   ele, e aí a ordem de origem decide para o nosso lado nos quatro. */
+:root:root {
+  --bottomnav-height: 48px;
+  --bottomnav-margin: var(--spacing-2);
+  --bottomnav-px: var(--spacing-1);
+  --bottomnav-item-gap: 2px;
+  --bottomnav-icon-size: 20px;
+  --bottomnav-space: calc(var(--bottomnav-height) + var(--bottomnav-margin) * 2 + var(--bottomnav-safe-b));
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
