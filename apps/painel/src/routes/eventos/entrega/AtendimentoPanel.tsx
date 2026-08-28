@@ -16,6 +16,7 @@ import * as React from 'react';
 import {
   Badge,
   Button,
+  Card,
   ConfirmModal,
   Input,
   SearchInput,
@@ -377,9 +378,10 @@ function ChecklistKit({
   const tamanhoEntradas = Object.entries(tamanhos);
   if (itens.length === 0 && tamanhoEntradas.length > 0) {
     return (
-      <section
+      <Card
+        as="section"
         aria-label={`Tamanhos para entrega · ${kitLabel}`}
-        className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-4)]"
+        className="flex flex-col gap-[var(--spacing-2)] p-[var(--spacing-4)]"
       >
         <h4 className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
           Tamanho para entrega · {kitLabel}
@@ -391,7 +393,7 @@ function ChecklistKit({
             </Badge>
           ))}
         </div>
-      </section>
+      </Card>
     );
   }
 
