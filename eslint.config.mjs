@@ -59,17 +59,16 @@ const CANONE_DO_DS = canoneDoBarrel(
 const DIVIDA_CONTROLE_CRU = [];
 
 /**
- * Dívida da Regra 2 — re-implementação batizada. As três entradas são ACHADO
- * DO GATE, não da varredura: a medição de 2026-08-11 contou superfície
- * reconstruída em `<div>`/`<article>` e não procurou DECLARAÇÃO com nome de
- * canônico. São o segundo mecanismo da L-021, e o mais caro — a duplicata
- * batizada é a que a próxima pessoa importa achando que importou o cânone.
+ * Dívida da Regra 2 — re-implementação batizada. As duas entradas restantes
+ * são ACHADO DO GATE, não da varredura: a medição de 2026-08-11 contou
+ * superfície reconstruída em `<div>`/`<article>` e não procurou DECLARAÇÃO
+ * com nome de canônico. São o segundo mecanismo da L-021, e o mais caro —
+ * a duplicata batizada é a que a próxima pessoa importa achando que importou
+ * o cânone.
  *
- * A terceira entrou em 11/08, quando as peças de moldura nasceram: `SecaoHead`
- * passou a ser sinônimo de `SectionHeader`. A árvore não mudou; a régua ficou
- * mais longa. O baseline do `gate-canon` registra essa remedição com a razão
- * por escrito (`--remedir`), porque catraca que sobe sem explicação é catraca
- * quebrada.
+ * `SecaoHead.tsx` SAIU desta lista em 28/08 (lane REUSO-E-SHOWROOM): o
+ * arquivo foi deletado e os 7 consumidores em `EngajamentoView.tsx` passaram
+ * a importar `SectionHeader` do DS diretamente.
  */
 const DIVIDA_PADRAO_REIMPLEMENTADO = [
   // Onda 4 · `Painel` = `Card` (cartão vidro do HIFI-REC reescrito à mão)
@@ -77,19 +76,6 @@ const DIVIDA_PADRAO_REIMPLEMENTADO = [
   // Onda 2 · `Vazio` = `EmptyState` — o mesmo item que a onda já lista como
   // "estado vazio artesanal" em `kits/DistribuicaoView.tsx:112`.
   "apps/painel/src/routes/eventos/kits/DistribuicaoView.tsx",
-  // Ondas 4 e 5 · `SecaoHead` = `SectionHeader`, publicado no DS na Onda 0
-  // Parte B. O comentário no topo do arquivo registra que a peça nasceu
-  // DUPLICADA (`ActiveEvents` e `RecentRegistrations`) e foi consolidada por
-  // iniciativa de quem passou por ali — e argumenta que ela "não sobe ao
-  // design system porque é composição de tela". A CANONE-1 decidiu o
-  // contrário em 11/08: cabeçalho de bloco que muda de anatomia conforme a
-  // tela não é cabeçalho de bloco, e isso vale entre PROJETOS.
-  //
-  // A entrada morre quando os consumidores (`clubes/engajamento` na Onda 4,
-  // `overview/**` na Onda 5) importarem `SectionHeader` direto. Se sobrar
-  // wrapper, o nome precisa dizer o que ele acrescenta — `SecaoHead` batiza o
-  // canônico de novo, e é o batismo que faz a duplicata parecer oficial.
-  "apps/painel/src/components/SecaoHead.tsx",
   // Onda C5 · `FiltroStatus` (HubEventos.tsx) SAIU desta lista, verdicto
   // registrado na própria lane, não achado morto por engano. A hipótese da C0
   // — "byte a byte a anatomia da FilterChips" — não resistiu à leitura de
