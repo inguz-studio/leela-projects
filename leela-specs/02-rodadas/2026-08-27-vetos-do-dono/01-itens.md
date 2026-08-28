@@ -78,3 +78,36 @@
   réplicas locais serviam builds velhos. Consertado: merges + rebuild da :4601 e :4602.
   Lição de processo: **toda entrega em PR precisa dizer explicitamente que o local só muda
   depois do merge + rebuild.**
+
+## Adendo 2 de 28/08 — a terceira fala do dono (alertas, overlay, RN-500 revogada)
+
+- **V2708-21 · ⛔ REGRA DE DS: alerta sem listra lateral** — "os alertas estão seguindo padrões
+  que não pedi, como uma listra no lado esquerdo, sendo que esse tipo de componente foge
+  totalmente à nossa identidade. **Alertas devem ter no máximo um ícone com cor indicando o que
+  pode ser.**" Varredura no `Alert` do DS + todo uso; documentar. → lane DS-ALERTA-E-OVERLAY
+- **V2708-22 · ⛔ REGRA DE DS: overlay/modal entra centralizado** — "a animação de overlay está
+  fazendo um fade in que não vem do centro da tela, e sim de baixo pra cima. **Quero que fique
+  centralizado e isso seja um padrão daqui pra frente, documentado** em nossos design systems."
+  → lane DS-ALERTA-E-OVERLAY
+- **V2708-23 · Terciário fase 3: Inscritos (e varredura do que sobrou)** — "o menu terciário
+  ficou muito bom, mas não foi aplicado em outras áreas como inscritos, financeiro". Nota de
+  processo: Financeiro JÁ estava no PR #12 (draft na hora da fala; mergeado em resposta).
+  Inscritos vira mandato novo. → lane PAINEL-FASE-3
+- **V2708-24 · Credenciamento ao vivo em bento grid 2×2** — "os credenciamentos em visão geral
+  devem ser um bento grid 2x2" (os 4 widgets migrados no PR #8). → lane PAINEL-FASE-3
+- **V2708-25 · ⛔ RN-500 REVOGADA pelo dono — modalidade é livre para nascer** — palavras dele:
+  "Sobre a RN, **revogo ela**. O organizador tem que ter o poder de **registrar novas
+  modalidades quando quiser**, só **não pode apagar**. Contudo ele pode **inativar** alguma já
+  em andamento, **suspendendo as vendas de novas e mantendo o que já foi vendido**, **ou apenas
+  ocultando**." Vira RN-578 (ciclo de vida da modalidade), com a revogação da RN-500
+  registrada explicitamente — nunca por silêncio (lição da RN-470). → lane RN-MODALIDADE-E-LOTES
+- **V2708-26 · Motivos demais nos fluxos do organizador** — "estamos perguntando muitos motivos
+  também, acho que não precisamos disso agora, como ajuste de lotes". Remover a exigência de
+  motivo dos fluxos do ORGANIZADOR (modalidade, ajustes de lote). ⛔ NÃO toca o motivo da porta
+  da plataforma (RN-376 — decisão 44 dele, auditoria de admin). → lane RN-MODALIDADE-E-LOTES
+- **V2708-27 · Lotes: datas de início e fim liberadas** — "libere também a edição de limites de
+  início e fim dos lotes; caso já tenha algum iniciado e vendido, não tem problema editar a
+  data final, pois o planejamento do organizador pode mudar com o tempo." Vira RN-579. → lane
+  RN-MODALIDADE-E-LOTES
+- **Princípio declarado (vira memória):** "o importante é sempre darmos essa flexibilidade para
+  ele [o organizador] atuar."
