@@ -1,5 +1,5 @@
 {
-  "medidoEm": "2026-08-17",
+  "medidoEm": "2026-08-28",
   "contagens": {
     "acao-de-tabela-em-texto": {
       "painel": 24,
@@ -10,11 +10,11 @@
       "landing": 6
     },
     "botao-cru-estilizado": {
-      "painel": 4,
+      "painel": 3,
       "landing": 0
     },
     "grade-crua": {
-      "painel": 103,
+      "painel": 101,
       "landing": 12
     },
     "receita-de-grid": {
@@ -53,10 +53,13 @@
       "total": 0
     },
     "padrao-reimplementado-fora-do-ds": {
-      "total": 3
+      "total": 2
     },
     "filtro-fora-do-canone": {
       "total": 0
+    },
+    "componente-sem-story": {
+      "ds": 0
     }
   },
   "remedicoes": [

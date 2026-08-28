@@ -51,12 +51,13 @@ import {
   EmptyState,
   KpiCard,
   PageHeader,
+  SectionHeader,
   Skeleton,
   cn,
   type BarChartDatum,
 } from '@leela/design-system';
 import { Activity, CalendarClock, GitBranch, ListOrdered, Users } from 'lucide-react';
-import { SecaoHead } from '../../../components/SecaoHead';
+import { AjudaDoBloco } from '../../../components/AjudaDoBloco';
 import { Cascata } from '../../../components/CartaoV3';
 import { InsightsDaLeela } from '../../../components/InsightsDaLeela';
 import { formatDecimal1, formatInt } from '../_lib/format';
@@ -226,7 +227,7 @@ function CardEmBreve({
 }): JSX.Element {
   return (
     <section aria-label={titulo} className="flex flex-col">
-      <SecaoHead titulo={titulo} />
+      <SectionHeader title={titulo} />
       <Painel className="flex-1">
         <EmptyState icon={icon} title="Em breve" description={causa} />
       </Painel>
@@ -284,16 +285,21 @@ function RankingDeDesafios({
 
   return (
     <>
-      <SecaoHead
-        titulo="Desafios que mais movem a comunidade"
+      <SectionHeader
+        title="Desafios que mais movem a comunidade"
         // A explicação ACOMPANHA O RECORTE (REFACTOR item 12): dizer "do maior
         // para o menor" enquanto a tela mostra cinco de nove é meia verdade.
-        ajuda={
-          excedeTop && recorte === 'top'
-            ? `Os ${RANKING_MAX_DESAFIOS} desafios em andamento com mais participantes, de ${lista.length} no total. Troque para "Todos" para ver a lista inteira.`
-            : 'Participantes por desafio em andamento, do maior para o menor. Só entram os ativos: um desafio encerrado já teve o ciclo inteiro, e o que está em andamento está no meio dele.'
+        help={
+          <AjudaDoBloco
+            titulo="Desafios que mais movem a comunidade"
+            texto={
+              excedeTop && recorte === 'top'
+                ? `Os ${RANKING_MAX_DESAFIOS} desafios em andamento com mais participantes, de ${lista.length} no total. Troque para "Todos" para ver a lista inteira.`
+                : 'Participantes por desafio em andamento, do maior para o menor. Só entram os ativos: um desafio encerrado já teve o ciclo inteiro, e o que está em andamento está no meio dele.'
+            }
+          />
         }
-        controle={
+        control={
           excedeTop ? (
             <div
               role="group"
@@ -372,14 +378,19 @@ function ModalidadesDaComunidade({
 
   return (
     <>
-      <SecaoHead
-        titulo="Modalidades da comunidade"
-        ajuda={
-          excedeTop && recorte === 'top'
-            ? `As ${RANKING_MAX_MODALIDADES} modalidades com mais membros ativos, de ${lista.length} com gente. Troque para "Todas" para ver a lista inteira.`
-            : 'Membros ativos somados por modalidade dos seus clubs. A modalidade é a do club, não um interesse que o membro declarou: esse campo não existe. Uma pessoa ativa em dois clubs conta nos dois. Modalidade sem ninguém sai da lista.'
+      <SectionHeader
+        title="Modalidades da comunidade"
+        help={
+          <AjudaDoBloco
+            titulo="Modalidades da comunidade"
+            texto={
+              excedeTop && recorte === 'top'
+                ? `As ${RANKING_MAX_MODALIDADES} modalidades com mais membros ativos, de ${lista.length} com gente. Troque para "Todas" para ver a lista inteira.`
+                : 'Membros ativos somados por modalidade dos seus clubs. A modalidade é a do club, não um interesse que o membro declarou: esse campo não existe. Uma pessoa ativa em dois clubs conta nos dois. Modalidade sem ninguém sai da lista.'
+            }
+          />
         }
-        controle={
+        control={
           excedeTop ? (
             <div
               role="group"
@@ -597,14 +608,14 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
             <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-2">
               <Cascata i={2} className="flex">
               <section aria-label="Equilíbrio dos pilares" className="flex flex-col flex-1">
-                <SecaoHead
-                  titulo="Equilíbrio dos pilares"
+                <SectionHeader
+                  title="Equilíbrio dos pilares"
                   // UXW-FIX · MEL-05: a frase antiga encaixava três
                   // qualificações numa só ("por participante", "sobre o mínimo
                   // exigido", "ponderada pelo tamanho") e não sobrava leitura
                   // para quem não desenhou o cálculo. Duas frases, uma ideia
                   // cada — o que se mede, e o que pesa mais na média.
-                  ajuda="Quanto a comunidade acumulou em cada pilar, em média por participante, comparado ao mínimo do desafio. Desafios com mais gente pesam mais na média. Não existe distribuição-alvo entre os três: o bloco mostra onde a comunidade está pesando, não onde ela deveria pesar."
+                  help={<AjudaDoBloco titulo="Equilíbrio dos pilares" texto="Quanto a comunidade acumulou em cada pilar, em média por participante, comparado ao mínimo do desafio. Desafios com mais gente pesam mais na média. Não existe distribuição-alvo entre os três: o bloco mostra onde a comunidade está pesando, não onde ela deveria pesar." />}
                 />
                 {loading || pilares === null ? (
                   <Skeleton variant="rect" className="h-40" />
@@ -645,9 +656,9 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
                 aria-label="Situação dos membros"
                 className="flex flex-col flex-1 scroll-mt-[var(--spacing-6)]"
               >
-                <SecaoHead
-                  titulo="Situação dos membros"
-                  ajuda="Quem entrou nos últimos 7 dias, quem segue ativo e quem está há 30 dias ou mais sem nenhum registro de atividade."
+                <SectionHeader
+                  title="Situação dos membros"
+                  help={<AjudaDoBloco titulo="Situação dos membros" texto="Quem entrou nos últimos 7 dias, quem segue ativo e quem está há 30 dias ou mais sem nenhum registro de atividade." />}
                 />
                 {loading || situacao === null ? (
                   <Skeleton variant="rect" className="h-40" />
@@ -669,9 +680,9 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
 
             <Cascata i={4}>
             <section aria-label="Como a comunidade entra" className="flex flex-col">
-              <SecaoHead
-                titulo="Como a comunidade entra"
-                ajuda="A porta por onde cada membro chegou ao club. Canais sem ninguém não aparecem."
+              <SectionHeader
+                title="Como a comunidade entra"
+                help={<AjudaDoBloco titulo="Como a comunidade entra" texto="A porta por onde cada membro chegou ao club. Canais sem ninguém não aparecem." />}
               />
               {loading || entrada === null ? (
                 <Skeleton variant="rect" className="h-32" />
@@ -765,9 +776,9 @@ export function EngajamentoView(props: EngajamentoViewProps): JSX.Element {
               aria-label="Desafios ligados a um evento"
               className="flex flex-col scroll-mt-[var(--spacing-6)]"
             >
-              <SecaoHead
-                titulo="Desafios ligados a um evento"
-                ajuda="Quanto da atividade em andamento já está apontada para um evento seu. É intenção declarada no desafio, não inscrição confirmada: um desafio ligado a um evento não significa que os participantes se inscreveram nele."
+              <SectionHeader
+                title="Desafios ligados a um evento"
+                help={<AjudaDoBloco titulo="Desafios ligados a um evento" texto="Quanto da atividade em andamento já está apontada para um evento seu. É intenção declarada no desafio, não inscrição confirmada: um desafio ligado a um evento não significa que os participantes se inscreveram nele." />}
               />
               {loading || ponte === null ? (
                 <Skeleton variant="rect" className="h-32" />

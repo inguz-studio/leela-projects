@@ -789,6 +789,45 @@ for (const [regra, achados] of Object.entries(achadosPorRegra)) {
   detalhes[chave] = achados.map((a) => `${a.arquivo}:${a.linha}`);
 }
 
+// ── Cobertura de stories no DS (§10 · REUSO-E-SHOWROOM, 28/08) ──────────────
+//
+// Conta os diretórios de componente em `packages/design-system/src/components`
+// que NÃO têm nenhum arquivo `*.stories.tsx` — direto ou em subdiretório.
+//
+// O baseline nasceu em 0: todos os 65 diretórios de componente têm story em
+// 28/08. Adicionar um componente sem story sobe o número e reprova o gate;
+// a catraca garante que novos componentes não cheguem à main sem story.
+// O número só pode descer (novo story escrito) ou ficar em 0. Subir reprova.
+//
+// O `--relatorio` lista os diretórios sem story para facilitar a triagem.
+{
+  const DS_COMPONENTS = join(RAIZ, 'packages/design-system/src/components');
+
+  /** Verifica recursivamente se um diretório contém algum `*.stories.tsx`. */
+  function temStoryEmDir(dir) {
+    for (const entrada of readdirSync(dir)) {
+      const p = join(dir, entrada);
+      if (statSync(p).isDirectory()) {
+        if (temStoryEmDir(p)) return true;
+      } else if (entrada.endsWith('.stories.tsx')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const semStory = [];
+  for (const entrada of readdirSync(DS_COMPONENTS)) {
+    const dir = join(DS_COMPONENTS, entrada);
+    if (!statSync(dir).isDirectory()) continue;
+    if (!temStoryEmDir(dir)) semStory.push(entrada);
+  }
+  contagens['componente-sem-story'] = { ds: semStory.length };
+  detalhes['componente-sem-story'] = semStory.map(
+    (n) => `packages/design-system/src/components/${n}  (sem story)`,
+  );
+}
+
 // ── comparação com o baseline ────────────────────────────────────────────────
 const anterior = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : null;
 const hoje = new Date().toISOString().slice(0, 10);
