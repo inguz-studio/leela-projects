@@ -23,12 +23,21 @@
 //           mesma régua da RN-399, muda o que a pessoa lê, não o identificador.
 //
 // Sobram duas: a aba-índice e a distribuição.
+//
+// V2708-03 (fase 2) · TERCIÁRIO em modo ROTA — a seção Kits é navegação
+// terciária (nível 3: painel → evento → Kits → seção), e ambas as sub-seções
+// são destino de link com dado próprio (critério da RN-574 emendada: rota onde
+// cada seção tem endereço colável e dado próprio). A barra horizontal do
+// AreaSubNav cede lugar à coluna sticky em ≥ lg e à faixa horizontal < lg.
 // =============================================================================
 
 import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
-import type { SubNavTab } from '@leela/design-system';
 import type { EventoOutletContext } from '../evento/EventoLayout';
-import { AreaSubNav } from '../../../components/nav/AreaSubNav';
+import {
+  AreaTerciarioNav,
+  TerciarioLayout,
+  type TerciarioItem,
+} from '../../../components/nav/TerciarioNav';
 
 export function KitsLayout(): JSX.Element {
   const ctx = useOutletContext<EventoOutletContext>();
@@ -40,18 +49,14 @@ export function KitsLayout(): JSX.Element {
   const ativa = resto.split('/')[0] || 'cadastro';
 
   // `href` fica (ctrl+clique, clique do meio, copiar endereço); o clique simples
-  // é interceptado e navega por SPA — a fiação saiu daqui na Leva 14 e vive no
-  // `AreaSubNav`, uma vez para as onze barras do painel.
+  // é interceptado pela navegação SPA do AreaTerciarioNav — mesmo contrato do
+  // AreaSubNav que este arquivo usava antes, agora com a peça canônica do nível 3.
   //
-  // Conflito de merge resolvido SOMANDO as duas lanes, 16/08: a KITS-BUILD
-  // decidiu QUAIS abas existem (duas, com a índice renomeada para
-  // "Gerenciamento" — S1257/S1258/S1259, o cabeçalho acima) e a SUBNAV-UNIFICA
-  // decidiu COMO a barra é montada. As duas metades são de eixos diferentes e
-  // nenhuma sobrescreve a outra: fica o conteúdo da main e a montagem daqui.
-  const tabs: SubNavTab[] = [
+  // `estoque` continua acendendo a aba de Distribuição: o endereço antigo salta
+  // para `distribuicao` pelo RedirectLegado, e durante o salto a aba certa já
+  // fica marcada.
+  const itens: TerciarioItem[] = [
     { id: 'cadastro', label: 'Gerenciamento', href: base, active: ativa === 'cadastro' },
-    // `estoque` continua acendendo a aba: o endereço antigo salta para
-    // `distribuicao`, e durante o salto a aba certa já fica marcada.
     {
       id: 'distribuicao',
       label: 'Distribuição',
@@ -61,10 +66,9 @@ export function KitsLayout(): JSX.Element {
   ];
 
   return (
-    <div className="flex flex-col gap-[var(--spacing-5)]">
-      <AreaSubNav tabs={tabs} aria-label="Seções de kits" />
+    <TerciarioLayout nav={<AreaTerciarioNav itens={itens} aria-label="Seções de kits" />}>
       <Outlet context={ctx} />
-    </div>
+    </TerciarioLayout>
   );
 }
 
