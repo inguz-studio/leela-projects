@@ -9,22 +9,24 @@
 //   Minhas afiliações (`/parcerias/afiliacoes/minhas` — lado do INFLUENCIADOR,
 //                      RN-318: só as próprias conversões)
 //
-// O menu da ÁREA mantém as 3 abas canônicas da decisão (Afiliações é UMA
-// frente); os dois lados navegam por esta sub-nav TERCIÁRIA — o mesmo
-// `AreaSubNav` de todas as barras do painel desde a Leva 14 (o `divider` da
-// RN-229 morreu junto com a prop no DS). Nenhum dos lados vira beco: no menu antigo
-// de clubs os dois eram entradas, e aqui seguem a um clique.
+// V2708-23 (varredura fase 3): os dois lados são rotas com dado próprio —
+// critério RN-574 emendada: modo ROTA. Migrado de AreaSubNav (barra horizontal)
+// para TerciarioLayout (25/75) + AreaTerciarioNav (coluna vertical ≥lg,
+// faixa horizontal <lg). Sem redirects: nenhuma URL mudou.
 // =============================================================================
 
 import { Outlet, useLocation } from 'react-router-dom';
-import type { SubNavTab } from '@leela/design-system';
-import { AreaSubNav } from '../../../components/nav/AreaSubNav';
+import {
+  AreaTerciarioNav,
+  TerciarioLayout,
+  type TerciarioItem,
+} from '../../../components/nav/TerciarioNav';
 
-export function AfiliacoesSubNav(): JSX.Element {
+export function AfiliacoesLayout(): JSX.Element {
   const { pathname } = useLocation();
   const emMinhas = pathname.startsWith('/parcerias/afiliacoes/minhas');
 
-  const tabs: SubNavTab[] = [
+  const itens: TerciarioItem[] = [
     {
       id: 'influenciadores',
       label: 'Influenciadores',
@@ -39,17 +41,10 @@ export function AfiliacoesSubNav(): JSX.Element {
     },
   ];
 
-  return <AreaSubNav aria-label="Seções de afiliações" tabs={tabs} />;
-}
-
-AfiliacoesSubNav.displayName = 'AfiliacoesSubNav';
-
-export function AfiliacoesLayout(): JSX.Element {
   return (
-    <div className="flex flex-col gap-[var(--spacing-5)]">
-      <AfiliacoesSubNav />
+    <TerciarioLayout nav={<AreaTerciarioNav itens={itens} aria-label="Seções de afiliações" />}>
       <Outlet />
-    </div>
+    </TerciarioLayout>
   );
 }
 
