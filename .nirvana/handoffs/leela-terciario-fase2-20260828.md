@@ -158,18 +158,37 @@ não podiam ser atualizadas porque a gate da landing estava subindo — agora OK
 
 ### Portas
 
-Preview em **4615** (`--strictPort`), derrubado por PID exato (78574, 48205)
-e confirmado liberado.
+Preview em **4615** (`--strictPort`), derrubado por PID exato (78574, 48205,
+79849) e confirmado liberado a cada subida.
 ⛔ **4601, 4602 e 8280 intocadas** — confirmadas de pé ao fim da lane.
 
 ---
 
-## 9 · O que fica para outras lanes
+## 9 · Gate visual — capturas confirmadas
+
+Build com `--mode mock-emulador` + emulador do mock em 127.0.0.1:8280
+(`firebase.mockcampeche.json`, já de pé), `LEELA_CLOCK=2026-03-15T12:00:00-03:00`,
+autologin (`?preview=castelo` → Marina Castelo). Probe headless Playwright rodado
+via `node probe-terciario-fase2.mjs`.
+
+| Arquivo | O que mostra |
+|---|---|
+| `kits-depois-1440.png` | TerciarioNav vertical: "Gerenciamento" / "Distribuição" à esq, conteúdo à dir |
+| `kits-depois-390.png` | Idem, mobile 390px |
+| `financeiro-depois-1440.png` | TerciarioNav vertical: "Caixa" (ativo) / "Reembolsos e transferências" |
+| `financeiro-depois-390.png` | Idem, mobile 390px |
+| `conta-depois-1440.png` | TerciarioNav ÂNCORA: 6 itens ("Perfil" ativo), formulários à dir |
+| `conta-depois-trocar-senha-1440.png` | Scroll spy: "Senha" ativo após `scrollIntoView` |
+| `conta-depois-390.png` | Idem, mobile 390px |
+
+Todas as telas renderizaram com dados de seed (Marina Castelo logada). Sem
+limitações a declarar.
+
+---
+
+## 10 · O que fica para outras lanes
 
 1. **GaleriaEstados:** migrar para modo ROTA se alguém quiser — requer revisão
    de RN-208 e reestruturação de URLs.
 2. **Ficha do tenant:** migrar se o escopo do terciário se expandir para
    super-admin.
-3. **Gate visual com auth:** o probe script em
-   `.nirvana/gate-visual/terciario-fase2/probe-terciario-fase2.mjs` está
-   pronto. Requer execução com usuário autenticado no perfil do Playwright.
