@@ -111,3 +111,27 @@
   RN-MODALIDADE-E-LOTES
 - **Princípio declarado (vira memória):** "o importante é sempre darmos essa flexibilidade para
   ele [o organizador] atuar."
+
+## Adendo 3 de 28/08 — o tema azul perdido e a regra que fecha a classe
+
+- **V2708-28 · ⛔ FALHA DE WORKFLOW VERIFICADA: o tema azul morreu sem commit** — o dono: "o
+  tema azul e o atual da leela foi feito e testado... chegou a existir na máquina anterior,
+  mas não salvou. Isso é uma falha do nosso workflow que quero que você verifique
+  imediatamente." **Verificação (28/08):** nenhum branch remoto além da main pré-26/08; nenhum
+  commit na história inteira tocou tokens de tema azul (só a rampa `info` e a auditoria de
+  congruência, que registra "info (azul): não existe no mockup — família só do DS"); o
+  `LEELA-migracao.zip` não está mais no disco e seu inventário no board (outputs, emulator-data,
+  provas visuais, segredos) nunca listou tokens de tema. **Causa-raiz:** trabalho experimental
+  vivia só na árvore não-commitada do Windows, e a migração foi por zip curado — o que não
+  estava rastreado nem na lista, morreu. **Regra nova (fecha a classe):** TODO trabalho —
+  inclusive spike/experimento incompleto — nasce em branch e termina a sessão com PUSH (PR
+  draft marcado experimental serve). O protocolo de lanes de 26-28/08 (worktree → branch →
+  push → PR draft) já pratica isso; a regra o estende a qualquer mão, humana ou agente.
+  O tema azul em si: o dono NÃO pediu reconstrução agora.
+- **V2708-29 · Intenção estratégica registrada: DS multi-marca e reaplicável** — "com o tempo
+  posso demandar ajustes ou duplicações no design system... para levar outra identidade em
+  outros projetos meus; a ideia é que o showroom e design system sejam reaplicáveis a outros
+  projetos que eu farei para economizar tempo." A arquitetura atual já aponta para lá (3 tiers
+  de tokens; trocar tema não pode exigir mudança em componente — governança §1); quando a
+  demanda chegar, o caminho é duplicar primitives/semantic com identidade nova, nunca tocar
+  componente.
