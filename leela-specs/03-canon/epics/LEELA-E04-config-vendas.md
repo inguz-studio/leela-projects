@@ -1970,9 +1970,22 @@ lote (`apps/painel/.../lotes/_lib/loteForm.ts:254-255`, que constrói o docId co
 `modalidade-lote-ordem`). O inventário com arquivo e linha está em `02-spec-modalidade-e-kit.md`
 §"O mapa do nome".
 
-### RN-500 (nova, dona) · a lista é editável enquanto o evento não vendeu
+### RN-500 (nova, dona) · a lista é editável enquanto o evento não vendeu — ⛔ REVOGADA em 2026-08-28
 
-Verbatim do dono: *"E precisamos editar as modalidades."* Hoje não existe caminho nenhum.
+**⛔ RN-500 REVOGADA pelo dono em 28/08/2026 (item V2708-25 da rodada
+`02-rodadas/2026-08-27-vetos-do-dono/01-itens.md`, lane RN-MODALIDADE-E-LOTES).** Palavras dele,
+verbatim: *"Sobre a RN, revogo ela. O organizador tem que ter o poder de registrar novas
+modalidades quando quiser, só não pode apagar. Contudo ele pode inativar alguma já em andamento,
+suspendendo as vendas de novas e mantendo o que já foi vendido, ou apenas ocultando."* A sucessora
+é a **RN-578** (ciclo de vida da modalidade — ver o Delta de 2026-08-28 neste épico): a fronteira
+deixa de ser do EVENTO (`qtdInscritos == 0`) e passa a ser da MODALIDADE, acrescentar vira sempre
+permitido, e nascem os estados inativa/oculta. A revogação está registrada AQUI, no lugar onde a
+regra vive, **nunca por silêncio** — a lição da RN-470. O enunciado abaixo permanece legível como
+registro histórico (disciplina da RN-211: marcada, nunca apagada); as RN-501, RN-502 e RN-505
+seguem vigentes, re-ancoradas pela RN-578 na fronteira nova.
+
+Verbatim do dono (05/08, o que a regra era): *"E precisamos editar as modalidades."* Hoje não
+existe caminho nenhum.
 `evento.modalidades[]` é escrito uma única vez, na criação (`functions/src/eventos/criarEvento.ts:389`),
 e o contrato de atualização exclui o campo por escrito
 (`packages/api-client/src/eventos/configuracoesEvento.ts:13-15`). A trava é de produto:
@@ -2738,3 +2751,146 @@ máquina são os 37 casos de `modalidadesCore.test.ts`, que cobrem o kernel e o 
 contra dublês.
 
 **Gate visual (L-011) pendente:** nenhuma tela desta onda foi vista renderizada.
+
+## Delta o ciclo de vida da modalidade e a janela do lote (RN-MODALIDADE-E-LOTES · 2026-08-28)
+
+Duas regras nascidas da terceira fala do dono em 28/08 (itens **V2708-25**, **V2708-26** e
+**V2708-27** do Adendo 2 de `02-rodadas/2026-08-27-vetos-do-dono/01-itens.md`), mais um corte
+transversal de motivo. Este épico as possui porque as duas governam a configuração comercial do
+evento. O princípio declarado por ele na mesma fala, que organiza as duas: *"o importante é sempre
+darmos essa flexibilidade para ele [o organizador] atuar."*
+
+**A RN-500 está revogada** — registro explícito na própria RN-500, acima. Nunca por silêncio
+(lição da RN-470). As vizinhas RN-501 (renomear é migração atômica), RN-502 (remover recusa
+nomeando quem impede) e RN-505 (nunca escrever a partir da projeção degradada) **seguem vigentes**,
+re-ancoradas na fronteira nova.
+
+### RN-578 (nova, dona) · ciclo de vida da modalidade — nascer é livre, apagar protege o vendido
+
+Verbatim do dono (28/08, V2708-25): *"Sobre a RN, revogo ela. O organizador tem que ter o poder de
+registrar novas modalidades quando quiser, só não pode apagar. Contudo ele pode inativar alguma já
+em andamento, suspendendo as vendas de novas e mantendo o que já foi vendido, ou apenas
+ocultando."*
+
+**Os três estados.** Cada modalidade da lista tem exatamente UM estado, derivado de dois arrays no
+doc do evento — `modalidadesInativas: string[]` e `modalidadesOcultas: string[]`, mutuamente
+exclusivos por construção (toda transição escreve um e limpa o outro; num doc corrompido com o
+nome nos dois, **oculta prevalece** — é o estado mais restritivo, fail-closed):
+
+- **ativa** (default — ausência nos dois arrays): oferta na vitrine pública, checkout aceita.
+  Todo evento existente lê como tudo-ativa sem migração nenhuma (campo ausente = array vazio).
+- **inativa**: a venda de NOVAS inscrições está suspensa. A vitrine não oferta, e o checkout
+  **RECUSA** payload direto (fail-closed — a recusa é do servidor, no `createInscricaoCharge`,
+  antes de precificar). Tudo que já foi vendido permanece **válido, visível e entregável**:
+  nenhum inscrito, pedido, valor, contador (`vendidos`/`reservas`/`qtdInscritos`) ou documento de
+  aprovisionamento é tocado. No painel do organizador a modalidade continua visível, marcada.
+- **oculta**: some da vitrine pública — nem listada, nem ofertada. O checkout também RECUSA
+  (o que não é ofertado não é vendável por payload montado à mão). O vendido permanece válido e
+  visível para quem comprou (ingresso, área do cliente, credenciamento, balcão): ocultar esconde a
+  OFERTA, nunca a compra.
+
+**Para o comprador, inativa e oculta são o mesmo fato** — "não disponível para novas inscrições" —
+e a recusa do checkout usa UMA frase para os dois, sem expor o vocabulário interno (mesma régua da
+RN-504 para "kit desligado").
+
+**As transições** — `inativar`, `ocultar`, `reativar` — são SEMPRE permitidas, entre quaisquer
+estados, com ou sem venda, a qualquer momento, pela porta única (`editarModalidadesEvento`,
+owner-only, RN-400/402). Transição repetida é no-op declarado (`alterado: false`), nunca erro.
+Uma transição escreve **somente os dois arrays** (mais `atualizadoEm`) — remover essa restrição
+tem de deixar vermelho o teste que afirma que inativar não toca inscrito, pedido nem lote.
+
+**As operações estruturais — a fronteira muda de dono.** Deixa de ser do evento
+(`qtdInscritos == 0`, a RN-500 revogada) e passa a ser DA MODALIDADE. "Modalidade com venda" =
+existe inscrição dela em `inscritos` (QUALQUER status, inclusive PIX pendente — o espírito da
+RN-487 na granularidade nova) OU lote dela com `vendidos > 0` OU `reservas > 0` (defesa em
+profundidade — as duas fontes são checadas dentro da transação):
+
+- **acrescentar** — SEMPRE permitido, mesmo com inscritos/vendas no evento. As únicas recusas são
+  as do nome (vazio, longo, "/", duplicado) e o teto de 20 (`MODALIDADES_MAX`).
+- **renomear** — permitido enquanto a MODALIDADE não tem venda; com venda, **RECUSADO nomeando a
+  razão**. O nome faz parte do que o comprador comprou (`inscrito.modalidade` grava a string, e a
+  migração da RN-501 alcança lote/kit/campanha, nunca inscrito/pedido) — renomear modalidade
+  vendida deixaria o vendido apontando para um nome que não existe, exatamente o que "mantendo o
+  que já foi vendido" proíbe. O caminho vivo do organizador: **inativa a antiga e acrescenta a
+  nova** — dois gestos sempre permitidos. Sem venda, a RN-501 segue inteira (migração atômica das
+  cinco referências + os dois arrays de estado, que migram junto no mesmo commit).
+- **remover** — **NUNCA com venda na modalidade**: é exatamente isto que o "só não pode apagar"
+  do dono protege. Sem venda (rascunho, ou modalidade que nunca vendeu — o espírito da fala:
+  proteger o vendido, não impedir o arrependimento barato), remover segue permitido com as
+  guardas da RN-502 (a recusa nomeia cada lote, kit e campanha que apontam). Remover também limpa
+  o nome dos dois arrays de estado — estado de modalidade que não existe é lixo.
+
+**Rules (o cliente não muda estado):** `modalidadesInativas` e `modalidadesOcultas` são escrita
+EXCLUSIVA de Function — no create de cliente os dois campos **não nascem**, no update de cliente
+os dois são **intocados**. A porta é o callable, autenticado e owner-only. A extensão
+`percursosEditaveis` da Rule continua congelando a escrita DIRETA de `modalidades`/`percursos`
+pelo cliente após a 1ª venda — o caminho com venda é a Function, que aplica a fronteira por
+modalidade descrita acima.
+
+**Sem interseção com dinheiro vendido.** Inativar/ocultar não é estorno, não é cancelamento e não
+é remoção: nenhum caminho desta regra escreve em `inscritos`, `pedidos`, `vendidos`, `reservas`,
+`qtdInscritos`, `receitaConfirmada` ou aprovisionamento. Quem quer devolver dinheiro usa a porta
+de estorno que já existe (RN-376 — intocada).
+
+**Falsificação:** um evento com inscrito confirmado na "10k" (a) aceita acrescentar "15k";
+(b) aceita inativar a "10k" sem que NENHUM doc de inscrito/pedido/lote mude; (c) recusa nova
+compra da "10k" no checkout com a modalidade inativa ou oculta; (d) recusa remover e renomear a
+"10k" nomeando a venda como razão; (e) aceita reativar a "10k", que volta a vender sem migração
+nenhuma; (f) a vitrine pública deixa de listar a "10k" inativa/oculta enquanto o painel do
+organizador continua a mostrá-la, marcada.
+
+**Estado:** regra selada e construída nesta lane (porta única + checkout + Rules + vitrine +
+painel).
+
+### RN-579 (nova, dona) · a janela do lote acompanha o planejamento do organizador
+
+Verbatim do dono (28/08, V2708-27): *"libere também a edição de limites de início e fim dos
+lotes; caso já tenha algum iniciado e vendido, não tem problema editar a data final, pois o
+planejamento do organizador pode mudar com o tempo."*
+
+- **Lote SEM venda (`vendidos == 0`)**: início e fim livres, como já eram — a Rule nunca congelou
+  lote sem venda. Nada muda aqui; a regra registra o que vale.
+- **Lote COM venda (`vendidos > 0`)**: **`fimEm` deixa de ser congelado** — o organizador edita a
+  data final por escrita direta, e a extensão `loteComercialImutavelSeVendido` da Rule perde o
+  `fimEm` da lista congelada. Permanecem congelados: **`inicioEm`** (a venda aconteceu sob aquele
+  início — movê-lo reescreveria a história do que já foi vendido, e um lote vendido
+  necessariamente já iniciou), **`preco`** (RN-200), **`ordem`** e **`modalidade`**;
+  `quantidadeLimite` segue tendo porta própria e auditada (RN-304, `ajustarCapacidadeLote`).
+
+**O que NÃO pode, julgado pelo kernel:**
+
+- **fim ≤ início** — nunca, em lote nenhum: janela negativa não existe. A guarda é o shape da
+  Rule (que valida o documento RESULTANTE do merge, então editar só o fim continua sujeito a
+  `fimEm > inicioEm`) e o kernel da tela.
+- **sobreposição com lote irmão da mesma modalidade** — o invariante de sequência da RN-300
+  continua inteiro (`validarLotesModalidade`); estender o fim de um lote por cima do início do
+  seguinte é recusado no pré-check do kernel na tela (a Rule não itera irmãos — limite conhecido
+  e declarado desde a S300).
+- **fim no passado é PERMITIDO e significa "encerrar a venda agora"** — decisão deliberada, não
+  omissão: recusar fim < agora obrigaria o organizador a acertar o minuto para encerrar, e o
+  registro verdadeiro do encerramento é o carimbo da virada (`encerradoEm`/`encerradoMotivo`,
+  escrita exclusiva de Function), nunca o `fimEm` retroativo. Nenhum documento de venda é
+  reescrito por isso: pedidos e inscritos carregam carimbos próprios. É o mesmo gesto que a
+  desativação-pela-janela já fazia em lote sem venda (`fimEm = agora`).
+
+**Efeitos, todos derivados (nada persistido de novo):** mover o fim para a frente estende/reabre a
+venda do lote se ainda houver vaga (`loteAtivo`/`loteEncerrado` derivam da janela e do contador);
+mover para trás encerra, e o próximo lote da modalidade assume por hand-off, como sempre (RN-300).
+Preço não se move (RN-200), então nenhum valor vendido ou por vender muda por causa da data.
+
+**Falsificação:** um lote com `vendidos > 0` aceita update que toca só `fimEm` (e `nome`); o
+mesmo update tocando `inicioEm`, `preco`, `ordem` ou `modalidade` é NEGADO pela Rule; nenhum
+inscrito ou pedido muda em qualquer dos casos; e `fimEm ≤ inicioEm` é negado pelo shape.
+
+**Estado:** regra selada e construída nesta lane (Rule + kernel de tela + `LoteModal`).
+
+### O corte transversal · motivo deixa de ser exigido do ORGANIZADOR (V2708-26)
+
+Verbatim do dono: *"estamos perguntando muitos motivos também, acho que não precisamos disso
+agora, como ajuste de lotes."* Nos fluxos do ORGANIZADOR — `editarModalidadesEvento` (todas as
+operações) e `ajustarCapacidadeLote` — o campo `motivo` vira **OPCIONAL**: a UI não pergunta mais
+(o Textarea saiu do `ModalidadeModal` e do `CapacidadeModal`, e o campo de razão saiu do
+ConfirmModal de remoção), e o servidor **grava se vier** (teto de 500 mantido; a trilha da RN-304
+continua registrando quem/quando/de→para/tela — o que ela precisa saber). ⛔ **O motivo da porta
+da PLATAFORMA não foi tocado**: a decisão 44 do dono (RN-376 — estornos/admin,
+`requestRefund`/fila de estornos) é auditoria de admin e continua exigindo motivo como sempre.
