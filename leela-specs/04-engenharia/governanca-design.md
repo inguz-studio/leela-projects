@@ -239,3 +239,32 @@ Fila em ondas **R0 a R6**, 64 itens, em
 `02-rodadas/2026-08-17-carga-cognitiva/04-fila-em-ondas.md`. A área interna do evento é a
 onda 1 por ordem do dono, não por ranking. As letras são R para não colidir com as ondas
 C0-C6 da conformidade de controles, que estão vivas.
+
+## 10. Reuso primeiro, e todo componente tem casa (2026-08-28 · regra do dono · PERMANENTE)
+
+> Fala do dono em 28/08/2026, rodada `2026-08-27-vetos-do-dono`: *"quero que você transforme
+> em regra global sobre reutilização de componentes, documentação no design system, showroom,
+> e storybook"* — depois de a auditoria V2708-08 confirmar 5 componentes locais duplicando o DS.
+
+**A regra, em quatro cláusulas:**
+
+1. **Reuso primeiro.** Antes de criar qualquer componente, a busca no barrel do DS
+   (`packages/design-system`, 93 exports) e no catálogo (§7) é obrigatória. Criar componente
+   novo é **exceção justificada por escrito** no handoff da lane — nunca o caminho natural.
+   Cópia local de padrão que o DS já publica (o caso `SecaoHead`/`CardValor`/`KpiTile`) é
+   dívida a consolidar, não precedente.
+2. **Todo componente novo nasce NO design system** — salvo fronteira técnica declarada (ex.:
+   dependência de `react-router`, precedente S049-T1/`TerciarioNav`, que vive em
+   `apps/painel/src/components/` com a fronteira escrita no próprio arquivo).
+3. **Sem documentação não está pronto.** Componente publicado carrega doc de uso (props,
+   variantes, quando usar × quando não) no padrão do DoD de componente
+   (`definition-of-done.md`).
+4. **Showroom e Storybook são parte da entrega, não polimento.** Todo componente publicado
+   ganha entrada no showcase (`packages/design-system/showcase/`) e story no Storybook
+   (`pnpm --filter @leela/design-system storybook`, já instalado). Componente fora do
+   showroom/Storybook é componente invisível — e invisível é o que gera a duplicata que a
+   cláusula 1 proíbe.
+
+**Catraca:** a cobertura showroom/Storybook × barrel entra na varredura da lane
+REUSO-E-SHOWROOM (rodada de 28/08) e o buraco vira contador do `gate-canon` quando medido —
+mesma disciplina dos §8-§9: a classe que reincide pede catraca, não conserto.

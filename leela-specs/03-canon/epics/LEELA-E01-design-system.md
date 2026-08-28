@@ -1059,6 +1059,24 @@ virar buraco — disciplina da RN-546, da RN-552 e da RN-557. A leitura "abas fi
 formato âncora" é o default e é o que resolve a queixa; a palavra "fixas" também admite ler
 como barra sticky sobre conteúdo rolável, e ele perguntou *"me fiz claro?"*.
 
+#### Emenda (dono · 27-28/08/2026 · rodada `2026-08-27-vetos-do-dono` · lane TERCIARIO-E-NAV)
+
+**O TERCIARIO-1 fechou contra o default.** Em 27/08 o dono olhou o terciário de Clubs e
+Configurações renderizado e disse: *"ficou bom, pois o menu terciário se encaixa melhor no
+formato web — padronize isso no desktop"*; em 28/08 autorizou a emenda por escrito ("pode
+tocar as regras terciárias"). O que ele aprovou foi **o molde âncora vivo** — logo a metade
+"painel exclusivo que não rola + estado em `?secao=`" desta regra, que era extrapolação de
+spec sem pedido dele (o `TabsPanel` previsto nunca foi construído), **cai**.
+
+**O que fica, e agora com forma construída:** o terciário é padrão nomeado numa peça só —
+`TerciarioNav` (`apps/painel/src/components/nav/`, fora do DS pela fronteira do
+`react-router`, precedente da S049-T1) — com **dois modos sancionados**: **rota** (seções que
+são destino de link e carregam dado próprio; Configurações do evento, com Vendas dentro) e
+**âncora** (seções da mesma coisa, com scroll spy; Configurações do club). O critério de
+separação rota × painel do texto original continua sendo a régua para escolher o modo. A
+extensão da D-1008-R18 (sem fundo, sem borda inferior, AA por estado) permanece. Desktop:
+coluna; abaixo de `lg`: faixa horizontal — a orientação dupla que a regra já pedia.
+
 **Efeito colateral declarado:** com painéis exclusivos, o `Ctrl+F` do navegador deixa de
 achar texto de outra seção — e o `forceMount` **não** salva, porque o navegador não busca em
 conteúdo oculto. É o preço real da troca no lugar, registrado para não ser descoberto depois
