@@ -1313,7 +1313,7 @@ export function ComponentsPage(): JSX.Element {
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
           <DemoCard
             title="Alert"
-            description="O aviso em BLOCO — Toast flutua e some, Alert fica no fluxo. Nasceu na Onda 0 Parte B porque o checkout repetia a mesma forma quatro vezes à mão, com cinco divergências entre as cópias e nenhuma delas sendo decisão. O canal de ARIA é prop (`live`) porque os três avisos originais escolheram canais diferentes, cada um com a razão escrita, e estavam certos; o default é `none`, porque aviso que já estava na tela não é live region."
+            description="O aviso em BLOCO — Toast flutua e some, Alert fica no fluxo. Identidade de severidade via ícone + fundo suave; sem borda lateral (V2708-21). O canal de ARIA é prop (`live`) porque os três avisos originais escolheram canais diferentes, cada um com a razão escrita, e estavam certos; o default é `none`, porque aviso que já estava na tela não é live region."
           >
             <Stack gap="md">
               <Alert tone="info" live="status" title="Estamos confirmando o seu pedido">
@@ -1489,7 +1489,7 @@ export function ComponentsPage(): JSX.Element {
 
           <DemoCard
             title="Dialog"
-            description="Primitivo Radix-free da superfície PÚBLICA (ADR-017): bottom-sheet no mobile → centrado a partir de sm. Título com ícone, descrição, footer e retorno de foco ao gatilho (returnFocusRef). É a fonte do comportamento que Modal e Drawer reusam."
+            description="Primitivo Radix-free da superfície PÚBLICA (ADR-017): entrada centralizada em todos os breakpoints — fade + zoom curto a partir do centro (V2708-22). Título com ícone, descrição, footer e retorno de foco ao gatilho (returnFocusRef). É a fonte do comportamento que Modal e Drawer reusam."
           >
             <div>
               <Button

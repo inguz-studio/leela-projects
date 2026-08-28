@@ -35,19 +35,20 @@ describe('Alert', () => {
     expect(screen.getByRole('heading', { level })).toBeInTheDocument();
   });
 
+  // V2708-21 · 28/08: sem borda — fundo suave + cor de severidade no ícone.
   it.each([
     ['info', 'feedback-info'],
     ['vitoria', 'feedback-success'],
     ['alerta', 'feedback-warning'],
     ['vulcao', 'feedback-danger'],
-  ] as const)('tone="%s" usa o trio de tokens de %s', (tone, familia) => {
+  ] as const)('tone="%s" usa fundo suave + texto de %s (sem borda)', (tone, familia) => {
     render(
       <Alert tone={tone} data-testid="a">
         corpo
       </Alert>,
     );
     const classes = screen.getByTestId('a').className;
-    expect(classes).toContain(`border-[var(--${familia})]`);
+    expect(classes).not.toContain(`border-[var(--${familia})]`);
     expect(classes).toContain(`bg-[var(--${familia}-surface)]`);
     expect(classes).toContain(`text-[var(--${familia}-fg)]`);
   });

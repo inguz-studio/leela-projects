@@ -27,15 +27,16 @@ Retorno de ação de escrita é Toast (flutuante, some sozinho) — obrigatório
 - ...todas as props de React.HTMLAttributes<HTMLDivElement> exceto `title` e `role`
 
 ## Tokens consumidos (nenhum valor cru permitido)
-- --feedback-info / -surface / -fg
-- --feedback-success / -surface / -fg
-- --feedback-warning / -surface / -fg
-- --feedback-danger / -surface / -fg
+- --feedback-info-surface / --feedback-info-fg
+- --feedback-success-surface / --feedback-success-fg
+- --feedback-warning-surface / --feedback-warning-fg
+- --feedback-danger-surface / --feedback-danger-fg
 - --radius-lg / --spacing-5 / --spacing-3 / --spacing-2 / --spacing-1 / --spacing-0-5
 - --alert-icon-size / --font-size-md-plus / --font-size-base / --font-weight-bold
 
 ## Proibido (do/don't)
 DON'T: <section className="flex gap-3 rounded-ds-lg border border-feedback-warning bg-feedback-warning-surface p-5"> — é este componente reescrito. Eram quatro assim no checkout quando a peça nasceu.
+DON'T: adicionar borda ao Alert (borda lateral ou full-border). V2708-21: a listra foge à identidade do produto. Identidade de severidade vem do ícone + fundo suave, não de borda.
 DON'T: role="alert" + aria-live="polite" juntos. É contradição, o navegador resolve do jeito dele e o defeito não aparece em teste nenhum. Os dois saem de UMA prop (`live`).
 DON'T: live="alert" em aviso que já estava na tela quando ela carregou. Anunciar conteúdo estático a cada render é ruído, e ruído treina a pessoa a ignorar o canal.
 DON'T: props de tamanho (size, padding, radius). As quatro cópias divergiam em raio, padding, gap e tipografia do título; nenhuma diferença era decisão, e o componente tem UMA forma.
