@@ -486,17 +486,55 @@ describe('lote VENDIDO — payload SÓ-NOME (RN-200/300 · review S300-T4 #1)', 
     }
   });
 
-  it('rename não é refém dos campos congelados: janela/preço ilegíveis não bloqueiam', () => {
-    // Campos comerciais corrompidos/ilegíveis no form (disabled na UI) — o
-    // caminho congelado nem os olha; só o nome importa.
+  it('rename não é refém dos campos congelados: início/preço/ordem ilegíveis não bloqueiam', () => {
+    // Campos comerciais CONGELADOS corrompidos/ilegíveis no form (disabled na
+    // UI) — o caminho congelado nem os olha; nome e fim (RN-579) importam.
     const r = validarFormLote({
-      values: { ...values, preco: 'abc', inicioEm: '', fimEm: '', ordem: '0' },
+      values: { ...values, preco: 'abc', inicioEm: '', ordem: '0' },
       modalidade: '5k',
       loteId: vendido.id,
       lotesDoEvento: [vendido],
       congelado: true,
     });
     expect(r.ok).toBe(true);
+  });
+
+  it('RN-579: o fim é campo VIVO do lote vendido — vazio é recusado no próprio campo', () => {
+    const r = validarFormLote({
+      values: { ...values, fimEm: '' },
+      modalidade: '5k',
+      loteId: vendido.id,
+      lotesDoEvento: [vendido],
+      congelado: true,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erros[0]?.campo).toBe('fimEm');
+  });
+
+  it('RN-579: fim ALTERADO viaja no payload junto do nome; inalterado fica em casa', () => {
+    // Alterado: entra `fimEm` como Date.
+    const alterado = validarFormLote({
+      values: { ...values, fimEm: '2026-06-30T18:00' },
+      modalidade: '5k',
+      loteId: vendido.id,
+      lotesDoEvento: [vendido],
+      congelado: true,
+    });
+    expect(alterado.ok).toBe(true);
+    if (alterado.ok) {
+      expect(Object.keys(alterado.input).sort()).toEqual(['fimEm', 'nome']);
+    }
+    // Inalterado (mesma string que o form carregou): só o nome — re-enviar o
+    // fim truncado ao minuto reescreveria os segundos gravados.
+    const igual = validarFormLote({
+      values,
+      modalidade: '5k',
+      loteId: vendido.id,
+      lotesDoEvento: [vendido],
+      congelado: true,
+    });
+    expect(igual.ok).toBe(true);
+    if (igual.ok) expect(Object.keys(igual.input)).toEqual(['nome']);
   });
 
   it('nome vazio segue rejeitado mesmo congelado', () => {

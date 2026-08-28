@@ -550,14 +550,18 @@ describe('catch-all de eventos é ALLOWLIST (re-review A-T2 A2)', () => {
 // Function; risco residual registrado no report do review.
 // ---------------------------------------------------------------------------
 describe('lotes — ataques antagonistas de payload direto (review S300-T4)', () => {
-  it('lote VENDIDO: janela, vaga e ordem TAMBÉM congelam (não só preço)', async () => {
+  it('lote VENDIDO: início, vaga e ordem congelam; a DATA FINAL é editável (RN-579)', async () => {
     const db = dbAs(MARINA_UID, marina);
-    // Valores shape-VÁLIDOS e diferentes do seed — o deny isola o congelamento.
-    await assertFails(
+    // RN-579 (28/08, decisão do dono V2708-27): o fim da janela MOVE mesmo em
+    // lote iniciado e vendido — "o planejamento do organizador pode mudar com
+    // o tempo".
+    await assertSucceeds(
       updateDoc(lote(db, '5k-lote-1'), {
         fimEm: Timestamp.fromDate(new Date('2026-03-15T00:00:00-03:00')),
       })
     );
+    // Início congelado (a venda aconteceu sob ele), vaga pela porta RN-304,
+    // ordem congelada — valores shape-VÁLIDOS: o deny isola o congelamento.
     await assertFails(
       updateDoc(lote(db, '5k-lote-1'), {
         inicioEm: Timestamp.fromDate(new Date('2025-11-01T00:00:00-03:00')),
@@ -565,6 +569,12 @@ describe('lotes — ataques antagonistas de payload direto (review S300-T4)', ()
     );
     await assertFails(updateDoc(lote(db, '5k-lote-1'), { quantidadeLimite: 5000 }));
     await assertFails(updateDoc(lote(db, '5k-lote-1'), { ordem: 7 }));
+    // fim ≤ início segue impossível (shape sobre o doc RESULTANTE do merge).
+    await assertFails(
+      updateDoc(lote(db, '5k-lote-1'), {
+        fimEm: Timestamp.fromDate(new Date('2025-11-15T00:00:00-03:00')),
+      })
+    );
   });
 
   it('lote VENDIDO: payload SÓ-NOME (espelho exato do api-client pós-fix #1) passa', async () => {

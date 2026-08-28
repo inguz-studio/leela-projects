@@ -309,25 +309,35 @@ export {
   validarFaceMinimaVendaPaga,
 } from './eventos/faceMinimaVenda';
 
-// RN-500/501/502 — a lista de modalidades tem dono (E04 · S316, leva 22).
-// Kernel PURO das três operações: mesma recusa na Function, na tela e no teste.
-export type { OperacaoModalidade, ReferenciasDaModalidade } from './eventos/modalidades';
+// RN-578/501/502 — o ciclo de vida da modalidade (E04 · S316; RN-500 revogada
+// pelo dono em 28/08). Kernel PURO das seis operações: mesma recusa na
+// Function, na tela e no teste.
+export type {
+  EstadoModalidade,
+  OperacaoModalidade,
+  ReferenciasDaModalidade,
+} from './eventos/modalidades';
 export {
   MODALIDADE_NOME_MAX,
   MODALIDADES_MAX,
-  MSG_MODALIDADES_CONGELADAS,
+  OPERACOES_ESTADO_MODALIDADE,
   OPERACOES_MODALIDADE,
   SUGESTOES_MODALIDADE_EVENTO,
+  estadoModalidade,
+  isOperacaoEstado,
   isOperacaoModalidade,
   mensagemRecusaRemocao,
   modalidadesDaTela,
-  modalidadesEditaveis,
+  modalidadesOfertaveis,
+  msgModalidadeComVenda,
+  msgModalidadeIndisponivel,
   normalizarNomeModalidade,
   semReferencias,
   validarAcrescentarModalidade,
   validarNomeModalidade,
   validarRemoverModalidade,
   validarRenomearModalidade,
+  validarTransicaoModalidade,
 } from './eventos/modalidades';
 
 // Data do evento — dia civil no fuso do produto (fix review Onda1 #01/#02).

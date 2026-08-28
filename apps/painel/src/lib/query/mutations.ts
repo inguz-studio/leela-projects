@@ -277,7 +277,7 @@ export function useAjustarCapacidadeLote(
 
 /**
  * Acrescenta, renomeia ou remove uma modalidade do evento (S316-T1/T2/T3 ·
- * RN-500/501/502) pela porta única `editarModalidadesEvento`.
+ * RN-578/501/502) pela porta única `editarModalidadesEvento`.
  *
  * A invalidação é LARGA de propósito, e é a renomeação que a dimensiona: um
  * rename migra `evento.modalidades`, `evento.percursos`, `Lote.modalidade`,

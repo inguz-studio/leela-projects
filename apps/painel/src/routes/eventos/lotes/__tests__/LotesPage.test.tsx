@@ -171,10 +171,10 @@ describe('LotesPage · desativar lote (frente E)', () => {
 // S316-T4 · as três operações de modalidade, pela porta única
 // ===========================================================================
 
-/** Evento SEM venda — a lista de modalidades só é editável aqui (RN-500). */
+/** Evento sem venda — renomear/remover só habilitam em modalidade sem venda (RN-578). */
 const EVENTO_SEM_VENDA = mkEvento({ modalidades: ['5k', '21k'], qtdInscritos: 0 });
 
-describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
+describe('LotesPage · modalidade (S316-T4 · RN-578/501/502)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.salvar.mockResolvedValue(undefined);
@@ -187,14 +187,15 @@ describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
     });
   });
 
-  it('acrescenta pela porta única, mandando o NOME e o motivo — nunca a lista', async () => {
+  it('acrescenta pela porta única, mandando o NOME — nunca a lista, e SEM pedir motivo', async () => {
     const usuario = userEvent.setup({ delay: null });
     renderPage([], EVENTO_SEM_VENDA);
 
     await usuario.click(screen.getByRole('button', { name: /^Adicionar modalidade$/i }));
     const dialogo = await screen.findByRole('dialog');
+    // V2708-26: o campo de motivo NÃO existe mais no fluxo do organizador.
+    expect(within(dialogo).queryByLabelText(/Motivo/i)).not.toBeInTheDocument();
     await usuario.type(within(dialogo).getByLabelText(/Nome da modalidade/i), '10k');
-    await usuario.type(within(dialogo).getByLabelText(/^Motivo$/i), 'faltou a de 10');
     await usuario.click(within(dialogo).getByRole('button', { name: 'Adicionar modalidade' }));
 
     await waitFor(() => expect(mocks.modalidadesMutateAsync).toHaveBeenCalledTimes(1));
@@ -202,8 +203,8 @@ describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
     expect(input).toMatchObject({
       operacao: 'acrescentar',
       modalidade: '10k',
-      motivo: 'faltou a de 10',
     });
+    expect(input).not.toHaveProperty('motivo');
     // ⛔ RN-505: a lista NÃO viaja no payload. A projeção degradada devolve
     // `modalidades: []`, e mandá-la apagaria as boas passando em todas as Rules.
     expect(input).not.toHaveProperty('modalidades');
@@ -224,7 +225,6 @@ describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
     const campo = within(dialogo).getByLabelText(/Novo nome/i);
     await usuario.clear(campo);
     await usuario.type(campo, 'Meia maratona');
-    await usuario.type(within(dialogo).getByLabelText(/^Motivo$/i), 'nome comercial');
     await usuario.click(within(dialogo).getByRole('button', { name: 'Renomear modalidade' }));
 
     await waitFor(() => expect(mocks.modalidadesMutateAsync).toHaveBeenCalledTimes(1));
@@ -260,7 +260,7 @@ describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('a confirmação de remoção nomeia a consequência ANTES do gesto (RN-500)', async () => {
+  it('a confirmação de remoção nomeia a consequência ANTES do gesto (herança da RN-500)', async () => {
     const usuario = userEvent.setup({ delay: null });
     renderPage([], EVENTO_SEM_VENDA);
     await usuario.click(screen.getByRole('button', { name: 'Remover a modalidade 5k' }));
@@ -272,15 +272,26 @@ describe('LotesPage · modalidade (S316-T4 · RN-500/501/502)', () => {
     expect(mocks.modalidadesMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('evento COM venda não oferece nenhuma das três operações (S316-T4 · RN-500/501/502)', () => {
-    renderPage([]); // EVENTO padrão tem 453 inscritos
-    // V2708-06: botão de cadastro sempre visível, mas desabilitado (RN-500).
-    // Visibilidade preserva a descoberta; disabled impede a ação.
-    const botaoAdicionar = screen.getByRole('button', { name: /^Adicionar modalidade$/i });
-    expect(botaoAdicionar).toBeDisabled();
-    // Renomear e Remover são operações de modalidade individual — permanecem
-    // ausentes: EVENTO padrão tem modalidades: ['5k'] e podeEditarModalidades=false.
-    expect(screen.queryByRole('button', { name: /^Renomear a modalidade/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Remover a modalidade/ })).not.toBeInTheDocument();
+  it('✅ RN-578: evento COM venda mantém "Adicionar modalidade" HABILITADO', async () => {
+    renderPage([]); // EVENTO padrão tem 453 inscritos — o pior caso da regra antiga
+    expect(screen.getByRole('button', { name: /^Adicionar modalidade$/i })).toBeEnabled();
+  });
+
+  it('RN-578: inativar dispara a porta única e o toast explica que o vendido continua válido', async () => {
+    mocks.modalidadesMutateAsync.mockResolvedValue({
+      eventoId: 'meia-floripa-2026', operacao: 'inativar', alterado: true,
+      modalidades: ['5k', '21k'], modalidadesInativas: ['5k'], modalidadesOcultas: [],
+    });
+    const usuario = userEvent.setup({ delay: null });
+    renderPage([], EVENTO_SEM_VENDA);
+
+    await usuario.click(screen.getByRole('button', { name: /^Inativar a modalidade 5k/ }));
+    await waitFor(() => expect(mocks.modalidadesMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mocks.modalidadesMutateAsync.mock.calls[0]?.[0]).toMatchObject({
+      operacao: 'inativar',
+      modalidade: '5k',
+    });
+    // O toast nomeia o efeito — e a garantia da regra.
+    await screen.findByText(/novas vendas suspensas/i);
   });
 });

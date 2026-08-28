@@ -1,9 +1,18 @@
 // =============================================================================
 // packages/core/src/eventos/modalidades.ts
 //
-// RN-500 / RN-501 / RN-502 — a lista de modalidades do evento passa a ter dono
+// RN-578 / RN-501 / RN-502 — o ciclo de vida da modalidade do evento
 // (E04 · S316, re-ancorada pela leva 22 de 17/08 no desenho pai/filho:
-// modalidade é o pai, lote é o filho).
+// modalidade é o pai, lote é o filho; re-fundada em 28/08 pela RN-578, que
+// nasceu da REVOGAÇÃO da RN-500 pelo dono — V2708-25).
+//
+// A FRONTEIRA MUDOU DE DONO (RN-578): deixou de ser do EVENTO (`qtdInscritos
+// == 0`, a RN-500 revogada) e passou a ser DA MODALIDADE:
+//   - acrescentar: SEMPRE permitido, mesmo com inscritos/vendas no evento;
+//   - renomear/remover: só enquanto A MODALIDADE não tem inscrição (qualquer
+//     status — espírito da RN-487) nem venda em lote;
+//   - inativar/ocultar/reativar: SEMPRE permitidos — suspendem/retomam a
+//     OFERTA sem tocar em nada que já foi vendido.
 //
 // O QUE ESTE MÓDULO É: o kernel PURO das três operações. Ele não escreve, não
 // lê Firestore e não sabe o que é uma transação — devolve a recusa NOMEADA ou
@@ -28,7 +37,7 @@
 // para virar fonte ÚNICA das três línguas que hoje descrevem modalidade
 // (criação, esta tela e o editor de kit) — a unificação que a onda A adiou de
 // propósito para a onda C. Ela é SUGESTÃO, nunca vocabulário fechado: a
-// RN-500 trata a modalidade do evento como string livre ("Kids 1k",
+// RN-578 trata a modalidade do evento como string livre ("Kids 1k",
 // "Trail 15k"), e fechar a lista quebraria evento vivo. Os catálogos fechados
 // que existem no produto descrevem OUTRO fato — `MODALIDADES_CLUBE`
 // (clubs/clube-opcoes) e os pilares da RN-114 (clubs/catalogo-acoes) falam de
@@ -36,15 +45,39 @@
 // misturam, e nenhum dos dois é recriado aqui.
 // =============================================================================
 
-/** As três operações da porta única (RN-500). */
-export type OperacaoModalidade = 'acrescentar' | 'renomear' | 'remover';
+/**
+ * As seis operações da porta única (RN-578): as três estruturais (mexem na
+ * LISTA) e as três de estado (mexem na OFERTA, nunca no vendido).
+ */
+export type OperacaoModalidade =
+  | 'acrescentar'
+  | 'renomear'
+  | 'remover'
+  | 'inativar'
+  | 'ocultar'
+  | 'reativar';
 
 /** Operações válidas — ordem de leitura, não de precedência. */
 export const OPERACOES_MODALIDADE: readonly OperacaoModalidade[] = [
   'acrescentar',
   'renomear',
   'remover',
+  'inativar',
+  'ocultar',
+  'reativar',
 ];
+
+/** As operações que mudam SÓ o estado da oferta (RN-578). */
+export const OPERACOES_ESTADO_MODALIDADE: readonly OperacaoModalidade[] = [
+  'inativar',
+  'ocultar',
+  'reativar',
+];
+
+/** A operação mexe só no estado (inativar/ocultar/reativar)? @pure */
+export function isOperacaoEstado(op: OperacaoModalidade): boolean {
+  return (OPERACOES_ESTADO_MODALIDADE as readonly string[]).includes(op);
+}
 
 /** Type guard da operação (o payload chega como `unknown` na Function). @pure */
 export function isOperacaoModalidade(v: unknown): v is OperacaoModalidade {
@@ -219,23 +252,100 @@ export function validarRemoverModalidade(
 }
 
 // ---------------------------------------------------------------------------
-// A fronteira temporal (RN-500 · MODAL-1, decidido em 09/08)
+// O estado da modalidade (RN-578 — nasceu da revogação da RN-500 em 28/08)
 // ---------------------------------------------------------------------------
 
 /**
- * A recusa quando o evento já vendeu. `qtdInscritos` conta QUALQUER status
- * (RN-487), então uma cobrança PIX viva já fecha a lista — e é assim de
- * propósito: quem estiver com o checkout aberto tem a compra **recusada**,
- * nunca cobrada por um preço que mudou de nome no meio.
+ * Estado da OFERTA de uma modalidade:
+ *   - `ativa`   — vitrine oferta, checkout aceita (default);
+ *   - `inativa` — venda de NOVAS inscrições suspensa; o vendido fica intacto;
+ *   - `oculta`  — some da vitrine pública; o vendido fica intacto.
+ * Para o COMPRADOR, inativa e oculta são o mesmo fato ("não disponível") e a
+ * recusa do checkout usa UMA frase — o vocabulário interno nunca vaza (mesma
+ * régua da RN-504 para "kit desligado").
  */
-export const MSG_MODALIDADES_CONGELADAS =
-  'Este evento já tem inscrição registrada, e a lista de modalidades fica ' +
-  'congelada a partir da primeira (inclusive PIX pendente). Preço e vaga de ' +
-  'cada lote continuam editáveis.';
+export type EstadoModalidade = 'ativa' | 'inativa' | 'oculta';
 
-/** A lista é editável neste evento? (fronteira "sem venda" — RN-500). @pure */
-export function modalidadesEditaveis(qtdInscritos: number): boolean {
-  return qtdInscritos === 0;
+/**
+ * Deriva o estado a partir dos dois arrays do doc do evento
+ * (`modalidadesInativas`/`modalidadesOcultas`). Eles são mutuamente exclusivos
+ * por construção (toda transição escreve um e limpa o outro); num doc
+ * corrompido com o nome nos dois, **oculta prevalece** — é o estado mais
+ * restritivo (fail-closed). Campo ausente = array vazio = tudo ativa, e é
+ * assim que todo evento existente entra na RN-578 sem migração. @pure
+ */
+export function estadoModalidade(
+  nome: string,
+  inativas: readonly string[],
+  ocultas: readonly string[],
+): EstadoModalidade {
+  if (ocultas.includes(nome)) return 'oculta';
+  if (inativas.includes(nome)) return 'inativa';
+  return 'ativa';
+}
+
+/**
+ * As modalidades que a VITRINE PÚBLICA oferta: só as ativas, na ordem do
+ * documento. A landing (página do evento, home e checkout) filtra por aqui;
+ * o painel do organizador NÃO — ele mostra todas, marcadas. @pure
+ */
+export function modalidadesOfertaveis(
+  modalidades: readonly string[],
+  inativas: readonly string[],
+  ocultas: readonly string[],
+): string[] {
+  return modalidades.filter((m) => estadoModalidade(m, inativas, ocultas) === 'ativa');
+}
+
+/**
+ * A recusa do CHECKOUT para modalidade não-ativa (RN-578, fail-closed). UMA
+ * frase para inativa e oculta — quem compra não conhece o vocabulário interno,
+ * e oculta nem deveria saber que existe. @pure
+ */
+export function msgModalidadeIndisponivel(nome: string): string {
+  return (
+    `A modalidade "${nome}" não está disponível para novas inscrições ` +
+    'neste evento.'
+  );
+}
+
+/** Transição de estado: a modalidade precisa existir na lista. @pure */
+export function validarTransicaoModalidade(
+  modalidades: readonly string[],
+  nome: string,
+): string | null {
+  const limpo = normalizarNomeModalidade(nome);
+  if (!modalidades.includes(limpo)) {
+    return `A modalidade "${limpo}" não está na lista deste evento.`;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// A fronteira POR MODALIDADE (RN-578 — substitui a fronteira do evento da
+// RN-500 revogada, que congelava a lista inteira em `qtdInscritos > 0`)
+// ---------------------------------------------------------------------------
+
+/**
+ * A recusa de renomear/remover uma modalidade que JÁ VENDEU. "Venda" aqui é
+ * inscrição de QUALQUER status (inclusive PIX pendente — o espírito da RN-487
+ * na granularidade da modalidade) ou lote com `vendidos`/`reservas` > 0. O
+ * nome faz parte do que o comprador comprou (`inscrito.modalidade` grava a
+ * string), e a migração da RN-501 não alcança inscritos/pedidos — por isso o
+ * caminho vivo é inativar a antiga e acrescentar a nova, dois gestos sempre
+ * permitidos. @pure
+ */
+export function msgModalidadeComVenda(
+  nome: string,
+  operacao: 'renomear' | 'remover',
+): string {
+  const gesto = operacao === 'renomear' ? 'renomeada' : 'removida';
+  return (
+    `A modalidade "${nome}" já tem inscrição registrada (inclusive PIX ` +
+    `pendente) e não pode ser ${gesto} — o nome faz parte do que já foi ` +
+    'vendido (RN-578). Para parar de vender, inative ou oculte a modalidade; ' +
+    'para trocar o nome da oferta, inative esta e adicione uma nova.'
+  );
 }
 
 // ---------------------------------------------------------------------------

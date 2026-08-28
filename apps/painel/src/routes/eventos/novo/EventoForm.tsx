@@ -80,7 +80,7 @@ const VALORES_INICIAIS: NovoEventoFormValues = {
 // const local deste arquivo, e a criação, a aba Modalidades e o editor de kit
 // descreviam modalidade cada uma do seu jeito — as "três línguas" que a onda A
 // apontou e adiou de propósito. Nenhum catálogo novo nasceu: a lista é a mesma,
-// mudou de casa. E ela é SUGESTÃO, nunca vocabulário fechado — a RN-500 trata a
+// mudou de casa. E ela é SUGESTÃO, nunca vocabulário fechado — a RN-578 trata a
 // modalidade do evento como string livre, e fechar a lista quebraria evento vivo.
 const SUGESTOES_MODALIDADE = SUGESTOES_MODALIDADE_EVENTO;
 

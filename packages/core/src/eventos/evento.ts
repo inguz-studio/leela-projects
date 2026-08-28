@@ -125,6 +125,24 @@ export interface Evento {
   /** Lista de percursos/modalidades do evento */
   modalidades: string[];
   /**
+   * RN-578 — modalidades com a venda de NOVAS inscrições suspensa (estado
+   * `inativa`). Escrita EXCLUSIVA de Function (`editarModalidadesEvento`);
+   * Rules negam o toque de cliente. Ausente no doc = [] (tudo ativa — é
+   * assim que todo evento existente entra na regra sem migração). O estado
+   * derivado vive no kernel: `estadoModalidade`/`modalidadesOfertaveis`.
+   * OPCIONAL na entidade (mocks/literais legados não têm — padrão
+   * `percursos`): `parseEvento` SEMPRE normaliza para [].
+   */
+  modalidadesInativas?: string[];
+  /**
+   * RN-578 — modalidades OCULTAS da vitrine pública (estado `oculta`).
+   * Mesma disciplina de escrita/ausência de `modalidadesInativas`; os dois
+   * arrays são mutuamente exclusivos por construção (toda transição escreve
+   * um e limpa o outro), e `oculta` prevalece num doc corrompido. OPCIONAL na
+   * entidade (padrão `percursos`): `parseEvento` SEMPRE normaliza para [].
+   */
+  modalidadesOcultas?: string[];
+  /**
    * Percursos com preço independente (S201-T1/T2). OPCIONAL na entidade:
    * eventos legados/seed/mocks não têm — `parseEvento` SEMPRE normaliza
    * para [] (docs vindos do Firestore nunca chegam undefined). Ver RN-200.
@@ -307,6 +325,18 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     ? percursosRaw.filter(isPercursoEvento)
     : [];
 
+  // Estado das modalidades (RN-578): ausente → [] (tudo ativa — é assim que
+  // todo evento existente entra na regra sem migração). Item que não é string
+  // não-vazia é descartado (mesma tolerância de `percursos` — a borda de I/O
+  // não corrige nem lança por lixo em campo de estado; o kernel deriva o
+  // estado só do que é nome legível).
+  const lerNomes = (raw: unknown): string[] =>
+    Array.isArray(raw)
+      ? raw.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+      : [];
+  const modalidadesInativas = lerNomes(data['modalidadesInativas']);
+  const modalidadesOcultas = lerNomes(data['modalidadesOcultas']);
+
   // Capacidade direta do doc — mesma semântica da leitura direta de
   // `resolverCapacidade` (server): número finito > 0, senão null (desconhecida
   // — a UI degrada sem ratio/badge; nunca inventa capacidade). RN-210.
@@ -416,6 +446,8 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     data: data['data'] as Timestamp,
     local: typeof local === 'string' ? local : '',
     modalidades,
+    modalidadesInativas,
+    modalidadesOcultas,
     percursos,
     slug: typeof slug === 'string' && slug.length > 0 ? slug : id,
     status,

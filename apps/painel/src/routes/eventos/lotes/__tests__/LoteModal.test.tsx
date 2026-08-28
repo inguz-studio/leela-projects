@@ -17,7 +17,7 @@ import type { Lote } from '@leela/core';
 import { LoteModal } from '../LoteModal';
 import { EXEMPLO_DE_MIL_NA_VAGA, REGUA_PONTO_E_VIRGULA } from '../../../../lib/textosDeCampo';
 import { ts } from '../../_test/fixtures';
-import { inputLocalParaDate } from '../_lib/loteForm';
+import { inputLocalParaDate, timestampParaInputLocal, validarFormLote } from '../_lib/loteForm';
 
 function mkLote(over: Partial<Lote> & { modalidade: string; ordem: number }): Lote {
   const inicioEm = over.inicioEm ?? ts(inputLocalParaDate('2025-12-01T00:00')!);
@@ -387,5 +387,93 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer nos campos do lote', (
     expect(screen.getByLabelText('Preço da inscrição em 5k (R$)')).not.toHaveAttribute(
       'aria-invalid',
     );
+  });
+});
+
+
+// ===========================================================================
+// RN-579 (28/08, V2708-27) — a DATA FINAL do lote vendido é editável
+// ===========================================================================
+
+describe('LoteModal · RN-579 — lote vendido edita a data final', () => {
+  it('o campo de fim fica HABILITADO num lote vendido; início/vaga/ordem/preço seguem desabilitados', () => {
+    renderModal({ lote: L2 }); // vendidos: 19
+    expect(screen.getByLabelText('Fim da venda')).toBeEnabled();
+    expect(screen.getByLabelText('Início da venda')).toBeDisabled();
+    expect(screen.getByLabelText('Vaga (quantidade limite)')).toBeDisabled();
+    expect(screen.getByLabelText('Ordem na modalidade')).toBeDisabled();
+    expect(screen.getByLabelText('Preço da inscrição em 5k (R$)')).toBeDisabled();
+    // A mensagem de estado diz o que abriu e o que segue fechado.
+    expect(screen.getByRole('note')).toHaveTextContent(/data final é editável/i);
+    expect(screen.getByRole('note')).toHaveTextContent(/RN-579/);
+  });
+
+  it('mudar o fim envia {nome, fimEm}; nada de preço/início/vaga no wire', async () => {
+    const onSalvar = vi.fn().mockResolvedValue(undefined);
+    renderModal({ lote: L2, onSalvar });
+    // O DateTimeField compõe DatePicker (popover) + hora; mudar a HORA já
+    // altera o fim — é o caminho de teste estável (a data exigiria o popover).
+    fireEvent.change(screen.getByLabelText('Fim da venda — hora'), {
+      target: { value: '18:30' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+
+    expect(onSalvar).toHaveBeenCalledTimes(1);
+    const [, payload] = onSalvar.mock.calls[0] as [string, Record<string, unknown>];
+    expect(Object.keys(payload).sort()).toEqual(['fimEm', 'nome']);
+    expect((payload['fimEm'] as Date).getTime()).toBe(
+      inputLocalParaDate('2026-04-01T18:30')!.getTime(),
+    );
+  });
+
+  it('fim INALTERADO não viaja — só o nome (nada de reescrever segundos truncados)', async () => {
+    const onSalvar = vi.fn().mockResolvedValue(undefined);
+    renderModal({ lote: L2, onSalvar });
+    const nome = screen.getByLabelText('Nome do lote');
+    await userEvent.clear(nome);
+    await userEvent.type(nome, 'Lote 2 renomeado');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+
+    const [, payload] = onSalvar.mock.calls[0] as [string, Record<string, unknown>];
+    expect(Object.keys(payload)).toEqual(['nome']);
+  });
+
+  // As recusas de janela do modo congelado são do KERNEL de tela
+  // (`validarFormLote`) — testadas direto, sem depender do popover do
+  // DatePicker (o caminho de UI é o mesmo `erro('fimEm')` dos outros campos).
+  it('kernel: fim antes do INÍCIO gravado é recusado no campo fimEm', () => {
+    const r = validarFormLote({
+      values: {
+        nome: L2.nome, ordem: String(L2.ordem),
+        inicioEm: timestampParaInputLocal(L2.inicioEm),
+        fimEm: '2026-01-15T12:00', // antes do início gravado (02/02/2026)
+        quantidadeLimite: String(L2.quantidadeLimite),
+        preco: '75',
+      },
+      modalidade: '5k', loteId: L2.id, lotesDoEvento: [L1, L2], congelado: true,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.erros[0]?.campo).toBe('fimEm');
+      expect(r.erro).toMatch(/depois do início/i);
+    }
+  });
+
+  it('kernel: estender o fim por cima do lote seguinte é recusado nomeando o irmão (RN-300)', () => {
+    const r = validarFormLote({
+      values: {
+        nome: L1.nome, ordem: String(L1.ordem),
+        inicioEm: timestampParaInputLocal(L1.inicioEm),
+        fimEm: '2026-03-01T00:00', // por cima do L2 (começa 02/02)
+        quantidadeLimite: String(L1.quantidadeLimite),
+        preco: '60',
+      },
+      modalidade: '5k', loteId: L1.id, lotesDoEvento: [L1, L2], congelado: true,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.erros[0]?.campo).toBe('fimEm');
+      expect(r.erro).toMatch(/Lote 2/);
+    }
   });
 });

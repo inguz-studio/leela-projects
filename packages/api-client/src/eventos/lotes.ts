@@ -83,16 +83,22 @@ export interface SalvarLoteInput {
 }
 
 /**
- * Payload de edição de lote VENDIDO (RN-200/300 · review S300-T4 #1): quando
- * `vendidos > 0` a Rule congela preco/inicioEm/fimEm/quantidadeLimite/ordem/
- * modalidade — então SÓ o nome viaja. Re-enviar a janela "igual" dependia de
- * ela ser minuto-alinhada (o form trunca segundos): um lote com timestamps de
- * Function/seed teria o rename NEGADO pela Rule por diff fantasma na janela.
+ * Payload de edição de lote VENDIDO (RN-200/300 + RN-579 · review S300-T4
+ * #1): quando `vendidos > 0` a Rule congela preco/inicioEm/quantidadeLimite/
+ * ordem/modalidade — então só `nome` e, desde a RN-579 (28/08), a DATA FINAL
+ * (`fimEm`) viajam. Re-enviar os campos congelados "iguais" dependia de
+ * minuto-alinhamento (o form trunca segundos): um lote com timestamps de
+ * Function/seed teria o rename NEGADO pela Rule por diff fantasma.
+ *
+ * `fimEm` OPCIONAL: ausente = não toca a janela (rename puro continua sem
+ * depender de alinhamento de minuto do fim gravado).
  */
 export interface RenomearLoteVendidoInput {
   /** Isolamento multi-tenant (ADR-009). */
   tenantId: string;
   nome: string;
+  /** Novo fim da janela (RN-579) — quando o organizador o editou. */
+  fimEm?: Date;
 }
 
 /** União dos payloads de escrita de lote: completo (sem venda) ou só-nome (vendido). */
@@ -115,11 +121,18 @@ export async function salvarLote(
 ): Promise<void> {
   if (!('preco' in input)) {
     if (criar) {
-      throw new Error('payload só-nome é exclusivo de EDIÇÃO de lote vendido (RN-200/300)');
+      throw new Error('payload de lote vendido é exclusivo de EDIÇÃO (RN-200/300/579)');
     }
+    // Lote vendido: nome sempre; `fimEm` SÓ quando editado (RN-579) — os
+    // campos congelados (preço/início/vaga/ordem/modalidade) nunca tocam o
+    // wire, então a Rule de congelamento nunca vê diff neles.
     await setDoc(
       doc(db, 'eventos', eventoId, 'lotes', loteId),
-      { nome: input.nome, atualizadoEm: serverTimestamp() },
+      {
+        nome: input.nome,
+        ...(input.fimEm !== undefined ? { fimEm: Timestamp.fromDate(input.fimEm) } : {}),
+        atualizadoEm: serverTimestamp(),
+      },
       { merge: true }
     );
     return;
@@ -170,8 +183,11 @@ export interface AjustarCapacidadeLoteInput {
   eventoId: string;
   loteId: string;
   novaCapacidade: number;
-  /** Motivo do ajuste (auditoria — obrigatório, 3–500 caracteres). */
-  motivo: string;
+  /**
+   * Motivo do ajuste — OPCIONAL desde 28/08 (V2708-26). Grava se vier
+   * (teto 500); a trilha da RN-304 continua com quem/quando/de→para.
+   */
+  motivo?: string;
 }
 
 export interface AjustarCapacidadeLoteResult {

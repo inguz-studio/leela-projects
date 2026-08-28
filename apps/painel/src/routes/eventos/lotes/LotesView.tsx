@@ -1,6 +1,6 @@
 // =============================================================================
 // LotesView — MODALIDADES do evento, com os lotes de cada uma dentro
-// (S316-T4 · E04 · ADR-012 · RN-500/501/502).
+// (S316-T4 · E04 · ADR-012 · RN-578/501/502 — a RN-500 foi revogada em 28/08).
 //
 // A leva 22 do dono (17/08) re-ancorou esta tela: *"Essa área deve ser ali em
 // Lotes. E chamaremos de Modalidades ao invés de Lotes, no menu secundário.
@@ -8,34 +8,25 @@
 // **Modalidade é o pai, lote é o filho**, e as duas ações do topo são
 // literalmente a frase dele.
 //
-// ⚠️ O ARQUIVO E A ROTA NÃO MUDAM DE NOME, e isso é regra, não preguiça: a
-// RN-399 manda mudar o que a pessoa LÊ, não o identificador. O id da aba
-// (`lotes`), o segmento da URL e o caminho do arquivo são identificadores; o
-// rótulo é o que muda. Mesma régua da RN-572, que trocou "Cadastro" por
-// "Gerenciamento" em Kits sem mover nada.
+// A TERCEIRA FALA (28/08, V2708-25 → RN-578) re-fundou o nível do pai:
+//   - "Adicionar modalidade" é SEMPRE habilitado — mesmo com inscritos/vendas
+//     no evento (a fronteira `qtdInscritos == 0` caiu com a RN-500);
+//   - cada modalidade tem ESTADO (ativa/inativa/oculta) com ações de
+//     inativar/ocultar/reativar no bloco — suspender a oferta sem tocar no
+//     que já foi vendido;
+//   - renomear/remover ficam desabilitados quando a tela SABE que a
+//     modalidade vendeu (lotes com vendidos/reservas — espelho parcial; o
+//     SERVIDOR é a autoridade e recusa por inscrição de qualquer status).
+//
+// ⚠️ O ARQUIVO E A ROTA NÃO MUDAM DE NOME (RN-399) — o rótulo é o que muda.
 //
 // ⛔ A RÉGUA QUE ESTA TELA NÃO PODE ESTOURAR (L-021): quem entra aqui dez vezes
 // por semana entra para mexer em preço e vaga de lote, não para criar
 // modalidade. **Editar um lote existente continua custando os mesmos toques de
-// antes** — a linha da tabela e o `RowActions` dela estão intactos; tudo que
-// nasceu é ao redor. O bloco por modalidade já existia (era ele quem agrupava);
-// o que faltava era o nível de cima ter AÇÕES.
+// antes** — a linha da tabela e o `RowActions` dela estão intactos.
 //
-// O QUE MUDOU DE FATO:
-//   1. "Adicionar modalidade" existe, no topo — a queixa que o dono repetiu
-//      três vezes entre 10/08 e 17/08 era não achar onde;
-//   2. cada bloco de modalidade ganha renomear e remover;
-//   3. modalidade sem lote deixa de ser tabela vazia e vira O CONVITE, com o
-//      botão que resolve;
-//   4. ⚠️ COMPAT: lote cuja modalidade saiu da lista VOLTA a aparecer, num
-//      bloco marcado. A tela antiga fazia `lotes.filter(l => l.modalidade === m)`
-//      sobre `evento.modalidades` e o lote sumia sem erro e sem aviso, com o
-//      preço dele ainda no banco e a Rule `modalidadeExisteNoEventoPai`
-//      impedindo qualquer conserto. Nenhum documento é migrado — a leitura é
-//      que passa a ser honesta;
-//   5. os textos que declaravam a lacuna morreram no mesmo commit que a fecha
-//      (a DIAG-PAINEL-LACUNAS os escreveu para a tela parar de mentir enquanto
-//      a S316 não subisse; mantê-los agora seria a mentira oposta).
+// COMPAT: lote cuja modalidade saiu da lista continua aparecendo num bloco
+// marcado (leitura honesta — nenhum documento migrado).
 //
 // Preço vigente e lote ativo continuam DERIVADOS do kernel (`precoVigente` /
 // `loteAtivo`), nunca recalculados aqui.
@@ -55,15 +46,20 @@ import {
 import type { TableColumn } from '@leela/design-system';
 import {
   capacidadeDoLote,
+  estadoModalidade,
   loteAtivo,
   modalidadesDaTela,
   precoVigente,
   type Evento,
+  type EstadoModalidade,
   type Lote,
 } from '@leela/core';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { EyeOff, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { formatDataHoraCurta, formatDinheiro, formatInt } from '../_lib/format';
 import { estadoLoteBadge, loteDesativavel, loteImutavel } from './_lib/loteForm';
+
+/** Transições de estado da modalidade oferecidas pela tela (RN-578). */
+export type TransicaoModalidade = 'inativar' | 'ocultar' | 'reativar';
 
 export interface LotesViewProps {
   evento: Evento;
@@ -77,18 +73,14 @@ export interface LotesViewProps {
   onAjustarCapacidade: (lote: Lote) => void;
   /** Ação rápida: encerrar a venda deste lote agora (frente E). */
   onDesativarLote: (lote: Lote) => void;
-  /** Abre o modal de acrescentar modalidade (S316-T4). */
+  /** Abre o modal de acrescentar modalidade — SEMPRE disponível (RN-578). */
   onAdicionarModalidade: () => void;
   /** Abre o modal de renomear a modalidade (RN-501). */
   onRenomearModalidade: (modalidade: string) => void;
-  /** Pede a remoção da modalidade — o servidor recusa nomeando (RN-502). */
+  /** Pede a remoção da modalidade — o servidor recusa nomeando (RN-502/578). */
   onRemoverModalidade: (modalidade: string) => void;
-  /**
-   * A lista de modalidades é editável? `false` quando o evento já tem
-   * inscrição de qualquer status, inclusive PIX pendente (RN-500/RN-487). A
-   * tela ESPELHA a fronteira; a Function é a autoridade.
-   */
-  podeEditarModalidades: boolean;
+  /** Inativa/oculta/reativa a modalidade (RN-578 — nunca toca o vendido). */
+  onTransicionarModalidade: (modalidade: string, op: TransicaoModalidade) => void;
   /** Instante de referência (default `new Date()`) — injetável para teste. */
   agora?: Date;
 }
@@ -106,7 +98,7 @@ export function LotesView({
   onAdicionarModalidade,
   onRenomearModalidade,
   onRemoverModalidade,
-  podeEditarModalidades,
+  onTransicionarModalidade,
   agora = new Date(),
 }: LotesViewProps): JSX.Element {
   if (loading) {
@@ -127,28 +119,24 @@ export function LotesView({
     );
   }
 
-  // COMPAT (item 4 do cabeçalho): as do evento, na ordem do documento, mais as
-  // que só existem nos lotes — estas marcadas como fora da lista.
+  // COMPAT: as do evento, na ordem do documento, mais as que só existem nos
+  // lotes — estas marcadas como fora da lista.
   const blocos = modalidadesDaTela(
     evento.modalidades,
     lotes.map((l) => l.modalidade),
   );
+  const inativas = evento.modalidadesInativas ?? [];
+  const ocultas = evento.modalidadesOcultas ?? [];
 
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
-      {/* V2708-06: botão sempre visível — desabilitado (não oculto) quando o evento
-          já tem inscrição. A ação existe e o organizador a encontra; o servidor
-          continua recusando a operação quando a fronteira temporal (RN-500) não
-          permite. V2708-09: description removida (regra sem textos de apoio). */}
+      {/* V2708-06 + RN-578: botão sempre visível E sempre habilitado —
+          adicionar modalidade é livre mesmo com inscritos/vendas (a fronteira
+          da RN-500 foi revogada pelo dono em 28/08). */}
       <SectionHeader
         title="Modalidades"
         action={
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={onAdicionarModalidade}
-            disabled={!podeEditarModalidades}
-          >
+          <Button variant="primary" size="sm" onClick={onAdicionarModalidade}>
             <Plus className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
             Adicionar modalidade
           </Button>
@@ -159,16 +147,12 @@ export function LotesView({
         <EmptyState
           title="Este evento ainda não tem modalidade"
           description="A modalidade é a distância ou o percurso (5k, 21k, Kids 1k). Sem ela não há lote de preço para configurar."
-          {...(podeEditarModalidades
-            ? {
-                action: (
-                  <Button variant="primary" onClick={onAdicionarModalidade}>
-                    <Plus className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
-                    Adicionar a primeira modalidade
-                  </Button>
-                ),
-              }
-            : {})}
+          action={
+            <Button variant="primary" onClick={onAdicionarModalidade}>
+              <Plus className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
+              Adicionar a primeira modalidade
+            </Button>
+          }
         />
       ) : (
         blocos.map(({ nome, orfa }) => (
@@ -176,9 +160,9 @@ export function LotesView({
             key={nome}
             modalidade={nome}
             orfa={orfa}
+            estado={estadoModalidade(nome, inativas, ocultas)}
             lotes={lotes.filter((l) => l.modalidade === nome)}
             agora={agora}
-            podeEditarModalidades={podeEditarModalidades}
             onNovoLote={onNovoLote}
             onEditarLote={onEditarLote}
             onRemoverLote={onRemoverLote}
@@ -186,6 +170,7 @@ export function LotesView({
             onDesativarLote={onDesativarLote}
             onRenomearModalidade={onRenomearModalidade}
             onRemoverModalidade={onRemoverModalidade}
+            onTransicionarModalidade={onTransicionarModalidade}
             onAdicionarModalidade={onAdicionarModalidade}
           />
         ))
@@ -198,9 +183,10 @@ interface ModalidadeBlocoProps {
   modalidade: string;
   /** A modalidade sumiu de `evento.modalidades` mas ainda tem lote apontando. */
   orfa: boolean;
+  /** Estado da OFERTA (RN-578) — derivado do doc pelo kernel. */
+  estado: EstadoModalidade;
   lotes: Lote[];
   agora: Date;
-  podeEditarModalidades: boolean;
   onNovoLote: (modalidade: string) => void;
   onEditarLote: (lote: Lote) => void;
   onRemoverLote: (lote: Lote) => void;
@@ -208,15 +194,16 @@ interface ModalidadeBlocoProps {
   onDesativarLote: (lote: Lote) => void;
   onRenomearModalidade: (modalidade: string) => void;
   onRemoverModalidade: (modalidade: string) => void;
+  onTransicionarModalidade: (modalidade: string, op: TransicaoModalidade) => void;
   onAdicionarModalidade: () => void;
 }
 
 function ModalidadeBloco({
   modalidade,
   orfa,
+  estado,
   lotes,
   agora,
-  podeEditarModalidades,
   onNovoLote,
   onEditarLote,
   onRemoverLote,
@@ -224,6 +211,7 @@ function ModalidadeBloco({
   onDesativarLote,
   onRenomearModalidade,
   onRemoverModalidade,
+  onTransicionarModalidade,
   onAdicionarModalidade,
 }: ModalidadeBlocoProps): JSX.Element {
   const ordenados = [...lotes].sort((a, b) => a.ordem - b.ordem);
@@ -232,6 +220,11 @@ function ModalidadeBloco({
   // ativo = venda fechada/não iniciada.
   const preco = precoVigente({ lotesDaModalidade: ordenados, agora });
   const ativo = loteAtivo(ordenados, agora);
+
+  // Espelho PARCIAL da fronteira por modalidade (RN-578): a tela só conhece os
+  // lotes — inscrição sem contador de lote (legado) o servidor pega sozinho.
+  // A Function é a autoridade; isto evita oferecer o que ela vai recusar.
+  const temVendaLocal = ordenados.some((l) => l.vendidos > 0 || l.reservas > 0);
 
   const colunas: TableColumn<Lote>[] = [
     { key: 'ordem', header: 'Ordem', width: 72, render: (l) => `L${l.ordem}` },
@@ -311,6 +304,10 @@ function ModalidadeBloco({
               {modalidade}
             </h3>
             {orfa ? <Badge variant="alerta">Fora da lista do evento</Badge> : null}
+            {/* Estado da OFERTA (RN-578): só os não-default viram badge — o
+                comum (ativa) não vira ruído. */}
+            {estado === 'inativa' ? <Badge variant="alerta">Inativa</Badge> : null}
+            {estado === 'oculta' ? <Badge variant="neutro">Oculta</Badge> : null}
             {preco !== null ? (
               <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
                 Preço vigente{' '}
@@ -327,18 +324,68 @@ function ModalidadeBloco({
           </div>
         </div>
         <div className="flex items-center gap-[var(--spacing-2)]">
-          {podeEditarModalidades && !orfa ? (
+          {!orfa ? (
             <>
+              {/* Transições de estado (RN-578) — sempre disponíveis, nunca
+                  tocam o vendido. Reativar aparece quando há o que reativar. */}
+              {estado !== 'ativa' ? (
+                <IconButton
+                  aria-label={`Reativar a modalidade ${modalidade} (volta a ser ofertada)`}
+                  title={`Reativar a modalidade ${modalidade} (volta a ser ofertada)`}
+                  onClick={() => onTransicionarModalidade(modalidade, 'reativar')}
+                >
+                  <Play />
+                </IconButton>
+              ) : null}
+              {estado !== 'inativa' ? (
+                <IconButton
+                  aria-label={`Inativar a modalidade ${modalidade} (suspende novas vendas; o vendido continua válido)`}
+                  title={`Inativar a modalidade ${modalidade} (suspende novas vendas; o vendido continua válido)`}
+                  onClick={() => onTransicionarModalidade(modalidade, 'inativar')}
+                >
+                  <Pause />
+                </IconButton>
+              ) : null}
+              {estado !== 'oculta' ? (
+                <IconButton
+                  aria-label={`Ocultar a modalidade ${modalidade} da página pública (o vendido continua válido)`}
+                  title={`Ocultar a modalidade ${modalidade} da página pública (o vendido continua válido)`}
+                  onClick={() => onTransicionarModalidade(modalidade, 'ocultar')}
+                >
+                  <EyeOff />
+                </IconButton>
+              ) : null}
+              {/* Renomear/remover: a fronteira é POR MODALIDADE (RN-578) — o
+                  espelho local desabilita quando os lotes acusam venda; o
+                  servidor recusa por inscrição de qualquer status. */}
               <IconButton
-                aria-label={`Renomear a modalidade ${modalidade}`}
-                title={`Renomear a modalidade ${modalidade}`}
+                aria-label={
+                  temVendaLocal
+                    ? `Renomear a modalidade ${modalidade} (já vendeu — inative e adicione uma nova)`
+                    : `Renomear a modalidade ${modalidade}`
+                }
+                title={
+                  temVendaLocal
+                    ? `Renomear a modalidade ${modalidade} (já vendeu — inative e adicione uma nova)`
+                    : `Renomear a modalidade ${modalidade}`
+                }
+                disabled={temVendaLocal}
                 onClick={() => onRenomearModalidade(modalidade)}
               >
                 <Pencil />
               </IconButton>
               <IconButton
-                aria-label={`Remover a modalidade ${modalidade}`}
-                title={`Remover a modalidade ${modalidade}`}
+                aria-label={
+                  temVendaLocal
+                    ? `Remover a modalidade ${modalidade} (já vendeu — o vendido é protegido; inative ou oculte)`
+                    : `Remover a modalidade ${modalidade}`
+                }
+                title={
+                  temVendaLocal
+                    ? `Remover a modalidade ${modalidade} (já vendeu — o vendido é protegido; inative ou oculte)`
+                    : `Remover a modalidade ${modalidade}`
+                }
+                disabled={temVendaLocal}
                 onClick={() => onRemoverModalidade(modalidade)}
               >
                 <Trash2 />
@@ -356,12 +403,12 @@ function ModalidadeBloco({
         // COMPAT do acervo, com texto honesto: este lote existe, tem preço, e
         // NENHUMA escrita passa nele enquanto o nome não voltar para a lista —
         // a Rule `modalidadeExisteNoEventoPai` roda no create E no update.
+        // RN-578: adicionar é sempre permitido, então o conserto está sempre
+        // ao alcance.
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
           {`Estes lotes apontam para "${modalidade}", que não está na lista de modalidades do evento. ` +
             'Enquanto o nome não voltar para a lista, nenhuma edição destes lotes é gravada. ' +
-            (podeEditarModalidades
-              ? 'Adicione a modalidade de novo para recuperá-los, ou remova os lotes.'
-              : 'O evento já vendeu, então a lista está congelada — fale com o suporte.')}
+            'Adicione a modalidade de novo para recuperá-los, ou remova os lotes.'}
         </p>
       ) : null}
 
@@ -440,7 +487,7 @@ function ModalidadeBloco({
         />
       )}
 
-      {orfa && podeEditarModalidades ? (
+      {orfa ? (
         <div>
           <Button variant="secondary" size="sm" onClick={onAdicionarModalidade}>
             <Plus className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />

@@ -334,7 +334,7 @@ export type {
   AjustarCapacidadeLoteResult,
 } from './eventos/lotes';
 
-// S316-T1/T2/T3 (E04 · RN-500/501/502/505) — a porta única da lista de
+// S316 (E04 · RN-578/501/502/505) — a porta única da lista de
 // modalidades. Escrita EXCLUSIVA de Cloud Function: o cliente manda o NOME e a
 // operação, nunca a lista (a projeção degradada devolveria vazio).
 export { editarModalidadesEvento } from './eventos/modalidades';

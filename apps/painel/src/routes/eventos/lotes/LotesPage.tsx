@@ -1,25 +1,32 @@
 // =============================================================================
 // LotesPage — container da rota `/eventos/:slug/lotes` (S300 · S316-T4 · E04 ·
-// ADR-012). A rota e o id da aba NÃO mudam (RN-399); o que a pessoa lê é
-// "Modalidades".
+// ADR-012 · RN-578/501/502 — a RN-500 foi revogada pelo dono em 28/08). A rota
+// e o id da aba NÃO mudam (RN-399); o que a pessoa lê é "Modalidades".
 //
 // Orquestra dois níveis:
-//   PAI  — modalidade: acrescentar, renomear e remover pela porta única
-//          `editarModalidadesEvento` (RN-500/501/502). Nenhuma escrita direta.
-//   FILHO — lote: `LoteModal` (criar/editar), `CapacidadeModal` e os dois
-//          `ConfirmModal` de sempre, por escrita direta + Rules. Intocados.
+//   PAI  — modalidade: acrescentar, renomear, remover, INATIVAR, OCULTAR e
+//          REATIVAR pela porta única `editarModalidadesEvento` (RN-578).
+//          Nenhuma escrita direta. Adicionar é SEMPRE oferecido (a fronteira
+//          do evento caiu com a RN-500); renomear/remover são recusados pelo
+//          SERVIDOR quando a modalidade já vendeu — a tela espelha com o que
+//          conhece (lotes com vendidos/reservas), e a Function é a autoridade.
+//   FILHO — lote: `LoteModal` (criar/editar — com a DATA FINAL editável mesmo
+//          em lote vendido, RN-579), `CapacidadeModal` e os dois
+//          `ConfirmModal` de sempre, por escrita direta + Rules.
 //
-// ⛔ A recusa da remoção (RN-502) chega à tela NOMEANDO cada lote, kit e
-// campanha que impedem. Ela vive no corpo do `ConfirmModal` de remoção, não num
-// toast que some — a pessoa precisa ler os nomes para saber o que apagar. Virar
-// "falha ao salvar" aqui recriaria o defeito de endereço da SEAL-LOTES
-// (`2a97a592`).
+// ⛔ A recusa da remoção (RN-502/RN-578) chega à tela NOMEANDO quem impede ou
+// a venda que protege. Ela vive no corpo do `ConfirmModal`, não num toast que
+// some. Virar "falha ao salvar" recriaria o defeito da SEAL-LOTES (`2a97a592`).
+//
+// MOTIVO (V2708-26, 28/08): a UI NÃO pergunta mais motivo ao organizador. Os
+// gestos automatizados continuam carimbando a ORIGEM na trilha (constantes
+// abaixo) — informação de graça para a auditoria, zero atrito para a pessoa.
 // =============================================================================
 
 import * as React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Alert, ConfirmModal, useToast } from '@leela/design-system';
-import { modalidadesEditaveis, type Lote } from '@leela/core';
+import { type Lote, type OperacaoModalidade } from '@leela/core';
 import { LotesView } from './LotesView';
 import { LoteModal } from './LoteModal';
 import { CapacidadeModal } from './CapacidadeModal';
@@ -38,13 +45,17 @@ import {
 import type { EventoOutletContext } from '../evento/EventoLayout';
 
 /**
- * Motivo do gesto de remoção. A porta única exige motivo de 3 a 500 caracteres
- * para a trilha (RN-304), e aqui não há campo: pedir uma justificativa escrita
- * dentro de um `ConfirmModal` de duas linhas transformaria um gesto em
- * formulário. O carimbo diz o que foi feito e por qual tela — que é o que a
- * auditoria precisa saber, junto do uid e do de → para que ela já grava.
+ * Carimbo de origem do gesto de remoção (trilha RN-304). Não é pergunta à
+ * pessoa (V2708-26): é o registro de POR QUAL TELA a operação passou.
  */
 const MOTIVO_REMOCAO_MODALIDADE = 'Removida pelo organizador na tela de Modalidades do evento.';
+
+/** Rótulo do toast por transição de estado (RN-578). */
+const ROTULO_TRANSICAO: Record<'inativar' | 'ocultar' | 'reativar', string> = {
+  inativar: 'inativada — novas vendas suspensas; o que já foi vendido continua válido',
+  ocultar: 'oculta da página pública; o que já foi vendido continua válido',
+  reativar: 'reativada — voltou a ser ofertada',
+};
 
 export function LotesPage(): JSX.Element {
   const { evento } = useOutletContext<EventoOutletContext>();
@@ -70,7 +81,7 @@ export function LotesPage(): JSX.Element {
   const [loteParaDesativar, setLoteParaDesativar] = React.useState<Lote | null>(null);
   const [desativando, setDesativando] = React.useState(false);
 
-  // Estado das operações de MODALIDADE (S316-T4).
+  // Estado das operações de MODALIDADE (S316-T4 · RN-578).
   const [modalidadeModal, setModalidadeModal] = React.useState<{
     modo: ModoModalidade;
     atual: string;
@@ -80,18 +91,11 @@ export function LotesPage(): JSX.Element {
   const [recusaRemocao, setRecusaRemocao] = React.useState<string | null>(null);
 
   const todosLotes = lotes ?? [];
-  // Espelho client-side da fronteira temporal (RN-500 · MODAL-1). `qtdInscritos`
-  // conta QUALQUER status, inclusive PIX pendente (RN-487). A Function é a
-  // autoridade — isto só evita oferecer o que o servidor vai recusar.
-  const podeEditarModalidades = modalidadesEditaveis(evento.qtdInscritos);
   const publicado = evento.status !== 'rascunho';
 
-  async function aplicarCapacidade(
-    loteId: string,
-    novaCapacidade: number,
-    motivo: string,
-  ): Promise<void> {
-    await ajustarCapacidade.mutateAsync({ eventoId: evento.id, loteId, novaCapacidade, motivo });
+  async function aplicarCapacidade(loteId: string, novaCapacidade: number): Promise<void> {
+    // V2708-26: sem motivo — a trilha (RN-304) segue com quem/quando/de→para.
+    await ajustarCapacidade.mutateAsync({ eventoId: evento.id, loteId, novaCapacidade });
   }
 
   function abrirNovo(modalidade: string): void {
@@ -110,14 +114,13 @@ export function LotesPage(): JSX.Element {
    * Acrescenta ou renomeia pela porta única. O erro NÃO é engolido: sobe para
    * o `ModalidadeModal`, que o ancora no campo com o modal aberto.
    */
-  async function confirmarModalidade(nome: string, motivo: string): Promise<void> {
+  async function confirmarModalidade(nome: string): Promise<void> {
     const modo = modalidadeModal?.modo ?? 'acrescentar';
     if (modo === 'acrescentar') {
       await editarModalidades.mutateAsync({
         eventoId: evento.id,
         operacao: 'acrescentar',
         modalidade: nome,
-        motivo,
       });
       toast({ title: `Modalidade "${nome}" adicionada`, variant: 'success' });
       return;
@@ -128,7 +131,6 @@ export function LotesPage(): JSX.Element {
       operacao: 'renomear',
       modalidade: de,
       novoNome: nome,
-      motivo,
     });
     const migrados = r.migracao
       ? `${r.migracao.lotes} lote(s), ${r.migracao.kits} kit(s) e ${r.migracao.campanhas} campanha(s) migraram junto.`
@@ -141,25 +143,44 @@ export function LotesPage(): JSX.Element {
   }
 
   /**
-   * Remove a modalidade. A recusa (RN-502) fica NO MODAL, com os nomes de quem
-   * impede — não vira toast que some antes de a pessoa terminar de ler.
+   * Transição de estado (RN-578): inativar / ocultar / reativar. Sem
+   * confirmação — o gesto é reversível por construção (reativar desfaz) e
+   * NUNCA toca o que já foi vendido; o toast nomeia o efeito.
    */
-  async function confirmarRemocaoModalidade(motivoDigitado: string): Promise<void> {
+  async function transicionarModalidade(
+    nome: string,
+    operacao: 'inativar' | 'ocultar' | 'reativar',
+  ): Promise<void> {
+    try {
+      await editarModalidades.mutateAsync({
+        eventoId: evento.id,
+        operacao: operacao as OperacaoModalidade,
+        modalidade: nome,
+      });
+      toast({ title: `"${nome}" ${ROTULO_TRANSICAO[operacao]}`, variant: 'success' });
+    } catch (err) {
+      toast({
+        title: 'Não foi possível mudar o estado da modalidade',
+        description: mensagemErroModalidade(err),
+        variant: 'danger',
+      });
+    }
+  }
+
+  /**
+   * Remove a modalidade. A recusa (RN-502, ou RN-578 quando já vendeu) fica
+   * NO MODAL, com os nomes de quem impede — não vira toast que some.
+   */
+  async function confirmarRemocaoModalidade(): Promise<void> {
     if (!modalidadeParaRemover) return;
     setRemovendoModalidade(true);
     setRecusaRemocao(null);
-    // O campo de motivo do `ConfirmModal` é opcional por desenho da peça; a
-    // porta única exige de 3 a 500 caracteres para a trilha (RN-304). Quem não
-    // escreve nada recebe o carimbo do gesto, que já diz o quê e por qual tela
-    // — o uid e o de → para a auditoria grava sozinha.
-    const digitado = motivoDigitado.trim();
-    const motivo = digitado.length >= 3 ? digitado : MOTIVO_REMOCAO_MODALIDADE;
     try {
       await editarModalidades.mutateAsync({
         eventoId: evento.id,
         operacao: 'remover',
         modalidade: modalidadeParaRemover,
-        motivo,
+        motivo: MOTIVO_REMOCAO_MODALIDADE,
       });
       toast({ title: `Modalidade "${modalidadeParaRemover}" removida`, variant: 'success' });
       setModalidadeParaRemover(null);
@@ -173,10 +194,9 @@ export function LotesPage(): JSX.Element {
   /**
    * Desativa o lote: a venda dele para AGORA (frente E). O caminho depende da
    * existência de venda, porque o lote não tem flag `ativo` — sem venda, fecha
-   * a janela (`fimEm = agora`); com venda, a janela está congelada pela Rule e
-   * a porta autorizada é a capacidade (RN-304, `ajustarCapacidadeLote`, que
-   * carimba o motivo na auditoria). Nos dois casos quem já comprou segue
-   * comprado: nada aqui escreve em inscrito.
+   * a janela (`fimEm = agora`); com venda, a porta histórica é a capacidade
+   * (RN-304, que carimba a origem na auditoria). Nos dois casos quem já
+   * comprou segue comprado: nada aqui escreve em inscrito.
    */
   async function confirmarDesativacao(): Promise<void> {
     if (!loteParaDesativar) return;
@@ -243,7 +263,7 @@ export function LotesPage(): JSX.Element {
           setRecusaRemocao(null);
           setModalidadeParaRemover(m);
         }}
-        podeEditarModalidades={podeEditarModalidades}
+        onTransicionarModalidade={(m, op) => void transicionarModalidade(m, op)}
       />
 
       <ModalidadeModal
@@ -271,13 +291,13 @@ export function LotesPage(): JSX.Element {
         loses={consequencias.loses}
         keeps={consequencias.keeps}
         confirmLabel="Remover modalidade"
-        reasonLabel="Motivo (fica no registro do evento)"
         loading={removendoModalidade}
         {...(recusaRemocao
           ? {
-              // A recusa NOMEADA da RN-502 ocupa o slot do ALVO, com o diálogo
-              // ABERTO: a pessoa precisa ler QUEM impede para saber o que apagar
-              // antes de tentar de novo. Num toast ela sumiria antes disso.
+              // A recusa NOMEADA (RN-502/RN-578) ocupa o slot do ALVO, com o
+              // diálogo ABERTO: a pessoa precisa ler QUEM impede — ou que a
+              // modalidade já vendeu e o caminho é inativar/ocultar. Num toast
+              // ela sumiria antes disso.
               target: (
                 <Alert tone="alerta" live="alert" title="Ainda não dá para remover">
                   {recusaRemocao}
@@ -285,7 +305,7 @@ export function LotesPage(): JSX.Element {
               ),
             }
           : {})}
-        onConfirm={(details) => void confirmarRemocaoModalidade(details.reason)}
+        onConfirm={() => void confirmarRemocaoModalidade()}
       />
 
       <CapacidadeModal

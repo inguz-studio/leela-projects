@@ -142,13 +142,14 @@ export { onInscritoWriteVirada, virarLoteCron } from './eventos/virarLote';
 // ratchet RN-300 permanece). ⚠️ Fable (integridade de venda).
 export { ajustarCapacidadeLote } from './eventos/ajustarCapacidadeLote';
 
-// Eventos — A PORTA ÚNICA DA LISTA DE MODALIDADES (S316-T1/T2/T3 · RN-500,
-// RN-501, RN-502, RN-505): acrescentar, renomear e remover, owner-only, com
-// `qtdInscritos == 0` checado pela própria Function (o Admin SDK não passa
-// pela Rule `percursosEditaveis`). Renomear é MIGRAÇÃO ATÔMICA de cinco
-// referências num commit; remover recusa NOMEANDO cada lote, kit e campanha
-// que impedem. A lista sai do documento, nunca do cliente (RN-505).
-// ⚠️ Fable (integridade referencial — o nome vive em cinco lugares).
+// Eventos — A PORTA ÚNICA DA LISTA DE MODALIDADES (S316 · RN-578,
+// RN-501, RN-502, RN-505 — a RN-500 foi revogada em 28/08): acrescentar
+// (sempre), renomear/remover (só modalidade SEM venda — fronteira POR
+// MODALIDADE checada pela própria Function, dentro da transação) e
+// inativar/ocultar/reativar (sempre; nunca tocam o vendido), owner-only.
+// Renomear é MIGRAÇÃO ATÔMICA num commit; remover recusa NOMEANDO cada
+// lote, kit e campanha que impedem. A lista sai do documento, nunca do
+// cliente (RN-505). ⚠️ Fable (integridade referencial + venda).
 export { editarModalidadesEvento } from './eventos/editarModalidadesEvento';
 
 // Eventos — publicação da página de vendas (S300-T2, lacuna #1 do S300-T3):

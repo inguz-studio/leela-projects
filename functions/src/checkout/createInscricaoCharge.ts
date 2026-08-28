@@ -114,6 +114,8 @@ import {
   type VersoesAceiteExibidas,
   ACEITE_USER_AGENT_MAX,
   MOTIVO_ACEITE_VERSAO_DIVERGENTE,
+  estadoModalidade,
+  msgModalidadeIndisponivel,
 } from '@leela/core';
 import { crmIdPepper } from '../crm/agregarClientes';
 import { assertTenantAtivo } from '../eventos/criarEvento';
@@ -904,6 +906,14 @@ export async function carregarInsumos(
   const percursos = Array.isArray(eventoSnap.get('percursos'))
     ? (eventoSnap.get('percursos') as { nome?: unknown; preco?: unknown }[])
     : [];
+  // Estado da modalidade (RN-578) — do DOC do evento, nunca do request.
+  // Ausente = [] = tudo ativa (eventos legados entram na regra sem migração).
+  const lerNomes = (raw: unknown): string[] =>
+    Array.isArray(raw)
+      ? raw.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+      : [];
+  const modalidadesInativas = lerNomes(eventoSnap.get('modalidadesInativas'));
+  const modalidadesOcultas = lerNomes(eventoSnap.get('modalidadesOcultas'));
 
   // Lotes por modalidade DISTINTA (ADR-012 — query where modalidade == X)
   const modalidades = [...new Set(input.inscritos.map((i) => i.modalidade))];
@@ -913,6 +923,19 @@ export async function carregarInsumos(
       throw new https.HttpsError(
         'invalid-argument',
         `Modalidade '${modalidade}' não existe no evento '${input.eventoId}'.`
+      );
+    }
+    // GATE DE ESTADO (RN-578, fail-closed): modalidade inativa/oculta NUNCA
+    // vende — a vitrine não a oferta, e o payload montado à mão morre AQUI,
+    // antes de qualquer precificação. UMA frase para os dois estados (quem
+    // compra não conhece o vocabulário interno). A recusa vem antes do preço
+    // pela mesma razão da fronteira da RN-500 original: quem estiver com o
+    // checkout aberto tem a compra RECUSADA, nunca cobrada por oferta que o
+    // organizador suspendeu no meio.
+    if (estadoModalidade(modalidade, modalidadesInativas, modalidadesOcultas) !== 'ativa') {
+      throw new https.HttpsError(
+        'failed-precondition',
+        msgModalidadeIndisponivel(modalidade)
       );
     }
     const lotesSnap = await eventoRef

@@ -41,29 +41,28 @@ import {
 import type { SalvarLoteInput } from '@leela/api-client';
 import { formatDataHoraCurta } from '../../_lib/format';
 
-/** Campos comerciais que a Rule CONGELA quando o lote já vendeu (espelho). */
+/**
+ * Campos comerciais que a Rule CONGELA quando o lote já vendeu (espelho).
+ * RN-579 (28/08): `fimEm` SAIU da lista — a data final é editável mesmo em
+ * lote iniciado e vendido, por decisão do dono (V2708-27).
+ */
 export const CAMPOS_CONGELADOS_APOS_VENDA = [
   'preco',
   'inicioEm',
-  'fimEm',
   'quantidadeLimite',
   'ordem',
 ] as const;
 
 /**
- * Mensagem exibida quando o lote está congelado por já ter vendido.
- *
- * HONESTIDADE DO ESTADO (BUILD-LOTES-UX · frente C): a mensagem antiga dizia
- * que "preço, janela, vaga e ordem ficam bloqueados" e parava aí — o
- * organizador via quatro portas fechadas sem saber que UMA delas tem chave. A
- * vaga TEM caminho autorizado pós-venda (`ajustarCapacidadeLote` — RN-304, com
- * motivo na auditoria); o preço é o único bloqueio que a RN-200 canônica
- * enuncia; janela e ordem estão travadas por uma extensão que só existe na Rule
- * (`loteComercialImutavelSeVendido`) e aguarda selo do dono da regra.
+ * Mensagem exibida quando o lote está parcialmente congelado por já ter
+ * vendido. HONESTIDADE DO ESTADO (BUILD-LOTES-UX · frente C): cada porta com
+ * chave é nomeada. O "selo do dono" que a janela aguardava chegou em 28/08
+ * (RN-579): a DATA FINAL é editável; início e ordem seguem bloqueados (a
+ * venda aconteceu sob aquele início), e o preço é a RN-200.
  */
 export const MSG_LOTE_VENDIDO =
-  'Lote com venda: o preço fica bloqueado (RN-200). A vaga se ajusta em "Ajustar capacidade", ' +
-  'com motivo na auditoria (RN-304). Janela e ordem seguem bloqueadas — mudança pendente de selo da regra.';
+  'Lote com venda: o preço fica bloqueado (RN-200) e o início e a ordem não mudam. ' +
+  'A data final é editável (RN-579), e a vaga se ajusta em "Ajustar capacidade" (RN-304).';
 
 /** Valores brutos do formulário (strings dos inputs). */
 export interface LoteFormValues {
@@ -82,11 +81,13 @@ export interface LoteFormValues {
 export type LotePayloadCompleto = Omit<SalvarLoteInput, 'tenantId'>;
 
 /**
- * Payload de edição de lote VENDIDO (review S300-T4 #1): a Rule congela os
- * campos comerciais, então SÓ `nome` viaja — nada de re-enviar janela/preço
- * "iguais" e depender de alinhamento de minuto para o diff dar vazio.
+ * Payload de edição de lote VENDIDO (review S300-T4 #1 + RN-579): a Rule
+ * congela preço/início/vaga/ordem/modalidade, então só `nome` e — desde 28/08
+ * — a DATA FINAL viajam. `fimEm` entra SÓ quando o organizador a mudou de
+ * fato (comparação contra o valor carregado no form): re-enviar o fim "igual"
+ * truncado ao minuto reescreveria os segundos gravados sem ninguém pedir.
  */
-export type LotePayloadVendido = Pick<LotePayloadCompleto, 'nome'>;
+export type LotePayloadVendido = Pick<LotePayloadCompleto, 'nome'> & { fimEm?: Date };
 
 export type LotePayload = LotePayloadCompleto | LotePayloadVendido;
 
@@ -460,13 +461,68 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
   const nome = values.nome.trim();
   if (nome.length === 0) erros.push({ campo: 'nome', mensagem: 'Informe o nome do lote.' });
 
-  // Lote VENDIDO: payload mínimo — só o nome (review S300-T4 #1). Os campos
-  // comerciais estão desabilitados na UI e congelados na Rule; validar/enviar
-  // os valores carregados seria (a) depender de minuto-alinhamento para o
-  // diff dar vazio e (b) bloquear um rename por problema pré-existente nos
-  // irmãos (sobreposição legada travaria até a troca de nome).
+  // Lote VENDIDO (review S300-T4 #1 + RN-579): payload mínimo — nome e, desde
+  // 28/08, a DATA FINAL. Os demais campos comerciais estão desabilitados na
+  // UI e congelados na Rule; validar/enviar os valores carregados seria (a)
+  // depender de minuto-alinhamento para o diff dar vazio e (b) bloquear um
+  // rename por problema pré-existente nos irmãos.
   if (congelado) {
-    return erros.length > 0 ? falha(erros) : { ok: true, input: { nome } };
+    const loteGravado = loteId !== null ? (lotesDoEvento.find((l) => l.id === loteId) ?? null) : null;
+    const fimEm = inputLocalParaDate(values.fimEm);
+    if (!fimEm) {
+      erros.push({ campo: 'fimEm', mensagem: 'Informe o fim da janela de venda.' });
+    }
+    // fim > início SEMPRE (RN-579: janela negativa não existe) — o início é o
+    // GRAVADO, que a Rule congela e o form mostra desabilitado.
+    if (fimEm && loteGravado && fimEm.getTime() <= loteGravado.inicioEm.toMillis()) {
+      erros.push({ campo: 'fimEm', mensagem: 'O fim da janela deve ser depois do início.' });
+    }
+    if (erros.length > 0 || !fimEm) return falha(erros);
+
+    // O fim não mudou (comparação contra o valor que o form CARREGOU, minuto
+    // a minuto)? Então ele não viaja — re-enviar o "igual" truncado ao minuto
+    // reescreveria os segundos gravados sem ninguém pedir.
+    const fimInalterado =
+      loteGravado !== null && values.fimEm === timestampParaInputLocal(loteGravado.fimEm);
+    if (fimInalterado || loteGravado === null) {
+      return { ok: true, input: { nome } };
+    }
+
+    // Invariante de sequência da modalidade (RN-300) com a janela PROJETADA
+    // (início gravado + fim novo) — estender o fim por cima do início do lote
+    // seguinte é recusado aqui; a Rule não itera irmãos (limite declarado).
+    const irmaosVendido = lotesDoEvento.filter(
+      (l) => l.modalidade === modalidade && l.id !== loteId,
+    );
+    const projetadoVendido = [
+      ...irmaosVendido.map((l) => ({
+        modalidade: l.modalidade,
+        ordem: l.ordem,
+        inicioEm: l.inicioEm,
+        fimEm: l.fimEm,
+      })),
+      {
+        modalidade,
+        ordem: loteGravado.ordem,
+        inicioEm: loteGravado.inicioEm,
+        fimEm: tsLike(fimEm),
+      },
+    ];
+    const erroSequenciaVendido = validarLotesModalidade(projetadoVendido);
+    if (erroSequenciaVendido) {
+      const conflito = conflitoDeJanela(
+        irmaosVendido,
+        loteGravado.ordem,
+        loteGravado.inicioEm.toDate(),
+        fimEm,
+      );
+      if (conflito) {
+        return falha([{ campo: 'fimEm', mensagem: mensagemConflitoJanela(conflito) }]);
+      }
+      return falha([{ campo: 'formulario', mensagem: erroSequenciaVendido }]);
+    }
+
+    return { ok: true, input: { nome, fimEm } };
   }
 
   // TODAS as pendências de campo são coletadas na mesma passada: o organizador

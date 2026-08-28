@@ -52,12 +52,18 @@ function renderView(over: Partial<Parameters<typeof LotesView>[0]> = {}) {
       onAdicionarModalidade={vi.fn()}
       onRenomearModalidade={vi.fn()}
       onRemoverModalidade={vi.fn()}
-      podeEditarModalidades
+      onTransicionarModalidade={vi.fn()}
       agora={AGORA}
       {...over}
     />,
   );
 }
+
+/** Lotes SEM venda — renomear/remover só habilitam aqui (RN-578). */
+const LOTES_5K_SEM_VENDA: Lote[] = [
+  mkLote({ modalidade: '5k', ordem: 1, preco: 60, quantidadeLimite: 150, vendidos: 0,
+    inicioEm: ts(inputLocalParaDate('2026-02-01T00:00')!), fimEm: ts(inputLocalParaDate('2026-04-01T00:00')!) }),
+];
 
 describe('LotesView', () => {
   it('mostra o preço vigente e o lote ativo derivados do kernel', () => {
@@ -184,10 +190,10 @@ describe('LotesView · a modalidade ganha dono (S316-T4)', () => {
     expect(onAdicionarModalidade).toHaveBeenCalledTimes(1);
   });
 
-  it('cada bloco de modalidade oferece renomear e remover', async () => {
+  it('cada bloco de modalidade SEM venda oferece renomear e remover', async () => {
     const onRenomearModalidade = vi.fn();
     const onRemoverModalidade = vi.fn();
-    renderView({ onRenomearModalidade, onRemoverModalidade });
+    renderView({ lotes: LOTES_5K_SEM_VENDA, onRenomearModalidade, onRemoverModalidade });
     await userEvent.click(screen.getByRole('button', { name: 'Renomear a modalidade 5k' }));
     await userEvent.click(screen.getByRole('button', { name: 'Remover a modalidade 5k' }));
     expect(onRenomearModalidade).toHaveBeenCalledWith('5k');
@@ -236,18 +242,60 @@ describe('LotesView · a modalidade ganha dono (S316-T4)', () => {
     ).not.toBeInTheDocument();
   });
 
-  // V2708-06: botão sempre visível, desabilitado (não ausente) quando congela.
-  // V2708-09: texto de apoio "inclusive PIX pendente" removido — sem assertiva.
-  it('evento COM venda: lista congela, botão Adicionar fica desabilitado (RN-500 · RN-487)', () => {
-    renderView({ podeEditarModalidades: false });
-    // V2708-06: a ação é descobrível mesmo sem poder usá-la.
-    const botaoAdicionar = screen.getByRole('button', { name: /^Adicionar modalidade$/i });
-    expect(botaoAdicionar).toBeDisabled();
-    // Renomear e remover seguem ocultos (ações destrutivas por modalidade).
-    expect(screen.queryByRole('button', { name: 'Renomear a modalidade 5k' })).not.toBeInTheDocument();
-    // E o que continua podendo ser feito segue à mão.
-    expect(screen.getByRole('button', { name: /Novo lote/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /^Editar lote / }).length).toBe(3);
+  // ===========================================================================
+  // RN-578 (28/08) — a RN-500 foi revogada: adicionar é SEMPRE habilitado, a
+  // fronteira desceu para a modalidade, e nasceram inativar/ocultar/reativar.
+  // ===========================================================================
+
+  it('✅ RN-578: "Adicionar modalidade" fica HABILITADO mesmo com o evento vendido', () => {
+    // O default do fixture tem qtdInscritos 453 e os lotes 5k têm vendas — o
+    // pior caso da regra antiga. Verbatim do dono: "registrar novas
+    // modalidades quando quiser".
+    renderView();
+    expect(screen.getByRole('button', { name: /^Adicionar modalidade$/i })).toBeEnabled();
+  });
+
+  it('⛔ RN-578: renomear/remover DESABILITAM quando os lotes acusam venda, com a razão no rótulo', () => {
+    renderView(); // LOTES_5K têm vendidos > 0
+    const renomear = screen.getByRole('button', { name: /^Renomear a modalidade 5k/ });
+    const remover = screen.getByRole('button', { name: /^Remover a modalidade 5k/ });
+    expect(renomear).toBeDisabled();
+    expect(remover).toBeDisabled();
+    // A razão chega pelo nome acessível (mesmo canal do RowActions de lote).
+    expect(renomear).toHaveAccessibleName(/já vendeu/);
+    expect(remover).toHaveAccessibleName(/protegido|inative/i);
+  });
+
+  it('RN-578: modalidade ativa oferece Inativar e Ocultar; nada de Reativar', async () => {
+    const onTransicionarModalidade = vi.fn();
+    renderView({ onTransicionarModalidade });
+    await userEvent.click(screen.getByRole('button', { name: /^Inativar a modalidade 5k/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^Ocultar a modalidade 5k/ }));
+    expect(onTransicionarModalidade).toHaveBeenCalledWith('5k', 'inativar');
+    expect(onTransicionarModalidade).toHaveBeenCalledWith('5k', 'ocultar');
+    expect(screen.queryByRole('button', { name: /^Reativar a modalidade 5k/ })).not.toBeInTheDocument();
+  });
+
+  it('RN-578: modalidade INATIVA mostra o badge e oferece Reativar', async () => {
+    const onTransicionarModalidade = vi.fn();
+    renderView({
+      evento: mkEvento({ modalidades: ['5k'], modalidadesInativas: ['5k'] }),
+      onTransicionarModalidade,
+    });
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
+    expect(within(bloco).getByText('Inativa')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^Reativar a modalidade 5k/ }));
+    expect(onTransicionarModalidade).toHaveBeenCalledWith('5k', 'reativar');
+    // Inativar some (já está inativa); Ocultar continua disponível.
+    expect(screen.queryByRole('button', { name: /^Inativar a modalidade 5k/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Ocultar a modalidade 5k/ })).toBeInTheDocument();
+  });
+
+  it('RN-578: modalidade OCULTA mostra o badge próprio', () => {
+    renderView({ evento: mkEvento({ modalidades: ['5k'], modalidadesOcultas: ['5k'] }) });
+    const bloco = screen.getByRole('region', { name: /^Modalidade 5k$/i });
+    expect(within(bloco).getByText('Oculta')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Reativar a modalidade 5k/ })).toBeInTheDocument();
   });
 
   it('⛔ L-021: editar um lote continua custando UM toque, como antes', () => {

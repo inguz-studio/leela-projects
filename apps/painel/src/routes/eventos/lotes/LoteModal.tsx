@@ -5,10 +5,11 @@
 // e PREÇO (money-config). 4 vias de fechamento (DS Modal). Salvar → Toast.
 //
 // MONEY-CONFIG (o que a Fable-review checa): quando o lote já vendeu
-// (`vendidos > 0`), preço, janela e ordem ficam DESABILITADOS — espelho do
-// congelamento da Rule. A VAGA tem porta autorizada (RN-304, `ajustarCapacidade`
-// com motivo na auditoria) e ganha um atalho daqui. A validação é do KERNEL
-// (validarFormLote → core); nada de regra de preço/lote reinventada aqui.
+// (`vendidos > 0`), preço, INÍCIO e ordem ficam DESABILITADOS — espelho do
+// congelamento da Rule. A DATA FINAL é editável (RN-579, decisão do dono de
+// 28/08: "o planejamento do organizador pode mudar com o tempo"). A VAGA tem
+// porta autorizada (RN-304, `ajustarCapacidade`) e ganha um atalho daqui. A
+// validação é do KERNEL (validarFormLote → core); nada reinventado aqui.
 //
 // BUILD-LOTES-UX (dono, 2026-08-04) — três mudanças de comportamento:
 //   A. o erro acende NO CAMPO pendente. Antes, `validarFormLote` devolvia uma
@@ -275,12 +276,14 @@ export function LoteModal({
             disabled={congelado}
             {...(erro('inicioEm') ? { errorMessage: erro('inicioEm') as string } : {})}
           />
+          {/* RN-579 (28/08): a DATA FINAL é editável mesmo em lote vendido —
+              o campo NÃO congela. Início, preço, vaga e ordem seguem
+              desabilitados quando `congelado` (espelho da Rule). */}
           <DateTimeField
             id={ID_DO_CAMPO.fimEm}
             label="Fim da venda"
             value={values.fimEm}
             onChange={(fimEm) => set('fimEm', fimEm)}
-            disabled={congelado}
             {...(erro('fimEm') ? { errorMessage: erro('fimEm') as string } : {})}
           />
         </div>

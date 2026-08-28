@@ -1,25 +1,24 @@
 // =============================================================================
 // modalidadeForm.ts — helpers da EDIÇÃO DE MODALIDADE (S316-T4 · E04 ·
-// RN-500/501/502).
+// RN-578/501/502 — a RN-500 foi revogada pelo dono em 28/08).
 //
 // A validação de verdade é o kernel puro do core (`@leela/core` →
 // `eventos/modalidades`), usado pela tela E pela Function. Aqui mora só o que
 // é de tela: o endereço do erro do servidor e a copy das consequências.
+//
+// MOTIVO: desde 28/08 (V2708-26) a UI NÃO pergunta mais motivo ao organizador
+// — o campo saiu do modal e do ConfirmModal, e o servidor o trata como
+// opcional. Os espelhos de teto que moravam aqui morreram junto.
 // =============================================================================
-
-/** Espelho do teto de motivo do callable (`editarModalidadesEvento`). */
-export const MOTIVO_MODALIDADE_MIN = 3;
-export const MOTIVO_MODALIDADE_MAX = 500;
 
 /**
  * A recusa do SERVIDOR, com endereço.
  *
- * ⛔ `failed-precondition` é a recusa NOMEADA da RN-502 — ela lista cada lote,
- * kit e campanha que impedem a remoção, e o texto vem pronto do kernel. Ela
- * passa INTACTA. Trocá-la por "falha ao salvar" recriaria o defeito de endereço
- * que a review da SEAL-LOTES corrigiu no `LoteModal` (`2a97a592`), e é
- * literalmente a queixa do dono num lugar novo: a tela sabia o que houve e não
- * contava.
+ * ⛔ `failed-precondition` é a recusa NOMEADA da RN-502/RN-578 — ela lista
+ * cada lote, kit e campanha que impedem a remoção, ou explica que a modalidade
+ * já vendeu (e qual é o caminho vivo: inativar/ocultar). O texto vem pronto do
+ * kernel e passa INTACTO. Trocá-lo por "falha ao salvar" recriaria o defeito
+ * de endereço que a review da SEAL-LOTES corrigiu no `LoteModal` (`2a97a592`).
  *
  * O SDK do Firebase prefixa o código com `functions/`, e a mensagem chega em
  * `err.message` — por isso a extração é por `code`, não por texto. @pure
@@ -52,9 +51,10 @@ export function mensagemErroModalidade(erro: unknown): string {
 
 /**
  * As consequências que a confirmação nomeia ANTES do gesto, e não depois —
- * requisito de tela da RN-500 para evento publicado. Elas mudam com o estado
- * do evento porque a consequência muda: num rascunho ninguém vê a página; num
- * publicado, a lista de percursos muda para quem está olhando agora.
+ * requisito de tela herdado da RN-500 (sobrevive à revogação: nomear a
+ * consequência de um gesto destrutivo continua sendo o desenho). Elas mudam
+ * com o estado do evento porque a consequência muda: num rascunho ninguém vê
+ * a página; num publicado, a lista de percursos muda para quem está olhando.
  * @pure
  */
 export function consequenciasDeRemover(
@@ -72,12 +72,13 @@ export function consequenciasDeRemover(
     loses,
     keeps: [
       'As outras modalidades e os lotes delas permanecem',
-      'Dá para acrescentar a modalidade de novo enquanto o evento não vender',
+      // RN-578: acrescentar é sempre permitido — a fronteira do evento caiu.
+      'Dá para acrescentar a modalidade de novo a qualquer momento',
     ],
   };
 }
 
-/** A mesma disciplina para o renome (RN-501 — cinco referências migram juntas). */
+/** A mesma disciplina para o renome (RN-501 — as referências migram juntas). */
 export function consequenciasDeRenomear(publicado: boolean): {
   loses: string[];
   keeps: string[];

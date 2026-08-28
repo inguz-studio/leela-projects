@@ -2,7 +2,7 @@
 // packages/api-client/src/eventos/modalidades.ts
 //
 // A porta única da lista de modalidades do evento (S316-T1/T2/T3 · E04 ·
-// RN-500, RN-501, RN-502, RN-505).
+// RN-578, RN-501, RN-502, RN-505 — a RN-500 foi revogada em 28/08).
 //
 // ESCRITA EXCLUSIVA de Cloud Function. Ao contrário de lote e kit — que são
 // escrita DIRETA do organizador, com a Rule como autoridade —, aqui o cliente
@@ -32,12 +32,18 @@ import { getLeelaFunctions } from '../firebase';
 export interface EditarModalidadesEventoInput {
   eventoId: string;
   operacao: OperacaoModalidade;
-  /** `acrescentar`: o nome novo. `renomear`/`remover`: o nome ATUAL. */
+  /**
+   * `acrescentar`: o nome novo. `renomear`/`remover`/`inativar`/`ocultar`/
+   * `reativar`: o nome ATUAL.
+   */
   modalidade: string;
   /** Só em `renomear`: o nome de destino. */
   novoNome?: string;
-  /** Motivo da operação (auditoria — obrigatório, 3–500 caracteres). */
-  motivo: string;
+  /**
+   * Motivo — OPCIONAL desde 28/08 (V2708-26: o dono cortou a exigência de
+   * motivo dos fluxos do organizador). Grava se vier (teto 500).
+   */
+  motivo?: string;
 }
 
 /** Quantos documentos a renomeação migrou, por família (RN-501). */
@@ -54,15 +60,20 @@ export interface EditarModalidadesEventoResult {
   alterado: boolean;
   /** A lista DEPOIS da operação, lida do documento — autoritativa. */
   modalidades: string[];
+  /** Estado DEPOIS da operação (RN-578) — autoritativo, para a UI espelhar. */
+  modalidadesInativas: string[];
+  modalidadesOcultas: string[];
   /** Presente só em `renomear`. */
   migracao?: MigracaoModalidade;
 }
 
 /**
- * Acrescenta, renomeia ou remove uma modalidade do evento pela porta única.
- * O servidor valida (`qtdInscritos == 0`, nome duplicado, quem aponta), migra
- * as cinco referências num commit quando for renomear, e grava a auditoria; o
- * cliente só transporta o input e recebe a lista autoritativa de volta.
+ * As seis operações da lista de modalidades pela porta única (RN-578): as
+ * estruturais (acrescentar sempre; renomear/remover só em modalidade SEM
+ * venda) e as de estado (inativar/ocultar/reativar — sempre, sem tocar no
+ * vendido). O servidor valida a fronteira POR MODALIDADE dentro da transação,
+ * migra as referências num commit quando for renomear, e grava a auditoria; o
+ * cliente só transporta o input e recebe as listas autoritativas de volta.
  */
 export async function editarModalidadesEvento(
   input: EditarModalidadesEventoInput,

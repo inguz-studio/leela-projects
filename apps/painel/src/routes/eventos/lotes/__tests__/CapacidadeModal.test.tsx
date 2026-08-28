@@ -49,18 +49,23 @@ describe('CapacidadeModal · aritmética e recusa (frente D)', () => {
     expect(screen.getByText('Disponível').nextSibling).toHaveTextContent('31');
   });
 
+  it('⛔ V2708-26: NÃO pergunta motivo — o dono cortou a exigência dos fluxos do organizador', () => {
+    renderModal();
+    expect(screen.queryByLabelText(/Motivo/i)).not.toBeInTheDocument();
+  });
+
   it('o caso do dono: baixar 50 → 20 com 19 vendidos é aceito (sobra 1 disponível)', async () => {
     const onAjustar = renderModal();
     const usuario = userEvent.setup({ delay: null });
     const campo = screen.getByLabelText(/Nova capacidade/i);
     await usuario.clear(campo);
     await usuario.type(campo, '20');
-    await usuario.type(screen.getByLabelText(/Motivo do ajuste/i), 'Fechando as vagas que sobraram.');
+    // V2708-26: sem campo de motivo — o dono cortou a exigência.
 
     const salvar = screen.getByRole('button', { name: 'Salvar capacidade' });
     expect(salvar).toBeEnabled();
     await usuario.click(salvar);
-    expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 20, 'Fechando as vagas que sobraram.');
+    expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 20);
   });
 
   // ---------------------------------------------------------------------------
@@ -132,7 +137,6 @@ describe('CapacidadeModal · aritmética e recusa (frente D)', () => {
     const campo = screen.getByLabelText(/Nova capacidade/i);
     await usuario.clear(campo);
     await usuario.type(campo, '10');
-    await usuario.type(screen.getByLabelText(/Motivo do ajuste/i), 'Tentativa de reduzir demais.');
 
     // Recusa explícita, com o número que manda no limite.
     expect(screen.getByText(/menor que o vendido \(19\)/i)).toBeInTheDocument();
@@ -151,10 +155,9 @@ describe('CapacidadeModal · aritmética e recusa (frente D)', () => {
     const campo = screen.getByLabelText(/Nova capacidade/i);
     await usuario.clear(campo);
     await usuario.type(campo, '19');
-    await usuario.type(screen.getByLabelText(/Motivo do ajuste/i), 'Encerrando a venda deste lote.');
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar capacidade' }));
-    expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 19, 'Encerrando a venda deste lote.');
+    expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 19);
   });
 });
 
@@ -181,7 +184,6 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer na capacidade', () => 
     const campo = screen.getByLabelText(/Nova capacidade/i);
     await usuario.clear(campo);
     await usuario.type(campo, '2,5');
-    await usuario.type(screen.getByLabelText(/Motivo do ajuste/i), 'Ajuste com texto torto.');
 
     expect(
       screen.getByText(
@@ -201,8 +203,7 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer na capacidade', () => 
     expect(campo).toHaveValue('1.000');
     expect(screen.getByText('Configurado').nextSibling).toHaveTextContent('1.000');
 
-    await usuario.type(screen.getByLabelText(/Motivo do ajuste/i), 'Reabrindo mil vagas.');
     await usuario.click(screen.getByRole('button', { name: 'Salvar capacidade' }));
-    expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 1000, 'Reabrindo mil vagas.');
+    expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 1000);
   });
 });

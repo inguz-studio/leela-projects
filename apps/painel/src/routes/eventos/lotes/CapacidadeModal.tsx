@@ -5,11 +5,15 @@
 // e deixa o organizador AUMENTAR a capacidade e salvar. Reduzir ABAIXO do
 // vendido é BLOQUEADO com o limite à mostra (não esconde): `validarAjusteCapacidade`
 // (kernel) é o espelho client-side; o callable `ajustarCapacidadeLote` é a
-// autoridade (guard + auditoria). Motivo obrigatório (3–500 · trilha).
+// autoridade (guard + auditoria).
+//
+// ⛔ SEM campo de motivo desde 28/08 (V2708-26): o dono cortou a exigência de
+// motivo dos fluxos do organizador — o servidor o trata como opcional e a
+// trilha (RN-304) continua com quem/quando/de→para.
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Input, Modal, Textarea, useToast } from '@leela/design-system';
+import { Button, Input, Modal, useToast } from '@leela/design-system';
 import {
   capacidadeDoLote,
   mensagemContagemInvalida,
@@ -20,17 +24,13 @@ import {
 import { formatInt } from '../_lib/format';
 import { capacidadePrevista } from './_lib/loteForm';
 
-/** Espelho do teto de motivo do callable (functions ajustarCapacidadeLote). */
-const MOTIVO_MIN = 3;
-const MOTIVO_MAX = 500;
-
 export interface CapacidadeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Lote em ajuste; null = modal fechado (sem lote selecionado). */
   lote: Lote | null;
   /** Aplica o ajuste (callable). Resolve → fecha; rejeita → Toast honesto. */
-  onAjustar: (loteId: string, novaCapacidade: number, motivo: string) => Promise<void>;
+  onAjustar: (loteId: string, novaCapacidade: number) => Promise<void>;
 }
 
 export function CapacidadeModal({
@@ -41,14 +41,12 @@ export function CapacidadeModal({
 }: CapacidadeModalProps): JSX.Element {
   const { toast } = useToast();
   const [capacidade, setCapacidade] = React.useState('');
-  const [motivo, setMotivo] = React.useState('');
   const [busy, setBusy] = React.useState(false);
 
   // (Re)carrega o form ao abrir: parte da capacidade configurada atual.
   React.useEffect(() => {
     if (!open || !lote) return;
     setCapacidade(String(lote.quantidadeLimite));
-    setMotivo('');
   }, [open, lote]);
 
   if (!lote) {
@@ -84,16 +82,14 @@ export function CapacidadeModal({
     : lida.motivo === 'vazio'
       ? 'Informe uma capacidade inteira.'
       : mensagemContagemInvalida(lida.motivo);
-  const motivoTrim = motivo.trim();
-  const motivoValido = motivoTrim.length >= MOTIVO_MIN && motivoTrim.length <= MOTIVO_MAX;
   const semAlteracao = capacidadeParseavel && nova === lote.quantidadeLimite;
-  const podeSalvar = erroCapacidade === null && motivoValido && !semAlteracao && !busy;
+  const podeSalvar = erroCapacidade === null && !semAlteracao && !busy;
 
   async function salvar(): Promise<void> {
     if (!lote || !podeSalvar) return;
     setBusy(true);
     try {
-      await onAjustar(lote.id, nova, motivoTrim);
+      await onAjustar(lote.id, nova);
       toast({ title: 'Capacidade ajustada', variant: 'success' });
       onOpenChange(false);
     } catch {
@@ -158,19 +154,8 @@ export function CapacidadeModal({
         <span id="capacidade-hint" className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
           {`Não pode ficar abaixo de ${formatInt(lote.vendidos)} (já vendidos). Aumente para reabrir vagas.`}
         </span>
-
-        <Textarea
-          id="capacidade-motivo"
-          label="Motivo do ajuste"
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          rows={3}
-          maxLength={MOTIVO_MAX}
-          placeholder="Ex.: reabrindo 50 vagas após liberação de lote extra."
-        />
-        <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-          Registrado na auditoria do evento (mínimo {MOTIVO_MIN} caracteres).
-        </span>
+        {/* V2708-26: o campo de motivo saiu — o dono cortou a exigência dos
+            fluxos do organizador; a trilha (RN-304) segue com quem/de→para. */}
       </div>
     </Modal>
   );

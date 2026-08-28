@@ -1,5 +1,7 @@
 /**
- * modalidadesCore.test.ts — S316-T1/T2/T3 · E04 · RN-500, RN-501, RN-502, RN-505
+ * modalidadesCore.test.ts — S316 · E04 · RN-578, RN-501, RN-502, RN-505
+ * (a RN-500 foi REVOGADA pelo dono em 28/08 — V2708-25; a fronteira desceu do
+ * evento para a modalidade, e nasceram os estados inativa/oculta)
  *
  * Duas metades:
  *
@@ -26,15 +28,18 @@ import type * as admin from 'firebase-admin';
 import {
   MODALIDADES_MAX,
   MODALIDADE_NOME_MAX,
-  MSG_MODALIDADES_CONGELADAS,
+  estadoModalidade,
   mensagemRecusaRemocao,
   modalidadesDaTela,
-  modalidadesEditaveis,
+  modalidadesOfertaveis,
+  msgModalidadeComVenda,
+  msgModalidadeIndisponivel,
   normalizarNomeModalidade,
   validarAcrescentarModalidade,
   validarNomeModalidade,
   validarRemoverModalidade,
   validarRenomearModalidade,
+  validarTransicaoModalidade,
   type AuthClaims,
 } from '@leela/core';
 import {
@@ -73,7 +78,7 @@ describe('kernel de modalidades — normalização e nome', () => {
   });
 });
 
-describe('kernel de modalidades — acrescentar (RN-500)', () => {
+describe('kernel de modalidades — acrescentar (RN-578: sempre permitido)', () => {
   it('aceita nome novo e recusa nome já presente', () => {
     expect(validarAcrescentarModalidade(['5k', '10k'], '21k')).toBeNull();
     expect(validarAcrescentarModalidade(['5k', '10k'], ' 10k ')).toMatch(/já está na lista/);
@@ -141,15 +146,43 @@ describe('kernel de modalidades — remover (RN-502)', () => {
   });
 });
 
-describe('kernel de modalidades — fronteira temporal (RN-500 · MODAL-1)', () => {
-  it('sem venda edita; UMA inscrição de qualquer status congela (RN-487)', () => {
-    expect(modalidadesEditaveis(0)).toBe(true);
-    expect(modalidadesEditaveis(1)).toBe(false);
+describe('kernel de modalidades — estado da oferta (RN-578)', () => {
+  it('ausente nos dois arrays = ativa (evento existente entra na regra sem migração)', () => {
+    expect(estadoModalidade('5k', [], [])).toBe('ativa');
+    expect(estadoModalidade('5k', ['5k'], [])).toBe('inativa');
+    expect(estadoModalidade('5k', [], ['5k'])).toBe('oculta');
   });
 
-  it('a mensagem explica que PIX pendente conta e que preço/vaga seguem editáveis', () => {
-    expect(MSG_MODALIDADES_CONGELADAS).toMatch(/PIX pendente/);
-    expect(MSG_MODALIDADES_CONGELADAS).toMatch(/Preço e vaga/);
+  it('num doc corrompido com o nome nos DOIS arrays, oculta prevalece (fail-closed)', () => {
+    expect(estadoModalidade('5k', ['5k'], ['5k'])).toBe('oculta');
+  });
+
+  it('a vitrine só oferta as ativas, na ordem do documento', () => {
+    expect(modalidadesOfertaveis(['5k', '10k', '21k'], ['10k'], ['21k'])).toEqual(['5k']);
+    expect(modalidadesOfertaveis(['5k', '10k'], [], [])).toEqual(['5k', '10k']);
+  });
+
+  it('a recusa do checkout usa UMA frase e não vaza o vocabulário interno', () => {
+    const msg = msgModalidadeIndisponivel('10k');
+    expect(msg).toMatch(/não está disponível para novas inscrições/);
+    expect(msg).not.toMatch(/inativa|oculta/i);
+  });
+
+  it('transição exige a modalidade na lista', () => {
+    expect(validarTransicaoModalidade(['5k'], '5k')).toBeNull();
+    expect(validarTransicaoModalidade(['5k'], '21k')).toMatch(/não está na lista/);
+  });
+});
+
+describe('kernel de modalidades — fronteira POR modalidade (RN-578)', () => {
+  it('a recusa de renomear/remover modalidade vendida nomeia o caminho vivo', () => {
+    const renomear = msgModalidadeComVenda('10k', 'renomear');
+    const remover = msgModalidadeComVenda('10k', 'remover');
+    expect(renomear).toMatch(/já tem inscrição registrada/);
+    expect(renomear).toMatch(/PIX\s+pendente/);
+    expect(renomear).toMatch(/renomeada/);
+    expect(remover).toMatch(/removida/);
+    expect(remover).toMatch(/inative/i);
   });
 });
 
@@ -196,10 +229,16 @@ describe('validarEditarModalidadesInput', () => {
     );
   });
 
-  it('rejeita operação fora das três', () => {
+  it('rejeita operação fora das seis', () => {
     expect(validarEditarModalidadesInput({ ...base, operacao: 'fundir' })).toContain(
-      '"operacao" deve ser acrescentar, renomear ou remover.',
+      '"operacao" deve ser acrescentar, renomear, remover, inativar, ocultar ou reativar.',
     );
+  });
+
+  it('aceita as três operações de estado (RN-578)', () => {
+    for (const operacao of ['inativar', 'ocultar', 'reativar']) {
+      expect(validarEditarModalidadesInput({ ...base, operacao })).toEqual([]);
+    }
   });
 
   it('exige novoNome em renomear', () => {
@@ -208,8 +247,16 @@ describe('validarEditarModalidadesInput', () => {
     );
   });
 
-  it('exige motivo de no mínimo 3 caracteres (auditoria — RN-304)', () => {
-    expect(validarEditarModalidadesInput({ ...base, motivo: 'x' }).join(' ')).toMatch(/motivo/);
+  it('motivo é OPCIONAL (V2708-26) — ausente e vazio passam; o teto continua', () => {
+    const { motivo: _m, ...semMotivo } = base;
+    expect(validarEditarModalidadesInput(semMotivo)).toEqual([]);
+    expect(validarEditarModalidadesInput({ ...base, motivo: '' })).toEqual([]);
+    expect(validarEditarModalidadesInput({ ...base, motivo: 'x'.repeat(501) }).join(' ')).toMatch(
+      /excede 500/,
+    );
+    expect(validarEditarModalidadesInput({ ...base, motivo: 42 }).join(' ')).toMatch(
+      /deve ser texto/,
+    );
   });
 });
 
@@ -231,6 +278,8 @@ interface Cenario {
   lotes?: { id: string; data: Raw }[];
   kits?: { id: string; data: Raw }[];
   campanhas?: { id: string; data: Raw }[];
+  /** Inscritos do evento — a fronteira POR MODALIDADE (RN-578) os consulta. */
+  inscritos?: { id: string; data: Raw }[];
 }
 
 interface Dubles {
@@ -266,11 +315,15 @@ function montar(cenario: Cenario): Dubles {
           return bruto === valor;
         };
         const casados = docs.filter(casa);
+        const snapDos = (lista: { id: string; data: Raw }[]) => ({
+          size: lista.length,
+          docs: lista.map((d) => snapDe(d.data, `eventos/${eventoId}/${nome}/${d.id}`)),
+        });
         return {
-          __snap: {
-            size: casados.length,
-            docs: casados.map((d) => snapDe(d.data, `eventos/${eventoId}/${nome}/${d.id}`)),
-          },
+          __snap: snapDos(casados),
+          // `.limit(n)` — a fronteira por modalidade (RN-578) só pergunta a
+          // EXISTÊNCIA de inscrito (`limit(1)`).
+          limit: (n: number) => ({ __snap: snapDos(casados.slice(0, n)) }),
         };
       },
     };
@@ -304,7 +357,9 @@ function montar(cenario: Cenario): Dubles {
                   ? (cenario.lotes ?? [])
                   : sub === 'kits'
                     ? (cenario.kits ?? [])
-                    : (cenario.campanhas ?? []),
+                    : sub === 'inscritos'
+                      ? (cenario.inscritos ?? [])
+                      : (cenario.campanhas ?? []),
                 id,
               ),
           }),
@@ -383,15 +438,23 @@ describe('editarModalidadesEventoCore — guardas', () => {
     ).rejects.toThrow(/não está ativo/);
   });
 
-  it('⛔ RECUSA quando o evento já vendeu — a checagem é da Function, não da Rule', async () => {
-    // FALSIFICAÇÃO da S316-T1: o Admin SDK bypassa `percursosEditaveis`, então
-    // remover esta checagem do núcleo tem de deixar ESTE caso vermelho. Uma
-    // cobrança PIX pendente já conta (RN-487) — é `qtdInscritos`, não pago.
-    const { db, escritas } = montar({ evento: { ...EVENTO_BASE, qtdInscritos: 1 } });
-    await expect(
-      editarModalidadesEventoCore(db, { eventoId: 'ev-1', operacao: 'acrescentar', modalidade: '10k', motivo: 'faltou' }, CALLER),
-    ).rejects.toThrow(MSG_MODALIDADES_CONGELADAS);
-    expect(escritas).toHaveLength(0);
+  it('✅ RN-578: acrescentar PASSA mesmo com o evento vendido (a RN-500 foi revogada)', async () => {
+    // FALSIFICAÇÃO da revogação (V2708-25, verbatim: "registrar novas
+    // modalidades quando quiser"): o evento com venda registrada ACEITA a
+    // modalidade nova. A fronteira que sobrou é POR MODALIDADE, e vale só
+    // para renomear/remover — testada nos describes delas.
+    const { db, escritas } = montar({
+      evento: { ...EVENTO_BASE, qtdInscritos: 7 },
+      inscritos: [{ id: 'i1', data: { modalidade: '21k' } }],
+    });
+    const res = await editarModalidadesEventoCore(
+      db,
+      { eventoId: 'ev-1', operacao: 'acrescentar', modalidade: '10k' },
+      CALLER,
+    );
+    expect(res.alterado).toBe(true);
+    expect(res.modalidades).toEqual(['5k', '21k', '10k']);
+    expect(escritas).toHaveLength(1);
   });
 
   it('nega evento inexistente', async () => {
@@ -402,7 +465,7 @@ describe('editarModalidadesEventoCore — guardas', () => {
   });
 });
 
-describe('editarModalidadesEventoCore — acrescentar (RN-500 · RN-505)', () => {
+describe('editarModalidadesEventoCore — acrescentar (RN-578 · RN-505)', () => {
   it('usa arrayUnion em modalidades e leitura-e-checagem em percursos', async () => {
     const { db, escritas, trilha } = montar({ evento: EVENTO_BASE });
     const res = await editarModalidadesEventoCore(
@@ -548,6 +611,170 @@ describe('editarModalidadesEventoCore — renomear (RN-501)', () => {
     ).rejects.toThrow(/já existe neste evento/);
     expect(dubles.escritas).toHaveLength(0);
   });
+
+  it('⛔ RN-578: recusa renomear modalidade com INSCRITO (qualquer status), sem escrever nada', async () => {
+    // FALSIFICAÇÃO da fronteira por modalidade: remover a guarda do núcleo
+    // tem de deixar ESTE caso vermelho. O inscrito basta — nenhum lote
+    // precisa acusar venda.
+    const dubles = montar({
+      evento: EVENTO_BASE,
+      inscritos: [{ id: 'i1', data: { modalidade: '21k', status: 'pendente' } }],
+    });
+    await expect(
+      editarModalidadesEventoCore(
+        dubles.db,
+        { eventoId: 'ev-1', operacao: 'renomear', modalidade: '21k', novoNome: 'Meia' },
+        CALLER,
+      ),
+    ).rejects.toThrow(/já tem inscrição registrada/);
+    expect(dubles.escritas).toHaveLength(0);
+  });
+
+  it('⛔ RN-578: lote com vendidos > 0 também fecha o renome (defesa em profundidade)', async () => {
+    const dubles = montar({
+      evento: EVENTO_BASE,
+      lotes: [{ id: 'l1', data: { modalidade: '21k', nome: 'Lote 1', vendidos: 3 } }],
+    });
+    await expect(
+      editarModalidadesEventoCore(
+        dubles.db,
+        { eventoId: 'ev-1', operacao: 'renomear', modalidade: '21k', novoNome: 'Meia' },
+        CALLER,
+      ),
+    ).rejects.toThrow(/já tem inscrição registrada/);
+    expect(dubles.escritas).toHaveLength(0);
+  });
+
+  it('a OUTRA modalidade continua renomeável — a fronteira é da modalidade, não do evento', async () => {
+    // O evento vendeu na 21k; a 5k nunca vendeu e renomeia normalmente.
+    const dubles = montar({
+      evento: { ...EVENTO_BASE, qtdInscritos: 3 },
+      inscritos: [{ id: 'i1', data: { modalidade: '21k' } }],
+    });
+    const res = await editarModalidadesEventoCore(
+      dubles.db,
+      { eventoId: 'ev-1', operacao: 'renomear', modalidade: '5k', novoNome: 'Kids 5k' },
+      CALLER,
+    );
+    expect(res.alterado).toBe(true);
+    expect(res.modalidades).toEqual(['Kids 5k', '21k']);
+  });
+
+  it('renomear migra o nome também nos arrays de ESTADO (RN-578)', async () => {
+    const dubles = montar({
+      evento: { ...EVENTO_BASE, modalidadesInativas: ['21k'] },
+    });
+    const res = await editarModalidadesEventoCore(
+      dubles.db,
+      { eventoId: 'ev-1', operacao: 'renomear', modalidade: '21k', novoNome: 'Meia' },
+      CALLER,
+    );
+    expect(res.modalidadesInativas).toEqual(['Meia']);
+    const porPath = new Map(dubles.escritas.map((e) => [e.path, e.patch]));
+    expect(porPath.get('eventos/ev-1')).toMatchObject({ modalidadesInativas: ['Meia'] });
+  });
+});
+
+describe('editarModalidadesEventoCore — inativar/ocultar/reativar (RN-578)', () => {
+  const CAMPOS_DE_ESTADO = ['modalidadesInativas', 'modalidadesOcultas', 'atualizadoEm'];
+
+  it('inativar escreve SÓ os dois arrays de estado — nada de inscrito/pedido/lote', async () => {
+    // A PROVA DE DINHEIRO da lane: inativar não cancela nem invalida o que já
+    // foi vendido. No dublê isso é literal — a ÚNICA escrita é no doc do
+    // evento, e o patch só carrega os dois arrays + atualizadoEm.
+    const dubles = montar({
+      evento: { ...EVENTO_BASE, qtdInscritos: 5 },
+      inscritos: [{ id: 'i1', data: { modalidade: '21k', status: 'confirmado' } }],
+      lotes: [{ id: 'l1', data: { modalidade: '21k', nome: 'Lote 1', vendidos: 5 } }],
+    });
+    const res = await editarModalidadesEventoCore(
+      dubles.db,
+      { eventoId: 'ev-1', operacao: 'inativar', modalidade: '21k' },
+      CALLER,
+    );
+    expect(res.alterado).toBe(true);
+    expect(res.modalidadesInativas).toEqual(['21k']);
+    expect(res.modalidades).toEqual(['5k', '21k']);
+    expect(dubles.escritas).toHaveLength(1);
+    expect(dubles.escritas[0]?.path).toBe('eventos/ev-1');
+    expect(Object.keys(dubles.escritas[0]?.patch ?? {}).sort()).toEqual(
+      [...CAMPOS_DE_ESTADO].sort(),
+    );
+    expect(dubles.escritas[0]?.patch['modalidadesInativas']).toEqual(
+      FieldValue.arrayUnion('21k'),
+    );
+    expect(dubles.escritas[0]?.patch['modalidadesOcultas']).toEqual(
+      FieldValue.arrayRemove('21k'),
+    );
+  });
+
+  it('ocultar e inativar são mutuamente exclusivos por construção', async () => {
+    const dubles = montar({ evento: { ...EVENTO_BASE, modalidadesInativas: ['21k'] } });
+    const res = await editarModalidadesEventoCore(
+      dubles.db,
+      { eventoId: 'ev-1', operacao: 'ocultar', modalidade: '21k' },
+      CALLER,
+    );
+    expect(res.modalidadesInativas).toEqual([]);
+    expect(res.modalidadesOcultas).toEqual(['21k']);
+    expect(dubles.escritas[0]?.patch['modalidadesOcultas']).toEqual(FieldValue.arrayUnion('21k'));
+    expect(dubles.escritas[0]?.patch['modalidadesInativas']).toEqual(
+      FieldValue.arrayRemove('21k'),
+    );
+  });
+
+  it('reativar limpa os dois arrays e a modalidade volta a ser ofertada', async () => {
+    const dubles = montar({ evento: { ...EVENTO_BASE, modalidadesOcultas: ['21k'] } });
+    const res = await editarModalidadesEventoCore(
+      dubles.db,
+      { eventoId: 'ev-1', operacao: 'reativar', modalidade: '21k' },
+      CALLER,
+    );
+    expect(res.modalidadesInativas).toEqual([]);
+    expect(res.modalidadesOcultas).toEqual([]);
+  });
+
+  it('transição repetida é no-op declarado — nada gravado, nada auditado, nunca erro', async () => {
+    const dubles = montar({ evento: { ...EVENTO_BASE, modalidadesInativas: ['21k'] } });
+    const res = await editarModalidadesEventoCore(
+      dubles.db,
+      { eventoId: 'ev-1', operacao: 'inativar', modalidade: '21k' },
+      CALLER,
+    );
+    expect(res.alterado).toBe(false);
+    expect(dubles.escritas).toHaveLength(0);
+    expect(dubles.trilha).toHaveLength(0);
+  });
+
+  it('recusa transição de modalidade fora da lista', async () => {
+    const dubles = montar({ evento: EVENTO_BASE });
+    await expect(
+      editarModalidadesEventoCore(
+        dubles.db,
+        { eventoId: 'ev-1', operacao: 'inativar', modalidade: '42k' },
+        CALLER,
+      ),
+    ).rejects.toThrow(/não está na lista/);
+  });
+
+  it('a auditoria registra a transição com de→para de ESTADO e sem motivo quando não veio', async () => {
+    const dubles = montar({ evento: EVENTO_BASE });
+    await editarModalidadesEventoCore(
+      dubles.db,
+      { eventoId: 'ev-1', operacao: 'ocultar', modalidade: '21k' },
+      CALLER,
+    );
+    expect(dubles.trilha).toHaveLength(1);
+    expect(dubles.trilha[0]).toMatchObject({
+      tipo: TIPO_AUDITORIA_MODALIDADES,
+      operacao: 'ocultar',
+      modalidade: '21k',
+      de: 'ativa',
+      para: 'oculta',
+      uid: 'uid-owner',
+    });
+    expect(dubles.trilha[0]).not.toHaveProperty('motivo');
+  });
 });
 
 describe('editarModalidadesEventoCore — remover (RN-502)', () => {
@@ -571,17 +798,36 @@ describe('editarModalidadesEventoCore — remover (RN-502)', () => {
     expect(dubles.escritas).toHaveLength(0);
   });
 
-  it('passa depois que os lotes foram apagados, e tira o nome das DUAS listas', async () => {
-    const dubles = montar({ evento: EVENTO_BASE });
+  it('⛔ RN-578: NUNCA remove modalidade com inscrição — "só não pode apagar" protege o vendido', async () => {
+    const dubles = montar({
+      evento: { ...EVENTO_BASE, qtdInscritos: 1 },
+      inscritos: [{ id: 'i1', data: { modalidade: '21k', status: 'pendente' } }],
+    });
+    await expect(
+      editarModalidadesEventoCore(
+        dubles.db,
+        { eventoId: 'ev-1', operacao: 'remover', modalidade: '21k' },
+        CALLER,
+      ),
+    ).rejects.toThrow(/já tem inscrição registrada/);
+    expect(dubles.escritas).toHaveLength(0);
+  });
+
+  it('passa depois que os lotes foram apagados, e tira o nome das listas E dos arrays de estado', async () => {
+    const dubles = montar({ evento: { ...EVENTO_BASE, modalidadesOcultas: ['21k'] } });
     const res = await editarModalidadesEventoCore(
       dubles.db,
       { eventoId: 'ev-1', operacao: 'remover', modalidade: '21k', motivo: 'errei o nome' },
       CALLER,
     );
     expect(res.modalidades).toEqual(['5k']);
+    expect(res.modalidadesOcultas).toEqual([]);
     expect(dubles.escritas[0]?.patch).toMatchObject({
       modalidades: ['5k'],
       percursos: [{ nome: '5k', preco: 0 }],
+      // Limpeza de estado (RN-578): estado de modalidade removida é lixo.
+      modalidadesInativas: FieldValue.arrayRemove('21k'),
+      modalidadesOcultas: FieldValue.arrayRemove('21k'),
     });
   });
 

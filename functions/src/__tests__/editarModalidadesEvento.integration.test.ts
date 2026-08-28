@@ -1,27 +1,36 @@
 /**
- * editarModalidadesEvento.integration.test.ts — LEELA-S316-T1/T2/T3
- * (RN-500, RN-501, RN-502, RN-505)
+ * editarModalidadesEvento.integration.test.ts — LEELA-S316
+ * (RN-578, RN-501, RN-502, RN-505, RN-579 — a RN-500 foi REVOGADA em 28/08)
  * (⚠️ EXIGE Firestore Emulator 8080 — projectId demo-leela.)
  *
  * O que SÓ o emulator prova, e por isso esta suíte existe ao lado do
  * `modalidadesCore.test.ts` (que roda com dublês e cobre guardas e recusas):
  *
- *   A1. Renomear migra os CINCO alvos e eles ficam legíveis num único commit.
- *   A2. ⛔ Falha injetada no meio da transação NÃO deixa NADA escrito. É o
- *       teste que não pode faltar: uma migração parcial deixa todo lote da
- *       modalidade inutilizado pela própria Rule `modalidadeExisteNoEventoPai`,
- *       que é chamada no create E no update — nem a escrita que consertaria o
- *       lote passaria.
+ *   A1. Renomear migra os alvos e eles ficam legíveis num único commit.
+ *   A2. ⛔ Falha injetada no meio da transação NÃO deixa NADA escrito.
  *   A3. O lote renomeado continua sendo encontrado pela query da modalidade
  *       nova, com o docId ANTIGO (que embute o nome velho) intacto.
  *   A4. O cliente escrevendo `modalidades` direto num evento COM venda é
- *       negado pela Rule `percursosEditaveis` — a camada que a Function
- *       reimplementa por dever, não por redundância.
+ *       negado pela Rule `percursosEditaveis`; e o ESTADO
+ *       (`modalidadesInativas`/`modalidadesOcultas`) é negado ao cliente
+ *       SEMPRE (RN-578 — escrita exclusiva de Function).
  *   A5. Acrescentar é idempotente por `arrayUnion` e não duplica `percursos`.
  *
- * ⚠️ NÃO EXECUTADA na máquina desta lane: `firebase-tools` 15 exige JDK 21+ e
- * a máquina tem JDK 17 (mesma limitação declarada pela SERV1-BUILD em 11/08).
- * Roda no CI, que provisiona Java 21 antes de `emulators:exec`.
+ *   B — AS PROVAS DA RN-578 (a parte de DINHEIRO da lane):
+ *   B1. Acrescentar PASSA em evento COM venda (a RN-500 caiu).
+ *   B2. Inativar uma modalidade VENDIDA não toca NENHUM byte do inscrito nem
+ *       do lote (o vendido sobrevive), e a cotação de compra NOVA da
+ *       modalidade inativa é RECUSADA pela MESMA porta que o checkout usa
+ *       (`carregarInsumos` — fail-closed). Reativar volta a vender.
+ *   B3. Renomear/remover modalidade vendida são recusados; a modalidade SEM
+ *       venda do MESMO evento segue livre — a fronteira é da modalidade.
+ *
+ *   C — A PROVA DA RN-579 (Rules):
+ *   C1. Lote com venda aceita update de cliente que toca SÓ `fimEm` (e nome);
+ *       tocar `inicioEm` ou `preco` continua negado.
+ *
+ * ⚠️ NÃO EXECUTADA nesta máquina (emulador não sobe com o mock no ar — regra
+ * da lane). Roda no CI, que provisiona Java 21 antes de `emulators:exec`.
  *
  * Comando: npx firebase-tools emulators:exec --only firestore --project demo-leela \
  *   "npx vitest run src/__tests__/editarModalidadesEvento.integration.test.ts"
@@ -35,7 +44,7 @@ import {
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { doc, updateDoc } from 'firebase/firestore';
+import { Timestamp as ClientTimestamp, doc, updateDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { AuthClaims } from '@leela/core';
@@ -43,6 +52,7 @@ import {
   editarModalidadesEventoCore,
   TIPO_AUDITORIA_MODALIDADES,
 } from '../eventos/editarModalidadesEvento';
+import { cotarInscricaoCheckoutCore } from '../checkout/cotarInscricaoCheckout';
 import { AUDITORIA_ACESSOS_COL } from '../shared/auditoriaAcessos';
 
 const PROJECT_ID = 'demo-leela';
@@ -85,6 +95,14 @@ beforeEach(async () => {
     id: CASTELO_ID, nome: CASTELO_ID, slug: CASTELO_ID, status: 'ativo',
     ownerUid: MARINA_UID, tipo: 'produtor', criadoEm: now, atualizadoEm: now,
   });
+  // Termos comerciais — a cotação (B2) passa pela mesma `carregarInsumos` do
+  // checkout, que lê o termo do tenant.
+  batch.set(adminDb.doc(`tenants/${CASTELO_ID}/commercialTerms/current`), {
+    platformFeePct: 10.5,
+    installmentRules: { maxParcelas: 12, jurosAoMes: 3.49, parcelaMinima: 20 },
+    anticipation: { disponivel: false }, communityMonthlyEnabled: false, saasMonthlyFee: 0,
+    versao: 1, atualizadoPor: 'seed', atualizadoEm: now,
+  });
 
   // Evento SEM venda — o alvo das três operações.
   const eventoRef = adminDb.collection('eventos').doc(EVENTO_ID);
@@ -122,14 +140,27 @@ beforeEach(async () => {
     criadoEm: now, atualizadoEm: now,
   });
 
-  // Evento COM venda — a fronteira temporal (RN-500 · MODAL-1).
-  batch.set(adminDb.collection('eventos').doc(EVENTO_VENDIDO_ID), {
+  // Evento COM venda — a fronteira POR MODALIDADE (RN-578): a 15k VENDEU
+  // (inscrito confirmado + lote com vendidos > 0); a 7k nunca vendeu.
+  const vendidoRef = adminDb.collection('eventos').doc(EVENTO_VENDIDO_ID);
+  batch.set(vendidoRef, {
     id: EVENTO_VENDIDO_ID, tenantId: CASTELO_ID, organizadorId: MARINA_UID,
     nome: 'Trail vendido', slug: EVENTO_VENDIDO_ID, status: 'publicado',
     data: tsRel(30), local: 'Florianópolis',
-    modalidades: ['15k'], percursos: [{ nome: '15k', preco: 120 }],
+    modalidades: ['15k', '7k'],
+    percursos: [{ nome: '15k', preco: 120 }, { nome: '7k', preco: 60 }],
     usaChip: false, qtdInscritos: 1, receitaConfirmada: 120,
     criadoEm: now, atualizadoEm: now,
+  });
+  batch.set(vendidoRef.collection('lotes').doc('15k-l1'), {
+    id: '15k-l1', tenantId: CASTELO_ID, modalidade: '15k', ordem: 1, nome: 'Lote 1',
+    inicioEm: tsRel(-2), fimEm: tsRel(20), quantidadeLimite: 100, preco: 120,
+    vendidos: 1, criadoEm: now, atualizadoEm: now,
+  });
+  batch.set(vendidoRef.collection('inscritos').doc('inscrito-vivo'), {
+    id: 'inscrito-vivo', tenantId: CASTELO_ID, eventoId: EVENTO_VENDIDO_ID,
+    nome: 'Ana Souza', email: 'ana@exemplo.com', modalidade: '15k',
+    status: 'confirmado', criadoEm: now, atualizadoEm: now,
   });
 
   await batch.commit();
@@ -213,8 +244,8 @@ describe('S316-T2 · renomear é migração atômica de cinco referências (RN-5
   });
 });
 
-describe('S316-T1 · a fronteira temporal e a Rule que a Function reimplementa', () => {
-  it('evento SEM venda aceita as três operações', async () => {
+describe('S316-T1 · a fronteira nova (RN-578) e as Rules que a acompanham', () => {
+  it('evento SEM venda aceita as operações estruturais', async () => {
     await expect(
       editarModalidadesEventoCore(
         adminDb,
@@ -224,15 +255,14 @@ describe('S316-T1 · a fronteira temporal e a Rule que a Function reimplementa',
     ).resolves.toMatchObject({ alterado: true });
   });
 
-  it('⛔ evento COM venda é recusado NA FUNCTION (o Admin SDK não passa pela Rule)', async () => {
-    await expect(
-      editarModalidadesEventoCore(
-        adminDb,
-        { eventoId: EVENTO_VENDIDO_ID, operacao: 'acrescentar', modalidade: '30k', motivo: 'tentando' },
-        OWNER,
-      ),
-    ).rejects.toThrow(/congelada/);
-    expect((await eventoDoc(EVENTO_VENDIDO_ID)).get('modalidades')).toEqual(['15k']);
+  it('✅ B1: acrescentar PASSA em evento COM venda — a RN-500 foi revogada (V2708-25)', async () => {
+    const r = await editarModalidadesEventoCore(
+      adminDb,
+      { eventoId: EVENTO_VENDIDO_ID, operacao: 'acrescentar', modalidade: '30k' },
+      OWNER,
+    );
+    expect(r.alterado).toBe(true);
+    expect((await eventoDoc(EVENTO_VENDIDO_ID)).get('modalidades')).toEqual(['15k', '7k', '30k']);
   });
 
   it('A4: o cliente escrevendo `modalidades` direto é negado pela Rule quando há venda', async () => {
@@ -249,6 +279,23 @@ describe('S316-T1 · a fronteira temporal e a Rule que a Function reimplementa',
     // Com venda: negada.
     await assertFails(
       updateDoc(doc(db, 'eventos', EVENTO_VENDIDO_ID), { modalidades: ['15k', '30k'] }),
+    );
+  });
+
+  it('⛔ A4b (RN-578): o ESTADO da modalidade é negado ao cliente SEMPRE — até sem venda', async () => {
+    const ctx = testEnv.authenticatedContext(MARINA_UID, {
+      role: 'tenant_owner',
+      tenantId: CASTELO_ID,
+    });
+    const db = ctx.firestore();
+    // O evento SEM venda passa em `percursosEditaveis`; o que barra é a
+    // `estadoModalidadesIntocado` — quem escreve estes arrays decide venda
+    // (o checkout recusa modalidade não-ativa), então só a Function escreve.
+    await assertFails(
+      updateDoc(doc(db, 'eventos', EVENTO_ID), { modalidadesInativas: ['21k'] }),
+    );
+    await assertFails(
+      updateDoc(doc(db, 'eventos', EVENTO_ID), { modalidadesOcultas: ['21k'] }),
     );
   });
 
@@ -302,5 +349,174 @@ describe('S316-T3 · remover recusa nomeando quem impede (RN-502)', () => {
     );
     expect(r.modalidades).toEqual(['5k']);
     expect((await eventoDoc()).get('percursos')).toEqual([{ nome: '5k', preco: 0 }]);
+  });
+});
+
+// ===========================================================================
+// B · AS PROVAS DA RN-578 — o vendido sobrevive, a venda nova é recusada
+// ===========================================================================
+
+describe('RN-578 · inativar/ocultar não tocam o vendido, e a compra nova morre na porta', () => {
+  const inscritoPath = `eventos/${EVENTO_VENDIDO_ID}/inscritos/inscrito-vivo`;
+  const lotePath = `eventos/${EVENTO_VENDIDO_ID}/lotes/15k-l1`;
+
+  it('⛔ B2: inativar modalidade VENDIDA não muda NENHUM byte do inscrito nem do lote', async () => {
+    const inscritoAntes = await adminDb.doc(inscritoPath).get();
+    const loteAntes = await adminDb.doc(lotePath).get();
+
+    const r = await editarModalidadesEventoCore(
+      adminDb,
+      { eventoId: EVENTO_VENDIDO_ID, operacao: 'inativar', modalidade: '15k' },
+      OWNER,
+    );
+    expect(r.alterado).toBe(true);
+    expect(r.modalidadesInativas).toEqual(['15k']);
+
+    // O VENDIDO SOBREVIVE: doc do inscrito e do lote byte a byte iguais —
+    // dados E updateTime (nenhuma escrita passou por eles).
+    const inscritoDepois = await adminDb.doc(inscritoPath).get();
+    const loteDepois = await adminDb.doc(lotePath).get();
+    expect(inscritoDepois.data()).toEqual(inscritoAntes.data());
+    expect(inscritoDepois.updateTime?.isEqual(inscritoAntes.updateTime!)).toBe(true);
+    expect(loteDepois.data()).toEqual(loteAntes.data());
+    expect(loteDepois.updateTime?.isEqual(loteAntes.updateTime!)).toBe(true);
+    // A lista e os contadores do evento também não se movem.
+    const ev = await eventoDoc(EVENTO_VENDIDO_ID);
+    expect(ev.get('modalidades')).toEqual(['15k', '7k']);
+    expect(ev.get('qtdInscritos')).toBe(1);
+    expect(ev.get('receitaConfirmada')).toBe(120);
+  });
+
+  it('⛔ B2: a compra NOVA da modalidade inativa é RECUSADA pela porta do checkout', async () => {
+    // Antes de inativar, a cotação passa (o lote 15k está vigente).
+    await expect(
+      cotarInscricaoCheckoutCore(adminDb, {
+        eventoId: EVENTO_VENDIDO_ID,
+        itens: [{ modalidade: '15k' }],
+        forma: 'pix',
+        parcelas: 1,
+      }),
+    ).resolves.toMatchObject({ valorFinal: 120 });
+
+    await editarModalidadesEventoCore(
+      adminDb,
+      { eventoId: EVENTO_VENDIDO_ID, operacao: 'inativar', modalidade: '15k' },
+      OWNER,
+    );
+
+    // Depois: a MESMA porta que o createInscricaoCharge usa (`carregarInsumos`)
+    // recusa — fail-closed, com a frase única que não vaza vocabulário.
+    await expect(
+      cotarInscricaoCheckoutCore(adminDb, {
+        eventoId: EVENTO_VENDIDO_ID,
+        itens: [{ modalidade: '15k' }],
+        forma: 'pix',
+        parcelas: 1,
+      }),
+    ).rejects.toThrow(/não está disponível para novas inscrições/);
+
+    // OCULTAR recusa igual (uma frase para os dois estados).
+    await editarModalidadesEventoCore(
+      adminDb,
+      { eventoId: EVENTO_VENDIDO_ID, operacao: 'ocultar', modalidade: '15k' },
+      OWNER,
+    );
+    await expect(
+      cotarInscricaoCheckoutCore(adminDb, {
+        eventoId: EVENTO_VENDIDO_ID,
+        itens: [{ modalidade: '15k' }],
+        forma: 'pix',
+        parcelas: 1,
+      }),
+    ).rejects.toThrow(/não está disponível para novas inscrições/);
+
+    // REATIVAR reabre a venda sem migração nenhuma.
+    await editarModalidadesEventoCore(
+      adminDb,
+      { eventoId: EVENTO_VENDIDO_ID, operacao: 'reativar', modalidade: '15k' },
+      OWNER,
+    );
+    await expect(
+      cotarInscricaoCheckoutCore(adminDb, {
+        eventoId: EVENTO_VENDIDO_ID,
+        itens: [{ modalidade: '15k' }],
+        forma: 'pix',
+        parcelas: 1,
+      }),
+    ).resolves.toMatchObject({ valorFinal: 120 });
+  });
+
+  it('⛔ B3: renomear e remover modalidade VENDIDA são recusados; a sem-venda segue livre', async () => {
+    await expect(
+      editarModalidadesEventoCore(
+        adminDb,
+        { eventoId: EVENTO_VENDIDO_ID, operacao: 'renomear', modalidade: '15k', novoNome: 'Trail 15' },
+        OWNER,
+      ),
+    ).rejects.toThrow(/já tem inscrição registrada/);
+    await expect(
+      editarModalidadesEventoCore(
+        adminDb,
+        { eventoId: EVENTO_VENDIDO_ID, operacao: 'remover', modalidade: '15k' },
+        OWNER,
+      ),
+    ).rejects.toThrow(/já tem inscrição registrada/);
+    // O vendido continua lá, intacto.
+    expect((await adminDb.doc(inscritoPath).get()).get('modalidade')).toBe('15k');
+
+    // A 7k do MESMO evento nunca vendeu: renomeia e some normalmente — a
+    // fronteira é da MODALIDADE, não do evento.
+    await expect(
+      editarModalidadesEventoCore(
+        adminDb,
+        { eventoId: EVENTO_VENDIDO_ID, operacao: 'renomear', modalidade: '7k', novoNome: 'Kids 7k' },
+        OWNER,
+      ),
+    ).resolves.toMatchObject({ alterado: true });
+    await expect(
+      editarModalidadesEventoCore(
+        adminDb,
+        { eventoId: EVENTO_VENDIDO_ID, operacao: 'remover', modalidade: 'Kids 7k' },
+        OWNER,
+      ),
+    ).resolves.toMatchObject({ alterado: true });
+    expect((await eventoDoc(EVENTO_VENDIDO_ID)).get('modalidades')).toEqual(['15k']);
+  });
+});
+
+// ===========================================================================
+// C · A PROVA DA RN-579 — a data final do lote vendido é editável (Rules)
+// ===========================================================================
+
+describe('RN-579 · lote vendido: fimEm editável pelo cliente; início/preço seguem congelados', () => {
+  it('C1: update que toca SÓ fimEm passa; inicioEm e preco são negados', async () => {
+    const ctx = testEnv.authenticatedContext(MARINA_UID, {
+      role: 'tenant_owner',
+      tenantId: CASTELO_ID,
+    });
+    const db = ctx.firestore();
+    const loteRef = doc(db, 'eventos', EVENTO_VENDIDO_ID, 'lotes', '15k-l1');
+    const fimNovo = ClientTimestamp.fromDate(new Date(Date.now() + 40 * DIA_MS));
+
+    // A data final move — "o planejamento do organizador pode mudar com o
+    // tempo" (verbatim, V2708-27).
+    await assertSucceeds(updateDoc(loteRef, { fimEm: fimNovo }));
+
+    // Início congelado: a venda aconteceu sob ele.
+    await assertFails(
+      updateDoc(loteRef, {
+        inicioEm: ClientTimestamp.fromDate(new Date(Date.now() - 10 * DIA_MS)),
+      }),
+    );
+    // Preço congelado (RN-200) e vaga só pela porta auditada (RN-304).
+    await assertFails(updateDoc(loteRef, { preco: 150 }));
+    await assertFails(updateDoc(loteRef, { quantidadeLimite: 500 }));
+
+    // fim ≤ início continua impossível: o shape valida o doc RESULTANTE.
+    await assertFails(
+      updateDoc(loteRef, {
+        fimEm: ClientTimestamp.fromDate(new Date(Date.now() - 3 * DIA_MS)),
+      }),
+    );
   });
 });

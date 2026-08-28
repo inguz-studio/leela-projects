@@ -65,8 +65,12 @@ export interface AjustarCapacidadeLoteInput {
   eventoId: string;
   loteId: string;
   novaCapacidade: number;
-  /** Motivo do ajuste (auditoria — obrigatório, 3–500 caracteres). */
-  motivo: string;
+  /**
+   * Motivo do ajuste — OPCIONAL desde 28/08 (V2708-26: o dono cortou a
+   * exigência de motivo dos fluxos do organizador). Grava se vier (teto 500);
+   * a trilha (RN-304) continua registrando quem/quando/de→para.
+   */
+  motivo?: string;
 }
 
 export interface AjustarCapacidadeLoteResult {
@@ -79,7 +83,6 @@ export interface AjustarCapacidadeLoteResult {
   capacidade: CapacidadeLote;
 }
 
-export const MOTIVO_AJUSTE_MIN = 3;
 export const MOTIVO_AJUSTE_MAX = 500;
 
 /** Tipo do registro de auditoria deste fluxo (discriminador na coleção). */
@@ -113,11 +116,14 @@ export function validarAjustarCapacidadeInput(raw: unknown): string[] {
   if (typeof cap !== 'number' || !Number.isInteger(cap)) {
     erros.push('"novaCapacidade" deve ser inteiro.');
   }
+  // Motivo OPCIONAL (V2708-26): ausente/vazio passa; presente tem teto e tipo.
   const motivo = input['motivo'];
-  if (typeof motivo !== 'string' || motivo.trim().length < MOTIVO_AJUSTE_MIN) {
-    erros.push(`"motivo" é obrigatório (mínimo ${MOTIVO_AJUSTE_MIN} caracteres — auditoria).`);
-  } else if (motivo.trim().length > MOTIVO_AJUSTE_MAX) {
-    erros.push(`"motivo" excede ${MOTIVO_AJUSTE_MAX} caracteres.`);
+  if (motivo !== undefined && motivo !== null) {
+    if (typeof motivo !== 'string') {
+      erros.push('"motivo", quando presente, deve ser texto.');
+    } else if (motivo.trim().length > MOTIVO_AJUSTE_MAX) {
+      erros.push(`"motivo" excede ${MOTIVO_AJUSTE_MAX} caracteres.`);
+    }
   }
   return erros;
 }
@@ -142,6 +148,8 @@ export async function ajustarCapacidadeLoteCore(
     );
   }
   const input = rawInput as unknown as AjustarCapacidadeLoteInput;
+  // Motivo OPCIONAL (V2708-26): normalizado uma vez; vazio = ausente.
+  const motivoTrim = typeof input.motivo === 'string' ? input.motivo.trim() : '';
 
   await assertTenantAtivo(db, tenantId);
 
@@ -241,7 +249,9 @@ export async function ajustarCapacidadeLoteCore(
         loteId: input.loteId,
         de: resultado.capacidadeAnterior,
         para: input.novaCapacidade,
-        motivo: input.motivo.trim(),
+        // Motivo entra QUANDO VEIO (V2708-26) — a trilha continua dizendo
+        // quem, quando e de→para, que é o que ela precisa saber.
+        ...(motivoTrim.length > 0 ? { motivo: motivoTrim } : {}),
         uid: caller.uid,
         papel: caller.claims.role ?? 'desconhecido',
         em: FieldValue.serverTimestamp(),
@@ -266,7 +276,7 @@ export async function ajustarCapacidadeLoteCore(
     de: resultado.capacidadeAnterior,
     para: input.novaCapacidade,
     alterado: resultado.alterado,
-    motivo: input.motivo.trim(),
+    ...(motivoTrim.length > 0 ? { motivo: motivoTrim } : {}),
     uid: caller.uid,
     papel: caller.claims.role ?? 'desconhecido',
   });

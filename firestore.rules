@@ -592,6 +592,22 @@ service cloud.firestore {
       }
 
       /**
+       * RN-578 (28/08): o ESTADO das modalidades (inativa/oculta) é escrita
+       * EXCLUSIVA de Function (`editarModalidadesEvento`, owner-only). Cliente
+       * mudando estado abriria/fecharia venda sem a porta autenticada — e o
+       * checkout recusa modalidade não-ativa (fail-closed), então quem escreve
+       * estes arrays decide venda. Create: não nascem; update: intocados.
+       */
+      function estadoModalidadesNaoNasce() {
+        return !('modalidadesInativas' in request.resource.data)
+          && !('modalidadesOcultas' in request.resource.data);
+      }
+      function estadoModalidadesIntocado() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['modalidadesInativas', 'modalidadesOcultas']);
+      }
+
+      /**
        * FABLE-F-T1: cronograma de entrega — quando presente, é LISTA com no
        * máximo 30 janelas (JANELAS_ENTREGA_MAX do core — anti doc-bomba).
        * Shape fino por janela (dia ISO, HH:mm, fim > início) vive no core
@@ -747,6 +763,7 @@ service cloud.firestore {
                         && tenantAtivo(request.resource.data.tenantId)
                         && eventoAgregadosZerados()
                         && statusNasceRascunho()
+                        && estadoModalidadesNaoNasce()
                         && janelasEntregaValidas()
                         && faixaChipsValida()
                         && capaValida()
@@ -762,6 +779,7 @@ service cloud.firestore {
                         && eventoAgregadosIntocados()
                         && statusIntocado()
                         && percursosEditaveis()
+                        && estadoModalidadesIntocado()
                         && janelasEntregaValidas()
                         && faixaChipsValida()
                         && capaValida()
@@ -1068,10 +1086,11 @@ service cloud.firestore {
       // isolado, não reescrita de doc gordo do evento.
       //
       // `vendidos` = ∑ de escrita EXCLUSIVA de Function: create exige 0/ausente,
-      // update não o toca. RN-300/200 (registrado): preço/janela/vaga/ordem/
-      // modalidade CONGELAM após a 1ª venda DO PRÓPRIO LOTE (vendidos > 0) — a
-      // trava é per-lote (granularidade ADR-012 (modalidade, lote)), mais
-      // precisa que o ∑ do evento; espelha a semântica de `percursosEditaveis`.
+      // update não o toca. RN-300/200 + RN-579 (registrado): preço/início/vaga/
+      // ordem/modalidade CONGELAM após a 1ª venda DO PRÓPRIO LOTE (vendidos >
+      // 0) — a DATA FINAL (`fimEm`) não congela mais (RN-579, decisão do dono
+      // de 28/08). A trava é per-lote (granularidade ADR-012 (modalidade,
+      // lote)), mais precisa que o ∑ do evento; espelha `percursosEditaveis`.
       // Leitura PÚBLICA do preço no checkout fica para a story de compra
       // (E12/S300 checkout), com teste — deny-by-default até lá (precedente do
       // TODO de leitura pública de eventos). Aqui: membro do tenant lê.
@@ -1201,11 +1220,21 @@ service cloud.firestore {
          * Lote com venda (vendidos > 0) CONGELA os campos comerciais para o
          * cliente (RN-200/300 na granularidade (modalidade, lote) — ADR-012).
          * Sem venda, tudo editável. Ajustes pós-venda = Function/platform_admin.
+         *
+         * RN-579 (28/08, decisão do dono V2708-27): `fimEm` SAIU da lista —
+         * a data final é editável mesmo em lote iniciado e vendido ("o
+         * planejamento do organizador pode mudar com o tempo"). O shape
+         * (`fimEm > inicioEm`) continua valendo sobre o doc RESULTANTE do
+         * merge, então janela negativa segue impossível. Permanecem
+         * congelados: `inicioEm` (a venda aconteceu sob aquele início —
+         * movê-lo reescreveria a história do vendido), `preco` (RN-200),
+         * `ordem` e `modalidade`; `quantidadeLimite` tem a porta auditada
+         * da RN-304 (`ajustarCapacidadeLote`).
          */
         function loteComercialImutavelSeVendido() {
           return resource.data.get('vendidos', 0) == 0
             || !request.resource.data.diff(resource.data).affectedKeys()
-                .hasAny(['preco', 'inicioEm', 'fimEm', 'quantidadeLimite',
+                .hasAny(['preco', 'inicioEm', 'quantidadeLimite',
                          'ordem', 'modalidade']);
         }
 

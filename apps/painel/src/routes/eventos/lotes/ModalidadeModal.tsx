@@ -1,30 +1,31 @@
 // =============================================================================
 // ModalidadeModal — acrescentar e renomear modalidade (S316-T4 · E04 ·
-// RN-500/RN-501).
+// RN-578/RN-501 — a RN-500 foi revogada pelo dono em 28/08).
 //
-// Um modal para as duas operações porque a forma é a mesma: um nome, um motivo
-// e uma confirmação que nomeia a consequência ANTES do gesto (requisito de
-// tela da RN-500 para evento publicado). O que muda é o título, a copy e o que
-// o kernel valida.
+// Um modal para as duas operações porque a forma é a mesma: um nome e uma
+// confirmação que nomeia a consequência ANTES do gesto (requisito de tela
+// herdado da RN-500, que sobrevive à revogação). O que muda é o título, a
+// copy e o que o kernel valida. ⛔ SEM campo de motivo desde 28/08 (V2708-26):
+// o dono cortou a exigência de motivo dos fluxos do organizador — o servidor
+// o trata como opcional e a UI não pergunta.
 //
 // A validação client-side é o MESMO kernel do servidor (`@leela/core` →
 // `validarAcrescentarModalidade` / `validarRenomearModalidade`). O callable é
 // a autoridade; isto aqui só evita a ida ao servidor por um nome vazio ou
 // duplicado, e garante que a frase que o organizador lê seja a mesma dos dois
-// lados.
+// lados. A fronteira POR MODALIDADE da RN-578 (renomear só sem venda) é do
+// servidor — a recusa dele chega intacta ao campo.
 //
 // ⛔ A recusa do servidor vira ERRO DE FORMULÁRIO ancorado no campo, com o
 // modal ABERTO. É a lição da SEAL-LOTES (`2a97a592`): recusa que vira "falha
 // ao salvar" e fecha a tela é a mesma queixa do dono num lugar novo.
 //
 // As sugestões (5k, 10k, 21k, 42k) são as MESMAS da criação do evento —
-// `SUGESTOES_MODALIDADE_EVENTO`, movida para o core nesta lane. Isso é uma das
-// "três línguas" que a onda A adiou de propósito para cá: criação, esta tela e
-// o editor de kit falavam de modalidade cada uma do seu jeito.
+// `SUGESTOES_MODALIDADE_EVENTO` (fonte única no core).
 // =============================================================================
 
 import * as React from 'react';
-import { Alert, Button, Chip, Input, Modal, Stack, Textarea } from '@leela/design-system';
+import { Alert, Button, Chip, Input, Modal, Stack } from '@leela/design-system';
 import {
   MODALIDADE_NOME_MAX,
   SUGESTOES_MODALIDADE_EVENTO,
@@ -32,12 +33,7 @@ import {
   validarAcrescentarModalidade,
   validarRenomearModalidade,
 } from '@leela/core';
-import {
-  MOTIVO_MODALIDADE_MAX,
-  MOTIVO_MODALIDADE_MIN,
-  consequenciasDeRenomear,
-  mensagemErroModalidade,
-} from './_lib/modalidadeForm';
+import { consequenciasDeRenomear, mensagemErroModalidade } from './_lib/modalidadeForm';
 
 export type ModoModalidade = 'acrescentar' | 'renomear';
 
@@ -49,10 +45,10 @@ export interface ModalidadeModalProps {
   modalidades: readonly string[];
   /** Nome atual, só em `renomear`. */
   modalidadeAtual?: string;
-  /** O evento está publicado? Muda a copy da consequência (RN-500). */
+  /** O evento está publicado? Muda a copy da consequência. */
   publicado: boolean;
   /** Executa a operação pela porta única. Resolve → fecha; rejeita → erro no campo. */
-  onConfirmar: (nome: string, motivo: string) => Promise<void>;
+  onConfirmar: (nome: string) => Promise<void>;
 }
 
 export function ModalidadeModal({
@@ -65,14 +61,12 @@ export function ModalidadeModal({
   onConfirmar,
 }: ModalidadeModalProps): JSX.Element {
   const [nome, setNome] = React.useState('');
-  const [motivo, setMotivo] = React.useState('');
   const [erroServidor, setErroServidor] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) return;
     setNome(modo === 'renomear' ? modalidadeAtual : '');
-    setMotivo('');
     setErroServidor(null);
   }, [open, modo, modalidadeAtual]);
 
@@ -85,10 +79,7 @@ export function ModalidadeModal({
   // quando ela tem o que explicar, não como boas-vindas.
   const erroCampo = nome.length === 0 ? null : (erroServidor ?? erroKernel);
 
-  const motivoTrim = motivo.trim();
-  const motivoValido =
-    motivoTrim.length >= MOTIVO_MODALIDADE_MIN && motivoTrim.length <= MOTIVO_MODALIDADE_MAX;
-  const podeConfirmar = limpo.length > 0 && erroKernel === null && motivoValido && !busy;
+  const podeConfirmar = limpo.length > 0 && erroKernel === null && !busy;
 
   const disponiveis = SUGESTOES_MODALIDADE_EVENTO.filter((s) => !modalidades.includes(s));
   const consequencias = consequenciasDeRenomear(publicado);
@@ -98,7 +89,7 @@ export function ModalidadeModal({
     setBusy(true);
     setErroServidor(null);
     try {
-      await onConfirmar(limpo, motivoTrim);
+      await onConfirmar(limpo);
       onOpenChange(false);
     } catch (err) {
       // A recusa do servidor chega INTACTA ao campo, com o modal aberto.
@@ -200,21 +191,6 @@ export function ModalidadeModal({
             </Stack>
           </Alert>
         ) : null}
-
-        <Textarea
-          id="modalidade-motivo"
-          label="Motivo"
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          rows={3}
-          maxLength={MOTIVO_MODALIDADE_MAX}
-          placeholder={
-            modo === 'acrescentar'
-              ? 'Ex.: faltou a distância de 10k no cadastro.'
-              : 'Ex.: o nome comercial da prova mudou.'
-          }
-        />
-        {/* V2708-09: hint de "mínimo N caracteres" removido. */}
       </div>
     </Modal>
   );

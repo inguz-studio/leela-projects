@@ -40,6 +40,7 @@ import {
   parseKit,
   parseLote,
   parsePaginaVendas,
+  modalidadesOfertaveis,
   modalidadesVitrine,
   politicaVendasPadrao,
   precoVitrine,
@@ -438,9 +439,21 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
     const dataEvento = dataRaw.toDate();
     const agora = agoraDoServidor();
 
-    const modalidadesNomes = Array.isArray(data['modalidades'])
-      ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
-      : [];
+    // RN-578: a vitrine pública só OFERTA modalidade ATIVA — inativa (venda
+    // suspensa) e oculta somem da página, do checkout e da descrição, com o
+    // filtro do kernel (`modalidadesOfertaveis`). O vendido não é tocado: o
+    // ingresso/área do cliente leem o INSCRITO, nunca esta lista. O servidor
+    // recusa por conta própria (fail-closed no createInscricaoCharge) — isto
+    // aqui só evita oferecer o que ele vai recusar.
+    const lerNomes = (raw: unknown): string[] =>
+      Array.isArray(raw)
+        ? (raw as unknown[]).filter((m): m is string => typeof m === 'string')
+        : [];
+    const modalidadesNomes = modalidadesOfertaveis(
+      lerNomes(data['modalidades']),
+      lerNomes(data['modalidadesInativas']),
+      lerNomes(data['modalidadesOcultas']),
+    );
 
     const [
       lotesPorModalidade,
@@ -585,9 +598,17 @@ async function montarResumoEvento(
   if (!ehTimestamp(dataRaw)) return null;
   const dataEvento = dataRaw.toDate();
 
-  const modalidadesNomes = Array.isArray(data['modalidades'])
-    ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
-    : [];
+  // RN-578: o card da home usa a MESMA régua da página do evento — modalidade
+  // inativa/oculta não é ofertada em superfície pública nenhuma.
+  const lerNomes = (raw: unknown): string[] =>
+    Array.isArray(raw)
+      ? (raw as unknown[]).filter((m): m is string => typeof m === 'string')
+      : [];
+  const modalidadesNomes = modalidadesOfertaveis(
+    lerNomes(data['modalidades']),
+    lerNomes(data['modalidadesInativas']),
+    lerNomes(data['modalidadesOcultas']),
+  );
 
   const lotesPorModalidade = await lerLotesPorModalidade(db, doc.id);
   // VITRINE-FIX: o card da home usa a MESMA régua da página do evento — sem
