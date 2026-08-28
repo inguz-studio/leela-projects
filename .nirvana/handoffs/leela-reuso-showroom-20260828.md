@@ -54,6 +54,37 @@ Preserva todas as regras do REFACTOR item 8:
 - Família tipográfica declarada no PopoverContent
 - Nome acessível cita o título do bloco
 
+#### Fronteira técnica (painel-local) — revisão do maestro em 28/08
+
+`AjudaDoBloco` fica em `apps/painel/` por três razões técnicas declaradas:
+
+**1. Porto de comportamento, não padrão novo.**  
+O `Popover + HelpCircle + IconButton` já existia dentro de `SecaoHead.tsx`
+antes desta lane. Esta extração é reorganização de código pré-existente aprovado
+de fato pelo uso em produção. Nenhum padrão de ajuda novo foi introduzido.
+
+**2. ADR-017 / server-safe — o slot `help` é livre por design.**  
+O `SectionHeader.tsx` do DS declara explicitamente: *"O que é INTERATIVO mora
+fora, em slot: `help` recebe o gatilho de ajuda… Assim o componente permanece
+puro — sem hook, sem Radix — e entra na entrada server-safe do ADR-017."*
+Mover `AjudaDoBloco` ao DS vincularia um componente Radix-dependente ao
+namespace de `SectionHeader`, quebrando essa garantia. Cada produto mantém
+sua própria implementação do slot `help`.
+
+**3. Convenção de nomes.**  
+O DS usa nomes em inglês (Button, Popover, SectionHeader). `AjudaDoBloco`
+segue a convenção PT-BR do painel. Uma migração ao DS exigiria renomear para
+`HelpPopover` ou `SectionHelpPopover` — outra peça, não a mesma — e a decisão
+de criar esse canônico no DS não foi tomada pelo dono nesta onda.
+
+**Precedente:** TerciarioNav (`apps/painel/src/components/nav/`) é a referência
+anterior de componente painel-local com fronteira técnica declarada.
+
+**Cobertura:** 4 testes em `__tests__/AjudaDoBloco.test.tsx` validam portal,
+aria-label, estado inicial fechado e font-family declarada. O contador
+`componente-sem-story.ds` não contabiliza componentes de painel — esse é o
+comportamento correto: o contador mede cobertura do DS, não do produto.
+
 ### Arquivos deletados
 
 - `apps/painel/src/components/SecaoHead.tsx`
