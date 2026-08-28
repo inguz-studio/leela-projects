@@ -104,7 +104,11 @@ async function main(): Promise<void> {
   }
 
   if (!admin.apps.length) {
-    admin.initializeApp({ projectId: 'demo-leela' });
+    // GCLOUD_PROJECT permite a uma lane semear o SEU emulador (bloco de
+    // portas + projeto próprios) sem colidir com o hub do demo-leela de um
+    // mock vizinho — mesmo padrão do preview-seed-clubes/extra. Default
+    // inalterado.
+    admin.initializeApp({ projectId: process.env['GCLOUD_PROJECT'] ?? 'demo-leela' });
   }
   const db = admin.firestore();
   const auth = admin.auth();
