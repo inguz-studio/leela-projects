@@ -17,10 +17,17 @@
 // item no escopo da foto da conta (S-R9-07 / DECISOES-ABERTAS). Validação de
 // tipo/tamanho no cliente é UX (`problemaDoArquivoImagem`); a fronteira real
 // são as storage.rules (ADR-016).
+//
+// V2708-03 (fase 2) · TERCIÁRIO em modo ÂNCORA — as 6 seções são partes da
+// mesma coisa (configurações do indivíduo), não destinos de rota distintos.
+// Critério da RN-574 emendada: seções da mesma coisa → âncora com scroll spy.
+// O TerciarioLayout (25/75) aparece só no estado autenticado carregado; os
+// estados de loading e erro de autenticação continuam sem o layout terciário
+// (não faz sentido oferecer navegação de seções sem conteúdo).
 // =============================================================================
 
 import * as React from 'react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, Button, FileInput, Input, InputSenha, useToast } from '@leela/design-system';
 import {
@@ -36,9 +43,24 @@ import { AuthAlert } from '../auth/AuthAlert';
 import { mensagemErroTrocaSenha } from '../auth/_lib/authErrors';
 import { useContaUsuario } from './useContaUsuario';
 import { useSair } from '@/shell/sair';
+import { TerciarioLayout, TerciarioNav, type TerciarioItem } from '@/components/nav/TerciarioNav';
 
 const SECAO = 'flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]';
 const SECAO_TITULO = 'text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]';
+
+type ContaSecaoId = 'perfil' | 'foto-perfil' | 'perfil-publico' | 'dados-recebimento' | 'trocar-senha' | 'sessao';
+
+const SECOES_CONTA: Array<{ id: ContaSecaoId; label: string }> = [
+  { id: 'perfil', label: 'Perfil' },
+  { id: 'foto-perfil', label: 'Foto de perfil' },
+  { id: 'perfil-publico', label: 'Perfil público' },
+  { id: 'dados-recebimento', label: 'Dados de recebimento' },
+  // Label "Senha" e não "Trocar senha" para não colidir com o texto do botão de
+  // submit do formulário — teste `getByRole('button', { name: 'Trocar senha' })`
+  // seria ambíguo se o item do menu tivesse o mesmo rótulo.
+  { id: 'trocar-senha', label: 'Senha' },
+  { id: 'sessao', label: 'Sessão' },
+];
 
 /** URL http(s) válida? Só decide se mostra a prévia da imagem (mesma do perfil público). @pure */
 function urlDeImagemValida(valor: string): boolean {
@@ -70,6 +92,35 @@ export function ContaPage({ recebimento }: ContaPageProps = {}): JSX.Element {
   // Deixou de ser a ÚNICA saída de logout na Leva 16 — o popover do perfil
   // oferece a mesma ação, e as duas leem esta implementação (`useSair`).
   const { sair, saindo } = useSair();
+
+  // Âncora: qual seção está visível (a mesma mecânica de ConfiguracoesView do
+  // clube — IntersectionObserver em cada section, no-op em jsdom).
+  const [ativa, setAtiva] = useState<ContaSecaoId>('perfil');
+  const refs = useRef<Partial<Record<ContaSecaoId, HTMLElement>>>({});
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visivel = entries.find((e) => e.isIntersecting);
+        if (visivel) {
+          const id = visivel.target.id.replace('conta-', '') as ContaSecaoId;
+          setAtiva(id);
+        }
+      },
+      { rootMargin: '-40% 0px -55% 0px' },
+    );
+    Object.values(refs.current).forEach((el) => el && obs.observe(el));
+    return () => obs.disconnect();
+  }, [loading, user]);
+
+  function irPara(id: ContaSecaoId): void {
+    setAtiva(id);
+    const el = refs.current[id];
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 
   // Nome: null enquanto não editado → cai no displayName atual (lida com o load
   // assíncrono da sessão sem useEffect de sincronização).
@@ -196,149 +247,190 @@ export function ContaPage({ recebimento }: ContaPageProps = {}): JSX.Element {
     }
   }
 
+  const itensDoMenu: TerciarioItem[] = SECOES_CONTA.map((s) => ({
+    id: s.id,
+    label: s.label,
+    active: ativa === s.id,
+    onClick: () => irPara(s.id),
+  }));
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
-      <header>
-        <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Sua conta
-        </h1>
-        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Dados pessoais e acesso. As configurações do organizador e dos eventos ficam em áreas
-          próprias.
-        </p>
-      </header>
-
-      {/* Perfil */}
-      <form className={SECAO} onSubmit={(e) => void salvarNome(e)} aria-label="Perfil">
-        <span className={SECAO_TITULO}>Perfil</span>
-        <Input
-          id="conta-nome"
-          label="Nome"
-          type="text"
-          autoComplete="name"
-          value={nome}
-          onChange={(e) => setNomeEditado(e.target.value)}
-        />
-        <Input id="conta-email" label="E-mail" type="email" value={user.email ?? ''} readOnly disabled />
-        <div>
-          <Button type="submit" variant="primary" disabled={!podeSalvarNome}>
-            {salvandoNome ? 'Salvando…' : 'Salvar'}
-          </Button>
-        </div>
-      </form>
-
-      {/* Foto de perfil (S020-T5 + LEELA-R5 + RN-168) — upload-only via Storage;
-          persiste na hora e reflete no Avatar do rodapé. O "cole uma URL" foi
-          removido (S-R9-07; supersede ADR-016 item 5 na conta). */}
-      <section className={SECAO} aria-label="Foto de perfil">
-        <span className={SECAO_TITULO}>Foto de perfil</span>
-        <div className="flex items-center gap-[var(--spacing-4)]">
-          <Avatar size="lg" name={nome || (user.email ?? 'Você')} {...(urlDeImagemValida(fotoUrl) ? { src: fotoUrl.trim() } : {})} />
-          <div className="flex flex-1 flex-col gap-[var(--spacing-3)]">
-            <FileInput
-              id="conta-foto-arquivo"
-              label="Enviar foto"
-              buttonLabel={urlDeImagemValida(fotoUrl) ? 'Trocar foto' : 'Escolher arquivo'}
-              busy={enviandoFoto}
-              hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Ajustada para 1:1 e atualizada na hora."
-              {...(erroUploadFoto ? { errorMessage: erroUploadFoto } : {})}
-              onFileSelected={(file) => void enviarFoto(file)}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Perfil público / link-in-bio (DN-1-T1 · E17) — editor separado */}
-      <section className={SECAO} aria-label="Perfil público">
-        <span className={SECAO_TITULO}>Perfil público</span>
-        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Seu link-in-bio (@handle) reúne seus eventos e clubs num endereço único e compartilhável.
-        </p>
-        <div>
-          <Button asChild variant="secondary">
-            <Link to="/conta/perfil-publico">Editar perfil público</Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Dados de recebimento (RN-366 · IAM-T5) — cadastro ÚNICO do titular.
-          Mora aqui, e não dentro de Repasses, porque dado bancário é do
-          organizador e não da origem do dinheiro: quando o clube pago trouxer
-          a segunda origem, não há titular duplicado para reconciliar. O saque
-          continua acontecendo na origem, sobre o saldo único (RN-334). */}
-      {recebimento ? (
-        <section className={SECAO} aria-label="Dados de recebimento">
-          <span className={SECAO_TITULO}>Dados de recebimento</span>
+    <TerciarioLayout nav={<TerciarioNav itens={itensDoMenu} aria-label="Seções da conta" />}>
+      <div className="flex flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
+        <header>
+          <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            Sua conta
+          </h1>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-            A conta que recebe seus repasses. Vale para todos os seus eventos — você solicita o
-            repasse em Eventos › Repasses.
+            Dados pessoais e acesso. As configurações do organizador e dos eventos ficam em áreas
+            próprias.
           </p>
-          {recebimento}
-        </section>
-      ) : null}
+        </header>
 
-      {/* Troca de senha (reauth obrigatória) */}
-      <form className={SECAO} onSubmit={(e) => void trocarSenhaSubmit(e)} aria-label="Trocar senha">
-        <span className={SECAO_TITULO}>Trocar senha</span>
-        {erroSenha ? <AuthAlert message={erroSenha} /> : null}
-        {/* Senha ATUAL sem medidor: ela é credencial de reauth, não senha em
-            construção. Medir a força do que a pessoa já usa não muda nada e só
-            exibe o diagnóstico dela para quem estiver olhando a tela. */}
-        <InputSenha
-          id="conta-senha-atual"
-          label="Senha atual"
-          autoComplete="current-password"
-          value={senhaAtual}
-          onChange={(e) => setSenhaAtual(e.target.value)}
-        />
-        {/* Senha NOVA: o único medidor desta seção, com a exigência escrita
-            embaixo (mesma frase que o servidor devolve). */}
-        <div className="flex flex-col gap-[var(--spacing-2)]">
-          <InputSenha
-            id="conta-nova-senha"
-            label="Nova senha"
-            autoComplete="new-password"
-            aria-describedby="conta-nova-senha-dica"
-            value={novaSenha}
-            onChange={(e) => setNovaSenha(e.target.value)}
-            avaliacao={avaliacaoDaNova}
+        {/* Perfil */}
+        <form
+          id="conta-perfil"
+          ref={(el) => { if (el) refs.current.perfil = el; }}
+          className={SECAO}
+          onSubmit={(e) => void salvarNome(e)}
+          aria-label="Perfil"
+        >
+          <span className={SECAO_TITULO}>Perfil</span>
+          <Input
+            id="conta-nome"
+            label="Nome"
+            type="text"
+            autoComplete="name"
+            value={nome}
+            onChange={(e) => setNomeEditado(e.target.value)}
           />
-          <span
-            id="conta-nova-senha-dica"
-            className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
-          >
-            {exigenciaDeSenha()}
-          </span>
-        </div>
-        {/* Confirmação sem medidor: mede a mesma string do campo de cima. */}
-        <InputSenha
-          id="conta-confirmar-senha"
-          label="Confirmar nova senha"
-          autoComplete="new-password"
-          value={confirmar}
-          onChange={(e) => setConfirmar(e.target.value)}
-          {...(confirmarErro ? { errorMessage: confirmarErro } : {})}
-        />
-        <div>
-          <Button type="submit" variant="primary" disabled={!podeTrocar}>
-            {trocando ? 'Trocando…' : 'Trocar senha'}
-          </Button>
-        </div>
-      </form>
+          <Input id="conta-email" label="E-mail" type="email" value={user.email ?? ''} readOnly disabled />
+          <div>
+            <Button type="submit" variant="primary" disabled={!podeSalvarNome}>
+              {salvandoNome ? 'Salvando…' : 'Salvar'}
+            </Button>
+          </div>
+        </form>
 
-      {/* Sessão — encerrar o acesso neste dispositivo (única saída de logout) */}
-      <section className={SECAO} aria-label="Sessão">
-        <span className={SECAO_TITULO}>Sessão</span>
-        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Encerra o acesso neste dispositivo. Você precisará entrar de novo.
-        </p>
-        <div>
-          <Button type="button" variant="secondary" disabled={saindo} onClick={() => void sair()}>
-            {saindo ? 'Saindo…' : 'Sair da conta'}
-          </Button>
-        </div>
-      </section>
-    </div>
+        {/* Foto de perfil (S020-T5 + LEELA-R5 + RN-168) — upload-only via Storage;
+            persiste na hora e reflete no Avatar do rodapé. O "cole uma URL" foi
+            removido (S-R9-07; supersede ADR-016 item 5 na conta). */}
+        <section
+          id="conta-foto-perfil"
+          ref={(el) => { if (el) refs.current['foto-perfil'] = el; }}
+          className={SECAO}
+          aria-label="Foto de perfil"
+        >
+          <span className={SECAO_TITULO}>Foto de perfil</span>
+          <div className="flex items-center gap-[var(--spacing-4)]">
+            <Avatar size="lg" name={nome || (user.email ?? 'Você')} {...(urlDeImagemValida(fotoUrl) ? { src: fotoUrl.trim() } : {})} />
+            <div className="flex flex-1 flex-col gap-[var(--spacing-3)]">
+              <FileInput
+                id="conta-foto-arquivo"
+                label="Enviar foto"
+                buttonLabel={urlDeImagemValida(fotoUrl) ? 'Trocar foto' : 'Escolher arquivo'}
+                busy={enviandoFoto}
+                hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Ajustada para 1:1 e atualizada na hora."
+                {...(erroUploadFoto ? { errorMessage: erroUploadFoto } : {})}
+                onFileSelected={(file) => void enviarFoto(file)}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Perfil público / link-in-bio (DN-1-T1 · E17) — editor separado */}
+        <section
+          id="conta-perfil-publico"
+          ref={(el) => { if (el) refs.current['perfil-publico'] = el; }}
+          className={SECAO}
+          aria-label="Perfil público"
+        >
+          <span className={SECAO_TITULO}>Perfil público</span>
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Seu link-in-bio (@handle) reúne seus eventos e clubs num endereço único e compartilhável.
+          </p>
+          <div>
+            <Button asChild variant="secondary">
+              <Link to="/conta/perfil-publico">Editar perfil público</Link>
+            </Button>
+          </div>
+        </section>
+
+        {/* Dados de recebimento (RN-366 · IAM-T5) — cadastro ÚNICO do titular.
+            Mora aqui, e não dentro de Repasses, porque dado bancário é do
+            organizador e não da origem do dinheiro: quando o clube pago trouxer
+            a segunda origem, não há titular duplicado para reconciliar. O saque
+            continua acontecendo na origem, sobre o saldo único (RN-334). */}
+        {recebimento ? (
+          <section
+            id="conta-dados-recebimento"
+            ref={(el) => { if (el) refs.current['dados-recebimento'] = el; }}
+            className={SECAO}
+            aria-label="Dados de recebimento"
+          >
+            <span className={SECAO_TITULO}>Dados de recebimento</span>
+            <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              A conta que recebe seus repasses. Vale para todos os seus eventos — você solicita o
+              repasse em Eventos › Repasses.
+            </p>
+            {recebimento}
+          </section>
+        ) : null}
+
+        {/* Troca de senha (reauth obrigatória) */}
+        <form
+          id="conta-trocar-senha"
+          ref={(el) => { if (el) refs.current['trocar-senha'] = el; }}
+          className={SECAO}
+          onSubmit={(e) => void trocarSenhaSubmit(e)}
+          aria-label="Trocar senha"
+        >
+          <span className={SECAO_TITULO}>Trocar senha</span>
+          {erroSenha ? <AuthAlert message={erroSenha} /> : null}
+          {/* Senha ATUAL sem medidor: ela é credencial de reauth, não senha em
+              construção. Medir a força do que a pessoa já usa não muda nada e só
+              exibe o diagnóstico dela para quem estiver olhando a tela. */}
+          <InputSenha
+            id="conta-senha-atual"
+            label="Senha atual"
+            autoComplete="current-password"
+            value={senhaAtual}
+            onChange={(e) => setSenhaAtual(e.target.value)}
+          />
+          {/* Senha NOVA: o único medidor desta seção, com a exigência escrita
+              embaixo (mesma frase que o servidor devolve). */}
+          <div className="flex flex-col gap-[var(--spacing-2)]">
+            <InputSenha
+              id="conta-nova-senha"
+              label="Nova senha"
+              autoComplete="new-password"
+              aria-describedby="conta-nova-senha-dica"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              avaliacao={avaliacaoDaNova}
+            />
+            <span
+              id="conta-nova-senha-dica"
+              className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
+            >
+              {exigenciaDeSenha()}
+            </span>
+          </div>
+          {/* Confirmação sem medidor: mede a mesma string do campo de cima. */}
+          <InputSenha
+            id="conta-confirmar-senha"
+            label="Confirmar nova senha"
+            autoComplete="new-password"
+            value={confirmar}
+            onChange={(e) => setConfirmar(e.target.value)}
+            {...(confirmarErro ? { errorMessage: confirmarErro } : {})}
+          />
+          <div>
+            <Button type="submit" variant="primary" disabled={!podeTrocar}>
+              {trocando ? 'Trocando…' : 'Trocar senha'}
+            </Button>
+          </div>
+        </form>
+
+        {/* Sessão — encerrar o acesso neste dispositivo (única saída de logout) */}
+        <section
+          id="conta-sessao"
+          ref={(el) => { if (el) refs.current.sessao = el; }}
+          className={SECAO}
+          aria-label="Sessão"
+        >
+          <span className={SECAO_TITULO}>Sessão</span>
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Encerra o acesso neste dispositivo. Você precisará entrar de novo.
+          </p>
+          <div>
+            <Button type="button" variant="secondary" disabled={saindo} onClick={() => void sair()}>
+              {saindo ? 'Saindo…' : 'Sair da conta'}
+            </Button>
+          </div>
+        </section>
+      </div>
+    </TerciarioLayout>
   );
 }
 

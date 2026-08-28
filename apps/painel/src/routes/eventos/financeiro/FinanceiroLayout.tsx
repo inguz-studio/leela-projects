@@ -14,12 +14,20 @@
 // repasses vive em `/eventos/repasses`.
 // Repassa `{ evento }` às rotas-filhas via Outlet context (mesmo contrato do
 // EventoLayout — as páginas leem `evento` sem recomputar).
+//
+// V2708-03 (fase 2) · TERCIÁRIO em modo ROTA — a seção Financeiro é navegação
+// terciária (nível 3: painel → evento → Financeiro → seção). Caixa e Reembolsos
+// são destino de link com dado próprio (critério da RN-574 emendada). A barra
+// horizontal do AreaSubNav cede lugar à coluna sticky em ≥ lg e à faixa < lg.
 // =============================================================================
 
 import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
-import type { SubNavTab } from '@leela/design-system';
 import type { EventoOutletContext } from '../evento/EventoLayout';
-import { AreaSubNav } from '../../../components/nav/AreaSubNav';
+import {
+  AreaTerciarioNav,
+  TerciarioLayout,
+  type TerciarioItem,
+} from '../../../components/nav/TerciarioNav';
 
 export function FinanceiroLayout(): JSX.Element {
   const { evento } = useOutletContext<EventoOutletContext>();
@@ -30,8 +38,9 @@ export function FinanceiroLayout(): JSX.Element {
   const ativa = resto.split('/')[0] || 'resumo';
 
   // `href` fica (ctrl+clique, clique do meio, copiar endereço); o clique simples
-  // é interceptado e navega por SPA — a fiação vive no `AreaSubNav`.
-  const tabs: SubNavTab[] = [
+  // é interceptado pela navegação SPA do AreaTerciarioNav — mesmo contrato do
+  // AreaSubNav que este arquivo usava antes.
+  const itens: TerciarioItem[] = [
     { id: 'resumo', label: 'Caixa', href: base, active: ativa === 'resumo' },
     {
       id: 'reembolsos',
@@ -44,10 +53,9 @@ export function FinanceiroLayout(): JSX.Element {
   const context: EventoOutletContext = { evento };
 
   return (
-    <div className="flex flex-col gap-[var(--spacing-5)]">
-      <AreaSubNav tabs={tabs} aria-label="Seções do financeiro" />
+    <TerciarioLayout nav={<AreaTerciarioNav itens={itens} aria-label="Seções do financeiro" />}>
       <Outlet context={context} />
-    </div>
+    </TerciarioLayout>
   );
 }
 
