@@ -4,10 +4,14 @@
 // de kit/chip + Ritmo com Sparkline do DS; (2) Alertas do balcão — pendências
 // DERIVADAS dos carimbos reais (retirada + chip órfão), nunca inventadas;
 // (3) Últimos atendimentos; (4) Ações rápidas. Presentational puro.
+//
+// V2708-24: os 4 cards formam um bento grid 2×2. Grade pelo idioma canônico
+// (MetricGrid, columns=2): `grid-cols-1 xs:grid-cols-2` — em 390px empilha
+// (1 coluna); de 480px acima vira 2 colunas. Sem borda (V2708-07 · §2.16).
 // =============================================================================
 
 import * as React from 'react';
-import { Badge, Button, Sparkline } from '@leela/design-system';
+import { Badge, Button, MetricGrid, Sparkline } from '@leela/design-system';
 import type { FaixaChips, Inscrito } from '@leela/core';
 import { presencaRegistrada } from '@leela/core';
 import { alertasChipBalcao, resumoBalcaoDetalhado, ritmoAtendimentos } from '../_lib/balcao';
@@ -46,7 +50,7 @@ export function PainelOperacional({
     !estoque?.quaseEsgotado;
 
   return (
-    <div className="flex flex-col gap-[var(--spacing-3)]">
+    <MetricGrid columns={2} gap="sm">
       {/* Card 1 · Retirada de kits */}
       <section aria-label="Retirada de kits" className={CARD}>
         <CardTitulo titulo="Retirada de kits" sub="Progresso ao vivo do balcão" />
@@ -163,7 +167,7 @@ export function PainelOperacional({
           </Button>
         </div>
       </section>
-    </div>
+    </MetricGrid>
   );
 }
 

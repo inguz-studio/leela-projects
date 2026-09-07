@@ -13,7 +13,10 @@
 //  • Clique na LINHA abre o slide-in (S203 critério 5) — além do "Detalhe".
 //  • Seleção em massa (checkbox + selecionar todos) + barra de ação
 //    (Enviar mensagem / Exportar CSV) — "gerenciar a operação" (JTBD S203).
-//  • 4 tabs no DOM (§2.7); a aba Pagamento mostra a inadimplência de verdade.
+//  • 4 seções no modo ÂNCORA (§2.7 → V2708-23): Geral, Pagamento, Comunicação,
+//    Histórico — partes da mesma coisa (mesma fonte de dados), nunca rotas
+//    distintas. Critério RN-574 emendada: seções da mesma coisa → âncora com
+//    scroll spy; rota × painel é a régua.
 //
 // Presentational: recebe todos os inscritos e deriva filtro + paginação
 // client-side. Reuso-first: DS (Table, Badge, Avatar, Chip, Select, Checkbox,
@@ -37,7 +40,6 @@ import {
   SearchInput,
   Skeleton,
   Table,
-  Tabs,
   useToast,
   type ComboboxOption,
   type RowAction,
@@ -64,6 +66,11 @@ import {
 } from '../_lib/inscritosFiltro';
 import { InscritoSlideInConnected } from './InscritoSlideInConnected';
 import { QrIngressoModal } from './QrIngressoModal';
+import {
+  TerciarioLayout,
+  TerciarioNav,
+  type TerciarioItem,
+} from '@/components/nav/TerciarioNav';
 
 export interface InscritosViewProps {
   inscritos: Inscrito[];
@@ -99,6 +106,21 @@ function baixarCsv(nome: string, conteudo: string): void {
   URL.revokeObjectURL(url);
 }
 
+// ── Seções do terciário ────────────────────────────────────────────────────
+// V2708-23: modo ÂNCORA (RN-574 emendada). As 4 seções são partes da mesma
+// coisa (gestão de inscrições do evento); não são destinos de rota com dado
+// próprio. Scroll spy com IntersectionObserver — no-op em jsdom; irPara()
+// funciona por clique mesmo sem o observer.
+
+type InscritosSecaoId = 'geral' | 'pagamento' | 'comunicacao' | 'historico';
+
+const SECOES_INSCRITOS: Array<{ id: InscritosSecaoId; label: string }> = [
+  { id: 'geral', label: 'Geral' },
+  { id: 'pagamento', label: 'Pagamento' },
+  { id: 'comunicacao', label: 'Comunicação' },
+  { id: 'historico', label: 'Histórico' },
+];
+
 export function InscritosView({
   inscritos,
   loading,
@@ -118,6 +140,41 @@ export function InscritosView({
   // RN-397 — o QR aberto por ação na linha; null = nenhum na tela.
   const [qrAberto, setQrAberto] = React.useState<Inscrito | null>(null);
   const [marcados, setMarcados] = React.useState<ReadonlySet<string>>(new Set());
+
+  // ── Terciário âncora ────────────────────────────────────────────────────
+  const [ativa, setAtiva] = React.useState<InscritosSecaoId>('geral');
+  const refs = React.useRef<Partial<Record<InscritosSecaoId, HTMLElement>>>({});
+
+  React.useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visivel = entries.find((e) => e.isIntersecting);
+        if (visivel) {
+          const id = visivel.target.id.replace('inscritos-', '') as InscritosSecaoId;
+          setAtiva(id);
+        }
+      },
+      { rootMargin: '-40% 0px -55% 0px' },
+    );
+    Object.values(refs.current).forEach((el) => el && obs.observe(el));
+    return () => obs.disconnect();
+  }, [loading]);
+
+  function irPara(id: InscritosSecaoId): void {
+    setAtiva(id);
+    const el = refs.current[id];
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  const itensDoMenu: TerciarioItem[] = SECOES_INSCRITOS.map((s) => ({
+    id: s.id,
+    label: s.label,
+    active: ativa === s.id,
+    onClick: () => irPara(s.id),
+  }));
 
   const contagem = React.useMemo(() => contarPorStatus(inscritos), [inscritos]);
   const pendentes72h = React.useMemo(
@@ -321,8 +378,8 @@ export function InscritosView({
     );
   }
 
-  // ── Aba Geral ─────────────────────────────────────────────────────────────
-  const geral = loading ? (
+  // ── Seção Geral ───────────────────────────────────────────────────────────
+  const conteudoGeral = loading ? (
     <div className="flex flex-col gap-[var(--spacing-2)]" role="status" aria-label="Carregando inscritos">
       {Array.from({ length: 6 }).map((_, i) => (
         <Skeleton key={i} variant="rect" className="h-[var(--table-row-height)]" />
@@ -473,9 +530,9 @@ export function InscritosView({
     </div>
   );
 
-  // ── Aba Pagamento (dor #1 servida de verdade, não placeholder) ────────────
+  // ── Seção Pagamento (dor #1 servida de verdade, não placeholder) ──────────
   const listaPendentes = React.useMemo(() => inadimplentes(inscritos), [inscritos]);
-  const pagamento = loading ? (
+  const conteudoPagamento = loading ? (
     <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">Carregando…</p>
   ) : (
     <div className="flex flex-col gap-[var(--spacing-4)]">
@@ -493,50 +550,71 @@ export function InscritosView({
     </div>
   );
 
-  const tabs = [
-    { id: 'geral', label: 'Geral', content: geral },
-    { id: 'pagamento', label: 'Pagamento', content: pagamento },
-    {
-      id: 'comunicacao',
-      label: 'Comunicação',
-      content: (
-        <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-          Histórico de e-mails e mensagens ao atleta entra com Comunicados (E05).
-        </p>
-      ),
-    },
-    {
-      id: 'historico',
-      label: 'Histórico',
-      content: (
-        <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-          Trilha de eventos da inscrição (alterações, check-in) chega com auditoria.
-        </p>
-      ),
-    },
-  ];
-
   return (
-    <div className="flex flex-col gap-[var(--spacing-4)]">
-      <Tabs tabs={tabs} aria-label="Seções de inscritos" />
+    <TerciarioLayout nav={<TerciarioNav itens={itensDoMenu} aria-label="Seções de inscritos" />}>
+      <div className="flex flex-col gap-[var(--spacing-6)]">
+        {/* ── Seção Geral ─────────────────────────────────────────────────── */}
+        <section
+          id="inscritos-geral"
+          ref={(el) => { if (el) refs.current.geral = el; }}
+          aria-label="Geral"
+          className="flex flex-col gap-[var(--spacing-4)]"
+        >
+          {conteudoGeral}
+        </section>
 
-      {/* Barra de ação em massa — só quando há seleção */}
-      {selecionados.length > 0 && (
-        <div className="flex flex-wrap items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-3)] shadow-elev-1">
-          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            {selecionados.length} selecionado(s)
-          </span>
-          <Button variant="secondary" size="sm" onClick={enviarMensagem}>
-            Enviar mensagem
-          </Button>
-          <Button variant="ghost" size="sm" onClick={exportarSelecionados}>
-            Exportar
-          </Button>
-          <Button variant="ghost" size="sm" onClick={limparSelecao} className="ml-auto">
-            Cancelar seleção
-          </Button>
-        </div>
-      )}
+        {/* ── Seção Pagamento ──────────────────────────────────────────────── */}
+        <section
+          id="inscritos-pagamento"
+          ref={(el) => { if (el) refs.current.pagamento = el; }}
+          aria-label="Pagamento"
+          className="flex flex-col gap-[var(--spacing-4)]"
+        >
+          {conteudoPagamento}
+        </section>
+
+        {/* ── Seção Comunicação (placeholder — E05) ──────────────────────── */}
+        <section
+          id="inscritos-comunicacao"
+          ref={(el) => { if (el) refs.current.comunicacao = el; }}
+          aria-label="Comunicação"
+          className="flex flex-col gap-[var(--spacing-4)]"
+        >
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Histórico de e-mails e mensagens ao atleta entra com Comunicados (E05).
+          </p>
+        </section>
+
+        {/* ── Seção Histórico (placeholder — auditoria) ──────────────────── */}
+        <section
+          id="inscritos-historico"
+          ref={(el) => { if (el) refs.current.historico = el; }}
+          aria-label="Histórico"
+          className="flex flex-col gap-[var(--spacing-4)]"
+        >
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Trilha de eventos da inscrição (alterações, check-in) chega com auditoria.
+          </p>
+        </section>
+
+        {/* Barra de ação em massa — só quando há seleção */}
+        {selecionados.length > 0 && (
+          <div className="flex flex-wrap items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-3)] shadow-elev-1">
+            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+              {selecionados.length} selecionado(s)
+            </span>
+            <Button variant="secondary" size="sm" onClick={enviarMensagem}>
+              Enviar mensagem
+            </Button>
+            <Button variant="ghost" size="sm" onClick={exportarSelecionados}>
+              Exportar
+            </Button>
+            <Button variant="ghost" size="sm" onClick={limparSelecao} className="ml-auto">
+              Cancelar seleção
+            </Button>
+          </div>
+        )}
+      </div>
 
       <InscritoSlideInConnected
         eventoId={eventoId}
@@ -546,7 +624,7 @@ export function InscritosView({
 
       {/* RN-397: um QR por vez, sob demanda — a tabela nunca renderiza QR. */}
       <QrIngressoModal inscrito={qrAberto} onClose={() => setQrAberto(null)} />
-    </div>
+    </TerciarioLayout>
   );
 }
 

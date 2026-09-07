@@ -102,11 +102,19 @@ describe('InscritosView', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('mantém as 4 tabs no DOM (§2.7)', () => {
+  // V2708-23: terciário em modo ÂNCORA — as 4 seções são botões no nav
+  // (aria-current="true" no ativo), não tabs. Conteúdo sempre no DOM.
+  it('mantém as 4 seções no DOM com navegação terciária (V2708-23)', () => {
     renderView({ inscritos: muitosInscritos(3), loading: false, error: null, modalidades: ['10k'] });
+    const nav = screen.getByRole('navigation', { name: 'Seções de inscritos' });
     for (const label of ['Geral', 'Pagamento', 'Comunicação', 'Histórico']) {
-      expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();
+      expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument();
     }
+    // Todas as seções estão presentes no DOM (modo âncora, não exclusivo).
+    expect(screen.getByRole('region', { name: 'Geral' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Pagamento' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Comunicação' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Histórico' })).toBeInTheDocument();
   });
 
   it('renderiza skeleton enquanto carrega', () => {
@@ -143,13 +151,14 @@ describe('InscritosView', () => {
     expect(screen.getByText('Mostrando 2 de 4 inscritos')).toBeInTheDocument();
   });
 
-  it('aba Pagamento lista os inadimplentes (não é mais placeholder)', async () => {
+  // V2708-23: modo ÂNCORA — a seção Pagamento é sempre renderizada (não exclusiva).
+  // Não é mais necessário clicar numa aba para revelar o conteúdo.
+  it('seção Pagamento lista os inadimplentes (sempre no DOM, modo âncora)', () => {
     const inscritos = [
       ...muitosInscritos(2, 'confirmado'),
       mkInscrito({ id: 'p1', atletaNome: 'Pedro Pendente', status: 'pendente' }),
     ];
     renderView({ inscritos, loading: false, error: null, modalidades: ['10k'] });
-    await userEvent.click(screen.getByRole('tab', { name: 'Pagamento' }));
     expect(screen.getByText(/aguardando pagamento \(1\)/i)).toBeInTheDocument();
   });
 
