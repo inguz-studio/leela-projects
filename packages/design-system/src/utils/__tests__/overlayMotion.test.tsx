@@ -232,16 +232,17 @@ describe('Dialog — saída animada de verdade', () => {
     }
   });
 
-  it('mobile é bottom-sheet e desktop é fade+zoom — a regra da superfície', () => {
+  // V2708-22 · 28/08: entrada centralizada em todos os breakpoints — fade + zoom
+  // sem slide de borda (regra do dono: "quero que fique centralizado").
+  it('entra centralizado — fade + zoom, sem slide, em todos os breakpoints', () => {
     render(<DialogControlado open />);
     const painel = screen.getByRole('dialog').querySelector('.bg-surface-raised');
-    // Mobile: sobe da borda que ele encosta (items-end).
-    expect(painel?.className).toContain('motion-safe:data-[state=open]:slide-in-from-bottom');
-    expect(painel?.className).toContain('motion-safe:data-[state=closed]:slide-out-to-bottom');
-    // Desktop (sm+): zera a translação e usa zoom — card centrado não desliza.
-    expect(painel?.className).toContain('motion-safe:sm:data-[state=open]:slide-in-from-bottom-0');
-    expect(painel?.className).toContain('motion-safe:sm:data-[state=open]:zoom-in-95');
-    expect(painel?.className).toContain('motion-safe:sm:data-[state=closed]:zoom-out-95');
+    // Todos os breakpoints: fade + zoom a partir do centro.
+    expect(painel?.className).toContain('motion-safe:data-[state=open]:zoom-in-95');
+    expect(painel?.className).toContain('motion-safe:data-[state=closed]:zoom-out-95');
+    // Sem slide de borda (bottom-sheet foi substituído).
+    expect(painel?.className).not.toContain('slide-in-from-bottom');
+    expect(painel?.className).not.toContain('slide-out-to-bottom');
   });
 
   it('o painel aponta para o token no style — nunca um número inline', () => {

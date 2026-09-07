@@ -60,17 +60,17 @@
  * foco nunca entraria. Nenhum consumidor nasce aberto hoje; a trava é para que
  * o primeiro que nascer não descubra isso em produção.
  *
- * MOVIMENTO (BUILD-MOTION · ordem do dono de 04/08)
- * ------------------------------------------------
+ * MOVIMENTO (BUILD-MOTION · ordem do dono de 04/08 · atualizado V2708-22 · 28/08)
+ * -------------------------------------------------------------------------------
  * A REGRA DA SUPERFÍCIE, escrita para não ser reinventada tela a tela:
  *   - a CORTINA sempre faz fade, nos dois breakpoints — ela não tem forma, só
  *     presença;
- *   - o PAINEL no mobile é bottom-sheet: já nasce encostado na borda de baixo
- *     (`items-end`), então sobe de lá. Uma folha que aparece por fade no lugar
- *     onde o polegar espera um gesto lê como bug de renderização;
- *   - o PAINEL no desktop (sm+) é card CENTRADO: não há borda de onde vir, e
- *     deslizar faria parecer que ele caiu. Fade + zoom curto, que é a gramática
- *     do `Modal` do painel — as duas superfícies do produto se movem igual.
+ *   - o PAINEL entra CENTRALIZADO em todos os breakpoints: fade + zoom curto a
+ *     partir do centro da tela (V2708-22 · 28/08 — fala do dono: "quero que
+ *     fique centralizado e isso seja um padrão daqui pra frente, documentado em
+ *     nossos design systems"). O bottom-sheet anterior foi substituído para
+ *     manter consistência visual com o `Modal` do painel — as duas superfícies
+ *     do produto se movem igual, e o ponto de origem é sempre o centro.
  *
  * A SAÍDA é animada de verdade: o nó só some do DOM depois que a animação
  * termina (`usePresencaOverlay`). O `useDialogBehavior` recebe `presente`, não
@@ -183,7 +183,7 @@ export function Dialog({
   return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-50 flex items-end justify-center sm:items-center',
+        'fixed inset-0 z-50 flex items-center justify-center',
         containerClassName,
       )}
       data-state={estado}
@@ -218,13 +218,11 @@ export function Dialog({
         data-state={estado}
         style={estiloMotion(estado)}
         className={cn(
-          'relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-t-ds-lg bg-surface-raised shadow-elev-3 sm:rounded-ds-lg',
-          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0',
-          'motion-safe:data-[state=open]:slide-in-from-bottom',
-          'motion-safe:sm:data-[state=open]:slide-in-from-bottom-0 motion-safe:sm:data-[state=open]:zoom-in-95',
-          'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
-          'motion-safe:data-[state=closed]:slide-out-to-bottom',
-          'motion-safe:sm:data-[state=closed]:slide-out-to-bottom-0 motion-safe:sm:data-[state=closed]:zoom-out-95',
+          // V2708-22: entrada centralizada em todos os breakpoints — raio completo
+          // e fade + zoom curto a partir do centro (sem slide de borda).
+          'relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-ds-lg bg-surface-raised shadow-elev-3',
+          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95',
+          'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
           panelClassName,
         )}
       >

@@ -33,9 +33,10 @@
  * Quem tem mudança a anunciar diz qual canal quer.
  *
  * AA: nenhum par novo. Os quatro tons usam `--feedback-*-fg` sobre
- * `--feedback-*-surface` (texto, ≥ 4.5:1) e `--feedback-*` como borda sobre as
- * superfícies (não-texto, ≥ 3:1) — os oito pares já rodam na matriz de
- * contraste, nos três temas.
+ * `--feedback-*-surface` (texto, ≥ 4.5:1) — os quatro pares já rodam na matriz
+ * de contraste, nos três temas. (V2708-21 · 28/08: a borda lateral foi removida
+ * por fuga de identidade — o idioma do produto é ícone com cor de severidade,
+ * não listra. O fundo suave por tom permanece.)
  */
 
 import * as React from 'react';
@@ -50,7 +51,7 @@ import { cn } from '../../utils/cn';
 const alertVariants = cva(
   [
     'flex items-start gap-[var(--spacing-3)]',
-    'rounded-[var(--radius-lg)] border p-[var(--spacing-5)]',
+    'rounded-[var(--radius-lg)] p-[var(--spacing-5)]',
   ].join(' '),
   {
     variants: {
@@ -59,15 +60,16 @@ const alertVariants = cva(
        * publica) ficam de fora: no brasa `--feedback-info` resolve para a
        * mesma família rosa do heroico, e um aviso neutro sem cor de estado é
        * um `Card` com texto dentro, não um aviso.
+       *
+       * V2708-21 · 28/08: sem borda lateral — apenas fundo suave + ícone com
+       * a cor de severidade (text-[var(--feedback-*-fg)]). A listra foge à
+       * identidade do produto; o ícone é o sinal.
        */
       tone: {
-        info: 'border-[var(--feedback-info)] bg-[var(--feedback-info-surface)] text-[var(--feedback-info-fg)]',
-        vitoria:
-          'border-[var(--feedback-success)] bg-[var(--feedback-success-surface)] text-[var(--feedback-success-fg)]',
-        alerta:
-          'border-[var(--feedback-warning)] bg-[var(--feedback-warning-surface)] text-[var(--feedback-warning-fg)]',
-        vulcao:
-          'border-[var(--feedback-danger)] bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]',
+        info: 'bg-[var(--feedback-info-surface)] text-[var(--feedback-info-fg)]',
+        vitoria: 'bg-[var(--feedback-success-surface)] text-[var(--feedback-success-fg)]',
+        alerta: 'bg-[var(--feedback-warning-surface)] text-[var(--feedback-warning-fg)]',
+        vulcao: 'bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]',
       },
     },
     defaultVariants: { tone: 'info' },

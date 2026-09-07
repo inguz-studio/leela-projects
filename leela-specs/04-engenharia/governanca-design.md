@@ -268,3 +268,28 @@ C0-C6 da conformidade de controles, que estão vivas.
 **Catraca:** a cobertura showroom/Storybook × barrel entra na varredura da lane
 REUSO-E-SHOWROOM (rodada de 28/08) e o buraco vira contador do `gate-canon` quando medido —
 mesma disciplina dos §8-§9: a classe que reincide pede catraca, não conserto.
+
+## 11. Identidade visual das superfícies de feedback e overlay (2026-08-28 · V2708-21 e V2708-22 · PERMANENTE)
+
+> Fala do dono em 28/08/2026, rodada `2026-08-27-vetos-do-dono` (adendo 2): *"os alertas estão
+> seguindo padrões que não pedi, como uma listra no lado esquerdo, sendo que esse tipo de
+> componente foge totalmente à nossa identidade. Alertas devem ter no máximo um ícone com cor
+> indicando o que pode ser."* e *"a animação de overlay está fazendo um fade in que não vem do
+> centro da tela, e sim de baixo pra cima. Quero que fique centralizado e isso seja um padrão
+> daqui pra frente, documentado em nossos design systems."*
+
+### 11.1 — Alert: ícone + fundo suave, sem borda lateral (V2708-21)
+
+**Alert não tem borda.** A identidade de severidade é comunicada por dois elementos:
+- o ícone padrão do tom (cor via `--feedback-*-fg`), trocável por `icon` ou silenciável com `icon={null}`;
+- o fundo suave de tom (`--feedback-*-surface`).
+
+Proibido adicionar `border`, `border-l`, `border-left` ou qualquer listra lateral ao `Alert` — como ao Toast crítico (a exceção do Toast está em §3 e não se estende ao Alert). Se uma varredura encontrar uso manual de `border` para simular aviso em bloco, o correto é substituir pelo componente `Alert` do DS.
+
+### 11.2 — Overlay/Modal: entrada centralizada (V2708-22)
+
+**Todo overlay do DS entra a partir do centro da tela.** O padrão é `fade + zoom curto (scale 95 → 100)`, sem slide de borda. Válido para `Modal`, `Dialog` e qualquer superfície de overlay futura.
+
+- `prefers-reduced-motion: reduce`: sem animação — o painel aparece no lugar, sem transição.
+- Implementação: classes `data-[state=open]:zoom-in-95` + `fade-in-0`, ambas atrás de `motion-safe:`.
+- Proibido `slide-in-from-bottom` como padrão de abertura de modal/dialog — bottom-sheet é padrão de sheet lateral, não de diálogo.
