@@ -1,0 +1,149 @@
+# Esqueleto do perfil da Leela para o squad product-os (esquema: ~/Squads-Vault/product-os/schemas/perfil-empresa.schema.json).
+# Estado rascunho: só entra o que foi lido em ~/dev/LEELA em 05/10/2026; o resto é pergunta em perguntas_abertas.
+# Corte 3 (product-os 2.5.0, 05/10/2026): acrescentado o bloco discovery (campos em branco e os documentos de leela-specs que podem servir de nuvem, benchmarks, rodadas e roadmap, todos a-confirmar) e 7 perguntas novas; nenhum valor novo foi inventado.
+# Corte 2 (product-os 2.4.0, 05/10/2026): acrescentados codigo[].clone_url e ramo e 7 perguntas novas (decisões, fichas, inventário, Central); nenhum valor novo foi inventado.
+# Atualizado no corte 1b (product-os 2.3.0): campos de personas, canais, regras de negócio e convenções, sem inventar valor.
+perfil_versao: 1
+estado: rascunho
+
+empresa:
+  slug: leela
+  nome: Leela
+  idioma: pt-BR
+  fuso: America/Sao_Paulo
+  dono: null
+
+cerebro:
+  caminho: null
+  repo_url: null
+  ramo_principal: main
+  instrucoes: null
+  pastas:
+    produto: leela-specs/01-produto
+    discovery: leela-specs/05-discovery
+    convencoes: leela-specs/00-boards
+    rodadas: leela-specs/02-rodadas
+    canon: leela-specs/03-canon
+    backlog: leela-specs/06-backlog
+    regras_indice: leela-specs/03-canon/indice-de-regras-de-negocio.md
+  seguranca_fora_do_git: null
+
+projetos: []
+universos: []
+
+codigo:
+  - repo: inguz-studio/leela-projects
+    caminho_local: /Users/vitorpiagge/dev/LEELA
+    clone_url: https://github.com/inguz-studio/leela-projects.git
+    ramo: main
+    acesso: so-leitura
+
+rubrica:
+  versao: 1
+  pais_alvo: null
+  concorrente_principal: []
+
+fichas:
+  grupos: []
+
+central:
+  url: null
+  pasta_instancia: null
+  marca:
+    nome_menu: Leela
+    tokens: null
+  modulos: {}
+
+rastreador:
+  tipo: a-confirmar
+  ferramenta: null
+  padrao_card: leela-specs/00-boards/CONVENCAO-BOARDS.md
+  padrao_card_estado: a-confirmar
+  tipos_de_card: null
+  prioridade: null
+  projetos: []
+  portao: null
+
+personas: []
+
+canais: []
+
+regras_de_negocio:
+  indice: leela-specs/03-canon/indice-de-regras-de-negocio.md
+  indice_escopo: cerebro
+  estados_que_travam: []
+  links_proibidos: []
+
+convencoes:
+  documentos: {}
+  escala_criticidade: []
+  farol: []
+  codigos_citaveis: "RN-###"
+
+vocabulario:
+  pasta: null
+
+discovery:
+  entrada_de_fontes: null
+  arquivo_de_fontes: null
+  fontes_de_campo: []
+  achados: null
+  players: null
+  macroteses: null
+  nuvem: null
+  roadmap: null
+  candidatos_do_cerebro:
+    - {caminho: leela-specs/05-discovery/NUVEM-FUNCIONALIDADES.md, serve_como: nuvem, estado: a-confirmar, nota: "inventário de funcionalidades dos 7 pilares de benchmark, em tabelas com Tipo (construir, integrar, adiar, já-no-plano) e Prioridade (V1, V2, depois); não usa os seis estados nem uma nota por item"}
+    - {caminho: leela-specs/05-discovery/pilares, serve_como: benchmarks, estado: a-confirmar, nota: "7 notas de pilar (ticketing, comunidade e clubes, comunicação, gamificação, vendas e afiliação, concorrentes diretos, integrações de treino)"}
+    - {caminho: leela-specs/05-discovery/benchmark-cheers.md, serve_como: benchmarks, estado: a-confirmar, nota: "benchmark competitivo; há outros quatro do mesmo tipo na pasta (shotgun, stayf, ticketing-br, wellable), com fontes verificadas e data"}
+    - {caminho: leela-specs/02-rodadas, serve_como: rodadas, estado: a-confirmar, nota: "pastas datadas de rodada (decisões, análises, revisões); não seguem o formato de achado do método"}
+    - {caminho: leela-specs/01-produto/ROADMAP.md, serve_como: roadmap, estado: a-confirmar, nota: "documento-espinha com horizontes, mapa de épicos, dependências e ondas de execução; a palavra onda aqui é de execução, não necessariamente a mesma das quatro ondas do método"}
+    - {caminho: leela-specs/06-backlog/BACKLOG.md, serve_como: backlog, estado: a-confirmar, nota: "visão de backlog em markdown (épico, história, subtarefa) com status backlog, doing, review e done"}
+
+fontes:
+  empresa: "README.md da raiz (nome LEELA); fuso: functions/src/clubs/recalcularStatusMembros.ts (America/Sao_Paulo); idioma: documentação em português"
+  cerebro.pastas: "ls de ~/dev/LEELA/leela-specs em 05/10/2026 (00-boards, 01-produto, 02-rodadas, 03-canon, 05-discovery, 06-backlog)"
+  codigo: "git remote -v de ~/dev/LEELA (inguz-studio/leela-projects); monorepo com apps painel, landing e mobile"
+  cerebro.ramo_principal: "git branch --show-current de ~/dev/LEELA em 05/10/2026 (main)"
+  rastreador.padrao_card: "leela-specs/00-boards/CONVENCAO-BOARDS.md existe (atualizado 2026-07-18; card de uma linha, estados por emoji, três altitudes); é só candidato: padrao_card_estado a-confirmar"
+  regras_de_negocio.indice: "leela-specs/03-canon/indice-de-regras-de-negocio.md existe (lido em 05/10/2026: regras RN-###, texto canônico no épico dono)"
+  convencoes.codigos_citaveis: "mesmo índice de regras: 'numeradas RN-###'"
+  rastreador.tipo: "leela-specs/06-backlog/BACKLOG.md se descreve como visão estilo Jira em markdown; nenhuma referência a Jira real foi achada; por isso a-confirmar"
+  codigo.clone_url_e_ramo: "git remote -v e git branch --show-current de ~/dev/LEELA em 05/10/2026"
+  discovery.candidatos_do_cerebro: "ls de leela-specs/05-discovery, 01-produto, 02-rodadas e 06-backlog em 05/10/2026; leitura do cabeçalho de NUVEM-FUNCIONALIDADES.md (colunas Tipo e Prioridade), do ROADMAP.md, do BACKLOG.md e do benchmark-stayf.md; nada foi conferido com o dono, por isso a-confirmar"
+
+nao_conferido:
+  - empresa.idioma
+  - cerebro.ramo_principal
+
+perguntas_abertas:
+  - {campo: cerebro.caminho, pergunta: "O cérebro da Leela é o próprio ~/dev/LEELA (com leela-specs/) ou criamos um cérebro separado em git e markdown?", recomendacao: "usar ~/dev/LEELA/leela-specs como cérebro, já que as pastas existem"}
+  - {campo: rastreador.tipo, pergunta: "Qual é o rastreador de tarefas: o backlog em markdown, um serviço (Jira, Linear, outro) ou nenhum? Existe projeto de descoberta separado do de execução?"}
+  - {campo: rastreador.padrao_card, pergunta: "O padrão de card da Leela é a convenção de boards atual (CONVENCAO-BOARDS.md) ou adotamos o padrão de cards da Shelflix?"}
+  - {campo: projetos, pergunta: "O que são os projetos da Leela: painel, landing e app mobile separados, ou um produto só com três superfícies?"}
+  - {campo: rubrica.concorrente_principal, pergunta: "Quem é o concorrente principal da Leela e qual o país-alvo?"}
+  - {campo: central.marca, pergunta: "Qual a marca e os tokens visuais? Há brand/ e o design system v3 tema brasa; a identidade definitiva está em aberto em DECISOES-ABERTAS.md."}
+  - {campo: central.url, pergunta: "Qual o domínio público da Leela (item 12 de DECISOES-ABERTAS.md, ainda marcador {DOMINIO_LEELA})?"}
+  - {campo: empresa.dono, pergunta: "O dono do produto, quem aprova portão, gravação no rastreador e publicação, é o Vitor?"}
+  - {campo: rastreador.tipos_de_card, pergunta: "Que tipos de card o rastreador da Leela tem (história, tarefa, subtarefa de QA, bug, épico) e como se chamam lá? A convenção atual fala em épico, história e tarefa, sem QA nem bug como tipo.", recomendacao: "decidir junto com o rastreador e o padrão de card"}
+  - {campo: rastreador.prioridade, pergunta: "Existe campo de prioridade no rastreador e quais são os níveis?"}
+  - {campo: personas, pergunta: "Quais cargos a Leela usa como persona nas histórias e specs?"}
+  - {campo: canais, pergunta: "A Leela tem canais de mensagem que os cards precisam descrever (existe ponte-radar-whatsapp.md em 04-engenharia)? Se sim, qual a regra do card para a mensagem?"}
+  - {campo: regras_de_negocio.estados_que_travam, pergunta: "A regra de negócio da Leela tem estado de validação (a validar, validada)? Quais estados travam um card?"}
+  - {campo: convencoes.escala_criticidade, pergunta: "A Leela usa escala única de criticidade nas regras (níveis e marcadores)? E farol de KR?"}
+  - {campo: convencoes.documentos, pergunta: "Existe convenção escrita de OKR, de JTBD, de regras de negócio e de política de priorização na Leela, ou valem os padrões da casa?", recomendacao: "valer os padrões da casa até haver convenção própria"}
+  - {campo: cerebro.repo_url, pergunta: "Qual o endereço público do repositório do cérebro, base dos links de regra nos cards? Se o cérebro for ~/dev/LEELA, o remoto é inguz-studio/leela-projects."}
+  - {campo: projetos.pastas_do_projeto.decisoes, pergunta: "Onde moram as notas de decisão da Leela? Hoje há leela-specs/01-produto/DECISOES-ABERTAS.md e rodadas em leela-specs/02-rodadas/*-decisoes, sem pasta Decisões nem cabeçalho com fichas resolvidas. Criamos a pasta e o formato de nota de decisão do método, ou a Leela segue o formato de rodada?", recomendacao: "criar a pasta de decisões no cérebro e adotar a nota do método; sem isso o registro e a sincronia param"}
+  - {campo: fichas.arquivo, pergunta: "Onde fica o fichas.json da Leela (as perguntas abertas do produto no esquema de ficha)? Hoje as perguntas estão em DECISOES-ABERTAS.md e DECISOES-ABERTAS-TRIAGEM.md, em texto livre."}
+  - {campo: fichas.codigos_internos, pergunta: "Quais códigos internos da Leela (RN-###, códigos de épico, de decisão e de rodada) não podem aparecer soltos no texto que o dono lê?"}
+  - {campo: fichas.afirmacoes_proibidas, pergunta: "Há premissa sobre o produto da Leela que o dono já corrigiu e que as fichas nunca devem repetir?"}
+  - {campo: inventario.superficies, pergunta: "Quais são as superfícies da Leela para classificar o que está no ar (painel, landing, app mobile, servidor)? E onde guardar o inventário (inventario.arquivo) e o arquivo de termos de segurança fora do git (inventario.termos_sensiveis e cerebro.seguranca_fora_do_git)?"}
+  - {campo: codigo, pergunta: "O código da Leela e o cérebro são o mesmo repositório (monorepo). O inventário deve ler um clone temporário em commit fixado (nunca a pasta de trabalho, que tem mudanças soltas)? Recomendação: sim, clone temporário em commit fixado.", recomendacao: "clone temporário em commit fixado, só leitura"}
+  - {campo: central.scripts, pergunta: "A Leela quer a Central de produto ao vivo (painel de decisões com base e rotina de volta ao cérebro)? Sem ela, a capacidade de sincronizar decisões só roda a parte de registrar a nota; a Central é do corte de montar a Central de uma empresa nova."}
+  - {campo: discovery.entrada_de_fontes, pergunta: "Onde chega o material bruto de campo (transcrições, relatos, pesquisas) e onde ele fica depois de lido? Hoje não achei pasta de entrada nem de fontes em leela-specs.", recomendacao: "criar uma pasta de entrada e uma de fontes no cérebro, como no método"}
+  - {campo: discovery.fontes_de_campo, pergunta: "Existe pesquisa de campo, entrevista ou evidência de suporte da Leela? Onde? Os benchmarks de 05-discovery são leitura de mercado, não campo."}
+  - {campo: discovery.players, pergunta: "A Leela quer fichas de concorrente no padrão da rubrica (critérios de 1 a 5, scores por conta, travas)? Os cinco benchmarks de 05-discovery viram fichas ou ficam como estão?"}
+  - {campo: rubrica.pais_alvo, pergunta: "Qual o país-alvo da Leela e quem o dono considera concorrente principal? Sem isso as travas da rubrica não rodam."}
+  - {campo: discovery.macroteses, pergunta: "A Leela tem macroteses? Hoje a visão está em pilares e em um relatório de discovery. Criamos a pasta de macroteses e o dono escolhe quais trabalhar, ou os 7 pilares fazem esse papel?", recomendacao: "criar a pasta de macroteses e decidir se os pilares viram teses"}
+  - {campo: discovery.nuvem, pergunta: "A nuvem de funcionalidades da Leela (NUVEM-FUNCIONALIDADES.md) migra para uma nota por item com os seis estados, ou segue em tabela? Quais níveis de prioridade e de prontidão a Leela usa (hoje V1, V2 e depois)?"}
+  - {campo: discovery.roadmap, pergunta: "O roadmap da Leela (ROADMAP.md, com ondas de execução) é o mesmo que as quatro ondas do método (agora, próximo, depois, fora), ou o método passa a ter o seu próprio roadmap?"}
