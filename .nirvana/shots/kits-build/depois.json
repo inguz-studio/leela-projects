@@ -1,0 +1,152 @@
+{
+  "kits-gerenciamento-desktop": {
+    "url": "/eventos/meia-floripa-2026/kits",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Kits",
+      "Kit Ouro",
+      "Kit Prata",
+      "Kit básico",
+      "Sem kit",
+      "Catálogo de itens",
+      "Camiseta técnica Be Hero",
+      "Gel de carboidrato 30g",
+      "Número de peitoral com chip",
+      "Sachê de whey protein 30g",
+      "Sacochila do evento",
+      "Viseira técnica"
+    ]
+  },
+  "kits-distribuicao-desktop": {
+    "url": "/eventos/meia-floripa-2026/kits/distribuicao",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Retirada por kit",
+      "Retirada por modalidade",
+      "Estoque por kit e modalidade",
+      "Estoque por tamanho"
+    ]
+  },
+  "kits-estoque-desktop": {
+    "url": "/eventos/meia-floripa-2026/kits/distribuicao",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Retirada por kit",
+      "Retirada por modalidade",
+      "Estoque por kit e modalidade",
+      "Estoque por tamanho"
+    ]
+  },
+  "kits-gerenciamento-768": {
+    "url": "/eventos/meia-floripa-2026/kits",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Kits",
+      "Kit Ouro",
+      "Kit Prata",
+      "Kit básico",
+      "Sem kit",
+      "Catálogo de itens",
+      "Camiseta técnica Be Hero",
+      "Gel de carboidrato 30g",
+      "Número de peitoral com chip",
+      "Sachê de whey protein 30g",
+      "Sacochila do evento",
+      "Viseira técnica"
+    ]
+  },
+  "kits-distribuicao-768": {
+    "url": "/eventos/meia-floripa-2026/kits/distribuicao",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Retirada por kit",
+      "Retirada por modalidade",
+      "Estoque por kit e modalidade",
+      "Estoque por tamanho"
+    ]
+  },
+  "kits-estoque-768": {
+    "url": "/eventos/meia-floripa-2026/kits/distribuicao",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Retirada por kit",
+      "Retirada por modalidade",
+      "Estoque por kit e modalidade",
+      "Estoque por tamanho"
+    ]
+  },
+  "kits-gerenciamento-375": {
+    "url": "/eventos/meia-floripa-2026/kits",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Kits",
+      "Kit Ouro",
+      "Kit Prata",
+      "Kit básico",
+      "Sem kit",
+      "Catálogo de itens",
+      "Camiseta técnica Be Hero",
+      "Gel de carboidrato 30g",
+      "Número de peitoral com chip",
+      "Sachê de whey protein 30g",
+      "Sacochila do evento",
+      "Viseira técnica"
+    ]
+  },
+  "kits-distribuicao-375": {
+    "url": "/eventos/meia-floripa-2026/kits/distribuicao",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Retirada por kit",
+      "Retirada por modalidade",
+      "Estoque por kit e modalidade",
+      "Estoque por tamanho"
+    ]
+  },
+  "kits-estoque-375": {
+    "url": "/eventos/meia-floripa-2026/kits/distribuicao",
+    "transbordoX": 0,
+    "abasDeKits": [
+      "Gerenciamento",
+      "Distribuição"
+    ],
+    "h2h3": [
+      "Retirada por kit",
+      "Retirada por modalidade",
+      "Estoque por kit e modalidade",
+      "Estoque por tamanho"
+    ]
+  }
+}
