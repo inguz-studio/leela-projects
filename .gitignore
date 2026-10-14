@@ -113,3 +113,12 @@ ui-debug.log
 pubsub-debug.log
 database-debug.log
 functions/lib/
+
+# Faxina local (14/10/2026): estado de máquina que nunca é fonte.
+# Worktrees de agentes — cada um é um checkout inteiro (com node_modules) de um
+# ramo que já está no origin; o git os gerencia por `git worktree`.
+.claude/worktrees/
+# Logs do harness por máquina (o .harness-logs/ da raiz já é ignorado)
+.nirvana/logs/
+# Cache e logs locais do Expo (dev server do apps/mobile)
+.expo/
