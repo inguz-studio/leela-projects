@@ -87,7 +87,10 @@ if (offenders === 0) pass(`nenhum font-family hardcoded em ${files.length} arqui
 // ── (B) verificação VIVA opcional ────────────────────────────────────────────
 const url = process.env['BRAND_VERIFY_URL'];
 if (url) {
-  const { chromium } = await import('file:///C:/dev/LEELA/node_modules/.pnpm/playwright@1.61.1/node_modules/playwright/index.mjs');
+  // `@playwright/test` (raiz do monorepo, resolvido por node_modules acima de
+  // apps/landing) reexporta o `chromium`. Import dinâmico: a camada estática (A)
+  // continua rodando sem Playwright instalado.
+  const { chromium } = await import('@playwright/test');
   const b = await chromium.launch();
   const p = await (await b.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
   let resolved = false;

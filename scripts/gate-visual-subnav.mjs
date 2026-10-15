@@ -25,6 +25,7 @@
 import { chromium } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Servido pelo `scripts/mock-campeche.sh up` RODADO NESTE WORKTREE: painel em
 // :4602 e Auth Emulator em :9298 (bloco de portas próprio, para não disputar
@@ -32,7 +33,9 @@ import { join } from 'node:path';
 // suíte julga o `dist`, e a foto também.
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:4602';
 const AUTH = process.env.AUTH_URL ?? 'http://127.0.0.1:9298';
-const OUT = process.env.OUT_DIR ?? 'C:/dev/LEELA/.nirvana/outputs/leela-subnav-unifica-20260813-resume';
+// Padrão relativo à raiz do repo (esta pasta é `scripts/`), sem caminho de máquina.
+const RAIZ = fileURLToPath(new URL('..', import.meta.url));
+const OUT = process.env.OUT_DIR ?? join(RAIZ, '.nirvana/outputs/leela-subnav-unifica-20260813-resume');
 
 const TAMANHOS = [
   { nome: 'desktop', width: 1440, height: 900 },
