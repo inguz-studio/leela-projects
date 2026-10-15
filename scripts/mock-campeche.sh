@@ -163,6 +163,8 @@ cmd_status() {
 # ---------------------------------------------------------------------------
 cmd_up() {
   c_green "==> LEELA · mock [Mock] - Campeche Run (emulador, :$PAINEL_PORT)"
+  leela_use_project_node "$ROOT"
+  c_green "    Node: $(node -v 2>/dev/null || echo '?')"
 
   # 0. Pré-checagens
   local JAVA_ACHADO

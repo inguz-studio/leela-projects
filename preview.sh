@@ -54,7 +54,8 @@ LOG_PORT=4501
 EMU_PORTS=("$FS_PORT" "$AUTH_PORT" "$FN_PORT" "$SG_PORT" "$UI_PORT" "$HUB_PORT" "$LOG_PORT")
 
 # --- Logs (fora do repo, temporário) -----------------------------------------
-LOG_DIR="$(mktemp -d "${TMPDIR:-${TEMP:-/tmp}}/leela-preview.XXXXXX" 2>/dev/null || echo "/tmp/leela-preview-$$")"
+TMP_BASE="${TMPDIR:-${TEMP:-/tmp}}"
+LOG_DIR="$(mktemp -d "${TMP_BASE%/}/leela-preview.XXXXXX" 2>/dev/null || echo "/tmp/leela-preview-$$")"
 mkdir -p "$LOG_DIR"
 EMU_LOG="$LOG_DIR/emulator.log"
 VITE_LOG="$LOG_DIR/vite.log"
@@ -83,12 +84,18 @@ cleanup() {
   trap - INT TERM EXIT
   echo ""
   c_yellow "Encerrando o preview..."
-  [ -n "$VITE_PID" ] && leela_kill_tree "$VITE_PID"
-  [ -n "$EMU_PID" ] && leela_kill_tree "$EMU_PID"
-  if [ "$PORTS_OWNED" = 1 ]; then
-    for p in "${EMU_PORTS[@]}"; do leela_kill_port "$p"; done
-    [ -n "$VITE_PORT" ] && leela_kill_port "$VITE_PORT"
-  fi
+  # stderr para /dev/null: o bash avisa "Terminated: 15 ( cd ... pnpm exec vite ... )"
+  # quando reaparece o job que a gente acabou de matar; é ruído, não erro.
+  {
+    [ -n "$VITE_PID" ] && leela_kill_tree "$VITE_PID"
+    [ -n "$EMU_PID" ] && leela_kill_tree "$EMU_PID"
+    if [ "$PORTS_OWNED" = 1 ]; then
+      for p in "${EMU_PORTS[@]}"; do leela_kill_port "$p"; done
+      [ -n "$VITE_PORT" ] && leela_kill_port "$VITE_PORT"
+    fi
+    [ -n "$VITE_PID" ] && wait "$VITE_PID"
+    [ -n "$EMU_PID" ] && wait "$EMU_PID"
+  } 2>/dev/null
   c_green "Preview encerrado. Logs em: $LOG_DIR"
   exit "$rc"
 }
@@ -119,6 +126,9 @@ wait_http() {
 # =============================================================================
 c_green "==> LEELA · preview local (1 comando)"
 
+leela_use_project_node "$ROOT"
+c_green "    Node: $(node -v 2>/dev/null || echo '?') · pnpm: $(pnpm -v 2>/dev/null || echo '?')"
+
 JAVA_HOME_ACHADO="$(leela_find_java 21)" \
   || die "Java 21+ não encontrado (o Emulator precisa; o firebase-tools 15 recusa Java abaixo de 21). $(leela_java_hint)"
 export JAVA_HOME="$JAVA_HOME_ACHADO"
@@ -140,7 +150,7 @@ BUSY=""
 for p in "${EMU_PORTS[@]}"; do
   leela_port_busy "$p" && BUSY="$BUSY $p"
 done
-[ -n "$BUSY" ] && die "porta(s) do Emulator ocupada(s):$BUSY. Um preview anterior pode estar de pé. Ver PREVIEW.md > Troubleshooting."
+[ -n "$BUSY" ] && die "porta(s) do Emulator ocupada(s):$BUSY. Um preview anterior pode estar de pé. Ver PREVIEW.md, seção \"Se algo der errado\" (porta ocupada)."
 PORTS_OWNED=1
 
 # Porta-base do painel: 5273 (fora da 5173/e2e dos agentes). Override possível.

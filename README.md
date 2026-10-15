@@ -37,15 +37,24 @@ leela/
 
 ### Pré-requisitos
 
-- Node >= 20
-- pnpm >= 9 (`npm i -g pnpm`)
+- Node 24 via fnm (o repo tem `.node-version`; o mínimo é 20)
+- pnpm 11.9.0 (fixado em `packageManager`; `corepack enable && corepack prepare pnpm@11.9.0 --activate`)
 - Firebase CLI (`npm i -g firebase-tools`)
-- Java 21+ Temurin (para o Firestore Emulator — firebase-tools 15.x exige 21)
+- Java 21+ (para o Firestore Emulator — firebase-tools 15.x exige 21; no Mac: `brew install openjdk@21`)
+
+Passo a passo completo para o **macOS** (instalação, preview em 1 comando, mocks e
+gates visuais): [PREVIEW.md](PREVIEW.md).
 
 ### Instalar dependências
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
+```
+
+### Ver o painel com dados de exemplo (1 comando)
+
+```bash
+bash preview.sh      # sobe o Emulator + seed + painel; Ctrl+C derruba tudo
 ```
 
 ### Desenvolvimento local (com emuladores)
