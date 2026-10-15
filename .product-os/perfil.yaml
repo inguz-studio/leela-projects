@@ -1,5 +1,5 @@
 # Esqueleto do perfil da Leela para o squad product-os (esquema: ~/Squads-Vault/product-os/schemas/perfil-empresa.schema.json).
-# Estado rascunho: só entra o que foi lido em ~/dev/LEELA em 05/10/2026; o resto é pergunta em perguntas_abertas.
+# Estado rascunho: só entra o que foi lido em ~/projetos/leela/LEELA em 05/10/2026; o resto é pergunta em perguntas_abertas.
 # Corte 3 (product-os 2.5.0, 05/10/2026): acrescentado o bloco discovery (campos em branco e os documentos de leela-specs que podem servir de nuvem, benchmarks, rodadas e roadmap, todos a-confirmar) e 7 perguntas novas; nenhum valor novo foi inventado.
 # Corte 2 (product-os 2.4.0, 05/10/2026): acrescentados codigo[].clone_url e ramo e 7 perguntas novas (decisões, fichas, inventário, Central); nenhum valor novo foi inventado.
 # Atualizado no corte 1b (product-os 2.3.0): campos de personas, canais, regras de negócio e convenções, sem inventar valor.
@@ -33,7 +33,7 @@ universos: []
 
 codigo:
   - repo: inguz-studio/leela-projects
-    caminho_local: /Users/vitorpiagge/dev/LEELA
+    caminho_local: /Users/vitorpiagge/projetos/leela/LEELA
     clone_url: https://github.com/inguz-studio/leela-projects.git
     ramo: main
     acesso: so-leitura
@@ -102,14 +102,14 @@ discovery:
 
 fontes:
   empresa: "README.md da raiz (nome LEELA); fuso: functions/src/clubs/recalcularStatusMembros.ts (America/Sao_Paulo); idioma: documentação em português"
-  cerebro.pastas: "ls de ~/dev/LEELA/leela-specs em 05/10/2026 (00-boards, 01-produto, 02-rodadas, 03-canon, 05-discovery, 06-backlog)"
-  codigo: "git remote -v de ~/dev/LEELA (inguz-studio/leela-projects); monorepo com apps painel, landing e mobile"
-  cerebro.ramo_principal: "git branch --show-current de ~/dev/LEELA em 05/10/2026 (main)"
+  cerebro.pastas: "ls de ~/projetos/leela/LEELA/leela-specs em 05/10/2026 (00-boards, 01-produto, 02-rodadas, 03-canon, 05-discovery, 06-backlog)"
+  codigo: "git remote -v de ~/projetos/leela/LEELA (inguz-studio/leela-projects); monorepo com apps painel, landing e mobile"
+  cerebro.ramo_principal: "git branch --show-current de ~/projetos/leela/LEELA em 05/10/2026 (main)"
   rastreador.padrao_card: "leela-specs/00-boards/CONVENCAO-BOARDS.md existe (atualizado 2026-07-18; card de uma linha, estados por emoji, três altitudes); é só candidato: padrao_card_estado a-confirmar"
   regras_de_negocio.indice: "leela-specs/03-canon/indice-de-regras-de-negocio.md existe (lido em 05/10/2026: regras RN-###, texto canônico no épico dono)"
   convencoes.codigos_citaveis: "mesmo índice de regras: 'numeradas RN-###'"
   rastreador.tipo: "leela-specs/06-backlog/BACKLOG.md se descreve como visão estilo Jira em markdown; nenhuma referência a Jira real foi achada; por isso a-confirmar"
-  codigo.clone_url_e_ramo: "git remote -v e git branch --show-current de ~/dev/LEELA em 05/10/2026"
+  codigo.clone_url_e_ramo: "git remote -v e git branch --show-current de ~/projetos/leela/LEELA em 05/10/2026"
   discovery.candidatos_do_cerebro: "ls de leela-specs/05-discovery, 01-produto, 02-rodadas e 06-backlog em 05/10/2026; leitura do cabeçalho de NUVEM-FUNCIONALIDADES.md (colunas Tipo e Prioridade), do ROADMAP.md, do BACKLOG.md e do benchmark-stayf.md; nada foi conferido com o dono, por isso a-confirmar"
 
 nao_conferido:
@@ -117,7 +117,7 @@ nao_conferido:
   - cerebro.ramo_principal
 
 perguntas_abertas:
-  - {campo: cerebro.caminho, pergunta: "O cérebro da Leela é o próprio ~/dev/LEELA (com leela-specs/) ou criamos um cérebro separado em git e markdown?", recomendacao: "usar ~/dev/LEELA/leela-specs como cérebro, já que as pastas existem"}
+  - {campo: cerebro.caminho, pergunta: "O cérebro da Leela é o próprio ~/projetos/leela/LEELA (com leela-specs/) ou criamos um cérebro separado em git e markdown?", recomendacao: "usar ~/projetos/leela/LEELA/leela-specs como cérebro, já que as pastas existem"}
   - {campo: rastreador.tipo, pergunta: "Qual é o rastreador de tarefas: o backlog em markdown, um serviço (Jira, Linear, outro) ou nenhum? Existe projeto de descoberta separado do de execução?"}
   - {campo: rastreador.padrao_card, pergunta: "O padrão de card da Leela é a convenção de boards atual (CONVENCAO-BOARDS.md) ou adotamos o padrão de cards da Shelflix?"}
   - {campo: projetos, pergunta: "O que são os projetos da Leela: painel, landing e app mobile separados, ou um produto só com três superfícies?"}
@@ -132,7 +132,7 @@ perguntas_abertas:
   - {campo: regras_de_negocio.estados_que_travam, pergunta: "A regra de negócio da Leela tem estado de validação (a validar, validada)? Quais estados travam um card?"}
   - {campo: convencoes.escala_criticidade, pergunta: "A Leela usa escala única de criticidade nas regras (níveis e marcadores)? E farol de KR?"}
   - {campo: convencoes.documentos, pergunta: "Existe convenção escrita de OKR, de JTBD, de regras de negócio e de política de priorização na Leela, ou valem os padrões da casa?", recomendacao: "valer os padrões da casa até haver convenção própria"}
-  - {campo: cerebro.repo_url, pergunta: "Qual o endereço público do repositório do cérebro, base dos links de regra nos cards? Se o cérebro for ~/dev/LEELA, o remoto é inguz-studio/leela-projects."}
+  - {campo: cerebro.repo_url, pergunta: "Qual o endereço público do repositório do cérebro, base dos links de regra nos cards? Se o cérebro for ~/projetos/leela/LEELA, o remoto é inguz-studio/leela-projects."}
   - {campo: projetos.pastas_do_projeto.decisoes, pergunta: "Onde moram as notas de decisão da Leela? Hoje há leela-specs/01-produto/DECISOES-ABERTAS.md e rodadas em leela-specs/02-rodadas/*-decisoes, sem pasta Decisões nem cabeçalho com fichas resolvidas. Criamos a pasta e o formato de nota de decisão do método, ou a Leela segue o formato de rodada?", recomendacao: "criar a pasta de decisões no cérebro e adotar a nota do método; sem isso o registro e a sincronia param"}
   - {campo: fichas.arquivo, pergunta: "Onde fica o fichas.json da Leela (as perguntas abertas do produto no esquema de ficha)? Hoje as perguntas estão em DECISOES-ABERTAS.md e DECISOES-ABERTAS-TRIAGEM.md, em texto livre."}
   - {campo: fichas.codigos_internos, pergunta: "Quais códigos internos da Leela (RN-###, códigos de épico, de decisão e de rodada) não podem aparecer soltos no texto que o dono lê?"}
