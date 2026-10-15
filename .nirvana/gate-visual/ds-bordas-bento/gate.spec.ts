@@ -11,9 +11,9 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
-const SCREENSHOT_DIR = path.join(
-  '/Users/vitorpiagge/dev/LEELA/.claude/worktrees/agent-a49ddb0e10886cb54/.nirvana/gate-visual/ds-bordas-bento',
-);
+// As fotos caem ao lado deste spec (onde as de 27/08 já estão versionadas),
+// em qualquer pasta em que o repo esteja clonado. Sem caminho absoluto.
+const SCREENSHOT_DIR = __dirname;
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
