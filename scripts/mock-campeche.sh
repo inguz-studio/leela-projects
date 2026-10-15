@@ -8,7 +8,7 @@
 # inscritos com bairros de Florianópolis, check-ins e um clube com registros
 # nos três pilares.
 #
-# Uso (Git Bash):
+# Uso (macOS, Linux ou Git Bash):
 #   bash scripts/mock-campeche.sh up      → sobe tudo e devolve o terminal
 #   bash scripts/mock-campeche.sh down    → derruba tudo
 #   bash scripts/mock-campeche.sh status  → o que está de pé
@@ -38,19 +38,16 @@
 
 set -uo pipefail
 
-# --- Java 21 (fora do PATH global) -------------------------------------------
-# PINADO, não `${JAVA_HOME:-...}`: o JAVA_HOME da máquina aponta para o JDK 17
-# (`C:\Program Files\Microsoft\jdk-17...`) e o firebase-tools 15 recusa Java
-# abaixo de 21 — respeitar o valor herdado derruba o Firestore Emulator no
-# boot com "no longer supports Java version before 21". O preview.sh pina pelo
-# mesmo motivo. Override consciente por LEELA_JAVA_HOME (nome próprio, para o
-# JAVA_HOME global nunca sequestrar o emulador por acidente).
-export JAVA_HOME="${LEELA_JAVA_HOME:-$HOME/.jdks/jdk-21.0.11+10}"
-export PATH="$JAVA_HOME/bin:$PATH"
+# --- Java 21+ -----------------------------------------------------------------
+# Achado em `cmd_up` por `leela_find_java` (scripts/lib/dev-env.sh): LEELA_JAVA_HOME
+# (override explícito, nome próprio para o JAVA_HOME global nunca sequestrar o
+# emulador) → JAVA_HOME → ~/.jdks → Homebrew openjdk@21 etc., sempre com checagem
+# de versão: o firebase-tools 15 recusa Java abaixo de 21 ("no longer supports Java
+# version before 21"), e o JAVA_HOME global da máquina antiga era um JDK 17.
 # ⛔ JAVA_TOOL_OPTIONS FICA DE FORA — e isso é uma lição, não um esquecimento.
 #
-# O preview.sh exporta `JAVA_TOOL_OPTIONS=-Xmx1024m` para limitar o heap da
-# JVM. Só que a JVM anuncia a variável imprimindo "Picked up
+# O preview.sh exportava `JAVA_TOOL_OPTIONS=-Xmx1024m` para limitar o heap da
+# JVM (já não exporta, pelo mesmo motivo). Só que a JVM anuncia a variável imprimindo "Picked up
 # JAVA_TOOL_OPTIONS: ..." na saída padrão de TODO processo Java que sobe —
 # inclusive o *rules runtime*, cujo handshake o firebase-tools lê justamente
 # por essa saída. O resultado, visto neste emulador:
@@ -67,6 +64,10 @@ unset JAVA_TOOL_OPTIONS
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+
+# Portas, processos e Java (macOS / Linux / Git Bash) — ver scripts/lib/dev-env.sh
+# shellcheck source=scripts/lib/dev-env.sh
+. "$ROOT/scripts/lib/dev-env.sh"
 
 # --- Portas ------------------------------------------------------------------
 FS_PORT=8280
@@ -100,14 +101,10 @@ die() {
   exit 1
 }
 
-# PID (Windows) que está OUVINDO uma porta TCP.
-pid_on_port() {
-  netstat -ano -p tcp 2>/dev/null \
-    | grep -E ":$1[[:space:]].*LISTENING" \
-    | awk '{print $NF}' | sort -u | head -1
-}
+# PID que está OUVINDO a porta TCP $1 (lsof no macOS/Linux, netstat no Git Bash).
+pid_on_port() { leela_pids_on_port "$1" | head -1; }
 
-port_busy() { [ -n "$(pid_on_port "$1")" ]; }
+port_busy() { leela_port_busy "$1"; }
 
 # Espera uma URL responder por até N segundos; aborta se o processo morrer.
 wait_http() {
@@ -131,7 +128,8 @@ cmd_down() {
   for p in "${EMU_PORTS[@]}" "$PAINEL_PORT"; do
     pid="$(pid_on_port "$p")"
     if [ -n "$pid" ]; then
-      taskkill //F //T //PID "$pid" >/dev/null 2>&1 && mortos=$((mortos + 1))
+      leela_kill_tree "$pid"
+      mortos=$((mortos + 1))
       echo "    porta $p (pid $pid) encerrada"
     fi
   done
@@ -167,19 +165,12 @@ cmd_up() {
   c_green "==> LEELA · mock [Mock] - Campeche Run (emulador, :$PAINEL_PORT)"
 
   # 0. Pré-checagens
-  [ -d "$JAVA_HOME" ] || die "Java 21 não encontrado em $JAVA_HOME (o Emulator precisa)."
-  # Falha ALTA e cedo: sem isto o erro aparece 3 minutos depois, escondido no
-  # log do emulador, como "Firestore morreu durante a inicialização".
-  # `grep version` e não `head -1`: com JAVA_TOOL_OPTIONS exportado, a PRIMEIRA
-  # linha do `java -version` é "Picked up JAVA_TOOL_OPTIONS: ...". O `tr -d`
-  # remove o CR do fim de linha do Windows, que colaria no número.
-  local JAVA_MAJOR
-  JAVA_MAJOR="$("$JAVA_HOME/bin/java" -version 2>&1 | tr -d '\r' \
-    | grep -m1 'version "' | sed -E 's/.*version "([0-9]+).*/\1/')"
-  case "$JAVA_MAJOR" in
-    ''|*[!0-9]*) die "não consegui ler a versão do Java em $JAVA_HOME." ;;
-  esac
-  [ "$JAVA_MAJOR" -ge 21 ] || die "o Emulator exige Java 21+; $JAVA_HOME é Java $JAVA_MAJOR."
+  local JAVA_ACHADO
+  JAVA_ACHADO="$(leela_find_java 21)" \
+    || die "Java 21+ não encontrado (o Emulator precisa). $(leela_java_hint)"
+  export JAVA_HOME="$JAVA_ACHADO"
+  export PATH="$JAVA_HOME/bin:$PATH"
+  c_green "    Java: $JAVA_HOME"
   command -v firebase >/dev/null 2>&1 || die "'firebase' (firebase-tools) não está no PATH."
   command -v pnpm >/dev/null 2>&1 || die "'pnpm' não está no PATH."
   command -v curl >/dev/null 2>&1 || die "'curl' não está no PATH."

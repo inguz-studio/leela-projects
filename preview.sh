@@ -11,29 +11,37 @@
 #   Painel (Vite) 5273+ (os AGENTES ocupam a 5173 no dev/e2e — o preview usa
 #   a 5273 e cai para a próxima livre se necessário; o link certo é impresso)
 #
-# Uso (Git Bash):   bash preview.sh      (ou ./preview.sh)
-# Parar:            Ctrl+C  (derruba tudo de forma limpa)
+# Uso (macOS, Linux ou Git Bash):   bash preview.sh      (ou ./preview.sh)
+# Parar:            Ctrl+C  (derruba tudo de forma limpa: painel, Emulator, Java)
 #
-# Override opcional: PREVIEW_VITE_PORT=5273 bash preview.sh
+# Override opcional: PREVIEW_VITE_PORT=4611 bash preview.sh   (porta do painel;
+#                    o gate visual do .nirvana/ espera o painel na 4611)
+#                    LEELA_JAVA_HOME=/caminho/do/jdk-21 bash preview.sh
 #
-# Pré-requisitos já instalados neste ambiente: Node, pnpm, firebase-tools,
-# Java 21 em ~/.jdks/jdk-21.0.11+10. Ver PREVIEW.md para troubleshooting.
+# Pré-requisitos: Node 24 (fnm), pnpm 11.9, firebase-tools e um Java 21+ (o
+# firebase-tools 15 recusa Java abaixo de 21). No macOS: PREVIEW.md, "Mac".
+# O Java é procurado por scripts/lib/dev-env.sh (LEELA_JAVA_HOME, JAVA_HOME,
+# ~/.jdks, Homebrew openjdk@21...). Ver PREVIEW.md para troubleshooting.
 # =============================================================================
 
 set -uo pipefail
 
-# --- Java 21 (fora do PATH global) -------------------------------------------
-export JAVA_HOME="$HOME/.jdks/jdk-21.0.11+10"
-export PATH="$JAVA_HOME/bin:$PATH"
-# Teto de heap da JVM do Emulator: por padrão a JVM reserva ~25% da RAM, o que
-# pode estourar a memória em máquina modesta (ou junto do Emulator dos agentes).
-# 1024m: 512m derrubava o Functions Emulator no meio do seed nesta máquina de 8GB
-# (Java morre → callables como getOverview pendem eternamente). Override via env.
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:--Xmx1024m}"
-
 # --- Raiz do repo ------------------------------------------------------------
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
+
+# Portas, processos e Java (macOS / Linux / Git Bash) — ver scripts/lib/dev-env.sh
+# shellcheck source=scripts/lib/dev-env.sh
+. "$ROOT/scripts/lib/dev-env.sh"
+
+# --- Java 21+ ------------------------------------------------------------------
+# JAVA_TOOL_OPTIONS FICA DE FORA: a JVM anuncia a variável ("Picked up
+# JAVA_TOOL_OPTIONS: ...") na saída de todo processo Java, inclusive o rules
+# runtime do Firestore, cujo handshake o firebase-tools lê por essa mesma saída;
+# o resultado é toda leitura de cliente negada, sem erro na tela. (Lição já paga
+# em scripts/mock-campeche.sh. O teto de heap que o preview.sh exportava aqui era
+# de uma máquina de 8 GB.)
+unset JAVA_TOOL_OPTIONS
 
 # --- Portas do Emulator (alt — isoladas dos agentes) -------------------------
 FS_PORT=8180
@@ -46,7 +54,7 @@ LOG_PORT=4501
 EMU_PORTS=("$FS_PORT" "$AUTH_PORT" "$FN_PORT" "$SG_PORT" "$UI_PORT" "$HUB_PORT" "$LOG_PORT")
 
 # --- Logs (fora do repo, temporário) -----------------------------------------
-LOG_DIR="$(mktemp -d 2>/dev/null || echo "${TEMP:-/tmp}/leela-preview-$$")"
+LOG_DIR="$(mktemp -d "${TMPDIR:-${TEMP:-/tmp}}/leela-preview.XXXXXX" 2>/dev/null || echo "/tmp/leela-preview-$$")"
 mkdir -p "$LOG_DIR"
 EMU_LOG="$LOG_DIR/emulator.log"
 VITE_LOG="$LOG_DIR/vite.log"
@@ -56,48 +64,36 @@ BUILD_LOG="$LOG_DIR/build.log"
 EMU_PID=""
 VITE_PID=""
 VITE_PORT=""
+# 1 só depois de a pré-checagem provar as portas do Emulator livres: o cleanup só
+# derruba "quem escuta nessas portas" se elas forem nossas (senão um preview que
+# morre na pré-checagem derrubaria o Emulator de OUTRA frente).
+PORTS_OWNED=0
 
 # --- Helpers -----------------------------------------------------------------
 c_green() { printf '\033[32m%s\033[0m\n' "$1"; }
 c_yellow() { printf '\033[33m%s\033[0m\n' "$1"; }
 c_red() { printf '\033[31m%s\033[0m\n' "$1"; }
 
-# PID (Windows) que está OUVINDO uma porta TCP, via netstat.
-pid_on_port() {
-  netstat -ano -p tcp 2>/dev/null \
-    | grep -E ":$1[[:space:]].*LISTENING" \
-    | awk '{print $NF}' | sort -u | head -1
-}
-
-port_busy() { [ -n "$(pid_on_port "$1")" ]; }
-
-# Primeira porta livre a partir de $1 (varre até +50).
-find_free_port() {
-  local p="$1" limit=$(( $1 + 50 ))
-  while [ "$p" -lt "$limit" ]; do
-    port_busy "$p" || { echo "$p"; return 0; }
-    p=$((p + 1))
-  done
-  return 1
-}
-
-# Mata a árvore que segura cada porta do preview (Java do Firestore + node do
-# firebase-tools + Vite). taskkill por PID nativo do Windows (//F = /F no MSYS).
+# Derruba o que o preview subiu: o Vite e o firebase-tools com toda a descendência
+# (Java do Firestore, node das Functions, esbuild) e, se as portas são nossas, o que
+# sobrar escutando nelas. Ctrl+C (INT) e kill (TERM) saem com 0; saída por erro
+# (die) mantém o código de erro.
 cleanup() {
+  local rc="${1:-0}" p
   trap - INT TERM EXIT
   echo ""
   c_yellow "Encerrando o preview..."
-  [ -n "$VITE_PID" ] && kill "$VITE_PID" >/dev/null 2>&1
-  [ -n "$EMU_PID" ] && kill "$EMU_PID" >/dev/null 2>&1
-  local p pid
-  for p in "${EMU_PORTS[@]}" ${VITE_PORT:+$VITE_PORT}; do
-    pid="$(pid_on_port "$p")"
-    [ -n "$pid" ] && taskkill //F //T //PID "$pid" >/dev/null 2>&1
-  done
+  [ -n "$VITE_PID" ] && leela_kill_tree "$VITE_PID"
+  [ -n "$EMU_PID" ] && leela_kill_tree "$EMU_PID"
+  if [ "$PORTS_OWNED" = 1 ]; then
+    for p in "${EMU_PORTS[@]}"; do leela_kill_port "$p"; done
+    [ -n "$VITE_PORT" ] && leela_kill_port "$VITE_PORT"
+  fi
   c_green "Preview encerrado. Logs em: $LOG_DIR"
-  exit 0
+  exit "$rc"
 }
-trap cleanup INT TERM EXIT
+trap 'cleanup 0' INT TERM
+trap 'cleanup $?' EXIT
 
 die() {
   c_red "ERRO: $1"
@@ -123,10 +119,18 @@ wait_http() {
 # =============================================================================
 c_green "==> LEELA · preview local (1 comando)"
 
-[ -d "$JAVA_HOME" ] || die "Java 21 não encontrado em $JAVA_HOME (necessário pelo Emulator)."
-command -v firebase >/dev/null 2>&1 || die "'firebase' (firebase-tools) não está no PATH."
+JAVA_HOME_ACHADO="$(leela_find_java 21)" \
+  || die "Java 21+ não encontrado (o Emulator precisa; o firebase-tools 15 recusa Java abaixo de 21). $(leela_java_hint)"
+export JAVA_HOME="$JAVA_HOME_ACHADO"
+export PATH="$JAVA_HOME/bin:$PATH"
+c_green "    Java: $JAVA_HOME"
+
+command -v firebase >/dev/null 2>&1 || die "'firebase' (firebase-tools) não está no PATH (npm i -g firebase-tools)."
 command -v pnpm >/dev/null 2>&1 || die "'pnpm' não está no PATH."
 command -v curl >/dev/null 2>&1 || die "'curl' não está no PATH."
+if [ "$LEELA_WIN" = 0 ] && ! command -v lsof >/dev/null 2>&1; then
+  c_yellow "    Aviso: 'lsof' não está no PATH — a checagem de porta usa uma conexão de teste e o encerramento não acha quem escuta."
+fi
 
 TSX_CLI="$(ls node_modules/.pnpm/tsx@*/node_modules/tsx/dist/cli.mjs 2>/dev/null | head -1)"
 [ -n "$TSX_CLI" ] || die "tsx não encontrado. Rode 'pnpm install' na raiz primeiro."
@@ -134,9 +138,10 @@ TSX_CLI="$(ls node_modules/.pnpm/tsx@*/node_modules/tsx/dist/cli.mjs 2>/dev/null
 # Portas do Emulator livres?
 BUSY=""
 for p in "${EMU_PORTS[@]}"; do
-  port_busy "$p" && BUSY="$BUSY $p"
+  leela_port_busy "$p" && BUSY="$BUSY $p"
 done
 [ -n "$BUSY" ] && die "porta(s) do Emulator ocupada(s):$BUSY. Um preview anterior pode estar de pé. Ver PREVIEW.md > Troubleshooting."
+PORTS_OWNED=1
 
 # Porta-base do painel: 5273 (fora da 5173/e2e dos agentes). Override possível.
 VITE_BASE="${PREVIEW_VITE_PORT:-5273}"
@@ -146,7 +151,7 @@ VITE_BASE="${PREVIEW_VITE_PORT:-5273}"
 start_vite() {
   local p="$1" attempts=0 i ok
   while [ "$attempts" -lt 6 ]; do
-    p="$(find_free_port "$p")" || die "sem porta livre para o painel a partir de $1."
+    p="$(leela_find_free_port "$p")" || die "sem porta livre para o painel a partir de $1."
     c_yellow "==> Subindo o painel (Vite :$p)..."
     (
       cd "$ROOT/apps/painel" &&
